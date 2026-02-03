@@ -54,7 +54,7 @@ export default function CodeBlock({
           title="复制到剪贴板"
           aria-label="复制到剪贴板"
           disabled={!hasCode}
-          className="h-7 gap-1 px-2 text-[11px] bg-muted/80 backdrop-blur-sm"
+          className="h-7 gap-1 px-2 text-[11px] bg-transparent"
         >
           {isCopied ? (
             <Check className="h-3.5 w-3.5 text-[var(--status-success)]" />
