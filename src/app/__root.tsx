@@ -1,5 +1,6 @@
-import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
+import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { useEffect } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastContainer } from "@/components/ui/toast-container";
@@ -23,6 +24,7 @@ const THEME_INIT_SCRIPT = `(function () {
 })();`;
 
 export const Route = createRootRoute({
+  component: RootComponent,
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -46,6 +48,18 @@ export const Route = createRootRoute({
   notFoundComponent: NotFound,
   shellComponent: RootDocument,
 });
+
+function RootComponent() {
+  useEffect(() => {
+    if (!import.meta.env.DEV) return;
+
+    void import("react-scan").then(({ scan }) => {
+      scan({ enabled: true });
+    });
+  }, []);
+
+  return <Outlet />;
+}
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
