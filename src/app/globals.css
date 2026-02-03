@@ -1,0 +1,351 @@
+@import "@fontsource/outfit/latin.css";
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Light Theme - Nord Snow Storm */
+  /* Surfaces - Main backgrounds and elevated surfaces */
+  --surface-primary: #faf9f5;
+  --surface-secondary: #f9f7f3;
+  --surface-muted: #ffffff;
+  --surface-hover: #f5f4ed;
+
+  --border-primary: #50504f;
+
+  /* Text - Hierarchy of text colors */
+  --text-primary: #141413; /* nord0 - Main text and code */
+  --text-secondary: #4C566A; /* nord3 - Secondary text */
+  --text-tertiary: #7B88A1; /* Tertiary text, placeholders */
+
+  /* Interactive - Buttons, links, toggles */
+  --interactive-primary: #c6613f; /* nord8 - Primary actions, links */
+  --interactive-primary-hover: #e49378; /* nord9 - Primary hover state */
+  --interactive-secondary: #81A1C1; /* Legacy primary - secondary actions */
+  --interactive-secondary-hover: #88C0D0; /* Legacy primary hover */
+
+
+
+
+  /* Inline Code */
+  --code-inline-bg: #D8DEE9;
+
+  /* Status Colors - Semantic feedback */
+  --status-destructive: #BF616A;
+  --status-destructive-foreground: #ffffff;
+  --status-info: #81A1C1;
+  --status-info-foreground: #ffffff;
+  --status-success: #A3BE8C;
+  --status-success-foreground: #ffffff;
+  --status-warning: #D08770;
+  --status-warning-foreground: #ffffff;
+
+  /* Z-index Scale - Semantic Layering System */
+  --z-base: 0;
+  --z-sidebar: 10;
+  --z-sticky: 10;
+  --z-card-inner: 10;
+  --z-composer: 20;
+  --z-mobile-overlay: 25;
+  --z-mobile-sidebar: 26;
+  --z-draggable: 40;
+  --z-modal-backdrop: 50;
+  --z-modal-content: 51;
+  --z-toast: 100;
+
+  color-scheme: light;
+
+  --radius: 0.625rem;
+}
+
+html.dark {
+  /* Dark Theme - Nord Polar Night */
+  /* Surfaces - Main backgrounds and elevated surfaces */
+  --surface-primary: #262624; /* nord0 - Main app background */
+  --surface-secondary: #252523;
+  --surface-muted: #30302e; /* nord1 - Subtle backgrounds, cards */
+  --surface-hover: #1f1e1d; /* nord2 - Hover states, user messages */
+
+  --border-primary: #b7b6b5;
+
+  /* Text - Hierarchy of text colors */
+  --text-primary: #eeede9; /* nord6 - Main text and code */
+  --text-secondary: #D8DEE9; /* nord4 - Secondary text */
+  --text-tertiary: #7B88A1; /* Tertiary text, placeholders */
+
+  /* Interactive - Buttons, links, toggles */
+  --interactive-primary: #c6613f; /* nord8 - Primary actions, links */
+  --interactive-primary-hover: #e49378; /* nord9 - Primary hover state */
+  --interactive-secondary: #88C0D0; /* nord8 - Legacy primary */
+  --interactive-secondary-hover: #8FBCBB; /* nord7 - Legacy primary hover */
+
+
+  /* Content - Decorative accents */
+  --content-accent: #88C0D0;
+  --content-accent-muted: rgba(136, 192, 208, 0.6);
+
+  /* Feedback - Loading, cursor */
+  --feedback-loading: #81A1C1;
+  --feedback-cursor: #88C0D0;
+
+  /* Inline Code */
+  --code-inline-bg: #434C5E; /* nord2 */
+
+  /* Status Colors - Semantic feedback */
+  --status-destructive: #BF616A;
+  --status-destructive-foreground: #ffffff;
+  --status-success: #A3BE8C; /* nord14 */
+  --status-success-foreground: #022c22;
+  --status-warning: #EBCB8B; /* nord13 - Brighter yellow for dark mode */
+  --status-warning-foreground: #451a03;
+  --status-info: #88C0D0; /* nord8 */
+  --status-info-foreground: #1e3a8a;
+
+  color-scheme: dark;
+}
+
+@theme inline {
+  /* Core Tailwind mappings */
+  --color-background: var(--surface-primary);
+  --color-foreground: var(--text-primary);
+  --color-muted: var(--surface-muted);
+  --color-muted-foreground: var(--text-tertiary);
+  --color-card: var(--surface-muted);
+  --color-border: var(--border-primary);
+  --color-ring: var(--interactive-primary);
+
+  /* Status mappings */
+  --color-destructive: var(--status-destructive);
+  --color-destructive-foreground: var(--status-destructive-foreground);
+  --color-success: var(--status-success);
+  --color-success-foreground: var(--status-success-foreground);
+  --color-warning: var(--status-warning);
+  --color-warning-foreground: var(--status-warning-foreground);
+  --color-info: var(--status-info);
+  --color-info-foreground: var(--status-info-foreground);
+
+  /* Fonts */
+  --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --font-body: "Outfit", sans-serif;
+
+  /* Transitions */
+  --transition-smooth: cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-spring: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+html {
+  background: var(--surface-primary);
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Glass Utility */
+.glass {
+  background: var(--surface-muted);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-primary);
+}
+
+.glass-strong {
+  background: var(--surface-secondary);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Mobile Sidebar & Overlay */
+.mobile-sidebar-overlay {
+  animation: mobile-overlay-fade-in 180ms var(--transition-smooth);
+}
+
+.mobile-sidebar-drawer {
+  animation: mobile-sidebar-slide-in 220ms var(--transition-smooth);
+}
+
+@keyframes mobile-overlay-fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes mobile-sidebar-slide-in {
+  from {
+    transform: translateX(-100%);
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+/* Interactive elements */
+button,
+input,
+select,
+textarea,
+[role="button"] {
+  transition-property: all;
+  transition-duration: 0.3s;
+  transition-timing-function: var(--transition-smooth);
+}
+
+/* Custom Scrollbar - Minimal */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-primary);
+  border-radius: 99px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-tertiary);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-primary) transparent;
+}
+
+.horizontal-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideUpFade {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideDownFade {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-in-left {
+  animation: fadeInLeft 0.6s var(--transition-smooth) both;
+  opacity: 0;
+}
+
+.animate-enter-up {
+  animation: slideUpFade 0.6s var(--transition-smooth) both;
+}
+
+.animate-enter-down {
+  animation: slideDownFade 0.6s var(--transition-smooth) both;
+}
+
+.animate-scale-in {
+  animation: scaleIn 0.4s var(--transition-smooth) both;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: -100% 50%;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
+/* View Transitions */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  pointer-events: none;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
