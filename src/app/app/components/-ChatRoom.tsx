@@ -8,12 +8,12 @@ interface ChatRoomProps {
 export function ChatRoom({ children }: ChatRoomProps) {
   return (
     <div className="flex-1 min-w-0 flex flex-col">
-      <div className="flex items-center h-12 px-1 border border-b-0 border-(--border-primary) rounded-t-xl bg-(--surface-primary)">
+      <div className="flex h-16 items-center gap-3 px-4 bg-transparent">
         <SidebarToggleButton />
         <div className="flex-1" />
-        <NewChatButton variant="topbar" />
+        <NewChatButton variant="topbar" className="rounded-lg" />
       </div>
-      <div className="flex-1 min-h-0 flex flex-col border border-t-0 border-(--border-primary) rounded-b-xl bg-(--surface-primary) overflow-hidden">
+      <div className="flex-1 min-h-0 flex flex-col bg-transparent overflow-hidden">
         {children}
       </div>
     </div>

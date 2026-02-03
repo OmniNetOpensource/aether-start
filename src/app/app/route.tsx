@@ -8,9 +8,9 @@ export const Route = createFileRoute("/app")({
 
 function AppLayout() {
   return (
-    <div className="relative flex h-screen w-screen bg-(--surface-primary) text-foreground">
+    <div className="relative flex h-screen w-screen overflow-hidden text-foreground">
       <Sidebar />
-      <div className="relative flex-1 min-w-0 flex gap-2 p-2 md:p-3 lg:p-4">
+      <div className="relative flex-1 min-w-0 flex">
         <ChatRoom>
           <Outlet />
         </ChatRoom>

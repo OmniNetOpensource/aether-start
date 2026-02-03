@@ -24,7 +24,7 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
 
   return (
     <div
-      className="py-4 transition-all duration-500"
+      className="border-t ink-border px-4 py-4 transition-all duration-500"
       style={{
         paddingLeft: isCollapsed ? 4 : 8,
         paddingRight: isCollapsed ? 4 : 8,
@@ -39,12 +39,12 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex cursor-pointer items-center gap-3 text-sm transition-all duration-500 hover:bg-(--surface-hover) hover:text-foreground"
+                className="flex cursor-pointer items-center gap-3 rounded-lg text-sm transition-all duration-500 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
                 style={{
                   width: isCollapsed ? 40 : "100%",
                   height: isCollapsed ? 40 : "auto",
-                  padding: isCollapsed ? 4 : "4px 8px",
-                  borderRadius: isCollapsed ? 6 : 6,
+                  padding: isCollapsed ? 4 : "6px 8px",
+                  borderRadius: isCollapsed ? 8 : 8,
                   justifyContent: isCollapsed ? "center" : "flex-start",
                 }}
               >
@@ -65,10 +65,10 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
                       opacity: isCollapsed ? 0 : 1,
                     }}
                   >
-                    <span className="truncate font-semibold text-foreground">
+                    <span className="truncate text-sm font-semibold text-foreground">
                       {displayName}
                     </span>
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className="truncate text-[11px] text-(--text-tertiary)">
                       {subtitle}
                     </span>
                   </span>

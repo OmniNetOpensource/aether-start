@@ -165,6 +165,9 @@ importers:
       jsdom:
         specifier: ^27.0.0
         version: 27.4.0
+      react-grab:
+        specifier: ^0.1.1
+        version: 0.1.1(@types/react@19.2.10)(react@19.2.4)
       react-scan:
         specifier: ^0.4.3
         version: 0.4.3(@types/react@19.2.10)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)(rollup@4.57.1)
@@ -2360,6 +2363,11 @@ packages:
     peerDependencies:
       react: '>=17.0.1'
 
+  bippy@0.5.28:
+    resolution: {integrity: sha512-n3UosYu2KoCQDeAw/zSyjoJksT2viBwGhmEgIdCcGXUQgQsmSJc1Hr7s9eneawAlTI2rbKV4gNFUOaotpLfdgA==}
+    peerDependencies:
+      react: '>=17.0.1'
+
   boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
 
@@ -3442,6 +3450,9 @@ packages:
     resolution: {integrity: sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ==}
     peerDependencies:
       react: ^19.2.4
+
+  react-grab@0.1.1:
+    resolution: {integrity: sha512-+mf6m6o016gfnw8HvQdus8h4dTZSaPtKDlfyDqYPcGiMU3avd40OlLBbJlWYb61zknWqlyRWEkOqAG7OiM3p2g==}
 
   react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
@@ -6037,6 +6048,13 @@ snapshots:
     transitivePeerDependencies:
       - '@types/react'
 
+  bippy@0.5.28(@types/react@19.2.10)(react@19.2.4):
+    dependencies:
+      '@types/react-reconciler': 0.28.9(@types/react@19.2.10)
+      react: 19.2.4
+    transitivePeerDependencies:
+      - '@types/react'
+
   boolbase@1.0.0: {}
 
   brace-expansion@1.1.12:
@@ -7455,6 +7473,14 @@ snapshots:
     dependencies:
       react: 19.2.4
       scheduler: 0.27.0
+
+  react-grab@0.1.1(@types/react@19.2.10)(react@19.2.4):
+    dependencies:
+      bippy: 0.5.28(@types/react@19.2.10)(react@19.2.4)
+      solid-js: 1.9.11
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
 
   react-is@17.0.2: {}
 

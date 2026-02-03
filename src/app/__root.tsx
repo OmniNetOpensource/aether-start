@@ -56,6 +56,7 @@ function RootComponent() {
     void import("react-scan").then(({ scan }) => {
       scan({ enabled: true });
     });
+    void import("react-grab");
   }, []);
 
   return <Outlet />;
@@ -68,13 +69,14 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="antialiased">
+      <body className="antialiased kraft-texture">
         <ResponsiveProvider initialDeviceType="desktop">
           <TooltipProvider>
             {children}
             <ToastContainer />
           </TooltipProvider>
         </ResponsiveProvider>
+        <div className="grain-overlay" aria-hidden="true" />
         <SpeedInsights />
         <Scripts />
       </body>

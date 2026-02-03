@@ -5,31 +5,36 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Light Theme - Nord Snow Storm */
+  /* Light Theme - Paperlike */
   /* Surfaces - Main backgrounds and elevated surfaces */
-  --surface-primary: #faf9f5;
-  --surface-secondary: #f9f7f3;
-  --surface-muted: #ffffff;
-  --surface-hover: #f5f4ed;
+  --surface-primary: #f3eee3;
+  --surface-secondary: #f7f1e6;
+  --surface-muted: rgba(0, 0, 0, 0.03);
+  --surface-hover: rgba(0, 0, 0, 0.05);
 
-  --border-primary: #50504f;
+  --border-primary: rgba(26, 26, 26, 0.08);
 
   /* Text - Hierarchy of text colors */
-  --text-primary: #141413; /* nord0 - Main text and code */
-  --text-secondary: #4C566A; /* nord3 - Secondary text */
-  --text-tertiary: #7B88A1; /* Tertiary text, placeholders */
+  --text-primary: #1a1a1a;
+  --text-secondary: rgba(26, 26, 26, 0.7);
+  --text-tertiary: rgba(26, 26, 26, 0.4);
 
   /* Interactive - Buttons, links, toggles */
-  --interactive-primary: #c6613f; /* nord8 - Primary actions, links */
-  --interactive-primary-hover: #e49378; /* nord9 - Primary hover state */
-  --interactive-secondary: #81A1C1; /* Legacy primary - secondary actions */
-  --interactive-secondary-hover: #88C0D0; /* Legacy primary hover */
+  --interactive-primary: #1a1a1a;
+  --interactive-primary-hover: #000000;
+  --interactive-secondary: rgba(26, 26, 26, 0.7);
+  --interactive-secondary-hover: #1a1a1a;
 
+  /* Content - Decorative accents */
+  --content-accent: #a38b66;
+  --content-accent-muted: rgba(163, 139, 102, 0.6);
 
-
+  /* Feedback - Loading, cursor */
+  --feedback-loading: rgba(26, 26, 26, 0.6);
+  --feedback-cursor: rgba(26, 26, 26, 0.7);
 
   /* Inline Code */
-  --code-inline-bg: #D8DEE9;
+  --code-inline-bg: rgba(26, 26, 26, 0.06);
 
   /* Status Colors - Semantic feedback */
   --status-destructive: #BF616A;
@@ -54,43 +59,44 @@
   --z-modal-content: 51;
   --z-toast: 100;
 
+  --z-grain: 5;
+
   color-scheme: light;
 
   --radius: 0.625rem;
 }
 
 html.dark {
-  /* Dark Theme - Nord Polar Night */
+  /* Dark Theme - Paperlike */
   /* Surfaces - Main backgrounds and elevated surfaces */
-  --surface-primary: #262624; /* nord0 - Main app background */
-  --surface-secondary: #252523;
-  --surface-muted: #30302e; /* nord1 - Subtle backgrounds, cards */
-  --surface-hover: #1f1e1d; /* nord2 - Hover states, user messages */
+  --surface-primary: #161614;
+  --surface-secondary: #1c1a18;
+  --surface-muted: rgba(255, 255, 255, 0.03);
+  --surface-hover: rgba(255, 255, 255, 0.06);
 
-  --border-primary: #b7b6b5;
+  --border-primary: rgba(227, 222, 211, 0.08);
 
   /* Text - Hierarchy of text colors */
-  --text-primary: #eeede9; /* nord6 - Main text and code */
-  --text-secondary: #D8DEE9; /* nord4 - Secondary text */
-  --text-tertiary: #7B88A1; /* Tertiary text, placeholders */
+  --text-primary: #e3ded3;
+  --text-secondary: rgba(227, 222, 211, 0.7);
+  --text-tertiary: rgba(227, 222, 211, 0.4);
 
   /* Interactive - Buttons, links, toggles */
-  --interactive-primary: #c6613f; /* nord8 - Primary actions, links */
-  --interactive-primary-hover: #e49378; /* nord9 - Primary hover state */
-  --interactive-secondary: #88C0D0; /* nord8 - Legacy primary */
-  --interactive-secondary-hover: #8FBCBB; /* nord7 - Legacy primary hover */
-
+  --interactive-primary: #e3ded3;
+  --interactive-primary-hover: #ffffff;
+  --interactive-secondary: rgba(227, 222, 211, 0.7);
+  --interactive-secondary-hover: #ffffff;
 
   /* Content - Decorative accents */
-  --content-accent: #88C0D0;
-  --content-accent-muted: rgba(136, 192, 208, 0.6);
+  --content-accent: #cbb693;
+  --content-accent-muted: rgba(203, 182, 147, 0.6);
 
   /* Feedback - Loading, cursor */
-  --feedback-loading: #81A1C1;
-  --feedback-cursor: #88C0D0;
+  --feedback-loading: rgba(227, 222, 211, 0.6);
+  --feedback-cursor: rgba(227, 222, 211, 0.7);
 
   /* Inline Code */
-  --code-inline-bg: #434C5E; /* nord2 */
+  --code-inline-bg: rgba(255, 255, 255, 0.08);
 
   /* Status Colors - Semantic feedback */
   --status-destructive: #BF616A;
@@ -148,14 +154,53 @@ html {
 }
 
 body {
-  background: var(--surface-primary);
+  background: transparent;
   color: var(--text-primary);
-  font-family: var(--font-body);
+  font-family: var(--font-sans);
   margin: 0;
   min-height: 100vh;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background-color: #e2d1b1;
+  color: #1a1a1a;
+}
+
+html.dark ::selection {
+  background-color: #4a3e2e;
+  color: #e3ded3;
+}
+
+.kraft-texture {
+  background-color: var(--surface-primary);
+  background-image: url("https://www.transparenttextures.com/patterns/natural-paper.png");
+  background-repeat: repeat;
+}
+
+html.dark .kraft-texture {
+  background-color: var(--surface-primary);
+  background-image: url("https://www.transparenttextures.com/patterns/black-paper.png");
+  background-repeat: repeat;
+}
+
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: var(--z-grain);
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+html.dark .grain-overlay {
+  opacity: 0.07;
+}
+
+.ink-border {
+  border-color: var(--border-primary);
 }
 
 /* Glass Utility */

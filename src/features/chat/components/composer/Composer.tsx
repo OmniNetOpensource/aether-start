@@ -163,28 +163,175 @@ export function Composer() {
       uploading;
   const isNewchat = useIsNewChat();
 
-  const formClassName = isNewchat
-    ? // 移除了 px-3 sm:px-4 md:px-6
-      "flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
-    : // 1. 移除了 px-3 sm:px-4 md:px-6
-      // 2. 将 py-4 md:py-6 改为了 mb-4 md:mb-6 (仅底部外边距)
-      "absolute inset-x-0 bottom-0 z-(--z-composer) flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto mb-4 md:mb-6 gap-3";
+  if (isNewchat) {
+    return (
+      <form
+        key="form-initial"
+        onSubmit={handleSubmit}
+        className="flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
+      >
+        <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-black/[0.03] dark:bg-white/[0.03] p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
+          {hasQuotes && (
+            <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0 mb-2">
+              {quotedTexts.map((quote) => (
+                <div
+                  key={quote.id}
+                  className="flex min-w-[200px] max-w-full items-start gap-3 rounded-lg border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
+                >
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border ink-border bg-muted">
+                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                      <Quote className="h-4 w-4" />
+                    </div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-foreground line-clamp-2">
+                      {quote.text}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="移除引用"
+                    onClick={() => removeQuotedText(quote.id)}
+                    className="h-6 w-6 rounded-full hover:text-destructive"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {hasAttachments && (
+            <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0">
+              {pendingAttachments.map((attachment) =>
+                attachment.kind === "image" ? (
+                  <div key={attachment.id} className="group relative">
+                    <ImagePreview
+                      url={attachment.displayUrl}
+                      name={attachment.name}
+                      size={attachment.size}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="移除附件"
+                      onClick={() => removeAttachment(attachment.id)}
+                      className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div
+                    key={attachment.id}
+                    className="flex min-w-[200px] max-w-60 items-center gap-3 rounded-lg border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
+                  >
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border ink-border bg-muted">
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                        <Paperclip className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-xs font-medium text-foreground">
+                        {attachment.name}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {formatFileSize(attachment.size)}
+                      </div>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label="移除附件"
+                      onClick={() => removeAttachment(attachment.id)}
+                      className="h-6 w-6 rounded-full hover:text-destructive"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                )
+              )}
+            </div>
+          )}
+
+          <div className="flex w-full items-end gap-2">
+            <Textarea
+              ref={textareaRef}
+              id="message-input"
+              name="message"
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+              }}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              rows={1}
+              placeholder="输入您的消息..."
+              enterKeyHint={isDesktop ? undefined : "enter"}
+              className="min-h-10 max-h-[200px] flex-1 resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
+              style={{ height: "44px" }}
+            />
+
+            <Button
+              type={pending ? "button" : "submit"}
+              disabled={sendDisabled}
+              onClick={(event) => {
+                if (pending) {
+                  event.preventDefault();
+                  stop();
+                }
+              }}
+              size="icon"
+            className={cn(
+              "h-9 w-9 shrink-0 rounded-xl sm:h-10 sm:w-10 transition-all duration-200",
+              sendDisabled
+                ? "bg-black/10 text-black/30 dark:bg-white/10 dark:text-white/30 scale-90 cursor-not-allowed"
+                : "bg-black text-white dark:bg-white dark:text-black hover:scale-105 active:scale-95"
+            )}
+            >
+              {pending ? (
+                <Square className="h-4 w-4 fill-current" />
+              ) : (
+                <ArrowUp className="h-5 w-5" />
+              )}
+            </Button>
+          </div>
+
+          <ComposerToolbar />
+        </div>
+      </form>
+    );
+  }
 
   return (
-    <form
-      key={isNewchat ? "form-initial" : "form-bottom"}
-      onSubmit={handleSubmit}
-      className={formClassName}
+    <div
+      key="composer-wrapper"
+      className="absolute inset-x-0 bottom-0 z-(--z-composer) pb-4 md:pb-6"
     >
-      <div className="relative flex w-full flex-col gap-1 rounded-2xl border bg-card p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
+        style={{
+          background:
+            "linear-gradient(to top, var(--surface-primary) 0%, color-mix(in srgb, var(--surface-primary) 90%, transparent) 60%, transparent 100%)",
+        }}
+      />
+      <form
+        key="form-bottom"
+        onSubmit={handleSubmit}
+        className="relative flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
+      >
+        <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-black/[0.03] dark:bg-white/[0.03] p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
         {hasQuotes && (
           <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0 mb-2">
             {quotedTexts.map((quote) => (
               <div
                 key={quote.id}
-                className="flex min-w-[200px] max-w-full items-start gap-3 rounded-lg border bg-(--surface-primary) p-2 pr-3 shadow-sm"
+                className="flex min-w-[200px] max-w-full items-start gap-3 rounded-lg border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
               >
-                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border ink-border bg-muted">
                   <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                     <Quote className="h-4 w-4" />
                   </div>
@@ -232,9 +379,9 @@ export function Composer() {
               ) : (
                 <div
                   key={attachment.id}
-                  className="flex min-w-[200px] max-w-60 items-center gap-3 rounded-lg border bg-(--surface-primary) p-2 pr-3 shadow-sm"
+                  className="flex min-w-[200px] max-w-60 items-center gap-3 rounded-lg border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
                 >
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border ink-border bg-muted">
                     <div className="flex h-full w-full items-center justify-center text-muted-foreground">
                       <Paperclip className="h-4 w-4" />
                     </div>
@@ -292,10 +439,10 @@ export function Composer() {
             }}
             size="icon"
             className={cn(
-              "h-9 w-9 shrink-0 rounded-full sm:h-10 sm:w-10 transition-all duration-200",
+              "h-9 w-9 shrink-0 rounded-xl sm:h-10 sm:w-10 transition-all duration-200",
               sendDisabled
-                ? "bg-muted text-muted-foreground cursor-not-allowed"
-                : "hover:scale-105 active:scale-95"
+                ? "bg-black/10 text-black/30 dark:bg-white/10 dark:text-white/30 scale-90 cursor-not-allowed"
+                : "bg-black text-white dark:bg-white dark:text-black hover:scale-105 active:scale-95"
             )}
           >
             {pending ? (
@@ -308,6 +455,7 @@ export function Composer() {
 
         <ComposerToolbar />
       </div>
-    </form>
+      </form>
+    </div>
   );
 }

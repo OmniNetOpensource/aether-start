@@ -56,7 +56,7 @@ export function ConversationList() {
     <div className="flex flex-col gap-1">
       {hasPinned ? (
         <>
-          <div className="px-3 py-1 text-[11px] font-medium text-(--text-tertiary)">
+          <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">
             置顶
           </div>
           <div className="flex flex-col gap-1">
@@ -75,7 +75,7 @@ export function ConversationList() {
       ) : null}
       {hasRegular ? (
         <>
-          <div className="px-3 py-1 text-[11px] font-medium text-(--text-tertiary)">
+          <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">
             最近
           </div>
           <div className="flex flex-col gap-1">

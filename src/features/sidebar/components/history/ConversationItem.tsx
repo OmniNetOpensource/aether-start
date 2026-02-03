@@ -79,8 +79,8 @@ export function ConversationItem({
 
   return (
     <div
-      className={`group relative flex w-full items-center gap-2 rounded-sm border border-transparent px-2 py-0 text-left transition-all hover:border-(--border-primary) hover:bg-(--surface-hover) ${
-        isActive ? "border-(--border-primary) bg-(--surface-muted)" : ""
+      className={`group relative flex w-full items-start gap-3 rounded-xl border ink-border bg-transparent p-4 text-left transition-all hover:bg-black/5 dark:hover:bg-white/5 ${
+        isActive ? "bg-black/5 dark:bg-white/5" : ""
       }`}
     >
       <Link
@@ -92,7 +92,7 @@ export function ConversationItem({
       />
       <div className="min-w-0 flex-1 pointer-events-none relative z-10">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-foreground">
+          <span className="min-w-0 flex-1 truncate text-base font-semibold text-(--text-secondary)">
             {title}
           </span>
           {isPinned ? (

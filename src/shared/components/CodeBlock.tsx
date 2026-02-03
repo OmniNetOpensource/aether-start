@@ -44,7 +44,7 @@ export default function CodeBlock({
 
 
   return (
-    <div className="group rounded-lg border bg-muted/50 relative">
+    <div className="group relative w-full max-w-full overflow-hidden rounded-lg border bg-muted/50">
       {/* Sticky copy button */}
       <div className="sticky top-2 float-right mr-2 mt-2 z-10">
         <Button
@@ -81,7 +81,7 @@ export default function CodeBlock({
       <pre
         className={cn(
           className,
-          "overflow-x-auto rounded-none bg-transparent p-4 text-sm"
+          "max-w-full overflow-x-auto rounded-none bg-transparent p-4 text-sm"
         )}
       >
         {children}

@@ -92,7 +92,7 @@ export function MessageList() {
         <div
           role="log"
           aria-live="polite"
-          className="flex-1 min-h-0 flex flex-col py-4 px-3 md:px-0 pb-44 md:pb-48 lg:pb-52 mx-auto w-full md:w-[70%] lg:w-[50%] space-y-2 md:space-y-3"
+          className="flex-1 min-h-0 flex flex-col mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-4 pb-40 md:pb-44 lg:pb-48"
         >
           {messages.map((message, index) => {
             const isLastMessage = index === messages.length - 1;
@@ -127,8 +127,8 @@ export function MessageList() {
       )}
 
       {messages.length > 0 && !isAtBottom && (
-        <div className="absolute bottom-32 md:bottom-36 lg:bottom-40 left-0 right-0 flex justify-end px-3 md:px-0 pointer-events-none z-(--z-sticky)">
-          <div className="w-full md:w-[70%] lg:w-[50%] mx-auto flex justify-end pr-1">
+        <div className="absolute bottom-24 md:bottom-28 lg:bottom-32 left-0 right-0 flex justify-end px-4 pointer-events-none z-(--z-sticky)">
+          <div className="w-full max-w-4xl mx-auto flex justify-end pr-1">
             <Button
               type="button"
               variant="secondary"

@@ -5,7 +5,6 @@ import { useNavigate } from "@tanstack/react-router";
 import Markdown from "@/src/shared/components/Markdown";
 import { ImagePreview } from "@/src/shared/components/ImagePreview";
 import { BranchInfo, Message } from "@/src/features/chat/types/chat";
-import { cn } from "@/lib/utils";
 import { formatFileSize } from "@/src/shared/utils/file";
 import { ResearchBlock } from "../research/ResearchBlock";
 import {
@@ -64,7 +63,7 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
       variant="ghost"
       size="sm"
       onClick={handleCopy}
-      className="h-auto gap-1.5 px-2 py-1 text-xs"
+      className="h-auto gap-1.5 px-2 py-1 text-[11px] text-(--text-tertiary) hover:text-foreground"
       title="复制内容"
     >
       {isCopied ? (
@@ -98,7 +97,7 @@ const ActionButton = ({
     size="sm"
     onClick={onClick}
     disabled={disabled}
-    className="h-auto gap-1.5 px-2 py-1 text-xs"
+    className="h-auto gap-1.5 px-2 py-1 text-[11px] text-(--text-tertiary) hover:text-foreground"
     title={title}
   >
     {icon}
@@ -140,7 +139,7 @@ const BranchConversationButton = ({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-auto gap-1.5 px-2 py-1 text-xs"
+          className="h-auto gap-1.5 px-2 py-1 text-[11px] text-(--text-tertiary) hover:text-foreground"
           title="创建新对话分支"
           disabled={disabled}
         >
@@ -208,192 +207,189 @@ export const MessageItem = memo(function MessageItem({
   const contentBlocks = message.blocks.filter(
     (block) => block.type !== "attachments",
   );
+  const shouldRenderBody =
+    isEditing ||
+    !isUser ||
+    contentBlocks.length > 0 ||
+    attachmentBlocks.length > 0;
+  const contentWidthClass = isUser ? "w-full max-w-[90%]" : "w-full";
 
   const shouldShowToolbar = !isEditing && (isUser || !isStreaming);
 
   return (
     <div
       key={`${message.role}-${index}`}
-      className={cn(
-        "w-full group/message flex flex-col space-y-2",
-        isUser ? "items-end" : "items-start",
-      )}
+      className="w-full border-b ink-border py-10"
     >
-      {isUser && !isEditing && attachmentBlocks.length > 0 && (
-        <div className="flex gap-3 overflow-x-auto">
-          {attachmentBlocks.flatMap((block) =>
-            block.attachments.map((attachment) =>
-              attachment.kind === "image" ? (
-                <ImagePreview
-                  key={attachment.id}
-                  url={attachment.displayUrl}
-                  name={attachment.name}
-                  size={attachment.size}
-                  className="shrink-0"
-                />
-              ) : (
-                <div
-                  key={attachment.id}
-                  className="flex w-[220px] shrink-0 items-center gap-3 rounded-lg border bg-card px-3 py-2"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-md border bg-(--surface-primary) text-muted-foreground">
-                    <Paperclip className="h-5 w-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium text-foreground">
-                      {attachment.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {formatFileSize(attachment.size)}
-                    </div>
-                  </div>
-                </div>
-              ),
-            ),
-          )}
-        </div>
-      )}
-
-      {(isEditing || (isUser ? contentBlocks.length > 0 : true)) && (
-        <>
-          {isEditing ? (
-            <MessageEditor messageId={messageId} depth={depth} />
-          ) : isUser ? (
-            <div
-              className={cn(
-                "rounded-xl sm:rounded-2xl px-4 py-2 sm:px-5 sm:py-2.5 md:px-6 md:py-3",
-                "bg-muted text-foreground max-w-[85%]",
-              )}
-            >
-              {contentBlocks.map((block, blockIndex) => {
-                const blockKey = `${index}-${blockIndex}`;
-
-                if (block.type === "content") {
-                  return (
-                    <div
-                      key={blockKey}
-                      className="text-base leading-relaxed text-foreground"
-                    >
-                      <Markdown content={block.content} />
-                    </div>
-                  );
-                }
-
-                return null;
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col space-y-3 min-w-0 w-full">
-              {contentBlocks.map((block, blockIndex) => {
-                const blockKey = `${index}-${blockIndex}`;
-                if (block.type === "research") {
-                  return (
-                    <ResearchBlock
-                      key={blockKey}
-                      items={block.items}
-                      blockIndex={blockIndex}
-                      messageIndex={index}
+      <div className="w-full min-w-0 flex flex-col items-start text-left">
+        <div
+          className={`${contentWidthClass} ${isUser ? "ml-auto" : ""}`}
+        >
+          {isUser && !isEditing && attachmentBlocks.length > 0 && (
+            <div className="mb-6 flex gap-3 overflow-x-auto">
+              {attachmentBlocks.flatMap((block) =>
+                block.attachments.map((attachment) =>
+                  attachment.kind === "image" ? (
+                    <ImagePreview
+                      key={attachment.id}
+                      url={attachment.displayUrl}
+                      name={attachment.name}
+                      size={attachment.size}
+                      className="shrink-0"
                     />
-                  );
-                }
-
-                if (block.type === "error") {
-                  return (
+                  ) : (
                     <div
-                      key={blockKey}
-                      className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                      key={attachment.id}
+                      className="flex w-[220px] shrink-0 items-center gap-3 rounded-xl border ink-border bg-black/[0.02] dark:bg-white/[0.02] px-3 py-2"
                     >
-                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                      <div className="flex-1 whitespace-pre-wrap">
-                        {block.message}
+                      <div className="flex h-12 w-12 items-center justify-center rounded-md border ink-border bg-(--surface-primary) text-(--text-tertiary)">
+                        <Paperclip className="h-5 w-5" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-sm font-medium text-foreground">
+                          {attachment.name}
+                        </div>
+                        <div className="text-xs text-(--text-tertiary)">
+                          {formatFileSize(attachment.size)}
+                        </div>
                       </div>
                     </div>
-                  );
-                }
-
-                return (
-                  <div
-                    key={blockKey}
-                    className="text-base leading-relaxed text-foreground"
-                  >
-                    <Markdown content={block.content} />
-                    {isStreaming && blockIndex === contentBlocks.length - 1 && (
-                      <span className="ml-1 inline-flex h-5 w-0.5 animate-pulse bg-(--feedback-cursor) align-middle" />
-                    )}
-                  </div>
-                );
-              })}
+                  ),
+                ),
+              )}
             </div>
           )}
-        </>
-      )}
 
-      {/* Only show copy button for user messages OR for assistant messages when not streaming */}
-      {shouldShowToolbar && (
-        <div
-          className={cn(
-            "flex items-center gap-1.5 transition-opacity duration-150 opacity-100 pointer-events-auto",
-            isUser ? "justify-end" : "justify-start",
-          )}
-        >
-          {isUser && (
+          {shouldRenderBody && (
             <>
-              <ActionButton
-                onClick={() => startEditing(messageId)}
-                disabled={pending}
-                title="编辑消息"
-                icon={<Pencil className="h-3.5 w-3.5" />}
-                label="编辑"
-              />
-              <ActionButton
-                onClick={() =>
-                  retryFromMessage(messageId, depth, (path: string) =>
-                    navigate({ to: path }),
-                  )
-                }
-                disabled={pending}
-                title="重试生成"
-                icon={<RotateCcw className="h-3.5 w-3.5" />}
-                label="重试"
-              />
+              {isEditing ? (
+                <MessageEditor messageId={messageId} depth={depth} />
+              ) : isUser ? (
+                <div className="text-base leading-relaxed text-(--text-primary) font-sans break-words [overflow-wrap:anywhere] [&_pre]:break-normal [&_pre]:[overflow-wrap:normal] [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-primary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:break-words [&_.markdown-body]:[overflow-wrap:anywhere] [&_.markdown-body_p]:text-(--text-primary)">
+                  {contentBlocks.map((block, blockIndex) => {
+                    const blockKey = `${index}-${blockIndex}`;
+
+                    if (block.type === "content") {
+                      return <Markdown key={blockKey} content={block.content} />;
+                    }
+
+                    return null;
+                  })}
+                </div>
+              ) : (
+                <div
+                  className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) break-words [overflow-wrap:anywhere] [&_pre]:break-normal [&_pre]:[overflow-wrap:normal] [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-secondary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:break-words [&_.markdown-body]:[overflow-wrap:anywhere]"
+                  style={{
+                    fontFamily:
+                      '"SimSun","STSong","Songti SC","Noto Serif SC",serif',
+                  }}
+                >
+                  {contentBlocks.map((block, blockIndex) => {
+                    const blockKey = `${index}-${blockIndex}`;
+                    if (block.type === "research") {
+                      return (
+                        <div key={blockKey} className="not-italic">
+                          <ResearchBlock
+                            items={block.items}
+                            blockIndex={blockIndex}
+                            messageIndex={index}
+                          />
+                        </div>
+                      );
+                    }
+
+                    if (block.type === "error") {
+                      return (
+                        <div
+                          key={blockKey}
+                          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive not-italic"
+                        >
+                          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                          <div className="flex-1 whitespace-pre-wrap">
+                            {block.message}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div key={blockKey}>
+                        <Markdown content={block.content} />
+                        {isStreaming &&
+                          blockIndex === contentBlocks.length - 1 && (
+                            <span className="ml-1 inline-flex h-5 w-0.5 animate-pulse bg-(--feedback-cursor) align-middle" />
+                          )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
-          <CopyButton blocks={message.blocks} />
-          {!isUser && (
-            <ActionButton
-              onClick={() =>
-                retryFromMessage(messageId, depth, (path: string) =>
-                  navigate({ to: path }),
-                )
-              }
-              disabled={pending}
-              title="重试生成"
-              icon={<RotateCcw className="h-3.5 w-3.5" />}
-              label="重试"
-            />
+
+          {shouldShowToolbar && (
+            <div
+              className="mt-4 flex items-center gap-1.5 transition-opacity duration-150 opacity-100 pointer-events-auto"
+            >
+              {isUser && (
+                <>
+                  <ActionButton
+                    onClick={() => startEditing(messageId)}
+                    disabled={pending}
+                    title="编辑消息"
+                    icon={<Pencil className="h-3.5 w-3.5" />}
+                    label="编辑"
+                  />
+                  <ActionButton
+                    onClick={() =>
+                      retryFromMessage(messageId, depth, (path: string) =>
+                        navigate({ to: path }),
+                      )
+                    }
+                    disabled={pending}
+                    title="重试生成"
+                    icon={<RotateCcw className="h-3.5 w-3.5" />}
+                    label="重试"
+                  />
+                </>
+              )}
+              <CopyButton blocks={message.blocks} />
+              {!isUser && (
+                <ActionButton
+                  onClick={() =>
+                    retryFromMessage(messageId, depth, (path: string) =>
+                      navigate({ to: path }),
+                    )
+                  }
+                  disabled={pending}
+                  title="重试生成"
+                  icon={<RotateCcw className="h-3.5 w-3.5" />}
+                  label="重试"
+                />
+              )}
+              {!isUser && !isStreaming && (
+                <BranchConversationButton
+                  messageId={messageId}
+                  disabled={pending}
+                />
+              )}
+            </div>
           )}
-          {!isUser && !isStreaming && (
-            <BranchConversationButton
-              messageId={messageId}
-              disabled={pending}
-            />
+          {branchInfo && !isEditing && (
+            <div
+              className="mt-2 flex items-center gap-1.5 transition-opacity duration-150 opacity-100 pointer-events-auto"
+            >
+              <BranchNavigator
+                branchInfo={branchInfo}
+                onNavigate={(direction) =>
+                  navigateBranch(messageId, depth, direction)
+                }
+                disabled={pending}
+              />
+            </div>
           )}
         </div>
-      )}
-      {branchInfo && !isEditing && (
-        <div
-          className={cn(
-            "flex items-center gap-1.5 transition-opacity duration-150 opacity-100 pointer-events-auto",
-            isUser ? "justify-end" : "justify-start",
-          )}
-        >
-          <BranchNavigator
-            branchInfo={branchInfo}
-            onNavigate={(direction) => navigateBranch(messageId, depth, direction)}
-            disabled={pending}
-          />
-        </div>
-      )}
+      </div>
     </div>
   );
 });

@@ -15,7 +15,7 @@ export function SidebarToggleButton() {
       size="icon-lg"
       onClick={toggle}
       aria-label={isOpen ? "收起侧边栏" : "展开侧边栏"}
-      className="rounded-xl text-muted-foreground transition-all hover:text-foreground"
+      className="rounded-lg text-(--text-tertiary) transition-all hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
     >
       <PanelLeft
         className={`h-5 w-5 transition-transform duration-300 ${
