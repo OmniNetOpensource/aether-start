@@ -11,9 +11,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.71.2
         version: 0.71.2(zod@3.25.76)
-      '@fontsource/outfit':
+      '@fontsource/noto-serif-sc':
         specifier: ^5.1.0
-        version: 5.2.8
+        version: 5.2.9
       '@radix-ui/react-avatar':
         specifier: ^1.1.11
         version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.10))(@types/react@19.2.10)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -892,8 +892,8 @@ packages:
   '@floating-ui/utils@0.2.10':
     resolution: {integrity: sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==}
 
-  '@fontsource/outfit@5.2.8':
-    resolution: {integrity: sha512-rXC6g0MqD7cOBjht0bMqc43qM6lRqDLML9KXsmg9uykz0wLQhy8Z/ajrMG6iyoT3NJR+MYgU+OEHp7uHoTb+Yw==}
+  '@fontsource/noto-serif-sc@5.2.9':
+    resolution: {integrity: sha512-+wosdNmyrtRjnqJ/4A6i99jApm6ye34n8Nh7jUO3P/+6Hd1ZBY1gB9yGaI5jVxb56RS1lM2kTc0DzX1ifRO2MA==}
 
   '@humanfs/core@0.19.1':
     resolution: {integrity: sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==}
@@ -4628,7 +4628,7 @@ snapshots:
 
   '@floating-ui/utils@0.2.10': {}
 
-  '@fontsource/outfit@5.2.8': {}
+  '@fontsource/noto-serif-sc@5.2.9': {}
 
   '@humanfs/core@0.19.1': {}
 

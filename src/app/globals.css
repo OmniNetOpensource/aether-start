@@ -1,4 +1,4 @@
-@import "@fontsource/outfit/latin.css";
+@import "@fontsource/noto-serif-sc";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -128,7 +128,7 @@ html.dark {
   /* Fonts */
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --font-body: "Outfit", sans-serif;
+  --font-body: "Noto Serif SC", serif;
 
   /* Transitions */
   --transition-smooth: cubic-bezier(0.32, 0.72, 0, 1);
@@ -143,6 +143,7 @@ html.dark {
 
 html {
   background: var(--surface-primary);
+  font-size: 18px;
   scroll-behavior: smooth;
 }
 
