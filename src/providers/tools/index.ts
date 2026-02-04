@@ -1,5 +1,5 @@
 import { fetchUrlTool } from "./fetch";
-import { serperSearchTool } from "./serper-search";
+import { searchTool } from "./search";
 import {
   type ChatTool,
   type ToolDefinition,
@@ -8,14 +8,14 @@ import {
   type ToolName,
 } from "./types";
 
-const hasSerperKey = Boolean(process.env.SERP_API_KEY);
+const hasSearchKey = Boolean(process.env.SERP_API_KEY);
 
 const toolMap: Partial<Record<ToolName, ToolDefinition>> = {
   fetch_url: fetchUrlTool,
 };
 
-if (hasSerperKey) {
-  toolMap.serper_search = serperSearchTool;
+if (hasSearchKey) {
+  toolMap.search = searchTool;
 }
 
 const toolEntries = Object.entries(toolMap) as Array<
@@ -26,8 +26,8 @@ toolEntries.forEach(([name]) => {
   console.error("[Tools] Enabled tool:", name);
 });
 
-if (!hasSerperKey) {
-  console.error("[Tools] Skipping tool: serper_search (missing SERP_API_KEY)");
+if (!hasSearchKey) {
+  console.error("[Tools] Skipping tool: search (missing SERP_API_KEY)");
 }
 
 export const toolSpecs: ChatTool[] = toolEntries.map(([, tool]) => tool.spec);

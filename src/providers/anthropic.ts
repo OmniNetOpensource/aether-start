@@ -2,12 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { buildSystemPrompt } from "@/src/server/chat/utils";
 import { getAnthropicConfig } from "./config";
 import type {
-  ChatOptions,
-  ChatResult,
-  ChatState,
-  PendingToolCall,
-  StreamEvent,
-  ToolCallResult,
+  ChatRunOptions,
+  ChatRunResult,
+  ChatProviderState,
+  PendingToolInvocation,
+  ChatStreamEvent,
+  ToolInvocationResult,
 } from "./types";
 import type { ChatTool } from "@/src/providers/tools/types";
 import type { SerializedMessage } from "@/src/features/chat/types/chat";
@@ -45,29 +45,29 @@ type AnthropicStreamChunk =
 type AnthropicState = {
   messages: AnthropicMessage[];
   lastAssistantText: string;
-  lastPendingToolCalls: PendingToolCall[];
+  lastPendingToolCalls: PendingToolInvocation[];
 };
 
 const getClient = () => {
-  const config = getAnthropicConfig();
+  const anthropicConfig = getAnthropicConfig();
   return new Anthropic({
-    apiKey: config.apiKey,
-    baseURL: config.baseURL,
-    defaultHeaders: config.defaultHeaders,
+    apiKey: anthropicConfig.apiKey,
+    baseURL: anthropicConfig.baseURL,
+    defaultHeaders: anthropicConfig.defaultHeaders,
   });
 };
 
 function convertToAnthropicMessages(history: SerializedMessage[]): AnthropicMessage[] {
-  return history.map((msg) => {
+  return history.map((message) => {
     const contentBlocks: AnthropicContentBlock[] = [];
 
-    for (const block of msg.blocks) {
+    for (const block of message.blocks) {
       if (block.type === "content" && block.content) {
         contentBlocks.push({ type: "text", text: block.content });
       } else if (block.type === "attachments") {
-        for (const att of block.attachments) {
-          if (att.kind === "image" && att.url) {
-            const base64Match = att.url.match(/^data:([^;]+);base64,(.+)$/);
+        for (const attachment of block.attachments) {
+          if (attachment.kind === "image" && attachment.url) {
+            const base64Match = attachment.url.match(/^data:([^;]+);base64,(.+)$/);
             if (base64Match) {
               contentBlocks.push({
                 type: "image",
@@ -84,7 +84,7 @@ function convertToAnthropicMessages(history: SerializedMessage[]): AnthropicMess
     }
 
     return {
-      role: msg.role,
+      role: message.role,
       content: contentBlocks.length > 0 ? contentBlocks : "",
     };
   });
@@ -92,15 +92,15 @@ function convertToAnthropicMessages(history: SerializedMessage[]): AnthropicMess
 
 function convertToolsToAnthropic(tools: ChatTool[]): AnthropicTool[] {
   return tools
-    .filter((t) => t.type === "function")
-    .map((t) => ({
-      name: t.function.name,
-      description: t.function.description,
-      input_schema: t.function.parameters as Record<string, unknown>,
+    .filter((tool) => tool.type === "function")
+    .map((tool) => ({
+      name: tool.function.name,
+      description: tool.function.description,
+      input_schema: tool.function.parameters as Record<string, unknown>,
     }));
 }
 
-async function* streamAnthropicCompletion(params: {
+async function* streamAnthropicCompletion(requestParams: {
   model: string;
   messages: AnthropicMessage[];
   system?: string;
@@ -110,10 +110,10 @@ async function* streamAnthropicCompletion(params: {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamParams: any = {
-    model: params.model,
-    messages: params.messages as Anthropic.MessageParam[],
-    system: params.system,
-    tools: params.tools as Anthropic.Tool[],
+    model: requestParams.model,
+    messages: requestParams.messages as Anthropic.MessageParam[],
+    system: requestParams.system,
+    tools: requestParams.tools as Anthropic.Tool[],
     max_tokens: 64000,
     thinking: {
       type: "enabled",
@@ -148,7 +148,7 @@ async function* streamAnthropicCompletion(params: {
   }
 }
 
-const createInitialState = (options: ChatOptions): AnthropicState => {
+const createInitialState = (options: ChatRunOptions): AnthropicState => {
   const systemPrompt = buildSystemPrompt();
   const rolePrompt = options.systemPrompt?.trim();
   const rolePromptMessages: AnthropicMessage[] = rolePrompt
@@ -166,12 +166,12 @@ const createInitialState = (options: ChatOptions): AnthropicState => {
   };
 };
 
-const toChatState = (state: AnthropicState): ChatState => ({
+const toChatState = (state: AnthropicState): ChatProviderState => ({
   backend: "anthropic",
   data: state,
 });
 
-const appendToolResults = (state: AnthropicState, results: ToolCallResult[]): AnthropicState => {
+const appendToolResults = (state: AnthropicState, results: ToolInvocationResult[]): AnthropicState => {
   const assistantContent: Array<
     | { type: "text"; text: string }
     | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
@@ -181,8 +181,8 @@ const appendToolResults = (state: AnthropicState, results: ToolCallResult[]): An
     assistantContent.push({ type: "text", text: state.lastAssistantText });
   }
 
-  for (const tc of state.lastPendingToolCalls) {
-    assistantContent.push({ type: "tool_use", id: tc.id, name: tc.name, input: tc.args });
+  for (const toolCall of state.lastPendingToolCalls) {
+    assistantContent.push({ type: "tool_use", id: toolCall.id, name: toolCall.name, input: toolCall.args });
   }
 
   type ToolResultContentItem =
@@ -193,16 +193,16 @@ const appendToolResults = (state: AnthropicState, results: ToolCallResult[]): An
     type: "tool_result";
     tool_use_id: string;
     content: string | ToolResultContentItem[];
-  }> = results.map((tr) => {
+  }> = results.map((toolResult) => {
     // Check if result is a JSON image result
     try {
-      const parsed = JSON.parse(tr.result);
+      const parsed = JSON.parse(toolResult.result);
       if (parsed.type === "image" && parsed.data_url) {
         const base64Match = parsed.data_url.match(/^data:([^;]+);base64,(.+)$/);
         if (base64Match) {
           return {
             type: "tool_result" as const,
-            tool_use_id: tr.id,
+            tool_use_id: toolResult.id,
             content: [
               {
                 type: "image" as const,
@@ -222,8 +222,8 @@ const appendToolResults = (state: AnthropicState, results: ToolCallResult[]): An
 
     return {
       type: "tool_result" as const,
-      tool_use_id: tr.id,
-      content: tr.result,
+      tool_use_id: toolResult.id,
+      content: toolResult.result,
     };
   });
 
@@ -239,9 +239,9 @@ const appendToolResults = (state: AnthropicState, results: ToolCallResult[]): An
 };
 
 export async function* runAnthropicChat(
-  options: ChatOptions,
-  state?: ChatState
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state?: ChatProviderState
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   const workingState = state && state.backend === "anthropic"
     ? (state.data as AnthropicState)
     : createInitialState(options);
@@ -249,7 +249,7 @@ export async function* runAnthropicChat(
   const anthropicTools = options.tools.length > 0 ? convertToolsToAnthropic(options.tools) : undefined;
 
   let assistantText = "";
-  const pendingToolCalls: PendingToolCall[] = [];
+  const pendingToolCalls: PendingToolInvocation[] = [];
   let currentToolId = "";
   let currentToolName = "";
   let currentToolJson = "";
@@ -275,12 +275,12 @@ export async function* runAnthropicChat(
       } else if (chunk.type === "stop") {
         stopReason = chunk.stop_reason;
         if (currentToolId && currentToolName) {
-          let args: Record<string, unknown> = {};
+          let toolArguments: Record<string, unknown> = {};
           try {
-            args = JSON.parse(currentToolJson || "{}");
+            toolArguments = JSON.parse(currentToolJson || "{}");
           } catch {
           }
-          pendingToolCalls.push({ id: currentToolId, name: currentToolName, args });
+          pendingToolCalls.push({ id: currentToolId, name: currentToolName, args: toolArguments });
         }
       }
     }
@@ -327,10 +327,10 @@ export async function* runAnthropicChat(
 }
 
 export async function* continueAnthropicChat(
-  options: ChatOptions,
-  state: ChatState,
-  toolResults: ToolCallResult[]
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state: ChatProviderState,
+  toolResults: ToolInvocationResult[]
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   if (state.backend !== "anthropic") {
     throw new Error("Invalid anthropic state");
   }

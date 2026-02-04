@@ -1,12 +1,12 @@
 import { buildSystemPrompt } from "@/src/server/chat/utils";
 import { getOpenAIConfig } from "./config";
 import type {
-  ChatOptions,
-  ChatResult,
-  ChatState,
-  PendingToolCall,
-  StreamEvent,
-  ToolCallResult,
+  ChatRunOptions,
+  ChatRunResult,
+  ChatProviderState,
+  PendingToolInvocation,
+  ChatStreamEvent,
+  ToolInvocationResult,
 } from "./types";
 import type { SerializedMessage } from "@/src/features/chat/types/chat";
 import type { ChatTool } from "@/src/providers/tools/types";
@@ -307,7 +307,7 @@ export async function* streamOpenAIResponse(params: {
   }
 }
 
-const createInitialState = (options: ChatOptions): OpenAIState => {
+const createInitialState = (options: ChatRunOptions): OpenAIState => {
   const rolePrompt = options.systemPrompt?.trim();
   const rolePromptInput: OpenAIInputItem[] = rolePrompt
     ? [{ type: "message", role: "system", content: rolePrompt }]
@@ -329,12 +329,12 @@ const createInitialState = (options: ChatOptions): OpenAIState => {
   };
 };
 
-const toChatState = (state: OpenAIState): ChatState => ({
+const toChatState = (state: OpenAIState): ChatProviderState => ({
   backend: "openai",
   data: state,
 });
 
-const appendToolResults = (state: OpenAIState, results: ToolCallResult[]): OpenAIState => {
+const appendToolResults = (state: OpenAIState, results: ToolInvocationResult[]): OpenAIState => {
   const functionCallOutputs: OpenAIFunctionCallOutput[] = results.map((tr) => ({
     type: "function_call_output" as const,
     call_id: tr.id,
@@ -377,9 +377,9 @@ const appendToolResults = (state: OpenAIState, results: ToolCallResult[]): OpenA
 };
 
 export async function* runOpenAIChat(
-  options: ChatOptions,
-  state?: ChatState
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state?: ChatProviderState
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   const workingState: OpenAIState = state && state.backend === "openai"
     ? (state.data as OpenAIState)
     : createInitialState(options);
@@ -479,7 +479,7 @@ export async function* runOpenAIChat(
     lastResponseId: responseId,
   };
 
-  const pendingToolCalls: PendingToolCall[] = pendingFunctionCalls.map((fc) => ({
+  const pendingToolCalls: PendingToolInvocation[] = pendingFunctionCalls.map((fc) => ({
     id: fc.call_id,
     name: fc.name,
     args: fc.args,
@@ -494,10 +494,10 @@ export async function* runOpenAIChat(
 }
 
 export async function* continueOpenAIChat(
-  options: ChatOptions,
-  state: ChatState,
-  toolResults: ToolCallResult[]
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state: ChatProviderState,
+  toolResults: ToolInvocationResult[]
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   if (state.backend !== "openai") {
     throw new Error("Invalid openai state");
   }

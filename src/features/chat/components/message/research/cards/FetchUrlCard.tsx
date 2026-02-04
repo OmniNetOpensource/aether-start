@@ -5,6 +5,7 @@ import { Check, ChevronDown, Image as ImageIcon, Link, Loader2, X } from "lucide
 import { cn } from "@/lib/utils";
 import type { ResearchItem } from "@/src/features/chat/types/chat";
 import { ImagePreview } from "@/src/components/ImagePreview";
+import Markdown from "@/src/components/Markdown";
 import { BaseResearchCard } from "./BaseResearchCard";
 import { getToolLifecycle } from "../utils";
 
@@ -101,6 +102,11 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
     (resultText.includes("内容过长") || resultText.includes("已省略不返回"));
   const isError = resultText.startsWith("Error") || isSystemPromptTooLong;
   const errorInfo = isError ? parseFetchError(resultText) : null;
+  const hasMarkdownContent =
+    responseType === "markdown" &&
+    !isError &&
+    !imageResult &&
+    resultText.trim().length > 0;
   const errorDescription = errorInfo?.summary
     ? `Failed · ${truncateText(errorInfo.summary, 20)}`
     : "Failed";
@@ -146,7 +152,8 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
       : `Fetching image from ${url || "URL"}`
     : `Fetching ${url || "URL"}`;
 
-  const hasExpandableContent = imageResult || (isError && errorInfo);
+  const hasExpandableContent =
+    imageResult || (isError && errorInfo) || hasMarkdownContent;
   const handleToggle = hasExpandableContent ? () => setIsExpanded((prev) => !prev) : undefined;
 
   const expandAction = hasExpandableContent ? (
@@ -188,6 +195,13 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
             size={imageResult.size_bytes}
             className="max-h-48 w-auto rounded border border-border"
           />
+        </div>
+      ) : null}
+      {isExpanded && hasMarkdownContent ? (
+        <div className="pb-2 pl-9 pr-3">
+          <div className="max-h-80 overflow-y-auto pr-1">
+            <Markdown content={resultText} />
+          </div>
         </div>
       ) : null}
     </BaseResearchCard>

@@ -1,11 +1,11 @@
-import type { StreamEvent } from "./types";
+import type { ChatStreamEvent } from "./types";
 import type { ConversationLogger } from "@/src/providers/logger";
 import type { ResearchItem, ToolProgress } from "@/src/features/chat/types/chat";
 
 const encoder = new TextEncoder();
 
 export type EventSender = {
-  send: (event: StreamEvent) => void;
+  send: (event: ChatStreamEvent) => void;
   close: () => void;
   isClosed: () => boolean;
 };
@@ -16,7 +16,7 @@ export function createEventSender(
 ): EventSender {
   let closed = false;
 
-  const send = (event: StreamEvent) => {
+  const send = (event: ChatStreamEvent) => {
     if (closed) return;
 
     const line = `data: ${JSON.stringify(event)}\n\n`;
@@ -72,7 +72,7 @@ export class ResearchTracker {
     return this.items;
   }
 
-  handle(event: StreamEvent): void {
+  handle(event: ChatStreamEvent): void {
     if (event.type === "thinking") {
       this.appendThinking(event.content);
     } else if (event.type === "tool_call") {

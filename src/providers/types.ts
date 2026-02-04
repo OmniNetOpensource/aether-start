@@ -1,17 +1,22 @@
 import type { SerializedMessage } from "@/src/features/chat/types/chat";
 import type { ChatTool } from "@/src/providers/tools/types";
 
-export type Backend = "openrouter" | "anthropic" | "openai" | "gemini";
+export type ChatProviderId = "openrouter" | "anthropic" | "openai" | "gemini";
 
-export type ProviderPreferences = {
+export type OpenRouterProviderPreferences = {
   order: string[];
 };
 
 // Stream events sent to the client
-export type StreamEvent =
+export type ChatStreamEvent =
   | { type: "content"; content: string }
   | { type: "thinking"; content: string }
-  | { type: "tool_call"; tool: string; args: Record<string, unknown>; callId?: string }
+  | {
+      type: "tool_call";
+      tool: string;
+      args: Record<string, unknown>;
+      callId?: string;
+    }
   | {
       type: "tool_progress";
       tool: string;
@@ -23,40 +28,51 @@ export type StreamEvent =
     }
   | { type: "tool_result"; tool: string; result: unknown; callId?: string }
   | { type: "error"; message: string }
-  | { type: "conversation_created"; conversationId: string; title: string; user_id: string; created_at: string; updated_at: string }
-  | { type: "conversation_updated"; conversationId: string; updated_at: string };
+  | {
+      type: "conversation_created";
+      conversationId: string;
+      title: string;
+      user_id: string;
+      created_at: string;
+      updated_at: string;
+    }
+  | {
+      type: "conversation_updated";
+      conversationId: string;
+      updated_at: string;
+    };
 
 // Tool call pending execution
-export type PendingToolCall = {
+export type PendingToolInvocation = {
   id: string;
   name: string;
   args: Record<string, unknown>;
 };
 
 // Result from tool execution
-export type ToolCallResult = {
+export type ToolInvocationResult = {
   id: string;
   name: string;
   result: string;
 };
 
-export type ChatOptions = {
-  backend: Backend;
+export type ChatRunOptions = {
+  backend: ChatProviderId;
   model: string;
   messages: SerializedMessage[];
   tools: ChatTool[];
   systemPrompt?: string;
-  provider?: ProviderPreferences;
+  provider?: OpenRouterProviderPreferences;
 };
 
-export type ChatState = {
-  backend: Backend;
+export type ChatProviderState = {
+  backend: ChatProviderId;
   data: unknown;
 };
 
-export type ChatResult = {
+export type ChatRunResult = {
   shouldContinue: boolean;
-  pendingToolCalls: PendingToolCall[];
+  pendingToolCalls: PendingToolInvocation[];
   assistantText: string;
-  state?: ChatState;
+  state?: ChatProviderState;
 };

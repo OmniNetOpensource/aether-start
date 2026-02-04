@@ -1,86 +1,82 @@
-import {
-  ChatTool,
-  ToolDefinition,
-  ToolHandler,
-} from "./types";
+import { ChatTool, ToolDefinition, ToolHandler } from "./types";
 
-type SerperSearchArgs = {
+type SearchArgs = {
   query: string;
 };
 
-type SerperResult = {
+type SearchResult = {
   title?: unknown;
   link?: unknown;
   snippet?: unknown;
   [key: string]: unknown;
 };
 
-type SerperSearchPayload = {
+type SearchPayload = {
   query: string;
   results: Array<{
     title: string;
     url: string;
     description: string;
   }>;
-  rawResults: SerperResult[];
+  rawResults: SearchResult[];
 };
 
-const parseSerperSearchArgs = (args: unknown): SerperSearchArgs => {
+const parseSearchArgs = (args: unknown): SearchArgs => {
   if (!args || typeof args !== "object") {
-    throw new Error("serper_search requires an object with a query");
+    throw new Error("search requires an object with a query");
   }
 
   const { query } = args as { query?: unknown };
 
   if (typeof query !== "string" || query.trim().length === 0) {
-    throw new Error("serper_search requires a non-empty query string");
+    throw new Error("search requires a non-empty query string");
   }
 
   return { query };
 };
 
-const SERPER_SEARCH_INTERVAL_MS = 2_000;
-let lastSerperSearchAt = 0;
-let serperSearchQueue: Promise<void> = Promise.resolve();
+const SEARCH_INTERVAL_MS = 2_000;
+let lastSearchAt = 0;
+let searchQueue: Promise<void> = Promise.resolve();
 
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
   });
 
-const enqueueSerperSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
+const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
   const runTask = async () => {
     const now = Date.now();
-    const elapsed = now - lastSerperSearchAt;
+    const elapsed = now - lastSearchAt;
 
-    if (elapsed < SERPER_SEARCH_INTERVAL_MS) {
-      const waitTime = SERPER_SEARCH_INTERVAL_MS - elapsed;
+    if (elapsed < SEARCH_INTERVAL_MS) {
+      const waitTime = SEARCH_INTERVAL_MS - elapsed;
       console.error(
-        "[Tools:serper_search] Throttling request, waiting",
+        "[Tools:search] Throttling request, waiting",
         `${waitTime}ms`
       );
       await sleep(waitTime);
     }
 
-    lastSerperSearchAt = Date.now();
+    lastSearchAt = Date.now();
     return task();
   };
 
-  const queuedTask = serperSearchQueue
+  const queuedTask = searchQueue
     .catch(() => {})
     .then(runTask);
 
-  serperSearchQueue = queuedTask.then(() => {}).catch(() => {});
+  searchQueue = queuedTask.then(() => {}).catch(() => {});
   return queuedTask;
 };
 
-const formatSerperSearchResponse = (
+const formatSearchResponse = (
   query: string,
-  data: { organic?: SerperResult[] }
+  data: { organic?: SearchResult[] }
 ): string => {
   const rawResults = Array.isArray(data.organic) ? data.organic : [];
 
-  const results: SerperSearchPayload["results"] = rawResults
+  const results: SearchPayload["results"] = rawResults
     .map((result) => {
       if (!result || typeof result !== "object") {
         return null;
@@ -117,7 +113,7 @@ const formatSerperSearchResponse = (
       } => Boolean(result && result.url)
     );
 
-  const payload: SerperSearchPayload = {
+  const payload: SearchPayload = {
     query,
     results,
     rawResults,
@@ -126,11 +122,11 @@ const formatSerperSearchResponse = (
   return JSON.stringify(payload);
 };
 
-const performSerperSearch = async (
+const performSearch = async (
   query: string,
   apiKey: string
 ): Promise<string> => {
-  console.error("[Tools:serper_search] Searching:", query);
+  console.error("[Tools:search] Searching:", query);
 
   const myHeaders = new Headers();
   myHeaders.append("X-API-KEY", apiKey);
@@ -159,15 +155,15 @@ const performSerperSearch = async (
 
     if (!response.ok) {
       console.error(
-        "[Tools:serper_search] API error:",
+        "[Tools:search] API error:",
         response.status,
         response.statusText
       );
-      return `Serper API error: ${response.status} ${response.statusText}`;
+      return `Search API error: ${response.status} ${response.statusText}`;
     }
 
-    const data = (await response.json()) as { organic?: SerperResult[] };
-    return formatSerperSearchResponse(query, data);
+    const data = (await response.json()) as { organic?: SearchResult[] };
+    return formatSearchResponse(query, data);
   } catch (error) {
     const isAbortError =
       typeof error === "object" &&
@@ -179,29 +175,29 @@ const performSerperSearch = async (
       : typeof error === "object" && error !== null
         ? (error as Error).message
         : String(error);
-    console.error("[Tools:serper_search] Error:", message);
-    return `Serper Search error: ${message}`;
+    console.error("[Tools:search] Error:", message);
+    return `Search error: ${message}`;
   } finally {
     clearTimeout(timeoutId);
   }
 };
 
-const serperSearch: ToolHandler = async (args) => {
-  const { query } = parseSerperSearchArgs(args);
+const search: ToolHandler = async (args) => {
+  const { query } = parseSearchArgs(args);
   const apiKey = process.env.SERP_API_KEY;
 
   if (!apiKey) {
-    console.error("[Tools:serper_search] Missing SERP_API_KEY");
+    console.error("[Tools:search] Missing SERP_API_KEY");
     return "Error: SERP_API_KEY is not set";
   }
 
-  return enqueueSerperSearchCall(() => performSerperSearch(query, apiKey));
+  return enqueueSearchCall(() => performSearch(query, apiKey));
 };
 
-const serperSearchSpec: ChatTool = {
+const searchSpec: ChatTool = {
   type: "function",
   function: {
-    name: "serper_search",
+    name: "search",
     description:
       "Search the web using Serper.dev Google Search API for fast, relevant results.",
     parameters: {
@@ -217,7 +213,7 @@ const serperSearchSpec: ChatTool = {
   },
 };
 
-export const serperSearchTool: ToolDefinition = {
-  spec: serperSearchSpec,
-  handler: serperSearch,
+export const searchTool: ToolDefinition = {
+  spec: searchSpec,
+  handler: search,
 };

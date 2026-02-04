@@ -1,17 +1,17 @@
 import { callToolByName } from "@/src/providers/tools";
 import type { ToolProgressUpdate } from "@/src/providers/tools/types";
 import type { ConversationLogger } from "@/src/providers/logger";
-import type { PendingToolCall, ToolCallResult, StreamEvent } from "../types";
+import type { PendingToolInvocation, ToolInvocationResult, ChatStreamEvent } from "../types";
 
 export type ExecuteToolsOptions = {
   logger: ConversationLogger | null;
-  onEvent: (event: StreamEvent) => void;
+  onEvent: (event: ChatStreamEvent) => void;
 };
 
 export async function executeTools(
-  toolCalls: PendingToolCall[],
+  toolCalls: PendingToolInvocation[],
   options: ExecuteToolsOptions
-): Promise<ToolCallResult[]> {
+): Promise<ToolInvocationResult[]> {
   const { onEvent } = options;
 
   return Promise.all(
@@ -32,7 +32,12 @@ export async function executeTools(
 
       const normalizedResult = typeof result === "string" ? result : JSON.stringify(result);
 
-      onEvent({ type: "tool_result", tool: tc.name, result, callId: tc.id });
+      onEvent({
+        type: "tool_result",
+        tool: tc.name,
+        result: normalizedResult,
+        callId: tc.id,
+      });
 
       return { id: tc.id, name: tc.name, result: normalizedResult };
     })

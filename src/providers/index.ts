@@ -1,10 +1,16 @@
-import type { ChatOptions, ChatResult, ChatState, StreamEvent, ToolCallResult } from "./types";
+import type {
+  ChatRunOptions,
+  ChatRunResult,
+  ChatProviderState,
+  ChatStreamEvent,
+  ToolInvocationResult,
+} from "./types";
 import { runAnthropicChat, continueAnthropicChat } from "./anthropic";
 import { runOpenAIChat, continueOpenAIChat } from "./openai";
 import { runGeminiChat, continueGeminiChat } from "./gemini";
 import { runOpenRouterChat, continueOpenRouterChat } from "./openrouter";
 
-export async function* runChat(options: ChatOptions): AsyncGenerator<StreamEvent, ChatResult> {
+export async function* runChat(options: ChatRunOptions): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   switch (options.backend) {
     case "anthropic":
       return yield* runAnthropicChat(options);
@@ -20,10 +26,10 @@ export async function* runChat(options: ChatOptions): AsyncGenerator<StreamEvent
 }
 
 export async function* continueChat(
-  options: ChatOptions,
-  state: ChatState,
-  toolResults: ToolCallResult[]
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state: ChatProviderState,
+  toolResults: ToolInvocationResult[]
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   if (state.backend !== options.backend) {
     throw new Error(`Backend mismatch: state=${state.backend} options=${options.backend}`);
   }

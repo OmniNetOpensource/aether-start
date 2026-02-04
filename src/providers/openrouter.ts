@@ -2,13 +2,13 @@ import { buildSystemPrompt, toChatMessages } from "@/src/server/chat/utils";
 import type { ChatMessage, ReasoningDetail, StreamToolCall } from "@/src/server/chat/utils";
 import { getOpenRouterConfig } from "./config";
 import type {
-  ChatOptions,
-  ChatResult,
-  ChatState,
-  PendingToolCall,
-  ProviderPreferences,
-  StreamEvent,
-  ToolCallResult,
+  ChatRunOptions,
+  ChatRunResult,
+  ChatProviderState,
+  PendingToolInvocation,
+  OpenRouterProviderPreferences,
+  ChatStreamEvent,
+  ToolInvocationResult,
 } from "./types";
 
 type StreamChunk = {
@@ -34,7 +34,7 @@ export async function streamChatCompletion(params: {
   model: string;
   messages: ChatMessage[];
   tools?: unknown[];
-  provider?: ProviderPreferences;
+  provider?: OpenRouterProviderPreferences;
   modalities?: ("text" | "image")[];
 }): Promise<ReadableStream<Uint8Array>> {
   const { apiKey, baseUrl, headers } = getOpenRouterConfig();
@@ -132,7 +132,7 @@ export async function* parseSSEStream(
   }
 }
 
-const createInitialState = (options: ChatOptions): OpenRouterState => {
+const createInitialState = (options: ChatRunOptions): OpenRouterState => {
   const systemPrompt = buildSystemPrompt();
   const rolePrompt = options.systemPrompt?.trim();
   const rolePromptMessages: ChatMessage[] = rolePrompt
@@ -148,12 +148,12 @@ const createInitialState = (options: ChatOptions): OpenRouterState => {
   };
 };
 
-const toChatState = (state: OpenRouterState): ChatState => ({
+const toChatState = (state: OpenRouterState): ChatProviderState => ({
   backend: "openrouter",
   data: state,
 });
 
-const appendToolResults = (state: OpenRouterState, results: ToolCallResult[]): OpenRouterState => {
+const appendToolResults = (state: OpenRouterState, results: ToolInvocationResult[]): OpenRouterState => {
   const messages = [...state.messages];
   for (const result of results) {
     messages.push({
@@ -166,9 +166,9 @@ const appendToolResults = (state: OpenRouterState, results: ToolCallResult[]): O
 };
 
 export async function* runOpenRouterChat(
-  options: ChatOptions,
-  state?: ChatState
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state?: ChatProviderState
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   const workingState = state && state.backend === "openrouter"
     ? (state.data as OpenRouterState)
     : createInitialState(options);
@@ -300,7 +300,7 @@ export async function* runOpenRouterChat(
     reasoningDetails: currentReasoningDetails.length > 0 ? currentReasoningDetails : undefined,
   });
 
-  const pendingToolCalls: PendingToolCall[] = toolCalls.map((tc) => {
+  const pendingToolCalls: PendingToolInvocation[] = toolCalls.map((tc) => {
     let args: Record<string, unknown> = {};
     try {
       const parsed = JSON.parse(tc.function.arguments || "{}");
@@ -321,10 +321,10 @@ export async function* runOpenRouterChat(
 }
 
 export async function* continueOpenRouterChat(
-  options: ChatOptions,
-  state: ChatState,
-  toolResults: ToolCallResult[]
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state: ChatProviderState,
+  toolResults: ToolInvocationResult[]
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   if (state.backend !== "openrouter") {
     throw new Error("Invalid openrouter state");
   }

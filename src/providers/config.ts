@@ -1,11 +1,11 @@
-import type { Backend } from "./types";
+import type { ChatProviderId } from "./types";
 
 export type RoleConfig = {
   id: string;
   name: string;
   model: string;
   systemPrompt: string;
-  backend: Backend;
+  backend: ChatProviderId;
 };
 
 const ROLE_CONFIGS: Record<string, RoleConfig> = {

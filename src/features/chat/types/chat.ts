@@ -95,8 +95,7 @@ export type SelectedSearchTool =
   | "none"
   | "brave_search"
   | "serp_search"
-  | "serper_search"
-  | "tavily_search";
+  | "search";
 
 export type ChatRequest = {
   conversationHistory: SerializedMessage[];

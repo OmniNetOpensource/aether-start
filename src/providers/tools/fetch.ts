@@ -4,6 +4,7 @@ import {
   ToolHandler,
   ToolProgressCallback,
 } from "./types";
+import { getGeminiConfig } from "@/src/providers/config";
 
 type FetchUrlArgs = {
   url: string;
@@ -28,7 +29,9 @@ const parseFetchUrlArgs = (args: unknown): FetchUrlArgs => {
 
   const response_type = (args as { response_type?: unknown }).response_type;
   if (response_type !== "markdown" && response_type !== "image") {
-    throw new Error("fetch_url requires response_type to be 'markdown' or 'image'");
+    throw new Error(
+      "fetch_url requires response_type to be 'markdown' or 'image'",
+    );
   }
 
   return { url, response_type };
@@ -52,7 +55,7 @@ const enqueueFetchUrlCall = async <T>(task: () => Promise<T>): Promise<T> => {
       const waitTime = FETCH_URL_INTERVAL_MS - elapsed;
       console.error(
         "[Tools:fetch_url] Throttling request, waiting",
-        `${waitTime}ms`
+        `${waitTime}ms`,
       );
       await sleep(waitTime);
     }
@@ -61,105 +64,130 @@ const enqueueFetchUrlCall = async <T>(task: () => Promise<T>): Promise<T> => {
     return task();
   };
 
-  const queuedTask = fetchUrlQueue
-    .catch(() => {})
-    .then(runTask);
+  const queuedTask = fetchUrlQueue.catch(() => {}).then(runTask);
 
   fetchUrlQueue = queuedTask.then(() => {}).catch(() => {});
   return queuedTask;
 };
 
-const PROGRESS_CHUNK_BYTES = 50 * 1024;
-const PROGRESS_INTERVAL_MS = 500;
-
 const formatKilobytes = (bytes: number) => (bytes / 1024).toFixed(1);
+
+const MAJOR_EXTRACT_MODEL = "gemini-3-flash-preview-thinking";
+const MAJOR_EXTRACT_TIMEOUT_MS = 30_000;
+const MAJOR_EXTRACT_SYSTEM_PROMPT = `你是一个内容抽取器。请从输入的 Markdown 中提取“主要内容（major part）”，删除导航、目录、页脚、广告、推荐、版权声明、模板化说明、社交分享、脚注等非正文内容。
+
+要求：
+1) 只输出提取后的 Markdown 正文，不要添加任何解释、前后缀或额外标题。
+2) 保留正文结构（标题、段落、列表、代码块、引用等），但不要保留与正文无关的模块。
+3) 不要总结或改写，只做抽取。`;
+
+type GeminiGenerateResponse = {
+  candidates?: Array<{
+    content?: {
+      parts?: Array<{
+        text?: string;
+      }>;
+    };
+  }>;
+};
 
 const emitProgress = async (
   onProgress: ToolProgressCallback | undefined,
-  update: Parameters<ToolProgressCallback>[0]
+  update: Parameters<ToolProgressCallback>[0],
 ) => {
   if (onProgress) {
     await onProgress(update);
   }
 };
 
-const readStreamWithProgress = async (
-  response: Response,
-  onProgress?: ToolProgressCallback
+const generateGeminiText = async (
+  model: string,
+  markdown: string,
 ): Promise<string> => {
-  if (!response.body) {
-    const text = await response.text();
-    await emitProgress(onProgress, {
-      stage: "complete",
-      message: `接收完成，总计 ${formatKilobytes(text.length)} KB`,
-      receivedBytes: text.length,
-    });
-    return text;
+  const { apiKey, baseUrl } = getGeminiConfig();
+
+  const response = await fetch(
+    `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-goog-api-key": apiKey,
+      },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: markdown }],
+          },
+        ],
+        system_instruction: {
+          parts: [{ text: MAJOR_EXTRACT_SYSTEM_PROMPT }],
+        },
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
   }
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
+  const data = (await response.json()) as GeminiGenerateResponse;
+  const parts = data?.candidates?.[0]?.content?.parts;
+  if (!parts || parts.length === 0) {
+    return "";
+  }
 
-  let result = "";
-  let receivedBytes = 0;
-  const totalBytesHeader = response.headers.get("content-length");
-  const totalBytes =
-    totalBytesHeader && !Number.isNaN(Number(totalBytesHeader))
-      ? Number(totalBytesHeader)
-      : undefined;
-  let lastReportedBytes = 0;
-  let lastReportedTime = Date.now();
+  return parts.map((part) => part.text || "").join("");
+};
 
-  await emitProgress(onProgress, {
-    stage: "receiving",
-    message: "已连接，开始接收数据...",
-    receivedBytes,
-    totalBytes,
-  });
+const extractMajorMarkdown = async (
+  markdown: string,
+): Promise<string | null> => {
+  if (markdown.trim().length === 0) {
+    return markdown;
+  }
 
-  while (true) {
-    const { value, done } = await reader.read();
-    if (done) break;
-    if (!value) continue;
+  try {
+    const extracted = await Promise.race([
+      generateGeminiText(MAJOR_EXTRACT_MODEL, markdown),
+      new Promise<string>((_, reject) =>
+        setTimeout(
+          () => reject(new Error("Gemini extraction timed out")),
+          MAJOR_EXTRACT_TIMEOUT_MS,
+        ),
+      ),
+    ]);
 
-    receivedBytes += value.byteLength;
-    result += decoder.decode(value, { stream: true });
-
-    const now = Date.now();
-    if (
-      receivedBytes - lastReportedBytes >= PROGRESS_CHUNK_BYTES ||
-      now - lastReportedTime >= PROGRESS_INTERVAL_MS
-    ) {
-      lastReportedBytes = receivedBytes;
-      lastReportedTime = now;
-
-      await emitProgress(onProgress, {
-        stage: "receiving",
-        message: `正在接收数据 (${formatKilobytes(receivedBytes)} KB${
-          totalBytes !== undefined ? ` / ${formatKilobytes(totalBytes)} KB` : ""
-        })`,
-        receivedBytes,
-        totalBytes,
-      });
+    if (typeof extracted !== "string" || extracted.trim().length === 0) {
+      return null;
     }
+
+    return extracted;
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : typeof error === "string"
+          ? error
+          : "Unknown error";
+    console.error("[Tools:fetch_url] Gemini extract failed:", message);
+    return null;
   }
-
-  result += decoder.decode();
-
-  await emitProgress(onProgress, {
-    stage: "complete",
-    message: `接收完成，总计 ${formatKilobytes(receivedBytes)} KB${
-      totalBytes !== undefined ? ` / ${formatKilobytes(totalBytes)} KB` : ""
-    }`,
-    receivedBytes,
-    totalBytes,
-  });
-
-  return result;
 };
 
 // Image URL detection
-const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg", ".ico"];
+const IMAGE_EXTENSIONS = [
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".gif",
+  ".webp",
+  ".bmp",
+  ".svg",
+  ".ico",
+];
 
 const isDirectImageUrl = (url: string): boolean => {
   try {
@@ -167,7 +195,7 @@ const isDirectImageUrl = (url: string): boolean => {
     const pathname = parsedUrl.pathname.toLowerCase();
 
     // Check file extension
-    if (IMAGE_EXTENSIONS.some(ext => pathname.endsWith(ext))) {
+    if (IMAGE_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
       return true;
     }
 
@@ -183,7 +211,7 @@ const isDirectImageUrl = (url: string): boolean => {
     const host = parsedUrl.host.toLowerCase();
     const fullPath = host + pathname;
 
-    return imageHostPatterns.some(pattern => pattern.test(fullPath));
+    return imageHostPatterns.some((pattern) => pattern.test(fullPath));
   } catch {
     return false;
   }
@@ -203,7 +231,7 @@ const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB limit
 // Fetch direct image URL
 const fetchDirectImage = async (
   url: string,
-  onProgress?: ToolProgressCallback
+  onProgress?: ToolProgressCallback,
 ): Promise<string> => {
   console.error("[Tools:fetch_url] Fetching direct image:", url);
   const controller = new AbortController();
@@ -275,7 +303,11 @@ const fetchDirectImage = async (
       receivedBytes: arrayBuffer.byteLength,
     });
 
-    console.error("[Tools:fetch_url] Direct image success, size:", arrayBuffer.byteLength, "bytes");
+    console.error(
+      "[Tools:fetch_url] Direct image success, size:",
+      arrayBuffer.byteLength,
+      "bytes",
+    );
 
     const result: ImageResult = {
       type: "image",
@@ -312,7 +344,7 @@ const fetchDirectImage = async (
 const fetchScreenshot = async (
   url: string,
   apiKey: string,
-  onProgress?: ToolProgressCallback
+  onProgress?: ToolProgressCallback,
 ): Promise<string> => {
   console.error("[Tools:fetch_url] Fetching screenshot for:", url);
   const controller = new AbortController();
@@ -336,7 +368,11 @@ const fetchScreenshot = async (
     });
 
     if (!response.ok) {
-      console.error("[Tools:fetch_url] Screenshot HTTP error:", response.status, response.statusText);
+      console.error(
+        "[Tools:fetch_url] Screenshot HTTP error:",
+        response.status,
+        response.statusText,
+      );
       await emitProgress(onProgress, {
         stage: "error",
         message: `截图服务返回 HTTP ${response.status}`,
@@ -378,7 +414,11 @@ const fetchScreenshot = async (
       receivedBytes: arrayBuffer.byteLength,
     });
 
-    console.error("[Tools:fetch_url] Screenshot success, size:", arrayBuffer.byteLength, "bytes");
+    console.error(
+      "[Tools:fetch_url] Screenshot success, size:",
+      arrayBuffer.byteLength,
+      "bytes",
+    );
 
     const result: ImageResult = {
       type: "image",
@@ -414,7 +454,7 @@ const fetchScreenshot = async (
 const performFetchUrl = async (
   url: string,
   apiKey: string,
-  onProgress?: ToolProgressCallback
+  onProgress?: ToolProgressCallback,
 ): Promise<string> => {
   const jinaUrl = `https://r.jina.ai/${url}`;
   console.error("[Tools:fetch_url] Fetching URL:", url, "via Jina:", jinaUrl);
@@ -422,15 +462,10 @@ const performFetchUrl = async (
   const timeoutId = setTimeout(() => controller.abort(), 80_000);
 
   try {
-    await emitProgress(onProgress, {
-      stage: "start",
-      message: "开始连接 Jina AI Reader...",
-    });
-
     const jinaResponse = await fetch(jinaUrl, {
       headers: {
         Authorization: `Bearer ${apiKey}`,
-        "X-Token-Budget": "30000",
+        "X-Token-Budget": "200000",
       },
       signal: controller.signal,
     });
@@ -439,7 +474,7 @@ const performFetchUrl = async (
       console.error(
         "[Tools:fetch_url] Jina AI Reader HTTP error:",
         jinaResponse.status,
-        jinaResponse.statusText
+        jinaResponse.statusText,
       );
       await emitProgress(onProgress, {
         stage: "error",
@@ -448,12 +483,36 @@ const performFetchUrl = async (
       return `Error: HTTP ${jinaResponse.status} ${jinaResponse.statusText}`;
     }
 
-    const jinaText = await readStreamWithProgress(jinaResponse, onProgress);
+    const totalBytesHeader = jinaResponse.headers.get("content-length");
+    const totalBytes =
+      totalBytesHeader && !Number.isNaN(Number(totalBytesHeader))
+        ? Number(totalBytesHeader)
+        : undefined;
+    const jinaText = await jinaResponse.text();
+    const receivedBytes = Buffer.byteLength(jinaText);
+    await emitProgress(onProgress, {
+      stage: "complete",
+      message: `接收完成，总计 ${formatKilobytes(receivedBytes)} KB${
+        totalBytes !== undefined ? ` / ${formatKilobytes(totalBytes)} KB` : ""
+      }`,
+      receivedBytes,
+      totalBytes,
+    });
     console.error(
       "[Tools:fetch_url] Jina AI Reader success, text length:",
       jinaText.length,
-      "bytes"
+      "bytes",
     );
+
+    const extracted = await extractMajorMarkdown(jinaText);
+    if (extracted) {
+      console.error(
+        "[Tools:fetch_url] Gemini extract success, text length:",
+        extracted.length,
+        "bytes",
+      );
+      return extracted;
+    }
 
     return jinaText;
   } catch (error) {
@@ -491,7 +550,9 @@ const fetchUrl: ToolHandler = async (args, onProgress) => {
     if (isDirectImageUrl(url)) {
       return enqueueFetchUrlCall(() => fetchDirectImage(url, onProgress));
     } else {
-      return enqueueFetchUrlCall(() => fetchScreenshot(url, apiKey, onProgress));
+      return enqueueFetchUrlCall(() =>
+        fetchScreenshot(url, apiKey, onProgress),
+      );
     }
   }
 
@@ -516,7 +577,8 @@ const fetchUrlSpec: ChatTool = {
         response_type: {
           type: "string",
           enum: ["markdown", "image"],
-          description: "Response format: 'markdown' for text content (converts HTML to readable text), 'image' for visual content (fetches images directly or captures webpage screenshots)",
+          description:
+            "Response format: 'markdown' for text content (converts HTML to readable text), 'image' for visual content (fetches images directly or captures webpage screenshots)",
         },
       },
       required: ["url", "response_type"],

@@ -17,7 +17,13 @@ import {
   ResearchTracker,
   executeTools,
 } from "@/src/providers";
-import type { StreamEvent, ChatOptions, ChatResult, ChatState, ToolCallResult } from "@/src/providers";
+import type {
+  ChatStreamEvent,
+  ChatRunOptions,
+  ChatRunResult,
+  ChatProviderState,
+  ToolInvocationResult,
+} from "@/src/providers";
 
 const generateConversationId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -115,7 +121,7 @@ export const Route = createFileRoute("/api/chat")({
           const systemInstruction = roleConfig.systemPrompt;
           const backend = roleConfig.backend;
 
-          const allowedToolNames = new Set<string>(["fetch_url", "serper_search"]);
+          const allowedToolNames = new Set<string>(["fetch_url", "search"]);
 
           const tools = toolSpecs.filter(
             (tool) =>
@@ -148,7 +154,7 @@ export const Route = createFileRoute("/api/chat")({
             };
           }
 
-          const chatOptions: ChatOptions = {
+          const chatOptions: ChatRunOptions = {
             backend,
             model: requestedModel,
             tools,
@@ -163,7 +169,7 @@ export const Route = createFileRoute("/api/chat")({
             async start(controller) {
               const eventSender = createEventSender(controller, logger);
               const researchTracker = new ResearchTracker();
-              const handleEvent = (event: StreamEvent) => {
+              const handleEvent = (event: ChatStreamEvent) => {
                 eventSender.send(event);
                 researchTracker.handle(event);
               };
@@ -174,8 +180,8 @@ export const Route = createFileRoute("/api/chat")({
 
               const maxIterations = 200;
               let iteration = 0;
-              let state: ChatState | undefined;
-              let pendingToolResults: ToolCallResult[] | null = null;
+              let state: ChatProviderState | undefined;
+              let pendingToolResults: ToolInvocationResult[] | null = null;
 
               try {
                 while (iteration < maxIterations) {
@@ -184,7 +190,7 @@ export const Route = createFileRoute("/api/chat")({
                   const generator = pendingToolResults && state
                     ? continueChat(chatOptions, state, pendingToolResults)
                     : runChat(chatOptions);
-                  let result: ChatResult | undefined;
+                  let result: ChatRunResult | undefined;
 
                   while (true) {
                     const { done, value } = await generator.next();

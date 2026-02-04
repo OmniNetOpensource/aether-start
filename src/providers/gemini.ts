@@ -1,6 +1,12 @@
 import { buildSystemPrompt } from "@/src/server/chat/utils";
 import { getGeminiConfig } from "./config";
-import type { ChatOptions, ChatResult, ChatState, StreamEvent, ToolCallResult } from "./types";
+import type {
+  ChatRunOptions,
+  ChatRunResult,
+  ChatProviderState,
+  ChatStreamEvent,
+  ToolInvocationResult,
+} from "./types";
 import type { SerializedMessage } from "@/src/features/chat/types/chat";
 
 export type GeminiContentPart =
@@ -177,7 +183,7 @@ export async function* streamGeminiContent(params: {
   }
 }
 
-const createInitialState = (options: ChatOptions): GeminiState => {
+const createInitialState = (options: ChatRunOptions): GeminiState => {
   const basePrompt = buildSystemPrompt();
   const rolePrompt = options.systemPrompt?.trim();
   const systemInstruction = rolePrompt ? `${basePrompt}\n\n${rolePrompt}` : basePrompt;
@@ -188,15 +194,15 @@ const createInitialState = (options: ChatOptions): GeminiState => {
   };
 };
 
-const toChatState = (state: GeminiState): ChatState => ({
+const toChatState = (state: GeminiState): ChatProviderState => ({
   backend: "gemini",
   data: state,
 });
 
 export async function* runGeminiChat(
-  options: ChatOptions,
-  state?: ChatState
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state?: ChatProviderState
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   const workingState = state && state.backend === "gemini"
     ? (state.data as GeminiState)
     : createInitialState(options);
@@ -223,10 +229,10 @@ export async function* runGeminiChat(
 }
 
 export async function* continueGeminiChat(
-  options: ChatOptions,
-  state: ChatState,
-  toolResults: ToolCallResult[]
-): AsyncGenerator<StreamEvent, ChatResult> {
+  options: ChatRunOptions,
+  state: ChatProviderState,
+  toolResults: ToolInvocationResult[]
+): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
   if (state.backend !== "gemini") {
     throw new Error("Invalid gemini state");
   }
