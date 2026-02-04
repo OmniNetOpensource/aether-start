@@ -51,7 +51,7 @@ export function MessageList() {
         <div
           role="log"
           aria-live="polite"
-          className="flex-1 min-h-0 flex flex-col mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-4 pb-40 md:pb-44 lg:pb-48"
+          className="flex-1 min-h-0 flex flex-col mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-1 pb-40 md:pb-44 lg:pb-48"
         >
           {messages.map((message, index) => {
             const isLastMessage = index === messages.length - 1;

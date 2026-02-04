@@ -36,6 +36,77 @@ const SEARCH_ERROR_PREFIXES = [
   "Tavily Search error:",
 ];
 
+const truncateText = (text: string, maxLength: number) => {
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
+};
+
+const parseSearchError = (rawText: string) => {
+  const text = rawText.trim();
+  const lower = text.toLowerCase();
+
+  if (!text) {
+    return { summary: "未知错误", suggestion: "请稍后重试", detail: "" };
+  }
+
+  if (text.startsWith("Error: TAVILY_API_KEY")) {
+    return {
+      summary: "缺少 TAVILY_API_KEY",
+      suggestion: "请配置密钥或联系管理员",
+      detail: text,
+    };
+  }
+
+  if (text.startsWith("Tavily API error:")) {
+    const summary = text.replace("Tavily API error:", "API 错误:").trim();
+    return {
+      summary,
+      suggestion: "请检查 API Key 或稍后重试",
+      detail: text,
+    };
+  }
+
+  if (text.startsWith("Tavily Search error:")) {
+    const summary = text.replace("Tavily Search error:", "搜索失败:").trim();
+    return {
+      summary,
+      suggestion: lower.includes("timed out")
+        ? "请求超时，请稍后重试"
+        : "请稍后重试",
+      detail: text,
+    };
+  }
+
+  if (text.startsWith("Error executing")) {
+    const summary = text.replace("Error executing", "工具执行失败").trim();
+    return {
+      summary,
+      suggestion: "请稍后重试",
+      detail: text,
+    };
+  }
+
+  if (text.startsWith("Error:")) {
+    const summary = text.replace(/^Error:\s*/, "").trim();
+    return {
+      summary: summary || "未知错误",
+      suggestion: "请稍后重试",
+      detail: text,
+    };
+  }
+
+  return { summary: text, suggestion: "请稍后重试", detail: text };
+};
+
+const formatSearchErrorDetails = (rawText: string) => {
+  const { summary, suggestion, detail } = parseSearchError(rawText);
+  const detailBlock =
+    detail && detail !== summary
+      ? `\n\n**原始信息**\n\n\`\`\`\n${detail}\n\`\`\``
+      : "";
+  return `**错误原因**：${summary}\n\n**建议**：${suggestion}${detailBlock}`;
+};
+
 const parseSearchResults = (rawResult: string): SearchResult[] | null => {
   try {
     const data = JSON.parse(rawResult);
@@ -166,6 +237,10 @@ export function SearchCard({ item, isActive = false }: SearchCardProps) {
   const isError = SEARCH_ERROR_PREFIXES.some((prefix) =>
     resultText.startsWith(prefix)
   );
+  const errorInfo = isError ? parseSearchError(resultText) : null;
+  const errorDescription = errorInfo?.summary
+    ? `Failed · ${truncateText(errorInfo.summary, 20)}`
+    : "Failed";
   const resultCount = result ? getSearchResultCount(resultText) : null;
   const searchResults = result ? parseSearchResults(resultText) : null;
 
@@ -177,7 +252,7 @@ export function SearchCard({ item, isActive = false }: SearchCardProps) {
   ) : isError ? (
     <>
       <X className="h-3 w-3 text-(--status-destructive)" />
-      <span>Error</span>
+      <span>{errorDescription}</span>
     </>
   ) : resultCount === 0 ? (
     <>
@@ -246,7 +321,7 @@ export function SearchCard({ item, isActive = false }: SearchCardProps) {
             </div>
           ) : isError ? (
             <div className="text-xs text-destructive">
-              <Markdown content={resultText} />
+              <Markdown content={formatSearchErrorDetails(resultText)} />
             </div>
           ) : (
             <div className="overflow-x-auto text-xs text-(--text-secondary)">

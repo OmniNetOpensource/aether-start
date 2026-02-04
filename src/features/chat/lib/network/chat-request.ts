@@ -138,8 +138,12 @@ export const startChatRequest = async (
   try {
     serializedMessages = await serializeMessagesForRequest(messages);
   } catch (error) {
+    const detail =
+      error instanceof Error ? error.message : String(error || "未知原因");
     console.error("Failed to serialize attachments", error);
-    toast.error("附件处理失败，请稍后重试。");
+    toast.error(
+      `附件处理失败：${detail}。建议: 重新选择附件或减少数量后重试。`
+    );
     return;
   }
 
@@ -349,21 +353,44 @@ export const startChatRequest = async (
           typeof data.message === "string"
             ? data.message
             : String(data.message ?? "");
+        const safeMessage = rawMessage || "未知错误";
 
         // 增强服务端返回的错误信息
-        let enhancedMessage = rawMessage;
-        const lowerMessage = rawMessage.toLowerCase();
+        let enhancedMessage = safeMessage;
+        const lowerMessage = safeMessage.toLowerCase();
 
         if (lowerMessage.includes("load error") || lowerMessage.includes("load_error")) {
-          enhancedMessage = `模型加载失败: ${rawMessage}\n可能原因: 网络不稳定、模型服务暂时不可用\n建议: 请稍后重试或切换其他模型`;
+          enhancedMessage =
+            `模型加载失败: ${safeMessage}\n` +
+            `可能原因: 网络不稳定、模型服务暂时不可用\n` +
+            `建议: 请稍后重试或切换其他模型\n` +
+            `提示: 若持续出现，可尝试刷新页面`;
         } else if (lowerMessage.includes("timeout") || lowerMessage.includes("timed out")) {
-          enhancedMessage = `请求超时: ${rawMessage}\n可能原因: 网络延迟过高、服务器响应缓慢\n建议: 请稍后重试`;
+          enhancedMessage =
+            `请求超时: ${safeMessage}\n` +
+            `可能原因: 网络延迟过高、服务器响应缓慢\n` +
+            `建议: 请稍后重试\n` +
+            `提示: 可尝试切换网络或降低请求频率`;
         } else if (lowerMessage.includes("rate limit") || lowerMessage.includes("too many")) {
-          enhancedMessage = `请求频率限制: ${rawMessage}\n建议: 请稍等片刻后重试`;
+          enhancedMessage =
+            `请求频率限制: ${safeMessage}\n` +
+            `可能原因: 短时间内请求过多\n` +
+            `建议: 请稍等片刻后重试`;
         } else if (lowerMessage.includes("unavailable") || lowerMessage.includes("503")) {
-          enhancedMessage = `服务暂时不可用: ${rawMessage}\n可能原因: 服务器维护或过载\n建议: 请稍后重试`;
+          enhancedMessage =
+            `服务暂时不可用: ${safeMessage}\n` +
+            `可能原因: 服务器维护或过载\n` +
+            `建议: 请稍后重试`;
         } else if (lowerMessage.includes("connection") || lowerMessage.includes("network")) {
-          enhancedMessage = `网络连接问题: ${rawMessage}\n可能原因: 网络不稳定\n建议: 请检查网络连接后重试`;
+          enhancedMessage =
+            `网络连接问题: ${safeMessage}\n` +
+            `可能原因: 网络不稳定、连接被中断\n` +
+            `建议: 请检查网络连接后重试`;
+        } else {
+          enhancedMessage =
+            `请求失败: ${safeMessage}\n` +
+            `可能原因: 服务异常或网络问题\n` +
+            `建议: 请稍后重试或刷新页面`;
         }
 
         get().appendToAssistant({
@@ -393,9 +420,13 @@ export const startChatRequest = async (
       }
       const message =
         error instanceof Error ? error.message : "无法连接到聊天服务";
+      const detailedMessage =
+        message.includes("可能原因:") || message.includes("建议:")
+          ? message
+          : `网络或服务异常: ${message}\n可能原因: 网络不稳定、服务不可用或浏览器阻止请求\n建议: 检查网络并稍后重试`;
       get().appendToAssistant({
         type: "error",
-        message,
+        message: detailedMessage,
       });
     },
     onFinish: () => {

@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { Loader2 } from "lucide-react";
 import { useMessageTreeStore } from "@/src/features/chat/store";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
 import { ConversationItem } from "./ConversationItem";
 
-export function ConversationList() {
+type ConversationListProps = {
+  scrollRootRef?: RefObject<HTMLDivElement | null>;
+};
+
+export function ConversationList({ scrollRootRef }: ConversationListProps) {
   const pinnedConversations = useConversationsStore(
     (state) => state.pinnedConversations
   );
@@ -19,14 +23,50 @@ export function ConversationList() {
   const loadLocalConversations = useConversationsStore(
     (state) => state.loadLocalConversations
   );
+  const loadMoreLocalConversations = useConversationsStore(
+    (state) => state.loadMoreLocalConversations
+  );
   const hasLoadedLocal = useConversationsStore((state) => state.hasLoadedLocal);
+  const loadingMore = useConversationsStore((state) => state.loadingMore);
+  const hasMoreLocal = useConversationsStore((state) => state.hasMoreLocal);
   const activeConversationId = useMessageTreeStore(
     (state) => state.conversationId
   );
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     void loadLocalConversations();
   }, [loadLocalConversations]);
+
+  useEffect(() => {
+    if (!hasMoreLocal) {
+      return;
+    }
+
+    const target = sentinelRef.current;
+    if (!target) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((entry) => entry.isIntersecting)) {
+          return;
+        }
+        if (loadingMore || !hasMoreLocal) {
+          return;
+        }
+        void loadMoreLocalConversations();
+      },
+      {
+        root: scrollRootRef?.current ?? null,
+        rootMargin: "120px",
+      }
+    );
+
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [scrollRootRef, hasMoreLocal, loadingMore, loadMoreLocalConversations]);
 
   if (conversationsLoading && !hasLoadedLocal) {
     return (
@@ -88,6 +128,21 @@ export function ConversationList() {
             ))}
           </div>
         </>
+      ) : null}
+      {hasMoreLocal || loadingMore ? (
+        <div
+          ref={sentinelRef}
+          className="flex items-center justify-center py-3 text-(--text-tertiary)"
+        >
+          {loadingMore ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span className="ml-2 text-xs">加载更多...</span>
+            </>
+          ) : (
+            <span className="text-xs">滚动加载更多...</span>
+          )}
+        </div>
       ) : null}
     </div>
   );

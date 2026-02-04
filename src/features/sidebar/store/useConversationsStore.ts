@@ -7,18 +7,24 @@ type ConversationsState = {
   normalConversations: Conversation[];
   conversationsLoading: boolean;
   hasLoadedLocal: boolean;
+  loadingMore: boolean;
+  hasMoreLocal: boolean;
+  normalCursor: { updated_at: string; id: string } | null;
 };
 
 type ConversationsActions = {
   addConversation: (conversation: Conversation) => void;
   setConversations: (conversations: Conversation[]) => void;
   loadLocalConversations: () => Promise<void>;
+  loadMoreLocalConversations: () => Promise<void>;
   clearLocal: () => Promise<void>;
   pinConversation: (id: string) => Promise<void>;
   unpinConversation: (id: string) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
 };
+
+const PAGE_SIZE = 10;
 
 const sortByPinnedAt = (conversations: Conversation[]): Conversation[] => {
   const sorted = [...conversations];
@@ -101,6 +107,9 @@ export const useConversationsStore = create<
   normalConversations: [],
   conversationsLoading: false,
   hasLoadedLocal: false,
+  loadingMore: false,
+  hasMoreLocal: false,
+  normalCursor: null,
 
   addConversation: (conversation) =>
     set((state) => {
@@ -131,10 +140,66 @@ export const useConversationsStore = create<
     set((state) => ({ ...state, conversationsLoading: true }));
 
     try {
-      const localConversations = await localDB.getAll();
-      const mapped: Conversation[] = localConversations.map(
-        mapLocalToConversation
-      );
+      const [pinnedConversations, page] = await Promise.all([
+        localDB.getPinned(),
+        localDB.getUpdatedAtPage({
+          limit: PAGE_SIZE,
+          cursor: null,
+          excludePinned: true,
+        }),
+      ]);
+      const mappedPinned = pinnedConversations.map(mapLocalToConversation);
+      const mappedNormal = page.items.map(mapLocalToConversation);
+
+      set((state) => ({
+        ...state,
+        ...mergeConversations(
+          state.pinnedConversations,
+          state.normalConversations,
+          [...mappedPinned, ...mappedNormal]
+        ),
+        hasLoadedLocal: true,
+        conversationsLoading: false,
+        hasMoreLocal: page.nextCursor !== null,
+        normalCursor: page.nextCursor,
+      }));
+    } catch (error) {
+      console.error("Failed to load local conversations:", error);
+      set((state) => ({
+        ...state,
+        hasLoadedLocal: true,
+        conversationsLoading: false,
+        hasMoreLocal: false,
+        normalCursor: null,
+      }));
+    }
+  },
+  loadMoreLocalConversations: async () => {
+    const {
+      hasLoadedLocal,
+      conversationsLoading,
+      loadingMore,
+      hasMoreLocal,
+      normalCursor,
+    } = get();
+    if (
+      !hasLoadedLocal ||
+      conversationsLoading ||
+      loadingMore ||
+      !hasMoreLocal
+    ) {
+      return;
+    }
+
+    set((state) => ({ ...state, loadingMore: true }));
+
+    try {
+      const page = await localDB.getUpdatedAtPage({
+        limit: PAGE_SIZE,
+        cursor: normalCursor,
+        excludePinned: true,
+      });
+      const mapped = page.items.map(mapLocalToConversation);
 
       set((state) => ({
         ...state,
@@ -143,15 +208,17 @@ export const useConversationsStore = create<
           state.normalConversations,
           mapped
         ),
-        hasLoadedLocal: true,
-        conversationsLoading: false,
+        loadingMore: false,
+        hasMoreLocal: page.nextCursor !== null,
+        normalCursor: page.nextCursor,
       }));
     } catch (error) {
-      console.error("Failed to load local conversations:", error);
+      console.error("Failed to load more local conversations:", error);
       set((state) => ({
         ...state,
-        hasLoadedLocal: true,
-        conversationsLoading: false,
+        loadingMore: false,
+        hasMoreLocal: false,
+        normalCursor: null,
       }));
     }
   },
@@ -168,6 +235,9 @@ export const useConversationsStore = create<
       pinnedConversations: [],
       normalConversations: [],
       hasLoadedLocal: true,
+      loadingMore: false,
+      hasMoreLocal: false,
+      normalCursor: null,
     }));
   },
 

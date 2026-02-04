@@ -32,7 +32,9 @@ export function UnknownToolCard({
       icon={<AlertTriangle className="h-3.5 w-3.5" />}
       title={`Running ${toolName}`}
       description={
-        <span className="text-[10px] text-(--status-warning)">Unknown tool</span>
+        <span className="text-[10px] text-(--status-warning)">
+          Unknown tool · 未启用
+        </span>
       }
       action={
         <ChevronRight
@@ -60,6 +62,12 @@ export function UnknownToolCard({
       >
         <div className="max-h-[280px] overflow-y-auto pr-1 text-xs text-destructive/80">
           Missing UI for tool: <strong>{toolName}</strong>
+          <div className="mt-1 text-[10px] text-(--text-tertiary)">
+            可能原因: 前端未注册该工具组件，或服务端未启用该工具。
+          </div>
+          <div className="mt-1 text-[10px] text-(--text-tertiary)">
+            建议: 检查 tools 配置及 ResearchBlock 映射后重试。
+          </div>
         </div>
       </div>
     </BaseResearchCard>

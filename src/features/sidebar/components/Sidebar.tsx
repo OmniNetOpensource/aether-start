@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ConversationList } from "./history/ConversationList";
 import { ProfileMenu } from "./profile/ProfileMenu";
 import { NewChatButton } from "./NewChatButton";
@@ -12,6 +12,7 @@ export default function Sidebar() {
   const isMobile = deviceType === "mobile";
   const isOpen = useSidebarStore((state) => state.isOpen);
   const setIsOpen = useSidebarStore((state) => state.setIsOpen);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isMobile) return;
@@ -68,9 +69,12 @@ export default function Sidebar() {
               <NewChatButton isCollapsed={false} />
             </div>
 
-            <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto px-4 py-4">
+            <div
+              ref={scrollRef}
+              className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto px-4 py-4"
+            >
               <div className="flex h-full flex-col gap-3">
-                <ConversationList />
+                <ConversationList scrollRootRef={scrollRef} />
               </div>
             </div>
 
@@ -104,9 +108,12 @@ export default function Sidebar() {
           <NewChatButton isCollapsed={false} />
         </div>
 
-        <div className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto px-4 py-4">
+        <div
+          ref={scrollRef}
+          className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto px-4 py-4"
+        >
           <div className="flex h-full flex-col gap-3">
-            <ConversationList />
+            <ConversationList scrollRootRef={scrollRef} />
           </div>
         </div>
 

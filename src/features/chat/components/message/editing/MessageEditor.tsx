@@ -63,8 +63,12 @@ const buildAttachmentsFromFiles = async (
         displayUrl,
       });
     } catch (error) {
+      const detail =
+        error instanceof Error ? error.message : String(error || "未知原因");
       console.error(`无法上传文件「${file.name}」`, error);
-      toast.error(`无法上传文件「${file.name}」，请稍后重试。`);
+      toast.error(
+        `无法上传文件「${file.name}」：${detail}。建议: 检查文件是否可读或稍后重试。`
+      );
     }
   }
 

@@ -47,12 +47,3 @@ export function getSearchResultCount(rawResult: string): number | null {
     return null;
   }
 }
-
-export function tryGetHostname(url: string): string {
-  if (!url) return "URL";
-  try {
-    return new URL(url).hostname;
-  } catch {
-    return url;
-  }
-}

@@ -8,7 +8,7 @@ import {
 import type { LegacyMessageTree } from "@/src/features/chat/lib/tree";
 
 const DB_NAME = "aether_local";
-const DB_VERSION = 4;
+const DB_VERSION = 5;
 const STORE_CONVERSATIONS = "conversations";
 
 export type LocalConversation = {
@@ -26,7 +26,7 @@ interface AetherDB extends DBSchema {
   conversations: {
     key: string;
     value: LocalConversation;
-    indexes: { updated_at: string; pinned_at: string };
+    indexes: { updated_at: string; pinned_at: string; updated_at_id: [string, string] };
   };
   // Legacy store kept in typing so upgrade can safely delete it.
   messages: {
@@ -65,6 +65,12 @@ const openDatabase = async (): Promise<IDBPDatabase<AetherDB>> => {
           const store = transaction?.objectStore(STORE_CONVERSATIONS);
           if (store && !store.indexNames.contains("pinned_at")) {
             store.createIndex("pinned_at", "pinned_at");
+          }
+        }
+        if (oldVersion < 5) {
+          const store = transaction?.objectStore(STORE_CONVERSATIONS);
+          if (store && !store.indexNames.contains("updated_at_id")) {
+            store.createIndex("updated_at_id", ["updated_at", "id"]);
           }
         }
       },
@@ -258,5 +264,110 @@ export const localDB = {
 
     const db = await openDatabase();
     await db.clear(STORE_CONVERSATIONS);
+  },
+  async getPinned(): Promise<LocalConversation[]> {
+    if (!supportsIndexedDB) {
+      return [];
+    }
+
+    const db = await openDatabase();
+    const tx = db.transaction(STORE_CONVERSATIONS, "readwrite");
+    try {
+      const store = tx.objectStore(STORE_CONVERSATIONS);
+      const index = store.index("pinned_at");
+      const results: LocalConversation[] = [];
+      const seen = new Set<string>();
+      let cursor = await index.openCursor(null, "prev");
+      while (cursor) {
+        const normalized = await normalizeConversation(db, cursor.value);
+        if (normalized && normalized.pinned) {
+          results.push(normalized);
+          seen.add(normalized.id);
+        }
+        cursor = await cursor.continue();
+      }
+      let fallback = await store.openCursor();
+      while (fallback) {
+        const normalized = await normalizeConversation(db, fallback.value);
+        if (
+          normalized &&
+          normalized.pinned &&
+          !normalized.pinned_at &&
+          !seen.has(normalized.id)
+        ) {
+          const inferredPinnedAt =
+            normalized.updated_at || normalized.created_at;
+          const updated: LocalConversation = {
+            ...normalized,
+            pinned_at: inferredPinnedAt,
+          };
+          await fallback.update(updated);
+          results.push(updated);
+          seen.add(updated.id);
+        }
+        fallback = await fallback.continue();
+      }
+      return results;
+    } finally {
+      await tx.done;
+    }
+  },
+  async getUpdatedAtPage(params: {
+    limit: number;
+    cursor: { updated_at: string; id: string } | null;
+    excludePinned?: boolean;
+  }): Promise<{
+    items: LocalConversation[];
+    nextCursor: { updated_at: string; id: string } | null;
+  }> {
+    if (!supportsIndexedDB) {
+      return { items: [], nextCursor: null };
+    }
+
+    const { limit, cursor, excludePinned } = params;
+    if (limit <= 0) {
+      return { items: [], nextCursor: null };
+    }
+
+    const db = await openDatabase();
+    const tx = db.transaction(STORE_CONVERSATIONS);
+    try {
+      const index = tx.objectStore(STORE_CONVERSATIONS).index("updated_at_id");
+      const range = cursor
+        ? IDBKeyRange.upperBound([cursor.updated_at, cursor.id], true)
+        : null;
+      const items: LocalConversation[] = [];
+      let nextCursor: { updated_at: string; id: string } | null = null;
+      let cursorRef = await index.openCursor(range, "prev");
+      while (cursorRef) {
+        const normalized = await normalizeConversation(db, cursorRef.value);
+        if (normalized) {
+          if (!excludePinned || !normalized.pinned) {
+            items.push(normalized);
+            if (items.length === limit) {
+              const lastKey = {
+                updated_at: normalized.updated_at,
+                id: normalized.id,
+              };
+              let peek = await cursorRef.continue();
+              while (peek) {
+                const candidate = peek.value as LocalConversation | undefined;
+                const isPinned = Boolean(candidate?.pinned);
+                if (!excludePinned || !isPinned) {
+                  nextCursor = lastKey;
+                  return { items, nextCursor };
+                }
+                peek = await peek.continue();
+              }
+              return { items, nextCursor: null };
+            }
+          }
+        }
+        cursorRef = await cursorRef.continue();
+      }
+      return { items, nextCursor };
+    } finally {
+      await tx.done;
+    }
   },
 };

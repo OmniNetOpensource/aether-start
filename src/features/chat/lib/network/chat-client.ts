@@ -1,6 +1,80 @@
 import { SerializedMessage } from "@/src/features/chat/types/chat";
 import { StreamParser, StreamEvent } from "./stream-parser";
 
+const getChatApiStatusHint = (status: number): { reason: string; suggestion: string } => {
+  switch (status) {
+    case 400:
+      return {
+        reason: "请求参数无效或内容格式错误",
+        suggestion: "请检查输入内容，或刷新页面后重试",
+      };
+    case 401:
+      return {
+        reason: "未授权或缺少必要的 API 配置",
+        suggestion: "请检查登录状态或服务端密钥配置",
+      };
+    case 403:
+      return {
+        reason: "权限不足或访问被拒绝",
+        suggestion: "请确认账号权限或更换可用的配置",
+      };
+    case 404:
+      return {
+        reason: "聊天接口不可用或路径不存在",
+        suggestion: "请稍后重试或联系管理员确认服务状态",
+      };
+    case 408:
+      return {
+        reason: "请求超时，服务响应过慢",
+        suggestion: "请检查网络后重试",
+      };
+    case 429:
+      return {
+        reason: "请求过于频繁触发限流",
+        suggestion: "请稍等片刻后重试",
+      };
+    case 500:
+      return {
+        reason: "服务器内部错误",
+        suggestion: "请稍后重试",
+      };
+    case 502:
+      return {
+        reason: "上游服务异常或网关错误",
+        suggestion: "请稍后重试",
+      };
+    case 503:
+      return {
+        reason: "服务暂时不可用或正在维护",
+        suggestion: "请稍后重试",
+      };
+    case 504:
+      return {
+        reason: "网关超时或上游服务响应过慢",
+        suggestion: "请稍后重试",
+      };
+    default:
+      return {
+        reason: "服务暂时不可用或网络异常",
+        suggestion: "请检查网络后重试",
+      };
+  }
+};
+
+const formatChatApiError = (
+  status: number,
+  statusText: string,
+  detail: string
+): string => {
+  const hint = getChatApiStatusHint(status);
+  const detailLine = detail ? `\n详情: ${detail}` : "";
+  return (
+    `聊天服务请求失败 (HTTP ${status} ${statusText})\n` +
+    `可能原因: ${hint.reason}\n` +
+    `建议: ${hint.suggestion}${detailLine}`
+  );
+};
+
 type ChatClientOptions = {
   onEvent: (event: StreamEvent) => void;
   onError: (error: Error) => void;
@@ -65,10 +139,7 @@ export class ChatClient {
           // Ignore body parsing failures; fall back to status message.
         }
 
-        const detailSuffix = detail ? ` - ${detail}` : "";
-        throw new Error(
-          `Chat API request failed: ${status} ${statusText}${detailSuffix}`
-        );
+        throw new Error(formatChatApiError(status, statusText, detail));
       }
 
       const reader = response.body?.getReader();
