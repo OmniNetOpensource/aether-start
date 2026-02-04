@@ -6,6 +6,7 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "preview": "vite preview",
+    "test": "vitest",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "check": "pnpm type-check && pnpm lint && pnpm build"

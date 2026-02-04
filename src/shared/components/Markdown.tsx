@@ -172,17 +172,30 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
       </div>
     );
   },
-  code: ({ className, ...props }) => {
-    const isInline = !className || !className.includes("language-");
+  code: ({ className, node, children, ...props }) => {
+    const rawCode = extractCodeFromNode(children);
+    const startLine = node?.position?.start?.line;
+    const endLine = node?.position?.end?.line;
+    const hasLineSpan = Boolean(startLine && endLine);
+    const isInline = hasLineSpan ? startLine === endLine : !rawCode.includes("\n");
     if (isInline) {
       return (
         <code
           {...props}
-          className="rounded-md bg-(--code-inline-bg) ring-1 ring-(--border-primary) px-1.5 py-0.5 font-mono text-[0.85em] text-(--text-primary) font-medium"
-        />
+          className={cn(
+            className,
+            "rounded-md bg-(--code-inline-bg) ring-1 ring-(--border-primary) px-1.5 py-0.5 font-mono text-[0.85em] text-(--text-primary) font-medium"
+          )}
+        >
+          {children}
+        </code>
       );
     }
-    return <code {...props} className={cn(className, "bg-transparent")} />;
+    return (
+      <code {...props} className={cn(className, "bg-transparent")}>
+        {children}
+      </code>
+    );
   },
   table: ({ className, ...props }) => (
     <div className="my-4 last:mb-0 first:mt-0 overflow-x-auto rounded-lg border border-(--border-primary)">
