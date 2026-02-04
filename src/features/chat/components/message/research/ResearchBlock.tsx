@@ -11,6 +11,14 @@ import {
   UnknownToolCard,
 } from "./cards";
 
+const SEARCH_TOOL_NAMES = new Set([
+  "search",
+  "serper_search",
+  "tavily_search",
+  "serp_search",
+  "brave_search",
+]);
+
 type ResearchBlockProps = {
   items: ResearchItemData[];
   blockIndex: number;
@@ -37,10 +45,11 @@ const ResearchBlockItem = memo(function ResearchBlockItem({
     switch (toolName) {
       case "fetch_url":
         return <FetchUrlCard item={item} isActive={isActive} />;
-      case "serper_search":
-      case "tavily_search":
-        return <SearchCard item={item} isActive={isActive} />;
       default:
+        if (SEARCH_TOOL_NAMES.has(toolName)) {
+          return <SearchCard item={item} isActive={isActive} />;
+        }
+
         return <UnknownToolCard item={item} isActive={isActive} />;
     }
   }
