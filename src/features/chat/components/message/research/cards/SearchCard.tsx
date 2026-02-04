@@ -32,6 +32,8 @@ type SearchResult = {
 const SEARCH_ERROR_PREFIXES = [
   "Error:",
   "Error executing",
+  "Serper API error:",
+  "Serper Search error:",
   "Tavily API error:",
   "Tavily Search error:",
 ];
@@ -53,6 +55,34 @@ const parseSearchError = (rawText: string) => {
     return {
       summary: "缺少 TAVILY_API_KEY",
       suggestion: "请配置密钥或联系管理员",
+      detail: text,
+    };
+  }
+
+  if (text.startsWith("Error: SERP_API_KEY")) {
+    return {
+      summary: "缺少 SERP_API_KEY",
+      suggestion: "请配置密钥或联系管理员",
+      detail: text,
+    };
+  }
+
+  if (text.startsWith("Serper API error:")) {
+    const summary = text.replace("Serper API error:", "API 错误:").trim();
+    return {
+      summary,
+      suggestion: "请检查 API Key 或稍后重试",
+      detail: text,
+    };
+  }
+
+  if (text.startsWith("Serper Search error:")) {
+    const summary = text.replace("Serper Search error:", "搜索失败:").trim();
+    return {
+      summary,
+      suggestion: lower.includes("timed out")
+        ? "请求超时，请稍后重试"
+        : "请稍后重试",
       detail: text,
     };
   }

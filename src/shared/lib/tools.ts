@@ -1,5 +1,5 @@
 import { fetchUrlTool } from "./tools/fetch";
-import { tavilySearchTool } from "./tools/tavily-search";
+import { serperSearchTool } from "./tools/serper-search";
 import {
   type ChatTool,
   type ToolDefinition,
@@ -8,14 +8,14 @@ import {
   type ToolName,
 } from "./tools/types";
 
-const hasTavilyKey = Boolean(process.env.TAVILY_API_KEY);
+const hasSerperKey = Boolean(process.env.SERP_API_KEY);
 
 const toolMap: Partial<Record<ToolName, ToolDefinition>> = {
   fetch_url: fetchUrlTool,
 };
 
-if (hasTavilyKey) {
-  toolMap.tavily_search = tavilySearchTool;
+if (hasSerperKey) {
+  toolMap.serper_search = serperSearchTool;
 }
 
 const toolEntries = Object.entries(toolMap) as Array<
@@ -26,8 +26,8 @@ toolEntries.forEach(([name]) => {
   console.error("[Tools] Enabled tool:", name);
 });
 
-if (!hasTavilyKey) {
-  console.error("[Tools] Skipping tool: tavily_search (missing TAVILY_API_KEY)");
+if (!hasSerperKey) {
+  console.error("[Tools] Skipping tool: serper_search (missing SERP_API_KEY)");
 }
 
 export const toolSpecs: ChatTool[] = toolEntries.map(([, tool]) => tool.spec);

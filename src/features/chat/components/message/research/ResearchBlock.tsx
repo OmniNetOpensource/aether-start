@@ -37,6 +37,7 @@ const ResearchBlockItem = memo(function ResearchBlockItem({
     switch (toolName) {
       case "fetch_url":
         return <FetchUrlCard item={item} isActive={isActive} />;
+      case "serper_search":
       case "tavily_search":
         return <SearchCard item={item} isActive={isActive} />;
       default:

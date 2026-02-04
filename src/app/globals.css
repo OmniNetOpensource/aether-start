@@ -387,6 +387,25 @@ textarea,
   pointer-events: none;
 }
 
+/* KaTeX Math Formula Styles */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 0.5em 0;
+}
+
+.katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.katex-html {
+  white-space: normal;
+  word-wrap: break-word;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

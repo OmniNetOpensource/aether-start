@@ -95,12 +95,13 @@ export type ProviderPreferences = {
   order: string[];
 };
 
-export type Backend = "openrouter" | "anthropic" | "openai";
+export type Backend = "openrouter" | "anthropic" | "openai" | "gemini";
 
 export type SelectedSearchTool =
   | "none"
   | "brave_search"
   | "serp_search"
+  | "serper_search"
   | "tavily_search";
 
 export type ChatRequest = {

@@ -1,5 +1,6 @@
 export type ToolName =
   | "fetch_url"
+  | "serper_search"
   | "tavily_search";
 
 export type ChatTool = {

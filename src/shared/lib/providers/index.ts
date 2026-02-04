@@ -3,6 +3,7 @@ import type { IProvider } from "./types";
 import { OpenRouterProvider } from "./openrouter";
 import { AnthropicProvider } from "./anthropic";
 import { OpenAIProvider } from "./openai";
+import { GeminiProvider } from "./gemini";
 
 /**
  * Get a provider instance by backend name
@@ -15,6 +16,8 @@ export function getProvider(backend: Backend): IProvider {
       return new AnthropicProvider();
     case "openai":
       return new OpenAIProvider();
+    case "gemini":
+      return new GeminiProvider();
     default:
       throw new Error(`Unknown backend: ${backend}`);
   }
@@ -28,3 +31,4 @@ export { executeTools } from "./tool-executor";
 export { OpenRouterProvider } from "./openrouter";
 export { AnthropicProvider } from "./anthropic";
 export { OpenAIProvider } from "./openai";
+export { GeminiProvider } from "./gemini";

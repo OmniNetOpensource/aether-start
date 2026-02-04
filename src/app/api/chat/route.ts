@@ -114,7 +114,7 @@ export const Route = createFileRoute("/api/chat")({
           const systemInstruction = roleConfig.systemPrompt;
           const backend = roleConfig.backend;
 
-          const allowedToolNames = new Set<string>(["fetch_url", "tavily_search"]);
+          const allowedToolNames = new Set<string>(["fetch_url", "serper_search"]);
 
           const tools = toolSpecs.filter(
             (tool) =>
@@ -179,7 +179,7 @@ export const Route = createFileRoute("/api/chat")({
                 eventSender.send(conversationCreatedEvent);
               }
 
-              const maxIterations = 20;
+              const maxIterations = 30;
               let iteration = 0;
 
               try {

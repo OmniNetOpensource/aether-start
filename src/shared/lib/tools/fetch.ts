@@ -3,7 +3,6 @@ import {
   ToolDefinition,
   ToolHandler,
   ToolProgressCallback,
-  cleanHtmlToText,
 } from "./types";
 
 type FetchUrlArgs = {
@@ -31,8 +30,6 @@ const parseFetchUrlArgs = (args: unknown): FetchUrlArgs => {
 
 const PROGRESS_CHUNK_BYTES = 50 * 1024;
 const PROGRESS_INTERVAL_MS = 500;
-// 添加最大内容长度限制 (约 70k 字符)
-const MAX_CONTENT_LENGTH = 70000;
 
 const formatKilobytes = (bytes: number) => (bytes / 1024).toFixed(1);
 
@@ -122,11 +119,17 @@ const readStreamWithProgress = async (
 
 const fetchUrl: ToolHandler = async (args, onProgress) => {
   const { url } = parseFetchUrlArgs(args);
-  console.error("[Tools:fetch_url] Fetching URL:", url);
-
-  // Try Jina AI Reader first
+  const apiKey = process.env.JINA_API_KEY;
   const jinaUrl = `https://r.jina.ai/${url}`;
-  console.error("[Tools:fetch_url] Trying Jina AI Reader:", jinaUrl);
+  console.error("[Tools:fetch_url] Fetching URL:", url, "via Jina:", jinaUrl);
+
+  if (!apiKey) {
+    console.error("[Tools:fetch_url] Missing JINA_API_KEY");
+    return "Error: JINA_API_KEY is not set";
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
 
   try {
     await emitProgress(onProgress, {
@@ -134,136 +137,54 @@ const fetchUrl: ToolHandler = async (args, onProgress) => {
       message: "开始连接 Jina AI Reader...",
     });
 
-    const jinaResponse = await fetch(jinaUrl);
+    const jinaResponse = await fetch(jinaUrl, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "X-Token-Budget": "30000",
+      },
+      signal: controller.signal,
+    });
 
-    if (jinaResponse.ok) {
-      const jinaText = await readStreamWithProgress(jinaResponse, onProgress);
-      console.error(
-        "[Tools:fetch_url] Jina AI Reader success, text length:",
-        jinaText.length,
-        "bytes"
-      );
-
-      // 检查 Jina 返回的内容长度
-      if (jinaText.length > MAX_CONTENT_LENGTH) {
-        return `[系统提示: 抓取的内容过长 (长度: ${jinaText.length} 字符)，已省略不返回。请尝试查阅摘要或使用更具体的搜索词。]`;
-      }
-
-      return jinaText;
-    } else {
+    if (!jinaResponse.ok) {
       console.error(
         "[Tools:fetch_url] Jina AI Reader HTTP error:",
         jinaResponse.status,
-        jinaResponse.statusText,
-        "- falling back to original URL"
+        jinaResponse.statusText
       );
       await emitProgress(onProgress, {
         stage: "error",
         message: `Jina AI Reader 返回 HTTP ${jinaResponse.status}`,
       });
+      return `Error: HTTP ${jinaResponse.status} ${jinaResponse.statusText}`;
     }
-  } catch (jinaError) {
+
+    const jinaText = await readStreamWithProgress(jinaResponse, onProgress);
     console.error(
-      "[Tools:fetch_url] Jina AI Reader error:",
-      typeof jinaError === "object" && jinaError !== null
-        ? (jinaError as Error).message
-        : String(jinaError),
-      "- falling back to original URL"
-    );
-    await emitProgress(onProgress, {
-      stage: "start",
-      message: "Jina AI Reader 不可用，切换为直接抓取...",
-    });
-  }
-
-  // Fallback to original URL
-  console.error("[Tools:fetch_url] Fetching original URL:", url);
-  await emitProgress(onProgress, {
-    stage: "start",
-    message: `开始连接 ${url}...`,
-  });
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error(
-        "[Tools:fetch_url] HTTP error:",
-        response.status,
-        response.statusText
-      );
-      await emitProgress(onProgress, {
-        stage: "error",
-        message: `HTTP 错误：${response.status} ${response.statusText}`,
-      });
-      return `Error: HTTP ${response.status} ${response.statusText}`;
-    }
-
-    const contentType = response.headers.get("content-type") || "";
-    console.error("[Tools:fetch_url] Content-Type:", contentType);
-
-    const rawText = await readStreamWithProgress(response, onProgress);
-
-    if (contentType.includes("application/json")) {
-      try {
-        const parsed = JSON.parse(rawText);
-        const jsonText = JSON.stringify(parsed, null, 2);
-        console.error(
-          "[Tools:fetch_url] JSON response length:",
-          jsonText.length
-        );
-
-        // 检查 JSON 内容长度
-        if (jsonText.length > MAX_CONTENT_LENGTH) {
-          return `[系统提示: JSON 内容过长 (长度: ${jsonText.length} 字符)，已省略不返回。]`;
-        }
-
-        return jsonText;
-      } catch (error) {
-        console.error("[Tools:fetch_url] JSON parse error:", error);
-        return rawText;
-      }
-    }
-
-    console.error(
-      "[Tools:fetch_url] Fetched text/HTML length:",
-      rawText.length,
+      "[Tools:fetch_url] Jina AI Reader success, text length:",
+      jinaText.length,
       "bytes"
     );
 
-    const cleaned = cleanHtmlToText(rawText);
-    console.error(
-      "[Tools:fetch_url] Cleaned text length:",
-      cleaned.length,
-      "bytes"
-    );
-
-    // 检查清理后的文本长度
-    if (cleaned.length > MAX_CONTENT_LENGTH) {
-      return `[系统提示: 网页内容过长 (长度: ${cleaned.length} 字符)，已省略不返回。请尝试查阅摘要或使用更具体的搜索词。]`;
-    }
-
-    return cleaned;
+    return jinaText;
   } catch (error) {
-    console.error(
-      "[Tools:fetch_url] Error:",
-      typeof error === "object" && error !== null
+    const isAbortError =
+      typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      (error as { name?: string }).name === "AbortError";
+    const message = isAbortError
+      ? "Request timed out"
+      : typeof error === "object" && error !== null
         ? (error as Error).message
-        : String(error)
-    );
+        : String(error);
+    console.error("[Tools:fetch_url] Error:", message);
     await emitProgress(onProgress, {
       stage: "error",
-      message: `请求失败：${
-        typeof error === "object" && error !== null
-          ? (error as Error).message
-          : String(error)
-      }`,
+      message: `请求失败：${message}`,
     });
-    return `Error fetching URL: ${
-      typeof error === "object" && error !== null
-        ? (error as Error).message
-        : String(error)
-    }`;
+    return `Error: ${message}`;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
