@@ -4,7 +4,7 @@ import { useId, useState } from "react";
 import { Brain, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResearchItem } from "@/src/features/chat/types/chat";
-import Markdown from "@/src/shared/components/Markdown";
+import Markdown from "@/src/components/Markdown";
 import { BaseResearchCard } from "./BaseResearchCard";
 
 type ThinkingCardProps = {

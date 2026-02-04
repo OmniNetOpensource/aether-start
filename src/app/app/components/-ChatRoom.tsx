@@ -1,4 +1,4 @@
-import { NewChatButton } from "@/src/features/sidebar/components/NewChatButton";
+import { NewChatButton } from "@/src/features/chat/components/NewChatButton";
 import { SidebarToggleButton } from "@/src/features/sidebar/components/SidebarToggleButton";
 
 interface ChatRoomProps {

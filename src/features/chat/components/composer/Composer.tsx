@@ -9,8 +9,8 @@ import {
 } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUp, Paperclip, Quote, Square, X } from "lucide-react";
-import { formatFileSize } from "@/src/shared/utils/file";
-import { ImagePreview } from "@/src/shared/components/ImagePreview";
+import { formatFileSize } from "@/src/lib/utils/file";
+import { ImagePreview } from "@/src/components/ImagePreview";
 import {
   useIsNewChat,
   useComposerStore,
@@ -20,8 +20,8 @@ import { ComposerToolbar } from "./ComposerToolbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { toast } from "@/src/shared/toast";
-import { useResponsive } from "@/src/shared/responsive/ResponsiveContext";
+import { toast } from "@/src/hooks/useToast";
+import { useResponsive } from "@/src/features/responsive";
 
 export function Composer() {
   const navigate = useNavigate();

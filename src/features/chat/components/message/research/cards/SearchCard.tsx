@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResearchItem } from "@/src/features/chat/types/chat";
-import Markdown from "@/src/shared/components/Markdown";
+import Markdown from "@/src/components/Markdown";
 import {
   getSearchResultCount,
   getToolLifecycle,

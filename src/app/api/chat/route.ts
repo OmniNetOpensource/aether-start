@@ -1,22 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { toolSpecs } from "@/src/shared/lib/tools";
-import { isSupportedChatModel } from "@/src/shared/lib/openrouter/server";
+import { toolSpecs } from "@/src/providers/tools";
+import { isSupportedChatModel } from "@/src/providers/config";
 import type { ChatRequest } from "@/src/features/chat/types/chat";
 import {
   getDefaultRoleConfig,
   getRoleConfig,
-} from "@/src/server/chat/role-config";
+} from "@/src/providers/config";
 import {
   ConversationLogger,
   createConversationLogger,
-} from "@/src/shared/lib/conversation-logger";
+} from "@/src/providers/logger";
 import {
-  getProvider,
+  runChat,
+  continueChat,
   createEventSender,
   ResearchTracker,
   executeTools,
-} from "@/src/shared/lib/providers";
-import type { StreamEvent } from "@/src/shared/lib/providers";
+} from "@/src/providers";
+import type { StreamEvent, ChatOptions, ChatResult, ChatState, ToolCallResult } from "@/src/providers";
 
 const generateConversationId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -147,24 +148,16 @@ export const Route = createFileRoute("/api/chat")({
             };
           }
 
-          const provider = getProvider(backend);
-
-          provider.initialize(
-            {
-              model: requestedModel,
-              tools,
-              systemInstruction,
-            },
-            {
-              conversationHistory: conversationHistory.map((message) => ({
-                ...message,
-                blocks: Array.isArray(message.blocks) ? message.blocks : [],
-              })),
-              conversationId: activeConversationId,
-              logger,
-              onProgress: () => {},
-            },
-          );
+          const chatOptions: ChatOptions = {
+            backend,
+            model: requestedModel,
+            tools,
+            systemPrompt: systemInstruction,
+            messages: conversationHistory.map((message) => ({
+              ...message,
+              blocks: Array.isArray(message.blocks) ? message.blocks : [],
+            })),
+          };
 
           const stream = new ReadableStream({
             async start(controller) {
@@ -181,21 +174,17 @@ export const Route = createFileRoute("/api/chat")({
 
               const maxIterations = 30;
               let iteration = 0;
+              let state: ChatState | undefined;
+              let pendingToolResults: ToolCallResult[] | null = null;
 
               try {
                 while (iteration < maxIterations) {
                   iteration++;
 
-                  const generator = provider.runIteration();
-                  let result: {
-                    shouldContinue: boolean;
-                    pendingToolCalls: Array<{
-                      id: string;
-                      name: string;
-                      args: Record<string, unknown>;
-                    }>;
-                    assistantText: string;
-                  };
+                  const generator = pendingToolResults && state
+                    ? continueChat(chatOptions, state, pendingToolResults)
+                    : runChat(chatOptions);
+                  let result: ChatResult | undefined;
 
                   while (true) {
                     const { done, value } = await generator.next();
@@ -206,7 +195,21 @@ export const Route = createFileRoute("/api/chat")({
                     handleEvent(value);
                   }
 
-                  if (!result!.shouldContinue) {
+                  if (!result) {
+                    break;
+                  }
+
+                  state = result.state ?? state;
+
+                  if (!result.shouldContinue) {
+                    break;
+                  }
+
+                  if (!state) {
+                    eventSender.send({
+                      type: "error",
+                      message: `错误：缺少继续对话所需的状态 (backend=${backend}, model=${requestedModel})`,
+                    });
                     break;
                   }
 
@@ -218,12 +221,12 @@ export const Route = createFileRoute("/api/chat")({
                     });
                   }
 
-                  const toolResults = await executeTools(result!.pendingToolCalls, {
+                  const toolResults = await executeTools(result.pendingToolCalls, {
                     logger,
                     onEvent: handleEvent,
                   });
 
-                  provider.appendToolResults(toolResults);
+                  pendingToolResults = toolResults;
                 }
 
                 if (iteration >= maxIterations && !eventSender.isClosed()) {

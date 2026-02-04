@@ -18,9 +18,9 @@ import {
   switchBranch,
   type AssistantAddition,
 } from "@/src/features/chat/lib/tree";
-import { buildConversationTitle } from "@/src/shared/utils/chatFormat";
-import { localDB } from "@/src/shared/lib/indexed-db";
-import { saveConversationToCloud } from "@/src/shared/lib/convex/cloud-conversations";
+import { buildConversationTitle } from "@/src/features/chat/lib/format";
+import { localDB } from "@/src/lib/storage/indexed-db";
+import { saveConversationToCloud } from "@/src/lib/storage/convex/cloud-conversations";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
 import { useChatRequestStore } from "./useChatRequestStore";
 

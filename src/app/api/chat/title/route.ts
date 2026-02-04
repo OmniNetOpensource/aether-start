@@ -3,7 +3,7 @@ import type { SerializedMessage } from "@/src/features/chat/types/chat";
 import {
   OPENROUTER_BASE_URL,
   getOpenRouterHeaders,
-} from "@/src/shared/lib/openrouter/server";
+} from "@/src/providers/config";
 
 const TITLE_MODEL = "google/gemini-3-flash-preview";
 const FALLBACK_TITLE = "New Chat";

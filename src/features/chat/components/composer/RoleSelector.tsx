@@ -9,7 +9,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { ROLES } from "@/src/shared/config/roles";
+import { ROLES } from "@/src/features/chat/config/roles";
 import { useChatRequestStore } from "@/src/features/chat/store";
 
 export function RoleSelector() {

@@ -1,17 +1,17 @@
 import { create } from "zustand";
-import { toast } from "@/src/shared/toast";
+import { toast } from "@/src/hooks/useToast";
 import type { ChatClient } from "@/src/features/chat/lib/network";
 import { startChatRequest } from "@/src/features/chat/lib/network";
-import { DEFAULT_ROLE_ID, ROLES } from "@/src/shared/config/roles";
+import { DEFAULT_ROLE_ID, ROLES } from "@/src/features/chat/config/roles";
 import {
   buildUserBlocks,
   cloneMessages,
   computeMessagesFromPath,
 } from "@/src/features/chat/lib/tree";
 import type { Message } from "@/src/features/chat/types/chat";
-import { buildConversationTitle } from "@/src/shared/utils/chatFormat";
-import { localDB } from "@/src/shared/lib/indexed-db";
-import { saveConversationToCloud } from "@/src/shared/lib/convex/cloud-conversations";
+import { buildConversationTitle } from "@/src/features/chat/lib/format";
+import { localDB } from "@/src/lib/storage/indexed-db";
+import { saveConversationToCloud } from "@/src/lib/storage/convex/cloud-conversations";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
 import { useComposerStore } from "./useComposerStore";
 import { useMessageTreeStore } from "./useMessageTreeStore";

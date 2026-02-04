@@ -8,4 +8,4 @@
 
 ## 内容
 - 子目录：history、profile
-- 文件：NewChatButton.tsx、Sidebar.tsx、SidebarToggleButton.tsx
+- 文件：Sidebar.tsx、SidebarToggleButton.tsx

@@ -6,7 +6,7 @@ import { XIcon, InfoIcon, CheckCircle2Icon, AlertTriangleIcon, AlertCircleIcon }
 import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
-import { Toast as ToastType } from "@/src/shared/toast/useToastStore";
+import { Toast as ToastType } from "@/src/stores/toast";
 
 const toastVariants = cva(
   "relative flex items-start gap-3 rounded-md border p-4 shadow-lg transition-all",

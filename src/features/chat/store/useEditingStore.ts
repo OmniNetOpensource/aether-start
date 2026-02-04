@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Attachment, EditingState } from "@/src/features/chat/types/chat";
-import { toast } from "@/src/shared/toast";
+import { toast } from "@/src/hooks/useToast";
 import {
   buildUserBlocks,
   cloneBlocks,

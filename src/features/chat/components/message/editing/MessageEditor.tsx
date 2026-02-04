@@ -3,12 +3,12 @@
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUp, Paperclip, X } from "lucide-react";
-import { ImagePreview } from "@/src/shared/components/ImagePreview";
+import { ImagePreview } from "@/src/components/ImagePreview";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { toast } from "@/src/shared/toast";
-import { useResponsive } from "@/src/shared/responsive/ResponsiveContext";
+import { toast } from "@/src/hooks/useToast";
+import { useResponsive } from "@/src/features/responsive";
 import {
   useChatRequestStore,
   useComposerStore,
@@ -19,7 +19,7 @@ import {
   convertFileToBase64,
   detectAttachmentKind,
   formatFileSize,
-} from "@/src/shared/utils/file";
+} from "@/src/lib/utils/file";
 import type { Attachment } from "@/src/features/chat/types/chat";
 
 type MessageEditorProps = {

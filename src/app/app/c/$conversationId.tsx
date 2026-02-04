@@ -4,7 +4,7 @@ import { Composer } from "@/src/features/chat/components/composer/Composer";
 import { MessageList } from "@/src/features/chat/components/message/display/MessageList";
 import { useConversationLoader } from "@/src/features/chat/hooks/useConversationLoader";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
-import { localDB } from "@/src/shared/lib/indexed-db";
+import { localDB } from "@/src/lib/storage/indexed-db";
 
 export const Route = createFileRoute("/app/c/$conversationId")({
   component: ConversationPage,

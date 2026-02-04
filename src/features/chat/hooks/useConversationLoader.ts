@@ -5,7 +5,7 @@ import {
   useEditingStore,
   useMessageTreeStore,
 } from "@/src/features/chat/store";
-import { localDB } from "@/src/shared/lib/indexed-db";
+import { localDB } from "@/src/lib/storage/indexed-db";
 import {
   buildCurrentPath,
   createLinearMessages,

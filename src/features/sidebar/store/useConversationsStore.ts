@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import type { Conversation } from "@/types/conversation";
-import { localDB, type LocalConversation } from "@/src/shared/lib/indexed-db";
+import { localDB, type LocalConversation } from "@/src/lib/storage/indexed-db";
 
 type ConversationsState = {
   pinnedConversations: Conversation[];

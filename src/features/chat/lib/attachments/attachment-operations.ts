@@ -3,8 +3,8 @@ import {
   MAX_ATTACHMENT_SIZE,
   convertFileToBase64,
   detectAttachmentKind,
-} from "@/src/shared/utils/file";
-import { toast } from "@/src/shared/toast";
+} from "@/src/lib/utils/file";
+import { toast } from "@/src/hooks/useToast";
 
 export const buildAttachmentsFromFiles = async (
   files: File[]

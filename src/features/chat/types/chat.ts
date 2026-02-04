@@ -91,12 +91,6 @@ export type EditingState = {
   editedAttachments: Attachment[];
 };
 
-export type ProviderPreferences = {
-  order: string[];
-};
-
-export type Backend = "openrouter" | "anthropic" | "openai" | "gemini";
-
 export type SelectedSearchTool =
   | "none"
   | "brave_search"

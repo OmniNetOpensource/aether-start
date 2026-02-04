@@ -1,8 +1,8 @@
 import { ChatClient } from "./chat-client";
-import { toast } from "@/src/shared/toast";
-import { localDB } from "@/src/shared/lib/indexed-db";
+import { toast } from "@/src/hooks/useToast";
+import { localDB } from "@/src/lib/storage/indexed-db";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
-import { buildConversationTitle } from "@/src/shared/utils/chatFormat";
+import { buildConversationTitle } from "@/src/features/chat/lib/format";
 import type {
   Message,
   MessageLike,
@@ -15,7 +15,7 @@ import {
   type AssistantAddition,
 } from "../tree/block-operations";
 import { computeMessagesFromPath } from "../tree/message-tree";
-import { saveConversationToCloud } from "@/src/shared/lib/convex/cloud-conversations";
+import { saveConversationToCloud } from "@/src/lib/storage/convex/cloud-conversations";
 
 const generateLocalMessageId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID

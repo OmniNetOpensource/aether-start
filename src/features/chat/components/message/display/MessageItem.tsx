@@ -2,10 +2,10 @@
 
 import { memo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import Markdown from "@/src/shared/components/Markdown";
-import { ImagePreview } from "@/src/shared/components/ImagePreview";
+import Markdown from "@/src/components/Markdown";
+import { ImagePreview } from "@/src/components/ImagePreview";
 import { BranchInfo, Message } from "@/src/features/chat/types/chat";
-import { formatFileSize } from "@/src/shared/utils/file";
+import { formatFileSize } from "@/src/lib/utils/file";
 import { ResearchBlock } from "../research/ResearchBlock";
 import {
   Copy,
