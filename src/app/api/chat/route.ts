@@ -172,7 +172,7 @@ export const Route = createFileRoute("/api/chat")({
                 eventSender.send(conversationCreatedEvent);
               }
 
-              const maxIterations = 30;
+              const maxIterations = 200;
               let iteration = 0;
               let state: ChatState | undefined;
               let pendingToolResults: ToolCallResult[] | null = null;

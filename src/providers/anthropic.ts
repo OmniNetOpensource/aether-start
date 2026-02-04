@@ -185,13 +185,47 @@ const appendToolResults = (state: AnthropicState, results: ToolCallResult[]): An
     assistantContent.push({ type: "tool_use", id: tc.id, name: tc.name, input: tc.args });
   }
 
-  const toolResultContent: Array<{ type: "tool_result"; tool_use_id: string; content: string }> = results.map(
-    (tr) => ({
-      type: "tool_result",
+  type ToolResultContentItem =
+    | { type: "text"; text: string }
+    | { type: "image"; source: AnthropicImageSource };
+
+  const toolResultContent: Array<{
+    type: "tool_result";
+    tool_use_id: string;
+    content: string | ToolResultContentItem[];
+  }> = results.map((tr) => {
+    // Check if result is a JSON image result
+    try {
+      const parsed = JSON.parse(tr.result);
+      if (parsed.type === "image" && parsed.data_url) {
+        const base64Match = parsed.data_url.match(/^data:([^;]+);base64,(.+)$/);
+        if (base64Match) {
+          return {
+            type: "tool_result" as const,
+            tool_use_id: tr.id,
+            content: [
+              {
+                type: "image" as const,
+                source: {
+                  type: "base64" as const,
+                  media_type: base64Match[1],
+                  data: base64Match[2],
+                },
+              },
+            ],
+          };
+        }
+      }
+    } catch {
+      // Not JSON, use as plain text
+    }
+
+    return {
+      type: "tool_result" as const,
       tool_use_id: tr.id,
       content: tr.result,
-    })
-  );
+    };
+  });
 
   return {
     messages: [

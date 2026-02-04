@@ -1,7 +1,10 @@
 "use client";
 
-import { Check, Link, Loader2, X } from "lucide-react";
+import { useState } from "react";
+import { Check, ChevronDown, Image as ImageIcon, Link, Loader2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { ResearchItem } from "@/src/features/chat/types/chat";
+import { ImagePreview } from "@/src/components/ImagePreview";
 import { BaseResearchCard } from "./BaseResearchCard";
 import { getToolLifecycle } from "../utils";
 
@@ -10,9 +13,29 @@ type FetchUrlCardProps = {
   isActive?: boolean;
 };
 
+type ImageResult = {
+  type: "image";
+  data_url: string;
+  mime_type: string;
+  size_bytes: number;
+  source: "direct" | "screenshot";
+};
+
 const truncateText = (text: string, maxLength: number) => {
   if (text.length <= maxLength) return text;
   return `${text.slice(0, Math.max(0, maxLength - 1))}…`;
+};
+
+const parseImageResult = (resultText: string): ImageResult | null => {
+  try {
+    const parsed = JSON.parse(resultText);
+    if (parsed.type === "image" && parsed.data_url) {
+      return parsed as ImageResult;
+    }
+  } catch {
+    // Not JSON or not an image result
+  }
+  return null;
 };
 
 const parseFetchError = (rawText: string) => {
@@ -61,11 +84,18 @@ const parseFetchError = (rawText: string) => {
 };
 
 export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const tool = item.data;
   const { result } = getToolLifecycle(tool);
   const args = tool.call.args as Record<string, unknown>;
   const url = typeof args.url === "string" ? args.url : "";
+  const responseType = typeof args.response_type === "string" ? args.response_type : "markdown";
   const resultText = typeof result?.result === "string" ? result.result : "";
+
+  // Check if result is an image
+  const imageResult = parseImageResult(resultText);
+  const isImageMode = responseType === "image";
+
   const isSystemPromptTooLong =
     resultText.startsWith("[系统提示:") &&
     (resultText.includes("内容过长") || resultText.includes("已省略不返回"));
@@ -75,15 +105,27 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
     ? `Failed · ${truncateText(errorInfo.summary, 20)}`
     : "Failed";
 
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  };
+
   const description = !result ? (
     <>
       <Loader2 className="h-3 w-3 animate-spin text-foreground" />
-      <span>Loading...</span>
+      <span>{isImageMode ? "Fetching image..." : "Loading..."}</span>
     </>
   ) : isError ? (
     <>
       <X className="h-3 w-3 text-(--status-destructive)" />
       <span>{errorDescription}</span>
+    </>
+  ) : imageResult ? (
+    <>
+      <Check className="h-3 w-3 text-(--status-success)" />
+      <span>
+        {imageResult.source === "screenshot" ? "Screenshot" : "Image"} · {formatSize(imageResult.size_bytes)}
+      </span>
     </>
   ) : (
     <>
@@ -92,19 +134,40 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
     </>
   );
 
+  const cardIcon = isImageMode ? (
+    <ImageIcon className="h-3.5 w-3.5" />
+  ) : (
+    <Link className="h-3.5 w-3.5" />
+  );
+
+  const cardTitle = isImageMode
+    ? imageResult?.source === "screenshot"
+      ? `Screenshot of ${url || "URL"}`
+      : `Fetching image from ${url || "URL"}`
+    : `Fetching ${url || "URL"}`;
+
+  const hasExpandableContent = imageResult || (isError && errorInfo);
+  const handleToggle = hasExpandableContent ? () => setIsExpanded((prev) => !prev) : undefined;
+
+  const expandAction = hasExpandableContent ? (
+    <ChevronDown
+      className={cn(
+        "h-3.5 w-3.5 text-(--text-tertiary) transition-transform duration-200",
+        isExpanded && "rotate-180"
+      )}
+    />
+  ) : null;
+
   return (
     <BaseResearchCard
-      icon={<Link className="h-3.5 w-3.5" />}
-      title={`Fetching ${url || "URL"}`}
+      icon={cardIcon}
+      title={cardTitle}
       description={description}
-      action={null}
+      action={expandAction}
       isActive={isActive}
-      onClick={undefined}
-      buttonProps={{
-        "aria-disabled": true,
-      }}
+      onClick={handleToggle}
     >
-      {isError && errorInfo ? (
+      {isExpanded && isError && errorInfo ? (
         <div className="pb-2 pl-9 pr-3 text-[11px] text-(--text-tertiary)">
           <div className="text-destructive/90">
             原因: {errorInfo.summary}
@@ -115,6 +178,16 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
               详情: {truncateText(errorInfo.detail, 160)}
             </div>
           ) : null}
+        </div>
+      ) : null}
+      {isExpanded && imageResult ? (
+        <div className="pb-2 pl-9 pr-3">
+          <ImagePreview
+            url={imageResult.data_url}
+            name={imageResult.source === "screenshot" ? "Webpage screenshot" : "Fetched image"}
+            size={imageResult.size_bytes}
+            className="max-h-48 w-auto rounded border border-border"
+          />
         </div>
       ) : null}
     </BaseResearchCard>
