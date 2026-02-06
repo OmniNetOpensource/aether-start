@@ -43,3 +43,50 @@ export async function executeTools(
     })
   );
 }
+
+export async function* executeToolsGen(
+  toolCalls: PendingToolInvocation[],
+  logger: ConversationLogger | null
+): AsyncGenerator<ChatStreamEvent, ToolInvocationResult[]> {
+  const results: ToolInvocationResult[] = []
+
+  for (const tc of toolCalls) {
+    yield { type: "tool_call", tool: tc.name, args: tc.args, callId: tc.id }
+
+    const progressBuffer: ChatStreamEvent[] = []
+
+    const result = await callToolByName(tc.name, tc.args, (progress: ToolProgressUpdate) => {
+      progressBuffer.push({
+        type: "tool_progress",
+        tool: tc.name,
+        stage: progress.stage,
+        message: String(progress.message ?? ""),
+        receivedBytes: progress.receivedBytes,
+        totalBytes: progress.totalBytes,
+        callId: tc.id,
+      })
+    })
+
+    for (const event of progressBuffer) {
+      yield event
+    }
+
+    const normalizedResult = typeof result === "string" ? result : JSON.stringify(result)
+
+    yield {
+      type: "tool_result",
+      tool: tc.name,
+      result: normalizedResult,
+      callId: tc.id,
+    }
+
+    logger?.log("TOOL", `Tool result: ${tc.name}`, {
+      callId: tc.id,
+      resultLength: normalizedResult.length,
+    })
+
+    results.push({ id: tc.id, name: tc.name, result: normalizedResult })
+  }
+
+  return results
+}

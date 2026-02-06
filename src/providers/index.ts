@@ -24,5 +24,4 @@ export async function* continueChat(
 }
 
 export * from "./types";
-export { createEventSender, ResearchTracker } from "./stream";
-export { executeTools } from "./tools/execute";
+export { executeToolsGen } from "./tools/execute";
