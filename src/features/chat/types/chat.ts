@@ -24,7 +24,7 @@ export type ResearchItem =
   | { kind: "thinking"; text: string }
   | { kind: "tool"; data: Tool };
 
-export type AttachmentKind = "image" | "file" | "video" | "audio";
+export type AttachmentKind = "image";
 
 type AttachmentBase = {
   id: string;

@@ -8,8 +8,7 @@ import {
   useRef,
 } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowUp, Paperclip, Quote, Square, X } from "lucide-react";
-import { formatFileSize } from "@/src/lib/utils/file";
+import { ArrowUp, Quote, Square, X } from "lucide-react";
 import { ImagePreview } from "@/src/components/ImagePreview";
 import {
   useIsNewChat,
@@ -67,14 +66,6 @@ export function Composer() {
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     const isEnter = event.key === "Enter";
-    if (isDesktop) {
-      if (isEnter && !event.shiftKey) {
-        event.preventDefault();
-        void submitMessage();
-      }
-      return;
-    }
-
     if (isEnter && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       void submitMessage();
@@ -204,56 +195,25 @@ export function Composer() {
           )}
           {hasAttachments && (
             <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0">
-              {pendingAttachments.map((attachment) =>
-                attachment.kind === "image" ? (
-                  <div key={attachment.id} className="group relative">
-                    <ImagePreview
-                      url={attachment.displayUrl}
-                      name={attachment.name}
-                      size={attachment.size}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="移除附件"
-                      onClick={() => removeAttachment(attachment.id)}
-                      className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div
-                    key={attachment.id}
-                    className="flex min-w-[200px] max-w-60 items-center gap-3 rounded-lg border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
+              {pendingAttachments.map((attachment) => (
+                <div key={attachment.id} className="group relative">
+                  <ImagePreview
+                    url={attachment.displayUrl}
+                    name={attachment.name}
+                    size={attachment.size}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    aria-label="移除附件"
+                    onClick={() => removeAttachment(attachment.id)}
+                    className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
                   >
-                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border ink-border bg-muted">
-                      <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                        <Paperclip className="h-4 w-4" />
-                      </div>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-xs font-medium text-foreground">
-                        {attachment.name}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground">
-                        {formatFileSize(attachment.size)}
-                      </div>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label="移除附件"
-                      onClick={() => removeAttachment(attachment.id)}
-                      className="h-6 w-6 rounded-full hover:text-destructive"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                )
-              )}
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
 
@@ -357,56 +317,25 @@ export function Composer() {
         )}
         {hasAttachments && (
           <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0">
-            {pendingAttachments.map((attachment) =>
-              attachment.kind === "image" ? (
-                <div key={attachment.id} className="group relative">
-                  <ImagePreview
-                    url={attachment.displayUrl}
-                    name={attachment.name}
-                    size={attachment.size}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="移除附件"
-                    onClick={() => removeAttachment(attachment.id)}
-                    className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ) : (
-                <div
-                  key={attachment.id}
-                  className="flex min-w-[200px] max-w-60 items-center gap-3 rounded-lg border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
+            {pendingAttachments.map((attachment) => (
+              <div key={attachment.id} className="group relative">
+                <ImagePreview
+                  url={attachment.displayUrl}
+                  name={attachment.name}
+                  size={attachment.size}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label="移除附件"
+                  onClick={() => removeAttachment(attachment.id)}
+                  className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
                 >
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border ink-border bg-muted">
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                      <Paperclip className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-xs font-medium text-foreground">
-                      {attachment.name}
-                    </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {formatFileSize(attachment.size)}
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="移除附件"
-                    onClick={() => removeAttachment(attachment.id)}
-                    className="h-6 w-6 rounded-full hover:text-destructive"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              )
-            )}
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
           </div>
         )}
 

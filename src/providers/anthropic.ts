@@ -58,17 +58,30 @@ const getClient = () => {
 };
 
 function convertToAnthropicMessages(history: SerializedMessage[]): AnthropicMessage[] {
-  return history.map((message) => {
+  console.log('\n[4] convertToAnthropicMessages - 转换为 Anthropic 格式:');
+  console.log('  消息数量:', history.length);
+
+  return history.map((message, msgIdx) => {
     const contentBlocks: AnthropicContentBlock[] = [];
+
+    console.log(`  消息 ${msgIdx + 1}:`, message.role);
 
     for (const block of message.blocks) {
       if (block.type === "content" && block.content) {
         contentBlocks.push({ type: "text", text: block.content });
       } else if (block.type === "attachments") {
+        console.log(`    处理 attachments block, 附件数量:`, block.attachments.length);
         for (const attachment of block.attachments) {
+          console.log(`      附件:`, attachment.name);
+          console.log('        url长度:', attachment.url?.length || 0);
+          console.log('        url前100字符:', attachment.url?.substring(0, 100) || 'N/A');
+
           if (attachment.kind === "image" && attachment.url) {
             const base64Match = attachment.url.match(/^data:([^;]+);base64,(.+)$/);
             if (base64Match) {
+              console.log('        ✓ 成功匹配 base64 格式');
+              console.log('        media_type:', base64Match[1]);
+              console.log('        base64 数据长度:', base64Match[2].length);
               contentBlocks.push({
                 type: "image",
                 source: {
@@ -77,11 +90,15 @@ function convertToAnthropicMessages(history: SerializedMessage[]): AnthropicMess
                   data: base64Match[2],
                 },
               });
+            } else {
+              console.log('        ✗ 未能匹配 base64 格式!');
             }
           }
         }
       }
     }
+
+    console.log(`    最终 contentBlocks 数量:`, contentBlocks.length);
 
     return {
       role: message.role,
@@ -100,6 +117,30 @@ function convertToolsToAnthropic(tools: ChatTool[]): AnthropicTool[] {
     }));
 }
 
+function logHttpRequest(params: {
+  url: string;
+  headers: Record<string, string>;
+  body: unknown;
+}) {
+  console.log('\n========== HTTP 请求详情 ==========');
+  console.log('URL:', params.url);
+  console.log('\nHeaders:');
+  Object.entries(params.headers).forEach(([key, value]) => {
+    // 脱敏处理 API key
+    if (key.toLowerCase().includes('key') || key.toLowerCase().includes('authorization')) {
+      const maskedValue = value.length > 8
+        ? `${value.slice(0, 4)}...${value.slice(-4)}`
+        : '***';
+      console.log(`  ${key}: ${maskedValue}`);
+    } else {
+      console.log(`  ${key}: ${value}`);
+    }
+  });
+  console.log('\nRequest Body:');
+  console.log(JSON.stringify(params.body, null, 2));
+  console.log('===================================\n');
+}
+
 async function* streamAnthropicCompletion(requestParams: {
   model: string;
   messages: AnthropicMessage[];
@@ -107,6 +148,7 @@ async function* streamAnthropicCompletion(requestParams: {
   tools?: AnthropicTool[];
 }): AsyncGenerator<AnthropicStreamChunk> {
   const client = getClient();
+  const anthropicConfig = getAnthropicConfig();
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamParams: any = {
@@ -120,6 +162,20 @@ async function* streamAnthropicCompletion(requestParams: {
       budget_tokens: 51404,
     },
   };
+
+  // 打印完整的 HTTP 请求信息
+  logHttpRequest({
+    url: `${anthropicConfig.baseURL || 'https://api.anthropic.com'}/v1/messages`,
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': anthropicConfig.apiKey,
+      ...anthropicConfig.defaultHeaders,
+    },
+    body: {
+      ...streamParams,
+      stream: true,
+    },
+  });
 
   const stream = client.messages.stream(streamParams);
 

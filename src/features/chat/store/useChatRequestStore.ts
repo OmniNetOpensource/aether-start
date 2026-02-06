@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import { toast } from "@/src/hooks/useToast";
 import type { ChatClient } from "@/src/features/chat/lib/network";
 import { startChatRequest } from "@/src/features/chat/lib/network";
@@ -90,99 +91,102 @@ const persistConversation = async (
 
 };
 
-export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>(
-  (set, get) => ({
-    pending: false,
-    chatClient: null,
-    activeRequestId: null,
-    currentRole: getInitialRole(),
-    sendMessage: async (navigate) => {
-      const { input, pendingAttachments, quotedTexts } =
-        useComposerStore.getState();
-      const trimmed = input.trim();
-      const selectedRole = get().currentRole;
+export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>()(
+  devtools(
+    (set, get) => ({
+      pending: false,
+      chatClient: null,
+      activeRequestId: null,
+      currentRole: getInitialRole(),
+      sendMessage: async (navigate) => {
+        const { input, pendingAttachments, quotedTexts } =
+          useComposerStore.getState();
+        const trimmed = input.trim();
+        const selectedRole = get().currentRole;
 
-      if (get().pending) {
-        return;
-      }
-      if (!trimmed && pendingAttachments.length === 0 && quotedTexts.length === 0) {
-        return;
-      }
-      if (!selectedRole) {
-        toast.warning("请先选择角色");
-        return;
-      }
+        if (get().pending) {
+          return;
+        }
+        if (!trimmed && pendingAttachments.length === 0 && quotedTexts.length === 0) {
+          return;
+        }
+        if (!selectedRole) {
+          toast.warning("请先选择角色");
+          return;
+        }
 
-      let finalInput = input;
-      if (quotedTexts.length > 0) {
-        const quotedBlocks = quotedTexts
-          .map((quote) =>
-            quote.text
-              .split(/\r?\n/)
-              .map((line) => `> ${line}`)
-              .join("\n")
-          )
-          .join("\n\n");
-        finalInput = trimmed ? `${quotedBlocks}\n\n${input}` : quotedBlocks;
-      }
+        let finalInput = input;
+        if (quotedTexts.length > 0) {
+          const quotedBlocks = quotedTexts
+            .map((quote) =>
+              quote.text
+                .split(/\r?\n/)
+                .map((line) => `> ${line}`)
+                .join("\n")
+            )
+            .join("\n\n");
+          finalInput = trimmed ? `${quotedBlocks}\n\n${input}` : quotedBlocks;
+        }
 
-      const treeStore = useMessageTreeStore.getState();
-      const result = treeStore._addMessage(
-        "user",
-        buildUserBlocks(finalInput, pendingAttachments)
-      );
+        const treeStore = useMessageTreeStore.getState();
+        const result = treeStore._addMessage(
+          "user",
+          buildUserBlocks(finalInput, pendingAttachments)
+        );
 
-      const pathMessages = computeMessagesFromPath(
-        result.messages,
-        result.currentPath
-      );
+        const pathMessages = computeMessagesFromPath(
+          result.messages,
+          result.currentPath
+        );
 
-      useComposerStore.getState().clear();
+        useComposerStore.getState().clear();
 
-      const { get: getRequestState, set: setRequestState } =
-        getChatRequestHandlers();
+        const { get: getRequestState, set: setRequestState } =
+          getChatRequestHandlers();
 
-      await startChatRequest(getRequestState, setRequestState, {
-        messages: pathMessages,
-        navigate,
-        titleSource: { role: "user", blocks: result.addedMessage.blocks },
-      });
-    },
-    stop: () => {
-      const { chatClient } = get();
-      const treeState = useMessageTreeStore.getState();
-      const { conversationId, messages, currentPath } = treeState;
-      if (conversationId) {
-        void persistConversation(conversationId, messages, currentPath);
-      }
-      if (!chatClient) {
+        await startChatRequest(getRequestState, setRequestState, {
+          messages: pathMessages,
+          navigate,
+          titleSource: { role: "user", blocks: result.addedMessage.blocks },
+        });
+      },
+      stop: () => {
+        const { chatClient } = get();
+        const treeState = useMessageTreeStore.getState();
+        const { conversationId, messages, currentPath } = treeState;
+        if (conversationId) {
+          void persistConversation(conversationId, messages, currentPath);
+        }
+        if (!chatClient) {
+          set({ pending: false, chatClient: null, activeRequestId: null });
+          return;
+        }
+        chatClient.abort();
         set({ pending: false, chatClient: null, activeRequestId: null });
-        return;
-      }
-      chatClient.abort();
-      set({ pending: false, chatClient: null, activeRequestId: null });
-    },
-    setCurrentRole: (role) => {
-      set({ currentRole: role });
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem(ROLE_STORAGE_KEY, role);
-      }
-    },
-    clear: () => {
-      const client = get().chatClient;
-      if (client) {
-        client.abort();
-      }
-      set({
-        pending: false,
-        chatClient: null,
-        activeRequestId: null,
-      });
-    },
-    _setPending: (pending) => set({ pending }),
-    _setChatClient: (chatClient) => set({ chatClient }),
-    _setActiveRequestId: (activeRequestId) => set({ activeRequestId }),
-  })
+      },
+      setCurrentRole: (role) => {
+        set({ currentRole: role });
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(ROLE_STORAGE_KEY, role);
+        }
+      },
+      clear: () => {
+        const client = get().chatClient;
+        if (client) {
+          client.abort();
+        }
+        set({
+          pending: false,
+          chatClient: null,
+          activeRequestId: null,
+        });
+      },
+      _setPending: (pending) => set({ pending }),
+      _setChatClient: (chatClient) => set({ chatClient }),
+      _setActiveRequestId: (activeRequestId) => set({ activeRequestId }),
+    }),
+    { name: "ChatRequestStore" }
+  )
 );
 
 const buildStoreStateSnapshot = () => {

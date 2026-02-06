@@ -19,14 +19,16 @@ import type {
 const restoreDisplayUrls = (
   attachments: Array<Attachment | LegacyAttachment>
 ): Attachment[] =>
-  attachments.map((att) => ({
-    id: att.id,
-    kind: att.kind,
-    name: att.name,
-    size: att.size,
-    mimeType: att.mimeType,
-    displayUrl: "url" in att ? att.url : att.displayUrl,
-  }));
+  attachments
+    .map((att) => ({
+      id: att.id,
+      kind: att.kind,
+      name: att.name,
+      size: att.size,
+      mimeType: att.mimeType,
+      displayUrl: "url" in att ? att.url : att.displayUrl,
+    }))
+    .filter((att) => att.mimeType?.startsWith("image/") && !!att.displayUrl);
 
 const hydrateBlocks = (blocks: Message["blocks"]) =>
   Array.isArray(blocks)

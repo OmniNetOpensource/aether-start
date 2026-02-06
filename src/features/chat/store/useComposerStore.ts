@@ -1,5 +1,6 @@
 import { RefObject } from "react";
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import type { Attachment } from "@/src/features/chat/types/chat";
 import { buildAttachmentsFromFiles } from "@/src/features/chat/lib/attachments";
 
@@ -36,72 +37,75 @@ const createQuotedTextId = () => {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 };
 
-export const useComposerStore = create<ComposerState & ComposerActions>(
-  (set, get) => ({
-    input: "",
-    pendingAttachments: [],
-    uploading: false,
-    quotedTexts: [],
-    textareaRef: null,
-    setInput: (value) => set({ input: value }),
-    addAttachments: async (files) => {
-      if (files.length === 0) {
-        return;
-      }
+export const useComposerStore = create<ComposerState & ComposerActions>()(
+  devtools(
+    (set, get) => ({
+      input: "",
+      pendingAttachments: [],
+      uploading: false,
+      quotedTexts: [],
+      textareaRef: null,
+      setInput: (value) => set({ input: value }),
+      addAttachments: async (files) => {
+        if (files.length === 0) {
+          return;
+        }
 
-      set({ uploading: true });
+        set({ uploading: true });
 
-      const attachments = await buildAttachmentsFromFiles(files);
+        const attachments = await buildAttachmentsFromFiles(files);
 
-      if (attachments.length === 0) {
-        set({ uploading: false });
-        return;
-      }
+        if (attachments.length === 0) {
+          set({ uploading: false });
+          return;
+        }
 
-      // 将新附件追加到现有待发送附件列表中
-      set((state) => ({
-        pendingAttachments: [...state.pendingAttachments, ...attachments],
-        uploading: false,
-      }));
-    },
-    removeAttachment: (id) =>
-      set((state) => {
-        return {
-          pendingAttachments: state.pendingAttachments.filter(
-            (item) => item.id !== id
-          ),
-        };
-      }),
-    addQuotedText: (text) => {
-      const trimmed = text.trim();
-      if (!trimmed) {
-        return;
-      }
-      set((state) => ({
-        quotedTexts: [
-          ...state.quotedTexts,
-          { id: createQuotedTextId(), text: trimmed },
-        ],
-      }));
-    },
-    removeQuotedText: (id) =>
-      set((state) => ({
-        quotedTexts: state.quotedTexts.filter((item) => item.id !== id),
-      })),
-    clearInput: () => set({ input: "" }),
-    clearAttachments: () => set({ pendingAttachments: [] }),
-    clear: () => {
-      set({
-        input: "",
-        pendingAttachments: [],
-        uploading: false,
-        quotedTexts: [],
-      });
-    },
-    setTextareaRef: (ref) => set({ textareaRef: ref }),
-    focusTextarea: () => {
-      const { textareaRef } = get();
-      textareaRef?.current?.focus();
-    },
-  })
+        // 将新附件追加到现有待发送附件列表中
+        set((state) => ({
+          pendingAttachments: [...state.pendingAttachments, ...attachments],
+          uploading: false,
+        }));
+      },
+      removeAttachment: (id) =>
+        set((state) => {
+          return {
+            pendingAttachments: state.pendingAttachments.filter(
+              (item) => item.id !== id
+            ),
+          };
+        }),
+      addQuotedText: (text) => {
+        const trimmed = text.trim();
+        if (!trimmed) {
+          return;
+        }
+        set((state) => ({
+          quotedTexts: [
+            ...state.quotedTexts,
+            { id: createQuotedTextId(), text: trimmed },
+          ],
+        }));
+      },
+      removeQuotedText: (id) =>
+        set((state) => ({
+          quotedTexts: state.quotedTexts.filter((item) => item.id !== id),
+        })),
+      clearInput: () => set({ input: "" }),
+      clearAttachments: () => set({ pendingAttachments: [] }),
+      clear: () => {
+        set({
+          input: "",
+          pendingAttachments: [],
+          uploading: false,
+          quotedTexts: [],
+        });
+      },
+      setTextareaRef: (ref) => set({ textareaRef: ref }),
+      focusTextarea: () => {
+        const { textareaRef } = get();
+        textareaRef?.current?.focus();
+      },
+    }),
+    { name: "ComposerStore" }
+  )
 );

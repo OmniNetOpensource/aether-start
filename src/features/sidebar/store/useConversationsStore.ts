@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import type { Conversation } from "@/types/conversation";
 import { localDB, type LocalConversation } from "@/src/lib/storage/indexed-db";
 
@@ -102,266 +103,271 @@ const mapLocalToConversation = (local: LocalConversation): Conversation => ({
 
 export const useConversationsStore = create<
   ConversationsState & ConversationsActions
->((set, get) => ({
-  pinnedConversations: [],
-  normalConversations: [],
-  conversationsLoading: false,
-  hasLoadedLocal: false,
-  loadingMore: false,
-  hasMoreLocal: false,
-  normalCursor: null,
-
-  addConversation: (conversation) =>
-    set((state) => {
-      const merged = mergeConversations(
-        state.pinnedConversations,
-        state.normalConversations,
-        [conversation]
-      );
-      return { ...state, ...merged };
-    }),
-
-  setConversations: (conversations) =>
-    set((state) => ({
-      ...state,
-      ...mergeConversations(
-        state.pinnedConversations,
-        state.normalConversations,
-        conversations
-      ),
-    })),
-
-  loadLocalConversations: async () => {
-    const { hasLoadedLocal, conversationsLoading } = get();
-    if (hasLoadedLocal || conversationsLoading) {
-      return;
-    }
-
-    set((state) => ({ ...state, conversationsLoading: true }));
-
-    try {
-      const [pinnedConversations, page] = await Promise.all([
-        localDB.getPinned(),
-        localDB.getUpdatedAtPage({
-          limit: PAGE_SIZE,
-          cursor: null,
-          excludePinned: true,
-        }),
-      ]);
-      const mappedPinned = pinnedConversations.map(mapLocalToConversation);
-      const mappedNormal = page.items.map(mapLocalToConversation);
-
-      set((state) => ({
-        ...state,
-        ...mergeConversations(
-          state.pinnedConversations,
-          state.normalConversations,
-          [...mappedPinned, ...mappedNormal]
-        ),
-        hasLoadedLocal: true,
-        conversationsLoading: false,
-        hasMoreLocal: page.nextCursor !== null,
-        normalCursor: page.nextCursor,
-      }));
-    } catch (error) {
-      console.error("Failed to load local conversations:", error);
-      set((state) => ({
-        ...state,
-        hasLoadedLocal: true,
-        conversationsLoading: false,
-        hasMoreLocal: false,
-        normalCursor: null,
-      }));
-    }
-  },
-  loadMoreLocalConversations: async () => {
-    const {
-      hasLoadedLocal,
-      conversationsLoading,
-      loadingMore,
-      hasMoreLocal,
-      normalCursor,
-    } = get();
-    if (
-      !hasLoadedLocal ||
-      conversationsLoading ||
-      loadingMore ||
-      !hasMoreLocal
-    ) {
-      return;
-    }
-
-    set((state) => ({ ...state, loadingMore: true }));
-
-    try {
-      const page = await localDB.getUpdatedAtPage({
-        limit: PAGE_SIZE,
-        cursor: normalCursor,
-        excludePinned: true,
-      });
-      const mapped = page.items.map(mapLocalToConversation);
-
-      set((state) => ({
-        ...state,
-        ...mergeConversations(
-          state.pinnedConversations,
-          state.normalConversations,
-          mapped
-        ),
-        loadingMore: false,
-        hasMoreLocal: page.nextCursor !== null,
-        normalCursor: page.nextCursor,
-      }));
-    } catch (error) {
-      console.error("Failed to load more local conversations:", error);
-      set((state) => ({
-        ...state,
-        loadingMore: false,
-        hasMoreLocal: false,
-        normalCursor: null,
-      }));
-    }
-  },
-
-  clearLocal: async () => {
-    try {
-      await localDB.clear();
-    } catch (error) {
-      console.error("Failed to clear local conversations:", error);
-    }
-
-    set((state) => ({
-      ...state,
+>()(
+  devtools(
+    (set, get) => ({
       pinnedConversations: [],
       normalConversations: [],
-      hasLoadedLocal: true,
+      conversationsLoading: false,
+      hasLoadedLocal: false,
       loadingMore: false,
       hasMoreLocal: false,
       normalCursor: null,
-    }));
-  },
 
-  pinConversation: async (id) => {
-    const { normalConversations } = get();
-    const target = normalConversations.find((item) => item.id === id);
-    if (!target) {
-      return;
-    }
+      addConversation: (conversation) =>
+        set((state) => {
+          const merged = mergeConversations(
+            state.pinnedConversations,
+            state.normalConversations,
+            [conversation]
+          );
+          return { ...state, ...merged };
+        }),
 
-    const pinned_at = new Date().toISOString();
-    const updated: Conversation = {
-      ...target,
-      pinned: true,
-      pinned_at,
-    };
+      setConversations: (conversations) =>
+        set((state) => ({
+          ...state,
+          ...mergeConversations(
+            state.pinnedConversations,
+            state.normalConversations,
+            conversations
+          ),
+        })),
 
-    set((state) => ({
-      ...state,
-      normalConversations: state.normalConversations.filter(
-        (item) => item.id !== id
-      ),
-      pinnedConversations: sortByPinnedAt([
-        updated,
-        ...state.pinnedConversations.filter((item) => item.id !== id),
-      ]),
-    }));
+      loadLocalConversations: async () => {
+        const { hasLoadedLocal, conversationsLoading } = get();
+        if (hasLoadedLocal || conversationsLoading) {
+          return;
+        }
 
-    try {
-      const existing = await localDB.get(id);
-      if (existing) {
-        await localDB.save({
-          ...existing,
+        set((state) => ({ ...state, conversationsLoading: true }));
+
+        try {
+          const [pinnedConversations, page] = await Promise.all([
+            localDB.getPinned(),
+            localDB.getUpdatedAtPage({
+              limit: PAGE_SIZE,
+              cursor: null,
+              excludePinned: true,
+            }),
+          ]);
+          const mappedPinned = pinnedConversations.map(mapLocalToConversation);
+          const mappedNormal = page.items.map(mapLocalToConversation);
+
+          set((state) => ({
+            ...state,
+            ...mergeConversations(
+              state.pinnedConversations,
+              state.normalConversations,
+              [...mappedPinned, ...mappedNormal]
+            ),
+            hasLoadedLocal: true,
+            conversationsLoading: false,
+            hasMoreLocal: page.nextCursor !== null,
+            normalCursor: page.nextCursor,
+          }));
+        } catch (error) {
+          console.error("Failed to load local conversations:", error);
+          set((state) => ({
+            ...state,
+            hasLoadedLocal: true,
+            conversationsLoading: false,
+            hasMoreLocal: false,
+            normalCursor: null,
+          }));
+        }
+      },
+      loadMoreLocalConversations: async () => {
+        const {
+          hasLoadedLocal,
+          conversationsLoading,
+          loadingMore,
+          hasMoreLocal,
+          normalCursor,
+        } = get();
+        if (
+          !hasLoadedLocal ||
+          conversationsLoading ||
+          loadingMore ||
+          !hasMoreLocal
+        ) {
+          return;
+        }
+
+        set((state) => ({ ...state, loadingMore: true }));
+
+        try {
+          const page = await localDB.getUpdatedAtPage({
+            limit: PAGE_SIZE,
+            cursor: normalCursor,
+            excludePinned: true,
+          });
+          const mapped = page.items.map(mapLocalToConversation);
+
+          set((state) => ({
+            ...state,
+            ...mergeConversations(
+              state.pinnedConversations,
+              state.normalConversations,
+              mapped
+            ),
+            loadingMore: false,
+            hasMoreLocal: page.nextCursor !== null,
+            normalCursor: page.nextCursor,
+          }));
+        } catch (error) {
+          console.error("Failed to load more local conversations:", error);
+          set((state) => ({
+            ...state,
+            loadingMore: false,
+            hasMoreLocal: false,
+            normalCursor: null,
+          }));
+        }
+      },
+
+      clearLocal: async () => {
+        try {
+          await localDB.clear();
+        } catch (error) {
+          console.error("Failed to clear local conversations:", error);
+        }
+
+        set((state) => ({
+          ...state,
+          pinnedConversations: [],
+          normalConversations: [],
+          hasLoadedLocal: true,
+          loadingMore: false,
+          hasMoreLocal: false,
+          normalCursor: null,
+        }));
+      },
+
+      pinConversation: async (id) => {
+        const { normalConversations } = get();
+        const target = normalConversations.find((item) => item.id === id);
+        if (!target) {
+          return;
+        }
+
+        const pinned_at = new Date().toISOString();
+        const updated: Conversation = {
+          ...target,
           pinned: true,
           pinned_at,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to pin conversation:", error);
-    }
-  },
+        };
 
-  unpinConversation: async (id) => {
-    const { pinnedConversations } = get();
-    const target = pinnedConversations.find((item) => item.id === id);
-    if (!target) {
-      return;
-    }
+        set((state) => ({
+          ...state,
+          normalConversations: state.normalConversations.filter(
+            (item) => item.id !== id
+          ),
+          pinnedConversations: sortByPinnedAt([
+            updated,
+            ...state.pinnedConversations.filter((item) => item.id !== id),
+          ]),
+        }));
 
-    const updated: Conversation = {
-      ...target,
-      pinned: false,
-      pinned_at: undefined,
-    };
+        try {
+          const existing = await localDB.get(id);
+          if (existing) {
+            await localDB.save({
+              ...existing,
+              pinned: true,
+              pinned_at,
+            });
+          }
+        } catch (error) {
+          console.error("Failed to pin conversation:", error);
+        }
+      },
 
-    set((state) => ({
-      ...state,
-      pinnedConversations: state.pinnedConversations.filter(
-        (item) => item.id !== id
-      ),
-      normalConversations: sortByUpdatedAt([
-        updated,
-        ...state.normalConversations.filter((item) => item.id !== id),
-      ]),
-    }));
+      unpinConversation: async (id) => {
+        const { pinnedConversations } = get();
+        const target = pinnedConversations.find((item) => item.id === id);
+        if (!target) {
+          return;
+        }
 
-    try {
-      const existing = await localDB.get(id);
-      if (existing) {
-        await localDB.save({
-          ...existing,
+        const updated: Conversation = {
+          ...target,
           pinned: false,
           pinned_at: undefined,
-        });
-      }
-    } catch (error) {
-      console.error("Failed to unpin conversation:", error);
-    }
-  },
+        };
 
-  deleteConversation: async (id) => {
-    set((state) => ({
-      ...state,
-      pinnedConversations: state.pinnedConversations.filter(
-        (item) => item.id !== id
-      ),
-      normalConversations: state.normalConversations.filter(
-        (item) => item.id !== id
-      ),
-    }));
+        set((state) => ({
+          ...state,
+          pinnedConversations: state.pinnedConversations.filter(
+            (item) => item.id !== id
+          ),
+          normalConversations: sortByUpdatedAt([
+            updated,
+            ...state.normalConversations.filter((item) => item.id !== id),
+          ]),
+        }));
 
-    try {
-      await localDB.delete(id);
-    } catch (error) {
-      console.error("Failed to delete local conversation:", error);
-    }
-  },
-  updateConversationTitle: async (id, title) => {
-    const { pinnedConversations, normalConversations } = get();
-    const allConversations = [...pinnedConversations, ...normalConversations];
-    const target = allConversations.find((item) => item.id === id);
+        try {
+          const existing = await localDB.get(id);
+          if (existing) {
+            await localDB.save({
+              ...existing,
+              pinned: false,
+              pinned_at: undefined,
+            });
+          }
+        } catch (error) {
+          console.error("Failed to unpin conversation:", error);
+        }
+      },
 
-    if (!target) {
-      return;
-    }
+      deleteConversation: async (id) => {
+        set((state) => ({
+          ...state,
+          pinnedConversations: state.pinnedConversations.filter(
+            (item) => item.id !== id
+          ),
+          normalConversations: state.normalConversations.filter(
+            (item) => item.id !== id
+          ),
+        }));
 
-    const updated: Conversation = { ...target, title };
+        try {
+          await localDB.delete(id);
+        } catch (error) {
+          console.error("Failed to delete local conversation:", error);
+        }
+      },
+      updateConversationTitle: async (id, title) => {
+        const { pinnedConversations, normalConversations } = get();
+        const allConversations = [...pinnedConversations, ...normalConversations];
+        const target = allConversations.find((item) => item.id === id);
 
-    set((state) => ({
-      ...state,
-      ...mergeConversations(
-        state.pinnedConversations,
-        state.normalConversations,
-        [updated]
-      ),
-    }));
+        if (!target) {
+          return;
+        }
 
-    try {
-      const existing = await localDB.get(id);
-      if (existing) {
-        await localDB.save({ ...existing, title });
-      }
-    } catch (error) {
-      console.error("Failed to update conversation title:", error);
-    }
-  },
-}));
+        const updated: Conversation = { ...target, title };
+
+        set((state) => ({
+          ...state,
+          ...mergeConversations(
+            state.pinnedConversations,
+            state.normalConversations,
+            [updated]
+          ),
+        }));
+
+        try {
+          const existing = await localDB.get(id);
+          if (existing) {
+            await localDB.save({ ...existing, title });
+          }
+        } catch (error) {
+          console.error("Failed to update conversation title:", error);
+        }
+      },
+    }),
+    { name: "ConversationsStore" }
+  )
+);

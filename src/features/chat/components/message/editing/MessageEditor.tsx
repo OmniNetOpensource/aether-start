@@ -2,7 +2,7 @@
 
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { ArrowUp, Paperclip, X } from "lucide-react";
+import { ArrowUp, ImagePlus, X } from "lucide-react";
 import { ImagePreview } from "@/src/components/ImagePreview";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,7 +15,6 @@ import {
   useEditingStore,
 } from "@/src/features/chat/store";
 import { buildAttachmentsFromFiles } from "@/src/features/chat/lib/attachments";
-import { formatFileSize } from "@/src/lib/utils/file";
 
 type MessageEditorProps = {
   messageId: number;
@@ -133,10 +132,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (!isDesktop) {
-      return;
-    }
-    if (event.key === "Enter" && !event.shiftKey) {
+    if (event.key === "Enter" && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       if (!sendDisabled) {
         submitEdit(depth, (path) => navigate({ to: path }));
@@ -159,68 +155,29 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
 
       {hasAttachments && (
         <div className="flex flex-wrap gap-2">
-          {editedAttachments.map((attachment) =>
-            attachment.kind === "image" ? (
-              <div key={attachment.id} className="group relative">
-                <ImagePreview
-                  url={attachment.displayUrl}
-                  name={attachment.name}
-                  size={attachment.size}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="移除附件"
-                  onClick={() =>
-                    updateEditAttachments(
-                      editedAttachments.filter(
-                        (item) => item.id !== attachment.id
-                      )
-                    )
-                  }
-                  className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <div
-                key={attachment.id}
-                className="flex min-w-[200px] max-w-60 items-center gap-3 rounded-lg border bg-(--surface-primary) p-2 pr-3"
+          {editedAttachments.map((attachment) => (
+            <div key={attachment.id} className="group relative">
+              <ImagePreview
+                url={attachment.displayUrl}
+                name={attachment.name}
+                size={attachment.size}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label="移除附件"
+                onClick={() =>
+                  updateEditAttachments(
+                    editedAttachments.filter((item) => item.id !== attachment.id)
+                  )
+                }
+                className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
               >
-                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border bg-muted">
-                  <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                    <Paperclip className="h-4 w-4" />
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-xs font-medium text-foreground">
-                    {attachment.name}
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">
-                    {formatFileSize(attachment.size)}
-                  </div>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="移除附件"
-                  onClick={() =>
-                    updateEditAttachments(
-                      editedAttachments.filter(
-                        (item) => item.id !== attachment.id
-                      )
-                    )
-                  }
-                  className="h-6 w-6 rounded-full hover:text-destructive"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            )
-          )}
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ))}
         </div>
       )}
 
@@ -243,6 +200,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
             ref={fileInputRef}
             type="file"
             multiple
+            accept="image/*"
             className="hidden"
             onChange={(event) => {
               const files = Array.from(event.target.files ?? []);
@@ -258,7 +216,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
             onClick={() => fileInputRef.current?.click()}
             disabled={uploading}
           >
-            <Paperclip className="h-3.5 w-3.5" />
+            <ImagePlus className="h-3.5 w-3.5" />
             添加附件
           </Button>
         </div>

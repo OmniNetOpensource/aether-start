@@ -12,15 +12,24 @@ const serializeAttachments = async (
 ): Promise<SerializedAttachment[]> => {
   const serialized: SerializedAttachment[] = [];
 
+  console.log('\n[2] serializeAttachments - 开始序列化附件:');
+  console.log('  附件数量:', attachments.length);
+
   for (const attachment of attachments) {
-    serialized.push({
+    const serializedAttachment = {
       id: attachment.id,
       kind: attachment.kind,
       name: attachment.name,
       size: attachment.size,
       mimeType: attachment.mimeType,
       url: attachment.displayUrl,
-    });
+    };
+
+    console.log('  附件:', attachment.name);
+    console.log('    url长度:', serializedAttachment.url.length);
+    console.log('    url前100字符:', serializedAttachment.url.substring(0, 100));
+
+    serialized.push(serializedAttachment);
   }
 
   return serialized;

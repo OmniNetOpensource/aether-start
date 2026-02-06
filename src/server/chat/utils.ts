@@ -62,16 +62,6 @@ export const toChatMessages = (history: SerializedMessage[]): ChatMessage[] =>
       );
 
       const contentParts: unknown[] = [];
-      const toBase64Payload = (source: string) => {
-        if (!source) {
-          return source;
-        }
-        if (!source.startsWith("data:")) {
-          return source;
-        }
-        const commaIndex = source.indexOf(",");
-        return commaIndex >= 0 ? source.slice(commaIndex + 1) : source;
-      };
 
       for (const block of relevantBlocks) {
         if (block.type === "content") {
@@ -87,23 +77,10 @@ export const toChatMessages = (history: SerializedMessage[]): ChatMessage[] =>
               continue;
             }
 
-            if (att.kind === "image") {
-              contentParts.push({
-                type: "image_url",
-                image_url: { url: source },
-              });
-            } else if (att.kind === "video") {
-              contentParts.push({
-                type: "video_url",
-                video_url: { url: source },
-              });
-            } else {
-              const fileData = toBase64Payload(source);
-              contentParts.push({
-                type: "file",
-                file: { filename: att.name, file_data: fileData },
-              });
-            }
+            contentParts.push({
+              type: "image_url",
+              image_url: { url: source },
+            });
           }
         }
       }

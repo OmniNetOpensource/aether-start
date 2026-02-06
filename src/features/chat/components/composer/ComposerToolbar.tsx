@@ -41,7 +41,7 @@ export function ComposerToolbar() {
             multiple
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept="image/*,.pdf,.doc,.docx,.txt,audio/*,video/*"
+            accept="image/*"
             className="hidden"
           />
           <Button

@@ -1,16 +1,4 @@
-import type { AttachmentKind } from "@/src/features/chat/types/chat";
-
-export const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024; // 20MB
-
-export function detectAttachmentKind(
-  mimeType: string | undefined,
-): AttachmentKind {
-  if (!mimeType) return "file";
-  if (mimeType.startsWith("image/")) return "image";
-  if (mimeType.startsWith("video/")) return "video";
-  if (mimeType.startsWith("audio/")) return "audio";
-  return "file";
-}
+export const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
 
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
@@ -49,15 +37,4 @@ export function convertFileToBase64(blob: Blob): Promise<string> {
 
     reader.readAsDataURL(blob);
   });
-}
-
-export function base64ToBlob(dataUrl: string): Blob {
-  const [header, base64] = dataUrl.split(",");
-  const mimeType = header?.match(/:(.*?);/)?.[1] || "application/octet-stream";
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) {
-    bytes[i] = binary.charCodeAt(i);
-  }
-  return new Blob([bytes], { type: mimeType });
 }
