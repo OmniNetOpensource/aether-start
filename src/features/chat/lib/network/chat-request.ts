@@ -15,6 +15,7 @@ import {
   type AssistantAddition,
 } from "../tree/block-operations";
 import { computeMessagesFromPath } from "../tree/message-tree";
+import { generateTitleFn } from "@/src/server/functions/chat-title";
 
 const generateLocalMessageId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -52,21 +53,10 @@ const generateTitle = async (conversationId: string, messages: Message[]) => {
   }
 
   try {
-    const response = await fetch("/api/chat/title", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        conversationId,
-        messages: buildTitleMessages(messages),
-      }),
+    const result = await generateTitleFn({
+      data: { messages: buildTitleMessages(messages) },
     });
-
-    if (!response.ok) {
-      return;
-    }
-
-    const data = (await response.json()) as { title?: string };
-    const title = typeof data.title === "string" ? data.title.trim() : "";
+    const title = typeof result.title === "string" ? result.title.trim() : "";
 
     if (!title || title === DEFAULT_CONVERSATION_TITLE) {
       return;

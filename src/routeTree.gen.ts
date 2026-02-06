@@ -13,9 +13,7 @@ import { Route as R404RouteImport } from './app/404'
 import { Route as AppRouteRouteImport } from './app/app/route'
 import { Route as IndexRouteImport } from './app/index'
 import { Route as AppIndexRouteImport } from './app/app/index'
-import { Route as ApiChatRouteRouteImport } from './app/api/chat/route'
 import { Route as AppCConversationIdRouteImport } from './app/app/c/$conversationId'
-import { Route as ApiChatTitleRouteRouteImport } from './app/api/chat/title/route'
 
 const R404Route = R404RouteImport.update({
   id: '/404',
@@ -37,37 +35,23 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRouteRoute,
 } as any)
-const ApiChatRouteRoute = ApiChatRouteRouteImport.update({
-  id: '/api/chat',
-  path: '/api/chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
   id: '/c/$conversationId',
   path: '/c/$conversationId',
   getParentRoute: () => AppRouteRoute,
-} as any)
-const ApiChatTitleRouteRoute = ApiChatTitleRouteRouteImport.update({
-  id: '/title',
-  path: '/title',
-  getParentRoute: () => ApiChatRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
-  '/api/chat': typeof ApiChatRouteRouteWithChildren
   '/app/': typeof AppIndexRoute
-  '/api/chat/title': typeof ApiChatTitleRouteRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
-  '/api/chat': typeof ApiChatRouteRouteWithChildren
   '/app': typeof AppIndexRoute
-  '/api/chat/title': typeof ApiChatTitleRouteRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRoutesById {
@@ -75,45 +59,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
-  '/api/chat': typeof ApiChatRouteRouteWithChildren
   '/app/': typeof AppIndexRoute
-  '/api/chat/title': typeof ApiChatTitleRouteRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/app'
-    | '/404'
-    | '/api/chat'
-    | '/app/'
-    | '/api/chat/title'
-    | '/app/c/$conversationId'
+  fullPaths: '/' | '/app' | '/404' | '/app/' | '/app/c/$conversationId'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/404'
-    | '/api/chat'
-    | '/app'
-    | '/api/chat/title'
-    | '/app/c/$conversationId'
-  id:
-    | '__root__'
-    | '/'
-    | '/app'
-    | '/404'
-    | '/api/chat'
-    | '/app/'
-    | '/api/chat/title'
-    | '/app/c/$conversationId'
+  to: '/' | '/404' | '/app' | '/app/c/$conversationId'
+  id: '__root__' | '/' | '/app' | '/404' | '/app/' | '/app/c/$conversationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   R404Route: typeof R404Route
-  ApiChatRouteRoute: typeof ApiChatRouteRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -146,26 +106,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/api/chat': {
-      id: '/api/chat'
-      path: '/api/chat'
-      fullPath: '/api/chat'
-      preLoaderRoute: typeof ApiChatRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/app/c/$conversationId': {
       id: '/app/c/$conversationId'
       path: '/c/$conversationId'
       fullPath: '/app/c/$conversationId'
       preLoaderRoute: typeof AppCConversationIdRouteImport
       parentRoute: typeof AppRouteRoute
-    }
-    '/api/chat/title': {
-      id: '/api/chat/title'
-      path: '/title'
-      fullPath: '/api/chat/title'
-      preLoaderRoute: typeof ApiChatTitleRouteRouteImport
-      parentRoute: typeof ApiChatRouteRoute
     }
   }
 }
@@ -184,23 +130,10 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
-interface ApiChatRouteRouteChildren {
-  ApiChatTitleRouteRoute: typeof ApiChatTitleRouteRoute
-}
-
-const ApiChatRouteRouteChildren: ApiChatRouteRouteChildren = {
-  ApiChatTitleRouteRoute: ApiChatTitleRouteRoute,
-}
-
-const ApiChatRouteRouteWithChildren = ApiChatRouteRoute._addFileChildren(
-  ApiChatRouteRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   R404Route: R404Route,
-  ApiChatRouteRoute: ApiChatRouteRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

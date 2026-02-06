@@ -1,5 +1,6 @@
 import { SerializedMessage } from "@/src/features/chat/types/chat";
 import { StreamParser, StreamEvent } from "./stream-parser";
+import { streamChatFn } from "@/src/server/functions/chat";
 
 const getChatApiStatusHint = (status: number): { reason: string; suggestion: string } => {
   switch (status) {
@@ -94,16 +95,18 @@ export class ChatClient {
     this.abortController = new AbortController();
 
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        signal: this.abortController.signal,
-        body: JSON.stringify({
+      const response = await streamChatFn({
+        data: {
           conversationHistory: messages,
           conversationId: conversationId ?? null,
           role,
-        }),
+        },
+        signal: this.abortController.signal,
       });
+
+      if (!(response instanceof Response)) {
+        throw new Error("Unexpected response type from server function");
+      }
 
       if (!response.ok) {
         const status = response.status;
