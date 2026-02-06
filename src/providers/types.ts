@@ -1,11 +1,7 @@
 import type { SerializedMessage } from "@/src/features/chat/types/chat";
 import type { ChatTool } from "@/src/providers/tools/types";
 
-export type ChatProviderId = "openrouter" | "anthropic" | "openai" | "gemini";
-
-export type OpenRouterProviderPreferences = {
-  order: string[];
-};
+export type ChatProviderId = "anthropic";
 
 // Stream events sent to the client
 export type ChatStreamEvent =
@@ -62,7 +58,6 @@ export type ChatRunOptions = {
   messages: SerializedMessage[];
   tools: ChatTool[];
   systemPrompt?: string;
-  provider?: OpenRouterProviderPreferences;
 };
 
 export type ChatProviderState = {

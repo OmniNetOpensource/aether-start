@@ -15,7 +15,6 @@ import {
   type AssistantAddition,
 } from "../tree/block-operations";
 import { computeMessagesFromPath } from "../tree/message-tree";
-import { saveConversationToCloud } from "@/src/lib/storage/convex/cloud-conversations";
 
 const generateLocalMessageId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -195,12 +194,6 @@ export const startChatRequest = async (
       pinned_at,
     });
 
-    void saveConversationToCloud({
-      conversationId: id,
-      created_at,
-      updated_at: now,
-      messages: pathMessages,
-    });
   };
 
   const chatClient = new ChatClient({

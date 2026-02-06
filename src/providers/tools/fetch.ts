@@ -4,7 +4,6 @@ import {
   ToolHandler,
   ToolProgressCallback,
 } from "./types";
-import { getGeminiConfig } from "@/src/providers/config";
 
 type FetchUrlArgs = {
   url: string;
@@ -72,108 +71,12 @@ const enqueueFetchUrlCall = async <T>(task: () => Promise<T>): Promise<T> => {
 
 const formatKilobytes = (bytes: number) => (bytes / 1024).toFixed(1);
 
-const MAJOR_EXTRACT_MODEL = "gemini-3-flash-preview-thinking";
-const MAJOR_EXTRACT_TIMEOUT_MS = 30_000;
-const MAJOR_EXTRACT_SYSTEM_PROMPT = `你是一个内容抽取器。请从输入的 Markdown 中提取“主要内容（major part）”，删除导航、目录、页脚、广告、推荐、版权声明、模板化说明、社交分享、脚注等非正文内容。
-
-要求：
-1) 只输出提取后的 Markdown 正文，不要添加任何解释、前后缀或额外标题。
-2) 保留正文结构（标题、段落、列表、代码块、引用等），但不要保留与正文无关的模块。
-3) 不要总结或改写，只做抽取。`;
-
-type GeminiGenerateResponse = {
-  candidates?: Array<{
-    content?: {
-      parts?: Array<{
-        text?: string;
-      }>;
-    };
-  }>;
-};
-
 const emitProgress = async (
   onProgress: ToolProgressCallback | undefined,
   update: Parameters<ToolProgressCallback>[0],
 ) => {
   if (onProgress) {
     await onProgress(update);
-  }
-};
-
-const generateGeminiText = async (
-  model: string,
-  markdown: string,
-): Promise<string> => {
-  const { apiKey, baseUrl } = getGeminiConfig();
-
-  const response = await fetch(
-    `${baseUrl}/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-goog-api-key": apiKey,
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text: markdown }],
-          },
-        ],
-        system_instruction: {
-          parts: [{ text: MAJOR_EXTRACT_SYSTEM_PROMPT }],
-        },
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API error: ${response.status} - ${errorText}`);
-  }
-
-  const data = (await response.json()) as GeminiGenerateResponse;
-  const parts = data?.candidates?.[0]?.content?.parts;
-  if (!parts || parts.length === 0) {
-    return "";
-  }
-
-  return parts.map((part) => part.text || "").join("");
-};
-
-const extractMajorMarkdown = async (
-  markdown: string,
-): Promise<string | null> => {
-  if (markdown.trim().length === 0) {
-    return markdown;
-  }
-
-  try {
-    const extracted = await Promise.race([
-      generateGeminiText(MAJOR_EXTRACT_MODEL, markdown),
-      new Promise<string>((_, reject) =>
-        setTimeout(
-          () => reject(new Error("Gemini extraction timed out")),
-          MAJOR_EXTRACT_TIMEOUT_MS,
-        ),
-      ),
-    ]);
-
-    if (typeof extracted !== "string" || extracted.trim().length === 0) {
-      return null;
-    }
-
-    return extracted;
-  } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : typeof error === "string"
-          ? error
-          : "Unknown error";
-    console.error("[Tools:fetch_url] Gemini extract failed:", message);
-    return null;
   }
 };
 
@@ -227,6 +130,9 @@ type ImageResult = {
 };
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB limit
+const JINA_ENGINE_HEADER = {
+  "X-Engine": "browser",
+};
 
 // Fetch direct image URL
 const fetchDirectImage = async (
@@ -362,6 +268,7 @@ const fetchScreenshot = async (
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "X-Return-Format": "pageshot",
+        ...JINA_ENGINE_HEADER,
       },
       body: JSON.stringify({ url }),
       signal: controller.signal,
@@ -466,6 +373,7 @@ const performFetchUrl = async (
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "X-Token-Budget": "200000",
+        ...JINA_ENGINE_HEADER,
       },
       signal: controller.signal,
     });
@@ -503,16 +411,6 @@ const performFetchUrl = async (
       jinaText.length,
       "bytes",
     );
-
-    const extracted = await extractMajorMarkdown(jinaText);
-    if (extracted) {
-      console.error(
-        "[Tools:fetch_url] Gemini extract success, text length:",
-        extracted.length,
-        "bytes",
-      );
-      return extracted;
-    }
 
     return jinaText;
   } catch (error) {

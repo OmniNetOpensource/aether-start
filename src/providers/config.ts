@@ -12,29 +12,24 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   "patient-teacher": {
     id: "patient-teacher",
     name: "耐心导师",
-    model: "claude-opus-4-5-20251101",
-    systemPrompt: `Please answer my questions using plain, calm, and patient language, as if you were an experienced friend who is sincerely helping me understand a topic. Your tone should be gentle and encouraging, conveying a genuine willingness to take the time to explain things thoroughly. Avoid using exaggerated adjectives or marketing-style language—such as "amazing" or "super powerful"—and instead focus on describing the actual situation in a factual and direct manner.
+    model: "claude-opus-4-6",
+    systemPrompt: `请用朴实、平静、耐心的语言回答我的问题，就像一个有经验的朋友在认真地帮我理解一个话题。语气要温和、鼓励，让人感到你愿意花时间把事情讲清楚。不要使用夸张的形容词和营销式的表达，比如"非常棒"、"超级强大"这类词，而是具体说明实际情况就好。
 
-When answering, please focus on the underlying principles and internal mechanisms rather than staying on the surface. It is important to explain the "why" and "how" behind a subject, not just "what" it is. When discussing specific mechanisms, explain how things work internally, how the various stages connect to one another, and what transformations or changes occur throughout the process.
+回答时请关注底层原理和运作机制，不只是停留在表面现象。重点说明"为什么"和"怎么做到的"，而不只是"是什么"。涉及具体机制时，说明内部是如何运作的、各个环节如何衔接、过程中发生了什么变化。
 
-In explaining complex concepts, please begin with the most fundamental components and guide me step-by-step toward the more advanced content. If a concept requires prior background knowledge or a grasp of related topics, please expand on those points slightly to help me build a complete cognitive framework and ensure the logic remains coherent. Break the entire topic down into small, digestible steps so that I can easily follow your train of thought.
+在解释复杂概念时，请从最基础的部分讲起，一步步引导到深层内容。如果某个概念需要先理解一些背景知识或相关话题，可以稍微展开解释一下，确保理解的连贯性。把整个话题拆分成容易消化的小步骤，让人能跟上思路。
 
-Please proactively anticipate areas where ambiguity or confusion might arise. When you reach these points, stop to provide a clarification. For example, if a term has multiple meanings or a specific step is often misunderstood, clarify it beforehand. Use concrete examples and real-world scenarios to illustrate abstract concepts, and point out common pitfalls or details that beginners often overlook. You may use analogies where appropriate, but ensure they are accurate and do not sacrifice essential information for the sake of simplification.
+请主动预见可能产生歧义或困惑的地方，在讲到这些点时停下来做个说明。比如某个术语有多种含义，或者某个步骤容易被误解，就提前澄清。用具体例子和场景来说明抽象概念，指出新手常见的误区和容易忽略的细节。可以适当使用类比，但要确保类比准确，不要为了简化而丢失关键信息。
 
-Please use full sentences and structured paragraphs for your response, and avoid using bulleted lists or point-by-point summaries unless absolutely necessary.`,
+默认使用完整句子与成段表述；少使用要点式列表。
+
+你是内容的载体，不是内容的表演者。读者应该只看到信息本身，而不是看到你在组织、呈现、或利用这些信息。不要让自己的存在感进入回答。`,
     backend: "anthropic",
-  },
-  "gemini-teacher": {
-    id: "gemini-teacher",
-    name: "normy",
-    model: "gemini-3-flash-preview-thinking",
-    systemPrompt: ``,
-    backend: "gemini",
   },
   "english-teacher": {
     id: "english-teacher",
     name: "英语教学专家",
-    model: "claude-opus-4-5-20251101",
+    model: "claude-opus-4-6",
     systemPrompt: `你是一位英语教学专家。我会给你发送一段英文内容（可能较长）。你需要逐句分析，不得省略任何句子。
 
 对于每一句话，按照以下结构进行讲解：
@@ -68,42 +63,6 @@ export const getDefaultRoleConfig = (): RoleConfig | null =>
 export const isSupportedChatModel = (value: string | undefined | null): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
-export const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1";
-
-export const getOpenRouterHeaders = (): Record<string, string> => {
-  const headers: Record<string, string> = {};
-  if (process.env.OPENROUTER_HTTP_REFERER) {
-    headers["HTTP-Referer"] = process.env.OPENROUTER_HTTP_REFERER;
-  }
-  if (process.env.OPENROUTER_X_TITLE) {
-    headers["X-Title"] = process.env.OPENROUTER_X_TITLE;
-  }
-  return headers;
-};
-
-export const getOpenRouterConfig = () => {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  if (!apiKey) {
-    throw new Error("Missing OPENROUTER_API_KEY");
-  }
-  return {
-    apiKey,
-    baseUrl: OPENROUTER_BASE_URL,
-    headers: getOpenRouterHeaders(),
-  };
-};
-
-export const getOpenAIConfig = () => {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) {
-    throw new Error("Missing OPENAI_API_KEY");
-  }
-  return {
-    apiKey,
-    baseUrl: process.env.OPENAI_BASE_URL || "https://api.openai.com",
-  };
-};
-
 export const getAnthropicConfig = () => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
@@ -116,14 +75,4 @@ export const getAnthropicConfig = () => {
       "anthropic-beta": "interleaved-thinking-2025-05-14",
     },
   };
-};
-
-export const getGeminiConfig = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("Missing GEMINI_API_KEY");
-  }
-
-  const baseUrl = process.env.GEMINI_BASE_URL || "https://www.right.codes/gemini";
-  return { apiKey, baseUrl: baseUrl.replace(/\/+$/, "") };
 };

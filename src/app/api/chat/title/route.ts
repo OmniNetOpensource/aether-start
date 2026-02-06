@@ -1,11 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import Anthropic from "@anthropic-ai/sdk";
 import type { SerializedMessage } from "@/src/features/chat/types/chat";
 import {
-  OPENROUTER_BASE_URL,
-  getOpenRouterHeaders,
+  getAnthropicConfig,
 } from "@/src/providers/config";
 
-const TITLE_MODEL = "google/gemini-3-flash-preview";
 const FALLBACK_TITLE = "New Chat";
 
 const extractContent = (message?: SerializedMessage) => {
@@ -55,13 +54,15 @@ export const Route = createFileRoute("/api/chat/title")({
           return Response.json({ title: FALLBACK_TITLE });
         }
 
-        const apiKey = process.env.OPENROUTER_API_KEY;
-        if (!apiKey) {
-          return Response.json(
-            { error: "Missing OPENROUTER_API_KEY" },
-            { status: 500 },
-          );
+        let anthropicConfig: ReturnType<typeof getAnthropicConfig>;
+        try {
+          anthropicConfig = getAnthropicConfig();
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : "Missing ANTHROPIC_API_KEY";
+          return Response.json({ error: message }, { status: 500 });
         }
+        const titleModel = "claude-haiku-4-5";
 
         const promptLines = [
           "Based on this conversation, generate a short title (max 10 chars, no quotes). Use the same language as the conversation.",
@@ -71,34 +72,35 @@ export const Route = createFileRoute("/api/chat/title")({
 
         const prompt = promptLines.join("\n");
 
-        const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            "Content-Type": "application/json",
-            ...getOpenRouterHeaders(),
-          },
-          body: JSON.stringify({
-            model: TITLE_MODEL,
-            messages: [{ role: "user", content: prompt }],
-            max_tokens: 50,
-            temperature: 0.2,
-          }),
+        const client = new Anthropic({
+          apiKey: anthropicConfig.apiKey,
+          baseURL: anthropicConfig.baseURL,
+          defaultHeaders: anthropicConfig.defaultHeaders,
         });
 
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Title generation failed:", response.status, errorText);
+        let rawTitle = "";
+        try {
+          const response = await client.messages.create({
+            model: titleModel,
+            max_tokens: 64,
+            temperature: 0.2,
+            messages: [{ role: "user", content: prompt }],
+          });
+          rawTitle = Array.isArray(response.content)
+            ? response.content
+                .map((block) => (block.type === "text" ? block.text : ""))
+                .join("")
+            : "";
+        } catch (error) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          console.error("Title generation failed:", message);
           return Response.json(
             { error: "Title generation failed" },
             { status: 502 },
           );
         }
 
-        const data = (await response.json()) as {
-          choices?: Array<{ message?: { content?: string } }>;
-        };
-        const rawTitle = data?.choices?.[0]?.message?.content;
         const title = typeof rawTitle === "string" ? sanitizeTitle(rawTitle) : "";
 
         if (!title) {

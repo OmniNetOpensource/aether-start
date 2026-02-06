@@ -11,7 +11,6 @@ import {
 import type { Message } from "@/src/features/chat/types/chat";
 import { buildConversationTitle } from "@/src/features/chat/lib/format";
 import { localDB } from "@/src/lib/storage/indexed-db";
-import { saveConversationToCloud } from "@/src/lib/storage/convex/cloud-conversations";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
 import { useComposerStore } from "./useComposerStore";
 import { useMessageTreeStore } from "./useMessageTreeStore";
@@ -89,12 +88,6 @@ const persistConversation = async (
     pinned_at,
   });
 
-  void saveConversationToCloud({
-    conversationId: id,
-    created_at,
-    updated_at: now,
-    messages: pathMessages,
-  });
 };
 
 export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>(
