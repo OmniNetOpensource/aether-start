@@ -4,8 +4,9 @@ export type RoleInfo = {
 };
 
 export const ROLES: RoleInfo[] = [
-  { id: "patient-teacher", name: "耐心导师" },
-  { id: "english-teacher", name: "英语教学专家" },
+  { id: "aether", name: "aether" },
+  { id: "心灵导师", name: "心灵导师" },
+  { id: "英语教学专家", name: "英语教学专家" },
 ];
 
-export const DEFAULT_ROLE_ID = "patient-teacher";
+export const DEFAULT_ROLE_ID = "aether";
