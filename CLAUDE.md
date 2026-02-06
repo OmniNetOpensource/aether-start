@@ -140,5 +140,3 @@ Environment variables in `.env.local`:
 - Always use `SerializedMessage` for API/storage
 - Convert to `Message` (with id, timestamps, tree structure) in UI
 - Use block system for structured content
-
-## When asked to create a plan or explain something, deliver the COMPLETE plan or explanation FIRST. Do NOT start editing files or writing code until the plan is explicitly approved by the user. If the user says 'explain first, then act', strictly follow that order.

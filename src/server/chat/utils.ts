@@ -50,9 +50,7 @@ export const buildSystemPrompt = () => {
 
 # 什么时候不需要搜索：已知的知识
 
-- 搜索工具使用技法：多次组合不同关键词进行多次搜索
-- 获取更详细的信息：fetch 特定网页
-
+- 学会利用google search高级技巧
 `;
 };
 
@@ -60,7 +58,7 @@ export const toChatMessages = (history: SerializedMessage[]): ChatMessage[] =>
   history
     .map((msg) => {
       const relevantBlocks = msg.blocks.filter(
-        (block) => block.type === "content" || block.type === "attachments"
+        (block) => block.type === "content" || block.type === "attachments",
       );
 
       const contentParts: unknown[] = [];

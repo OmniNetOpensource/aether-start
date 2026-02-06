@@ -53,7 +53,7 @@ const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
       const waitTime = SEARCH_INTERVAL_MS - elapsed;
       console.error(
         "[Tools:search] Throttling request, waiting",
-        `${waitTime}ms`
+        `${waitTime}ms`,
       );
       await sleep(waitTime);
     }
@@ -62,9 +62,7 @@ const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
     return task();
   };
 
-  const queuedTask = searchQueue
-    .catch(() => {})
-    .then(runTask);
+  const queuedTask = searchQueue.catch(() => {}).then(runTask);
 
   searchQueue = queuedTask.then(() => {}).catch(() => {});
   return queuedTask;
@@ -72,7 +70,7 @@ const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
 
 const formatSearchResponse = (
   query: string,
-  data: { organic?: SearchResult[] }
+  data: { organic?: SearchResult[] },
 ): string => {
   const rawResults = Array.isArray(data.organic) ? data.organic : [];
 
@@ -105,12 +103,12 @@ const formatSearchResponse = (
     })
     .filter(
       (
-        result
+        result,
       ): result is {
         title: string;
         url: string;
         description: string;
-      } => Boolean(result && result.url)
+      } => Boolean(result && result.url),
     );
 
   const payload: SearchPayload = {
@@ -124,7 +122,7 @@ const formatSearchResponse = (
 
 const performSearch = async (
   query: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<string> => {
   console.error("[Tools:search] Searching:", query);
 
@@ -150,14 +148,14 @@ const performSearch = async (
   try {
     const response = await fetch(
       "https://google.serper.dev/search",
-      requestOptions
+      requestOptions,
     );
 
     if (!response.ok) {
       console.error(
         "[Tools:search] API error:",
         response.status,
-        response.statusText
+        response.statusText,
       );
       return `Search API error: ${response.status} ${response.statusText}`;
     }
@@ -198,8 +196,7 @@ const searchSpec: ChatTool = {
   type: "function",
   function: {
     name: "search",
-    description:
-      "Search the web using Serper.dev Google Search API for fast, relevant results.",
+    description: "Search the web using Google Search",
     parameters: {
       type: "object",
       properties: {
