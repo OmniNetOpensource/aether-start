@@ -7,22 +7,17 @@ import {
 import { toast } from "@/src/hooks/useToast";
 
 export const buildAttachmentsFromFiles = async (
-  files: File[]
+  files: File[],
 ): Promise<Attachment[]> => {
-  const items = Array.from(files || []);
-  if (items.length === 0) {
-    return [];
-  }
-
   const attachments: Attachment[] = [];
 
-  for (const file of items) {
+  for (const file of files) {
     if (file.size > MAX_ATTACHMENT_SIZE) {
       toast.warning(
         `文件「${file.name}」超过限制（最大 ${(
           MAX_ATTACHMENT_SIZE /
           (1024 * 1024)
-        ).toFixed(0)}MB），已跳过。`
+        ).toFixed(0)}MB），已跳过。`,
       );
       continue;
     }
@@ -46,7 +41,7 @@ export const buildAttachmentsFromFiles = async (
         error instanceof Error ? error.message : String(error || "未知原因");
       console.error(`无法上传文件「${file.name}」`, error);
       toast.error(
-        `无法上传文件「${file.name}」：${detail}。建议: 检查文件是否可读或稍后重试。`
+        `无法上传文件「${file.name}」：${detail}。建议: 检查文件是否可读或稍后重试。`,
       );
     }
   }

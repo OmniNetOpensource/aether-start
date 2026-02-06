@@ -45,14 +45,13 @@ export const useComposerStore = create<ComposerState & ComposerActions>(
     textareaRef: null,
     setInput: (value) => set({ input: value }),
     addAttachments: async (files) => {
-      const items = Array.from(files || []);
-      if (items.length === 0) {
+      if (files.length === 0) {
         return;
       }
 
       set({ uploading: true });
 
-      const attachments = await buildAttachmentsFromFiles(items);
+      const attachments = await buildAttachmentsFromFiles(files);
 
       if (attachments.length === 0) {
         set({ uploading: false });
