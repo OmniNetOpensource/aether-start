@@ -1,8 +1,6 @@
 import type { SerializedMessage } from "@/src/features/chat/types/chat";
 import type { ChatTool } from "@/src/providers/tools/types";
 
-export type ChatProviderId = "anthropic";
-
 // Stream events sent to the client
 export type ChatStreamEvent =
   | { type: "content"; content: string }
@@ -53,7 +51,6 @@ export type ToolInvocationResult = {
 };
 
 export type ChatRunOptions = {
-  backend: ChatProviderId;
   model: string;
   messages: SerializedMessage[];
   tools: ChatTool[];
@@ -61,7 +58,6 @@ export type ChatRunOptions = {
 };
 
 export type ChatProviderState = {
-  backend: ChatProviderId;
   data: unknown;
 };
 

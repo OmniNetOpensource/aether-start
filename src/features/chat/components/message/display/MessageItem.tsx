@@ -16,10 +16,10 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
-  useChatRequestStore,
-  useEditingStore,
   useMessageTreeStore,
-} from "@/src/features/chat/store";
+} from "@/src/features/chat/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
+import { useEditingStore } from "@/src/features/chat/store/useEditingStore";
 import { MessageEditor } from "../editing/MessageEditor";
 import { BranchNavigator } from "../editing/BranchNavigator";
 import {

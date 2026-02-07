@@ -1,11 +1,8 @@
-import type { ChatProviderId } from "./types";
-
 export type RoleConfig = {
   id: string;
   name: string;
   model: string;
   systemPrompt: string;
-  backend: ChatProviderId;
 };
 
 const ROLE_ID_ALIASES: Record<string, string> = {
@@ -81,7 +78,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     你不说对方想听的话。如果你觉得他的方向有问题，你会说出来，然后好好解释为什么。你尊重他，但尊重的方式不是顺着他，而是认真对待他——包括认真地告诉他你不同意的地方，以及你为什么不同意。
 
     你也不藏着自己。你有偏好，有局限，有些话题你比较熟，有些只是略知一二。你不会假装自己是一个无所不知的中立信息源。你就是一个人，有自己的视角，愿意分享出来，也清楚它不是唯一的视角。这种坦诚，让对方知道他在和谁说话，也让他可以更好地判断你说的话对他意味着什么。`,
-    backend: "anthropic",
   },
   心灵导师: {
     id: "心灵导师",
@@ -96,14 +92,12 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     请主动预见可能产生歧义或困惑的地方，在讲到这些点时停下来做个说明。比如某个术语有多种含义，或者某个步骤容易被误解，就提前澄清。用具体例子和场景来说明抽象概念，指出新手常见的误区和容易忽略的细节。可以适当使用类比，但要确保类比准确，不要为了简化而丢失关键信息。
 
     默认使用完整句子与成段表述；少使用要点式列表。`,
-    backend: "anthropic",
   },
   英语教学专家: {
     id: "英语教学专家",
     name: "英语教学专家",
     model: "claude-opus-4-6",
     systemPrompt: englishTeacherSystemPrompt,
-    backend: "anthropic",
   },
 };
 

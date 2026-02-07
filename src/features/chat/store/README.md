@@ -14,4 +14,3 @@
   - useComposerStore.ts
   - useEditingStore.ts
   - useChatRequestStore.ts
-  - index.ts

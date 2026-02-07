@@ -9,4 +9,3 @@
 
 ## 内容
 - 子目录：display、editing、research
-- 文件：index.ts

@@ -1,6 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
-import { toolSpecs } from '@/src/providers/tools'
+import { toolSpecs } from '@/src/providers/tools/registry'
 import { isSupportedChatModel } from '@/src/providers/config'
 import {
   getDefaultRoleConfig,
@@ -11,17 +11,17 @@ import {
   createConversationLogger,
 } from '@/src/providers/logger'
 import {
-  runChat,
-  continueChat,
-  executeToolsGen,
-} from '@/src/providers'
+  runAnthropicChat,
+  continueAnthropicChat,
+} from '@/src/providers/anthropic'
+import { executeToolsGen } from '@/src/providers/tools/execute'
 import type {
   ChatStreamEvent,
   ChatRunOptions,
   ChatRunResult,
   ChatProviderState,
   ToolInvocationResult,
-} from '@/src/providers'
+} from '@/src/providers/types'
 
 const generateConversationId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
@@ -109,7 +109,6 @@ export const streamChatFn = createServerFn({ method: 'POST' })
 
       const requestedModel = roleConfig.model
       const systemInstruction = roleConfig.systemPrompt
-      const backend = roleConfig.backend
 
       const allowedToolNames = new Set<string>(['fetch_url', 'search'])
 
@@ -137,7 +136,6 @@ export const streamChatFn = createServerFn({ method: 'POST' })
       }
 
       const chatOptions: ChatRunOptions = {
-        backend,
         model: requestedModel,
         tools,
         systemPrompt: systemInstruction,
@@ -157,8 +155,8 @@ export const streamChatFn = createServerFn({ method: 'POST' })
 
         const generator =
           pendingToolResults && state
-            ? continueChat(chatOptions, state, pendingToolResults)
-            : runChat(chatOptions)
+            ? continueAnthropicChat(chatOptions, state, pendingToolResults)
+            : runAnthropicChat(chatOptions)
         let result: ChatRunResult | undefined
 
         while (true) {
@@ -183,7 +181,7 @@ export const streamChatFn = createServerFn({ method: 'POST' })
         if (!state) {
           yield {
             type: 'error',
-            message: `错误：缺少继续对话所需的状态 (backend=${backend}, model=${requestedModel})`,
+            message: `错误：缺少继续对话所需的状态 (model=${requestedModel})`,
           } satisfies ChatStreamEvent
           break
         }
@@ -215,7 +213,7 @@ export const streamChatFn = createServerFn({ method: 'POST' })
       if (iteration >= maxIterations) {
         yield {
           type: 'error',
-          message: `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${maxIterations} backend=${backend} model=${requestedModel}`,
+          message: `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${maxIterations} model=${requestedModel}`,
         } satisfies ChatStreamEvent
       }
 

@@ -9,4 +9,3 @@
 
 ## 内容
 - 子目录：composer、message
-- 文件：index.ts

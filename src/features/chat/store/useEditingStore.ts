@@ -3,14 +3,16 @@ import { devtools } from "zustand/middleware";
 import type { Attachment, EditingState } from "@/src/features/chat/types/chat";
 import { toast } from "@/src/hooks/useToast";
 import {
-  buildUserBlocks,
   cloneBlocks,
   computeMessagesFromPath,
   editMessage,
+} from "@/src/features/chat/lib/tree/message-tree";
+import {
+  buildUserBlocks,
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
-} from "@/src/features/chat/lib/tree";
-import { startChatRequest } from "@/src/features/chat/lib/network";
+} from "@/src/features/chat/lib/tree/block-operations";
+import { startChatRequest } from "@/src/features/chat/lib/network/chat-request";
 import { useMessageTreeStore } from "./useMessageTreeStore";
 import { getChatRequestHandlers, useChatRequestStore } from "./useChatRequestStore";
 

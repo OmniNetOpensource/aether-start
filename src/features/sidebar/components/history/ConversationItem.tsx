@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useChatRequestStore } from "@/src/features/chat/store";
+import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
 
 type ConversationItemProps = {

@@ -4,7 +4,7 @@ import { ChangeEvent, useRef } from "react";
 import { Loader2, Paperclip } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useComposerStore } from "@/src/features/chat/store";
+import { useComposerStore } from "@/src/features/chat/store/useComposerStore";
 import { RoleSelector } from "./RoleSelector";
 
 export function ComposerToolbar() {

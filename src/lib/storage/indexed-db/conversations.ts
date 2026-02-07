@@ -4,8 +4,8 @@ import {
   buildCurrentPath,
   createLinearMessages,
   migrateFromOldTree,
-} from "@/src/features/chat/lib/tree";
-import type { LegacyMessageTree } from "@/src/features/chat/lib/tree";
+} from "@/src/features/chat/lib/tree/message-tree";
+import type { LegacyMessageTree } from "@/src/features/chat/lib/tree/message-tree";
 
 const DB_NAME = "aether_local";
 const DB_VERSION = 5;

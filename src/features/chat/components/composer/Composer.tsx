@@ -10,17 +10,15 @@ import {
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUp, Quote, Square, X } from "lucide-react";
 import { ImagePreview } from "@/src/components/ImagePreview";
-import {
-  useIsNewChat,
-  useComposerStore,
-  useChatRequestStore,
-} from "@/src/features/chat/store";
+import { useComposerStore } from "@/src/features/chat/store/useComposerStore";
+import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
+import { useIsNewChat } from "@/src/features/chat/store/useMessageTreeStore";
 import { ComposerToolbar } from "./ComposerToolbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "@/src/hooks/useToast";
-import { useResponsive } from "@/src/features/responsive";
+import { useResponsive } from "@/src/features/responsive/ResponsiveContext";
 
 export function Composer() {
   const navigate = useNavigate();

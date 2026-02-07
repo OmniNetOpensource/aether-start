@@ -1,15 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  useComposerStore,
-  useEditingStore,
-  useMessageTreeStore,
-} from "@/src/features/chat/store";
-import { localDB } from "@/src/lib/storage/indexed-db";
+import { useComposerStore } from "@/src/features/chat/store/useComposerStore";
+import { useEditingStore } from "@/src/features/chat/store/useEditingStore";
+import { useMessageTreeStore } from "@/src/features/chat/store/useMessageTreeStore";
+import { localDB } from "@/src/lib/storage/indexed-db/conversations";
 import {
   buildCurrentPath,
   createLinearMessages,
-} from "@/src/features/chat/lib/tree";
+} from "@/src/features/chat/lib/tree/message-tree";
 import type {
   Attachment,
   LegacyAttachment,

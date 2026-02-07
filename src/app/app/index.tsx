@@ -2,7 +2,10 @@ import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Composer } from "@/src/features/chat/components/composer/Composer";
 import { MessageList } from "@/src/features/chat/components/message/display/MessageList";
-import { clearAllChatStores, useMessageTreeStore } from "@/src/features/chat/store";
+import { useMessageTreeStore } from "@/src/features/chat/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
+import { useEditingStore } from "@/src/features/chat/store/useEditingStore";
+import { useComposerStore } from "@/src/features/chat/store/useComposerStore";
 
 export const Route = createFileRoute("/app/")({
   component: HomePage,
@@ -13,7 +16,10 @@ function HomePage() {
   const hasMessages = messages.length > 0;
 
   useEffect(() => {
-    clearAllChatStores();
+    useChatRequestStore.getState().clear();
+    useEditingStore.getState().clear();
+    useComposerStore.getState().clear();
+    useMessageTreeStore.getState().clear();
   }, []);
 
   return (

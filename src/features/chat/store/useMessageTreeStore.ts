@@ -7,20 +7,22 @@ import type {
 } from "@/src/features/chat/types/chat";
 import {
   addMessage,
-  applyAssistantAddition,
   buildCurrentPath,
   cloneBlocks,
-  cloneMessages,
   computeMessagesFromPath,
   createEmptyMessageState,
   createLinearMessages,
   editMessage,
   getBranchInfo,
   switchBranch,
+} from "@/src/features/chat/lib/tree/message-tree";
+import {
+  applyAssistantAddition,
+  cloneMessages,
   type AssistantAddition,
-} from "@/src/features/chat/lib/tree";
+} from "@/src/features/chat/lib/tree/block-operations";
 import { buildConversationTitle } from "@/src/features/chat/lib/format";
-import { localDB } from "@/src/lib/storage/indexed-db";
+import { localDB } from "@/src/lib/storage/indexed-db/conversations";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
 import { useChatRequestStore } from "./useChatRequestStore";
 

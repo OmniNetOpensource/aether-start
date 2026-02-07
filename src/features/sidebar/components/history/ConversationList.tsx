@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { Loader2 } from "lucide-react";
-import { useMessageTreeStore } from "@/src/features/chat/store";
+import { useMessageTreeStore } from "@/src/features/chat/store/useMessageTreeStore";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
 import { ConversationItem } from "./ConversationItem";
 

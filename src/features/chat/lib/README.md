@@ -10,4 +10,3 @@
 
 ## 内容
 - 子目录：attachments、config、input、network、tree
-- 文件：index.ts

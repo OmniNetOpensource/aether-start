@@ -4,12 +4,10 @@ import { memo, useId, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResearchItem as ResearchItemData } from "@/src/features/chat/types/chat";
-import {
-  FetchUrlCard,
-  SearchCard,
-  ThinkingCard,
-  UnknownToolCard,
-} from "./cards";
+import { FetchUrlCard } from "./cards/FetchUrlCard";
+import { SearchCard } from "./cards/SearchCard";
+import { ThinkingCard } from "./cards/ThinkingCard";
+import { UnknownToolCard } from "./cards/UnknownToolCard";
 
 const SEARCH_TOOL_NAMES = new Set([
   "search",

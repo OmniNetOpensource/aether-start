@@ -1,4 +1,4 @@
-import { callToolByName } from "@/src/providers/tools";
+import { callToolByName } from "@/src/providers/tools/registry";
 import type { ToolProgressUpdate } from "@/src/providers/tools/types";
 import type { ConversationLogger } from "@/src/providers/logger";
 import type { PendingToolInvocation, ToolInvocationResult, ChatStreamEvent } from "../types";

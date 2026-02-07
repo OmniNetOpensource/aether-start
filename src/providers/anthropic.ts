@@ -223,7 +223,6 @@ const createInitialState = (options: ChatRunOptions): AnthropicState => {
 };
 
 const toChatState = (state: AnthropicState): ChatProviderState => ({
-  backend: "anthropic",
   data: state,
 });
 
@@ -298,7 +297,7 @@ export async function* runAnthropicChat(
   options: ChatRunOptions,
   state?: ChatProviderState
 ): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
-  const workingState = state && state.backend === "anthropic"
+  const workingState = state
     ? (state.data as AnthropicState)
     : createInitialState(options);
 
@@ -387,9 +386,6 @@ export async function* continueAnthropicChat(
   state: ChatProviderState,
   toolResults: ToolInvocationResult[]
 ): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
-  if (state.backend !== "anthropic") {
-    throw new Error("Invalid anthropic state");
-  }
   const nextState = appendToolResults(state.data as AnthropicState, toolResults);
-  return yield* runAnthropicChat(options, { backend: "anthropic", data: nextState });
+  return yield* runAnthropicChat(options, { data: nextState });
 }

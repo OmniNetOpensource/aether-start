@@ -4,7 +4,7 @@ import { useEffect } from "react";
 
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastContainer } from "@/components/ui/toast-container";
-import { ResponsiveProvider } from "@/src/features/responsive";
+import { ResponsiveProvider } from "@/src/features/responsive/ResponsiveContext";
 import { NotFound } from "@/src/app/-not-found";
 
 import appCss from "@/src/app/globals.css?url";

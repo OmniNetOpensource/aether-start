@@ -8,12 +8,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "@/src/hooks/useToast";
-import { useResponsive } from "@/src/features/responsive";
-import {
-  useChatRequestStore,
-  useComposerStore,
-  useEditingStore,
-} from "@/src/features/chat/store";
+import { useResponsive } from "@/src/features/responsive/ResponsiveContext";
+import { useEditingStore } from "@/src/features/chat/store/useEditingStore";
+import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
+import { useComposerStore } from "@/src/features/chat/store/useComposerStore";
 import { buildAttachmentsFromFiles } from "@/src/features/chat/lib/attachments";
 
 type MessageEditorProps = {

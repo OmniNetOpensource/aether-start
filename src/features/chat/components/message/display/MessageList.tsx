@@ -3,12 +3,10 @@
 import { useEffect, useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { PendingIndicator } from "./PendingIndicator";
-import {
-  useChatRequestStore,
-  useComposerStore,
-  useMessageTreeStore,
-} from "@/src/features/chat/store";
-import { computeMessagesFromPath } from "@/src/features/chat/lib/tree";
+import { useMessageTreeStore } from "@/src/features/chat/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
+import { useComposerStore } from "@/src/features/chat/store/useComposerStore";
+import { computeMessagesFromPath } from "@/src/features/chat/lib/tree/message-tree";
 import { useTextSelection } from "@/src/features/chat/hooks/useTextSelection";
 import { SelectionQuoteButton } from "./SelectionQuoteButton";
 

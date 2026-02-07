@@ -1,6 +1,6 @@
 import { ChatClient } from "./chat-client";
 import { toast } from "@/src/hooks/useToast";
-import { localDB } from "@/src/lib/storage/indexed-db";
+import { localDB } from "@/src/lib/storage/indexed-db/conversations";
 import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
 import { buildConversationTitle } from "@/src/features/chat/lib/format";
 import type {
