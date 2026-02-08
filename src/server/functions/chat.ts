@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { toolSpecs } from "@/src/providers/tools/registry";
-import { isSupportedChatModel } from "@/src/providers/config";
+import { fetchUrlTool } from "@/src/providers/tools/fetch";
+import { searchTool } from "@/src/providers/tools/search";
 import { getDefaultRoleConfig, getRoleConfig } from "@/src/providers/config";
 import {
   type ConversationLogger,
@@ -13,12 +13,13 @@ import {
 } from "@/src/providers/anthropic";
 import { executeToolsGen } from "@/src/providers/tools/execute";
 import type {
-  ChatStreamEvent,
+  ChatResponseEvent,
   ChatRunOptions,
   ChatRunResult,
   ChatProviderState,
   ToolInvocationResult,
 } from "@/src/providers/types";
+import type { ChatTool } from "@/src/providers/tools/types";
 
 const generateConversationId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -65,7 +66,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
         yield {
           type: "error",
           message: "Invalid conversation history: expected non-empty array.",
-        } satisfies ChatStreamEvent;
+        } satisfies ChatResponseEvent;
         return;
       }
 
@@ -82,7 +83,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
           type: "error",
           message:
             "Missing user message: latest user message missing or has empty blocks.",
-        } satisfies ChatStreamEvent;
+        } satisfies ChatResponseEvent;
         return;
       }
 
@@ -92,27 +93,20 @@ export const streamChatFn = createServerFn({ method: "POST" })
         yield {
           type: "error",
           message: `Invalid or missing role: "${String(role ?? "")}".`,
-        } satisfies ChatStreamEvent;
-        return;
-      }
-
-      if (!isSupportedChatModel(roleConfig.model)) {
-        yield {
-          type: "error",
-          message: `Invalid or missing model: "${String(roleConfig.model ?? "")}".`,
-        } satisfies ChatStreamEvent;
+        } satisfies ChatResponseEvent;
         return;
       }
 
       const requestedModel = roleConfig.model;
       const systemInstruction = roleConfig.systemPrompt;
 
-      const allowedToolNames = new Set<string>(["fetch_url", "search"]);
-
-      const tools = toolSpecs.filter(
-        (tool) =>
-          tool.type === "function" && allowedToolNames.has(tool.function.name),
-      );
+      const tools: ChatTool[] = []
+      if (process.env.JINA_API_KEY) {
+        tools.push(fetchUrlTool.spec)
+      }
+      if (process.env.SERP_API_KEY) {
+        tools.push(searchTool.spec)
+      }
 
       let activeConversationId = conversationId ?? null;
 
@@ -128,7 +122,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
           user_id: "",
           created_at: now,
           updated_at: now,
-        } satisfies ChatStreamEvent;
+        } satisfies ChatResponseEvent;
       }
 
       const chatOptions: ChatRunOptions = {
@@ -178,7 +172,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
           yield {
             type: "error",
             message: `错误：缺少继续对话所需的状态 (model=${requestedModel})`,
-          } satisfies ChatStreamEvent;
+          } satisfies ChatResponseEvent;
           break;
         }
 
@@ -187,12 +181,12 @@ export const streamChatFn = createServerFn({ method: "POST" })
             type: "conversation_updated",
             conversationId: activeConversationId,
             updated_at: new Date().toISOString(),
-          } satisfies ChatStreamEvent;
+          } satisfies ChatResponseEvent;
         }
 
         const toolGen = executeToolsGen(result.pendingToolCalls, logger);
         let toolGenResult: IteratorResult<
-          ChatStreamEvent,
+          ChatResponseEvent,
           ToolInvocationResult[]
         >;
         while (true) {
@@ -210,7 +204,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
         yield {
           type: "error",
           message: `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${maxIterations} model=${requestedModel}`,
-        } satisfies ChatStreamEvent;
+        } satisfies ChatResponseEvent;
       }
 
       if (activeConversationId) {
@@ -218,7 +212,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
           type: "conversation_updated",
           conversationId: activeConversationId,
           updated_at: new Date().toISOString(),
-        } satisfies ChatStreamEvent;
+        } satisfies ChatResponseEvent;
       }
     } catch (error) {
       const errorName = error instanceof Error ? error.name : "UnknownError";
@@ -232,6 +226,6 @@ export const streamChatFn = createServerFn({ method: "POST" })
       yield {
         type: "error",
         message: `错误：${errorName}: ${errorMessage}`,
-      } satisfies ChatStreamEvent;
+      } satisfies ChatResponseEvent;
     }
   });
