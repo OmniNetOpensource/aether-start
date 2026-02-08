@@ -140,3 +140,6 @@ Environment variables in `.env.local`:
 - Always use `SerializedMessage` for API/storage
 - Convert to `Message` (with id, timestamps, tree structure) in UI
 - Use block system for structured content
+
+
+没有我的同意，不允许revert changes

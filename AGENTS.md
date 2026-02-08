@@ -37,3 +37,6 @@ Use `pnpm` for all tasks.
 - Commit messages are short and imperative; optional conventional prefixes like `feat:` or `fix:` appear in history.
 - PRs should include: a clear summary, testing notes (`pnpm test` or `pnpm check`), and screenshots for UI changes.
 - Link relevant issues and call out any config or env changes.
+
+
+没有我的同意，不允许revert changes
