@@ -5,7 +5,7 @@ import type {
   SerializedAttachment,
   SerializedContentBlock,
   SerializedMessage,
-} from "@/src/features/chat/types/chat";
+} from "@/features/chat/types/chat";
 
 const serializeAttachments = async (
   attachments: Attachment[]

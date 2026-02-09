@@ -1,9 +1,9 @@
-import type { Attachment } from "@/src/features/chat/types/chat";
+import type { Attachment } from "@/features/chat/types/chat";
 import {
   MAX_IMAGE_SIZE,
   convertFileToBase64,
-} from "@/src/lib/utils/file";
-import { toast } from "@/src/hooks/useToast";
+} from "@/shared/lib/utils/file";
+import { toast } from "@/shared/hooks/useToast";
 
 export const buildAttachmentsFromFiles = async (
   files: File[],

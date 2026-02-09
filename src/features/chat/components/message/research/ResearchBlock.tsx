@@ -2,8 +2,8 @@
 
 import { memo, useId, useState } from "react";
 import { ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { ResearchItem as ResearchItemData } from "@/src/features/chat/types/chat";
+import { cn } from "@/shared/lib/utils";
+import type { ResearchItem as ResearchItemData } from "@/features/chat/types/chat";
 import { FetchUrlCard } from "./cards/FetchUrlCard";
 import { SearchCard } from "./cards/SearchCard";
 import { ThinkingCard } from "./cards/ThinkingCard";

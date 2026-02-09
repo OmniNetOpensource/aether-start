@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Composer } from "@/src/features/chat/components/composer/Composer";
-import { MessageList } from "@/src/features/chat/components/message/display/MessageList";
-import { useConversationLoader } from "@/src/features/chat/hooks/useConversationLoader";
-import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
-import { localDB } from "@/src/lib/storage/indexed-db/conversations";
+import { Composer } from "@/features/chat/components/composer/Composer";
+import { MessageList } from "@/features/chat/components/message/display/MessageList";
+import { useConversationLoader } from "@/features/chat/hooks/useConversationLoader";
+import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
+import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
 
 export const Route = createFileRoute("/app/c/$conversationId")({
   component: ConversationPage,

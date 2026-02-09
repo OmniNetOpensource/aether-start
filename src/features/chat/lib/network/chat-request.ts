@@ -1,13 +1,13 @@
 import { ChatClient } from "./chat-client";
-import { toast } from "@/src/hooks/useToast";
-import { localDB } from "@/src/lib/storage/indexed-db/conversations";
-import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
-import { buildConversationTitle } from "@/src/features/chat/lib/format";
+import { toast } from "@/shared/hooks/useToast";
+import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
+import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
+import { buildConversationTitle } from "@/features/chat/lib/format";
 import type {
   Message,
   MessageLike,
   SerializedMessage,
-} from "@/src/features/chat/types/chat";
+} from "@/features/chat/types/chat";
 import { serializeMessagesForRequest } from "./serialization";
 import {
   cloneMessages,
@@ -15,7 +15,7 @@ import {
   type AssistantAddition,
 } from "../tree/block-operations";
 import { computeMessagesFromPath } from "../tree/message-tree";
-import { generateTitleFn } from "@/src/server/functions/chat-title";
+import { generateTitleFn } from "@/features/chat/server/functions/chat-title";
 
 const generateLocalMessageId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID

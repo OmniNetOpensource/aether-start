@@ -6,8 +6,8 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+} from "@/shared/ui/popover";
+import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
 import { SettingsModal } from "./SettingsModal";
 
 type ProfileMenuProps = {

@@ -1,8 +1,8 @@
 import { RefObject } from "react";
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { Attachment } from "@/src/features/chat/types/chat";
-import { buildAttachmentsFromFiles } from "@/src/features/chat/lib/attachments";
+import type { Attachment } from "@/features/chat/types/chat";
+import { buildAttachmentsFromFiles } from "@/features/chat/lib/attachments";
 
 type ComposerState = {
   input: string;

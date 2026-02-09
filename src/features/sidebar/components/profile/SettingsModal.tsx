@@ -1,15 +1,15 @@
 "use client";
 
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "@/src/features/theme/hooks/useTheme";
+import { useTheme } from "@/features/theme/hooks/useTheme";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/ui/button";
+} from "@/shared/ui/dialog";
+import { Switch } from "@/shared/ui/switch";
+import { Button } from "@/shared/ui/button";
 
 type SettingsModalProps = {
   open: boolean;

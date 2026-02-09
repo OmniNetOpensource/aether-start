@@ -9,9 +9,9 @@ import {
   Search,
   X,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { ResearchItem } from "@/src/features/chat/types/chat";
-import Markdown from "@/src/components/Markdown";
+import { cn } from "@/shared/lib/utils";
+import type { ResearchItem } from "@/features/chat/types/chat";
+import Markdown from "@/shared/components/Markdown";
 import {
   getSearchResultCount,
   getToolLifecycle,

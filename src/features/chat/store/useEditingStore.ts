@@ -1,18 +1,18 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { Attachment, EditingState } from "@/src/features/chat/types/chat";
-import { toast } from "@/src/hooks/useToast";
+import type { Attachment, EditingState } from "@/features/chat/types/chat";
+import { toast } from "@/shared/hooks/useToast";
 import {
   cloneBlocks,
   computeMessagesFromPath,
   editMessage,
-} from "@/src/features/chat/lib/tree/message-tree";
+} from "@/features/chat/lib/tree/message-tree";
 import {
   buildUserBlocks,
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
-} from "@/src/features/chat/lib/tree/block-operations";
-import { startChatRequest } from "@/src/features/chat/lib/network/chat-request";
+} from "@/features/chat/lib/tree/block-operations";
+import { startChatRequest } from "@/features/chat/lib/network/chat-request";
 import { useMessageTreeStore } from "./useMessageTreeStore";
 import { getChatRequestHandlers, useChatRequestStore } from "./useChatRequestStore";
 

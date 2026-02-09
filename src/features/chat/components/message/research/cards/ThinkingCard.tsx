@@ -2,9 +2,9 @@
 
 import { useId, useState } from "react";
 import { Brain, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { ResearchItem } from "@/src/features/chat/types/chat";
-import Markdown from "@/src/components/Markdown";
+import { cn } from "@/shared/lib/utils";
+import type { ResearchItem } from "@/features/chat/types/chat";
+import Markdown from "@/shared/components/Markdown";
 import { BaseResearchCard } from "./BaseResearchCard";
 
 type ThinkingCardProps = {

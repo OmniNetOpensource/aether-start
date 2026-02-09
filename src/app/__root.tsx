@@ -2,12 +2,12 @@ import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-r
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { useEffect } from "react";
 
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ToastContainer } from "@/components/ui/toast-container";
-import { ResponsiveProvider } from "@/src/features/responsive/ResponsiveContext";
-import { NotFound } from "@/src/app/-not-found";
+import { TooltipProvider } from "@/shared/ui/tooltip";
+import { ToastContainer } from "@/shared/ui/toast-container";
+import { ResponsiveProvider } from "@/features/responsive/ResponsiveContext";
+import { NotFound } from "@/app/-not-found";
 
-import appCss from "@/src/app/globals.css?url";
+import appCss from "@/app/globals.css?url";
 import katexCss from "katex/dist/katex.min.css?url";
 
 const THEME_INIT_SCRIPT = `(function () {

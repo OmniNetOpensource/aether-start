@@ -3,9 +3,9 @@
 import { useEffect, useRef } from "react";
 import { ConversationList } from "./history/ConversationList";
 import { ProfileMenu } from "./profile/ProfileMenu";
-import { NewChatButton } from "@/src/features/chat/components/NewChatButton";
-import { useResponsive } from "@/src/features/responsive/ResponsiveContext";
-import { useSidebarStore } from "@/src/features/sidebar/store/useSidebarStore";
+import { NewChatButton } from "@/features/chat/components/NewChatButton";
+import { useResponsive } from "@/features/responsive/ResponsiveContext";
+import { useSidebarStore } from "@/features/sidebar/store/useSidebarStore";
 
 export default function Sidebar() {
   const deviceType = useResponsive();

@@ -3,11 +3,11 @@
 import { useEffect, useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { PendingIndicator } from "./PendingIndicator";
-import { useMessageTreeStore } from "@/src/features/chat/store/useMessageTreeStore";
-import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
-import { useComposerStore } from "@/src/features/chat/store/useComposerStore";
-import { computeMessagesFromPath } from "@/src/features/chat/lib/tree/message-tree";
-import { useTextSelection } from "@/src/features/chat/hooks/useTextSelection";
+import { useMessageTreeStore } from "@/features/chat/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
+import { useComposerStore } from "@/features/chat/store/useComposerStore";
+import { computeMessagesFromPath } from "@/features/chat/lib/tree/message-tree";
+import { useTextSelection } from "@/features/chat/hooks/useTextSelection";
 import { SelectionQuoteButton } from "./SelectionQuoteButton";
 
 export function MessageList() {

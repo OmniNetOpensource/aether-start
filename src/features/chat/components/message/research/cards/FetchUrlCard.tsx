@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { Captions, Check, ChevronDown, Image as ImageIcon, Link, Loader2, X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { ResearchItem } from "@/src/features/chat/types/chat";
-import { ImagePreview } from "@/src/components/ImagePreview";
-import Markdown from "@/src/components/Markdown";
+import { cn } from "@/shared/lib/utils";
+import type { ResearchItem } from "@/features/chat/types/chat";
+import { ImagePreview } from "@/shared/components/ImagePreview";
+import Markdown from "@/shared/components/Markdown";
 import { BaseResearchCard } from "./BaseResearchCard";
 import { getToolLifecycle } from "../utils";
 

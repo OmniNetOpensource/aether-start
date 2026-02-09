@@ -1,20 +1,20 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { toast } from "@/src/hooks/useToast";
-import type { ChatClient } from "@/src/features/chat/lib/network/chat-client";
-import { startChatRequest } from "@/src/features/chat/lib/network/chat-request";
-import { DEFAULT_ROLE_ID, ROLES } from "@/src/features/chat/config/roles";
+import { toast } from "@/shared/hooks/useToast";
+import type { ChatClient } from "@/features/chat/lib/network/chat-client";
+import { startChatRequest } from "@/features/chat/lib/network/chat-request";
+import { DEFAULT_ROLE_ID, ROLES } from "@/features/chat/config/roles";
 import {
   computeMessagesFromPath,
-} from "@/src/features/chat/lib/tree/message-tree";
+} from "@/features/chat/lib/tree/message-tree";
 import {
   buildUserBlocks,
   cloneMessages,
-} from "@/src/features/chat/lib/tree/block-operations";
-import type { Message } from "@/src/features/chat/types/chat";
-import { buildConversationTitle } from "@/src/features/chat/lib/format";
-import { localDB } from "@/src/lib/storage/indexed-db/conversations";
-import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
+} from "@/features/chat/lib/tree/block-operations";
+import type { Message } from "@/features/chat/types/chat";
+import { buildConversationTitle } from "@/features/chat/lib/format";
+import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
+import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
 import { useComposerStore } from "./useComposerStore";
 import { useMessageTreeStore } from "./useMessageTreeStore";
 

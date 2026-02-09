@@ -4,7 +4,7 @@ import type {
   BranchInfo,
   ContentBlock,
   Message,
-} from "@/src/features/chat/types/chat";
+} from "@/features/chat/types/chat";
 import {
   addMessage,
   buildCurrentPath,
@@ -15,15 +15,15 @@ import {
   editMessage,
   getBranchInfo,
   switchBranch,
-} from "@/src/features/chat/lib/tree/message-tree";
+} from "@/features/chat/lib/tree/message-tree";
 import {
   applyAssistantAddition,
   cloneMessages,
   type AssistantAddition,
-} from "@/src/features/chat/lib/tree/block-operations";
-import { buildConversationTitle } from "@/src/features/chat/lib/format";
-import { localDB } from "@/src/lib/storage/indexed-db/conversations";
-import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
+} from "@/features/chat/lib/tree/block-operations";
+import { buildConversationTitle } from "@/features/chat/lib/format";
+import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
+import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
 import { useChatRequestStore } from "./useChatRequestStore";
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;

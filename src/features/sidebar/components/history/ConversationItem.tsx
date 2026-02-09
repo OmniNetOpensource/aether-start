@@ -2,15 +2,15 @@
 
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
-import type { Conversation } from "@/types/conversation";
+import type { Conversation } from "@/shared/types/conversation";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
-import { useConversationsStore } from "@/src/features/sidebar/store/useConversationsStore";
+} from "@/shared/ui/dropdown-menu";
+import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
+import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
 
 type ConversationItemProps = {
   conversation: Conversation;

@@ -2,9 +2,9 @@
 
 import { memo, useState, type ReactNode } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import Markdown from "@/src/components/Markdown";
-import { ImagePreview } from "@/src/components/ImagePreview";
-import { BranchInfo, Message } from "@/src/features/chat/types/chat";
+import Markdown from "@/shared/components/Markdown";
+import { ImagePreview } from "@/shared/components/ImagePreview";
+import { BranchInfo, Message } from "@/features/chat/types/chat";
 import { ResearchBlock } from "../research/ResearchBlock";
 import {
   Copy,
@@ -14,12 +14,12 @@ import {
   RotateCcw,
   GitBranch,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/shared/ui/button";
 import {
   useMessageTreeStore,
-} from "@/src/features/chat/store/useMessageTreeStore";
-import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
-import { useEditingStore } from "@/src/features/chat/store/useEditingStore";
+} from "@/features/chat/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
+import { useEditingStore } from "@/features/chat/store/useEditingStore";
 import { MessageEditor } from "../editing/MessageEditor";
 import { BranchNavigator } from "../editing/BranchNavigator";
 import {
@@ -30,7 +30,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog";
+} from "@/shared/ui/dialog";
 
 type CopyButtonProps = {
   blocks: Message["blocks"];

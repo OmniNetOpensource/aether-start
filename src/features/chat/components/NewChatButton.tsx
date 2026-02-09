@@ -3,9 +3,9 @@
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps, ReactNode, MouseEvent } from "react";
 import { Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { useChatRequestStore } from "@/src/features/chat/store/useChatRequestStore";
+import { Button } from "@/shared/ui/button";
+import { cn } from "@/shared/lib/utils";
+import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
 
 type LinkComponentProps = ComponentProps<typeof Link>;
 

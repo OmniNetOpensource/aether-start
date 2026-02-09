@@ -1,6 +1,6 @@
-import { SerializedMessage } from '@/src/features/chat/types/chat'
-import type { ChatServerToClientEvent } from '@/src/features/chat/types/server-events'
-import { streamChatFn } from '@/src/server/functions/chat'
+import { SerializedMessage } from '@/features/chat/types/chat'
+import type { ChatServerToClientEvent } from '@/features/chat/types/server-events'
+import { streamChatFn } from '@/features/chat/server/functions/chat'
 
 type ChatClientOptions = {
   onEvent: (event: ChatServerToClientEvent) => void

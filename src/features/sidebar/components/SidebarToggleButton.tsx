@@ -1,8 +1,8 @@
 "use client";
 
 import { PanelLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { useSidebarStore } from "@/src/features/sidebar/store/useSidebarStore";
+import { Button } from "@/shared/ui/button";
+import { useSidebarStore } from "@/features/sidebar/store/useSidebarStore";
 
 export function SidebarToggleButton() {
   const isOpen = useSidebarStore((state) => state.isOpen);

@@ -2,8 +2,8 @@
 
 import { useEffect, useId, useState } from "react";
 import { AlertTriangle, ChevronRight } from "lucide-react";
-import { cn } from "@/lib/utils";
-import type { ResearchItem } from "@/src/features/chat/types/chat";
+import { cn } from "@/shared/lib/utils";
+import type { ResearchItem } from "@/features/chat/types/chat";
 import { BaseResearchCard } from "./BaseResearchCard";
 
 type UnknownToolCardProps = {
