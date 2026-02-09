@@ -3,7 +3,7 @@ import type {
   ContentBlock,
   Message,
   ResearchItem,
-} from "@/features/chat/types/chat";
+} from "@/features/conversation/types/message";
 
 export type LegacyMessageNode = {
   id: string;

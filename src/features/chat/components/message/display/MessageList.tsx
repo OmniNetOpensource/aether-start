@@ -6,7 +6,7 @@ import { PendingIndicator } from "./PendingIndicator";
 import { useMessageTreeStore } from "@/features/chat/store/useMessageTreeStore";
 import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
 import { useComposerStore } from "@/features/chat/store/useComposerStore";
-import { computeMessagesFromPath } from "@/features/chat/lib/tree/message-tree";
+import { computeMessagesFromPath } from "@/features/conversation/lib/tree/message-tree";
 import { useTextSelection } from "@/features/chat/hooks/useTextSelection";
 import { SelectionQuoteButton } from "./SelectionQuoteButton";
 

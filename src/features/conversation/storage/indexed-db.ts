@@ -1,26 +1,18 @@
 import { openDB, type DBSchema, type IDBPDatabase } from "idb";
-import type { Message } from "@/features/chat/types/chat";
+import type { Message } from "@/features/conversation/types/message";
 import {
   buildCurrentPath,
   createLinearMessages,
   migrateFromOldTree,
-} from "@/features/chat/lib/tree/message-tree";
-import type { LegacyMessageTree } from "@/features/chat/lib/tree/message-tree";
+} from "@/features/conversation/lib/tree/message-tree";
+import type { LegacyMessageTree } from "@/features/conversation/lib/tree/message-tree";
+import type { LocalConversation } from "@/features/conversation/types/conversation";
+
+export type { LocalConversation } from "@/features/conversation/types/conversation";
 
 const DB_NAME = "aether_local";
 const DB_VERSION = 5;
 const STORE_CONVERSATIONS = "conversations";
-
-export type LocalConversation = {
-  id: string;
-  title: string | null;
-  currentPath: number[];
-  messages: Message[];
-  created_at: string;
-  updated_at: string;
-  pinned?: boolean;
-  pinned_at?: string;
-};
 
 interface AetherDB extends DBSchema {
   conversations: {

@@ -3,11 +3,11 @@ import { useNavigate } from "@tanstack/react-router";
 import { useComposerStore } from "@/features/chat/store/useComposerStore";
 import { useEditingStore } from "@/features/chat/store/useEditingStore";
 import { useMessageTreeStore } from "@/features/chat/store/useMessageTreeStore";
-import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
+import { localDB } from "@/features/conversation/storage/indexed-db";
 import {
   buildCurrentPath,
   createLinearMessages,
-} from "@/features/chat/lib/tree/message-tree";
+} from "@/features/conversation/lib/tree/message-tree";
 import type {
   Attachment,
   LegacyAttachment,

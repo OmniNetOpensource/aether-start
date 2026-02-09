@@ -3,7 +3,7 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { Loader2 } from "lucide-react";
 import { useMessageTreeStore } from "@/features/chat/store/useMessageTreeStore";
-import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
+import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
 import { ConversationItem } from "./ConversationItem";
 
 type ConversationListProps = {

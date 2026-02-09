@@ -1,8 +1,8 @@
 import { ChatClient } from "./chat-client";
 import { toast } from "@/shared/hooks/useToast";
-import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
-import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
-import { buildConversationTitle } from "@/features/chat/lib/format";
+import { localDB } from "@/features/conversation/storage/indexed-db";
+import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
+import { buildConversationTitle } from "@/features/conversation/lib/format";
 import type {
   Message,
   MessageLike,
@@ -13,8 +13,8 @@ import {
   cloneMessages,
   extractContentFromBlocks,
   type AssistantAddition,
-} from "../tree/block-operations";
-import { computeMessagesFromPath } from "../tree/message-tree";
+} from "@/features/conversation/lib/tree/block-operations";
+import { computeMessagesFromPath } from "@/features/conversation/lib/tree/message-tree";
 import { generateTitleFn } from "@/features/chat/server/functions/chat-title";
 
 const generateLocalMessageId = () =>

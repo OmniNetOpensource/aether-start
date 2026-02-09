@@ -6,15 +6,15 @@ import { startChatRequest } from "@/features/chat/lib/network/chat-request";
 import { DEFAULT_ROLE_ID, ROLES } from "@/features/chat/config/roles";
 import {
   computeMessagesFromPath,
-} from "@/features/chat/lib/tree/message-tree";
+} from "@/features/conversation/lib/tree/message-tree";
 import {
   buildUserBlocks,
   cloneMessages,
-} from "@/features/chat/lib/tree/block-operations";
+} from "@/features/conversation/lib/tree/block-operations";
 import type { Message } from "@/features/chat/types/chat";
-import { buildConversationTitle } from "@/features/chat/lib/format";
-import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
-import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
+import { buildConversationTitle } from "@/features/conversation/lib/format";
+import { localDB } from "@/features/conversation/storage/indexed-db";
+import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
 import { useComposerStore } from "./useComposerStore";
 import { useMessageTreeStore } from "./useMessageTreeStore";
 

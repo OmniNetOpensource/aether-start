@@ -6,12 +6,12 @@ import {
   cloneBlocks,
   computeMessagesFromPath,
   editMessage,
-} from "@/features/chat/lib/tree/message-tree";
+} from "@/features/conversation/lib/tree/message-tree";
 import {
   buildUserBlocks,
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
-} from "@/features/chat/lib/tree/block-operations";
+} from "@/features/conversation/lib/tree/block-operations";
 import { startChatRequest } from "@/features/chat/lib/network/chat-request";
 import { useMessageTreeStore } from "./useMessageTreeStore";
 import { getChatRequestHandlers, useChatRequestStore } from "./useChatRequestStore";

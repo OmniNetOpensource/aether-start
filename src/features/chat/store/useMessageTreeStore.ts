@@ -15,15 +15,15 @@ import {
   editMessage,
   getBranchInfo,
   switchBranch,
-} from "@/features/chat/lib/tree/message-tree";
+} from "@/features/conversation/lib/tree/message-tree";
 import {
   applyAssistantAddition,
   cloneMessages,
   type AssistantAddition,
-} from "@/features/chat/lib/tree/block-operations";
-import { buildConversationTitle } from "@/features/chat/lib/format";
-import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
-import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
+} from "@/features/conversation/lib/tree/block-operations";
+import { buildConversationTitle } from "@/features/conversation/lib/format";
+import { localDB } from "@/features/conversation/storage/indexed-db";
+import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
 import { useChatRequestStore } from "./useChatRequestStore";
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;

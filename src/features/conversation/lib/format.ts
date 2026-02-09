@@ -1,5 +1,5 @@
 // 对话标题生成逻辑，供本地/云端统一使用
-import type { MessageLike } from "@/features/chat/types/chat";
+import type { MessageLike } from "@/features/conversation/types/message";
 
 export const buildConversationTitle = (message: MessageLike) => {
   const text = message.blocks
