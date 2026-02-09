@@ -49,6 +49,61 @@ type AnthropicState = {
   lastPendingToolCalls: PendingToolInvocation[];
 };
 
+const ANTHROPIC_MAX_TOKENS = 64000;
+const THINKING_BUDGET_RATIO = 0.8;
+const THINKING_MIN_BUDGET_TOKENS = 1024;
+const ADAPTIVE_THINKING_MODEL = "claude-opus-4-6";
+
+type AnthropicThinkingParams =
+  | {
+      thinking: {
+        type: "adaptive";
+      };
+      output_config: {
+        effort: "medium";
+      };
+    }
+  | {
+      thinking: {
+        type: "enabled";
+        budget_tokens: number;
+      };
+    };
+
+const getThinkingBudgetTokens = (maxTokens: number): number => {
+  const proposedBudgetTokens = Math.floor(maxTokens * THINKING_BUDGET_RATIO);
+  const maxAllowedBudgetTokens = maxTokens - 1;
+
+  if (maxAllowedBudgetTokens < THINKING_MIN_BUDGET_TOKENS) {
+    return Math.max(1, maxAllowedBudgetTokens);
+  }
+
+  return Math.min(
+    maxAllowedBudgetTokens,
+    Math.max(THINKING_MIN_BUDGET_TOKENS, proposedBudgetTokens),
+  );
+};
+
+const buildThinkingParams = (model: string, maxTokens: number): AnthropicThinkingParams => {
+  if (model === ADAPTIVE_THINKING_MODEL) {
+    return {
+      thinking: {
+        type: "adaptive",
+      },
+      output_config: {
+        effort: "medium",
+      },
+    };
+  }
+
+  return {
+    thinking: {
+      type: "enabled",
+      budget_tokens: getThinkingBudgetTokens(maxTokens),
+    },
+  };
+};
+
 const getClient = () => {
   const anthropicConfig = getAnthropicConfig();
   return new Anthropic({
@@ -140,6 +195,7 @@ async function* streamAnthropicCompletion(requestParams: {
 }): AsyncGenerator<AnthropicStreamChunk> {
   const client = getClient();
   const anthropicConfig = getAnthropicConfig();
+  const thinkingParams = buildThinkingParams(requestParams.model, ANTHROPIC_MAX_TOKENS);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamParams: any = {
@@ -147,11 +203,8 @@ async function* streamAnthropicCompletion(requestParams: {
     messages: requestParams.messages as Anthropic.MessageParam[],
     system: requestParams.system,
     tools: requestParams.tools as Anthropic.Tool[],
-    max_tokens: 64000,
-    thinking: {
-      type: "enabled",
-      budget_tokens: 51404,
-    },
+    max_tokens: ANTHROPIC_MAX_TOKENS,
+    ...thinkingParams,
   };
 
   // 打印完整的 HTTP 请求信息
