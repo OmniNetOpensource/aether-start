@@ -1,6 +1,6 @@
 "use client";
 
-import { isValidElement, type ReactElement, type ReactNode } from "react";
+import { isValidElement, lazy, Suspense, type ReactElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
@@ -8,6 +8,8 @@ import rehypeKatex from "rehype-katex";
 import rehypeHighlight from "rehype-highlight";
 import CodeBlock from "@/src/components/CodeBlock";
 import { cn } from "@/lib/utils";
+
+const MermaidBlock = lazy(() => import("@/src/components/MermaidBlock"));
 
 type Props = {
   content: string;
@@ -163,6 +165,22 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     const rawCode = extractCodeFromNode(
       codeElement?.props.children ?? children
     );
+
+    if (language === "mermaid") {
+      return (
+        <div className="my-4 last:mb-0 first:mt-0">
+          <Suspense
+            fallback={
+              <div className="rounded-lg border bg-muted/50 p-4 text-sm text-muted-foreground animate-pulse">
+                加载图表中...
+              </div>
+            }
+          >
+            <MermaidBlock code={rawCode} />
+          </Suspense>
+        </div>
+      );
+    }
 
     return (
       <div className="my-4 last:mb-0 first:mt-0">
