@@ -2,7 +2,7 @@ import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import Anthropic from '@anthropic-ai/sdk'
 import type { SerializedMessage } from '@/src/features/chat/types/chat'
-import { getAnthropicConfig } from '@/src/providers/config'
+import { getAnthropicConfig } from '@/src/server/functions/chat-config'
 
 const FALLBACK_TITLE = 'New Chat'
 

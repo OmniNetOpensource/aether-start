@@ -121,10 +121,6 @@ export const getRoleConfig = (roleId: string): RoleConfig | null => {
 export const getDefaultRoleConfig = (): RoleConfig | null =>
   ROLE_CONFIGS[DEFAULT_ROLE_ID] ?? null;
 
-export const isSupportedChatModel = (
-  value: string | undefined | null,
-): value is string => typeof value === "string" && value.trim().length > 0;
-
 export const getAnthropicConfig = () => {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {

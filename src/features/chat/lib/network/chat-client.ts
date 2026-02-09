@@ -1,9 +1,9 @@
 import { SerializedMessage } from '@/src/features/chat/types/chat'
-import type { ChatStreamEvent } from '@/src/providers/types'
+import type { ChatServerToClientEvent } from '@/src/features/chat/types/server-events'
 import { streamChatFn } from '@/src/server/functions/chat'
 
 type ChatClientOptions = {
-  onEvent: (event: ChatStreamEvent) => void
+  onEvent: (event: ChatServerToClientEvent) => void
   onError: (error: Error) => void
   onFinish?: () => void
 }
@@ -30,9 +30,8 @@ export class ChatClient {
         signal: this.abortController.signal,
       })
 
-      // @ts-expect-error streamChatFn returns async iterable at runtime
       for await (const event of result) {
-        this.options.onEvent(event as ChatStreamEvent)
+        this.options.onEvent(event as ChatServerToClientEvent)
       }
     } catch (error) {
       const isAbortError =
