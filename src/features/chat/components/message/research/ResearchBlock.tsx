@@ -87,7 +87,7 @@ export const ResearchBlock = memo(function ResearchBlock({
   const lastItemKey = `${messageIndex}-${blockIndex}-${items.length - 1}`;
 
   return (
-    <div className="my-2">
+    <div className="my-2 space-y-2">
       <button
         type="button"
         onClick={() => setIsExpanded((prev) => !prev)}
@@ -106,9 +106,9 @@ export const ResearchBlock = memo(function ResearchBlock({
       <div
         id={contentId}
         className={cn(
-          "overflow-hidden transition-all duration-300 ease-in-out",
+          "overflow-hidden space-y-2 transition-all duration-300 ease-in-out",
           isExpanded
-            ? "max-h-[1000px] opacity-100"
+            ? "max-h-[9999px] opacity-100"
             : "max-h-0 opacity-0"
         )}
       >
