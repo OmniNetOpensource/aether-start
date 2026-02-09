@@ -1,22 +1,26 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { fetchUrlTool } from "@/src/providers/tools/fetch";
-import { searchTool } from "@/src/providers/tools/search";
-import { getDefaultRoleConfig, getRoleConfig } from "@/src/providers/config";
+import { fetchUrlTool } from "@/src/server/functions/chat/tools/fetch";
+import { searchTool } from "@/src/server/functions/chat/tools/search";
 import {
-  type ConversationLogger,
+  getDefaultRoleConfig,
+  getRoleConfig,
+} from "@/src/server/functions/chat-config";
+import {
   createConversationLogger,
-} from "@/src/providers/logger";
-import { runChat } from "@/src/providers/anthropic";
-import { executeToolsGen } from "@/src/providers/tools/execute";
+  enterLoggerContext,
+  getLogger,
+} from "@/src/server/functions/chat/logger";
+import { runChat } from "@/src/server/functions/chat/anthropic";
+import { executeToolsGen } from "@/src/server/functions/chat/tools/execute";
 import type {
-  ChatResponseEvent,
-  ChatRunOptions,
+  ChatServerToClientEvent,
+  ChatRequestConfig,
   ChatRunResult,
   ChatProviderState,
   ToolInvocationResult,
-} from "@/src/providers/types";
-import type { ChatTool } from "@/src/providers/tools/types";
+} from "@/src/server/functions/chat/types";
+import type { ChatTool } from "@/src/server/functions/chat/tools/types";
 
 const generateConversationId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -37,17 +41,16 @@ const chatInputSchema = z.object({
 export const streamChatFn = createServerFn({ method: "POST" })
   .inputValidator(chatInputSchema)
   .handler(async function* ({ data }) {
-    let logger: ConversationLogger | null = null;
-
     try {
       const { conversationHistory, conversationId, role } = data;
 
-      logger = createConversationLogger();
+      const logger = createConversationLogger();
+      enterLoggerContext(logger);
 
       const messageCount = Array.isArray(conversationHistory)
         ? conversationHistory.length
         : 0;
-      logger?.log("FRONTEND", "Received chat request", {
+      getLogger().log("FRONTEND", "Received chat request", {
         conversationId,
         role,
         messageCount,
@@ -63,7 +66,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
         yield {
           type: "error",
           message: "Invalid conversation history: expected non-empty array.",
-        } satisfies ChatResponseEvent;
+        } satisfies ChatServerToClientEvent;
         return;
       }
 
@@ -80,7 +83,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
           type: "error",
           message:
             "Missing user message: latest user message missing or has empty blocks.",
-        } satisfies ChatResponseEvent;
+        } satisfies ChatServerToClientEvent;
         return;
       }
 
@@ -90,7 +93,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
         yield {
           type: "error",
           message: `Invalid or missing role: "${String(role ?? "")}".`,
-        } satisfies ChatResponseEvent;
+        } satisfies ChatServerToClientEvent;
         return;
       }
 
@@ -119,10 +122,10 @@ export const streamChatFn = createServerFn({ method: "POST" })
           user_id: "",
           created_at: now,
           updated_at: now,
-        } satisfies ChatResponseEvent;
+        } satisfies ChatServerToClientEvent;
       }
 
-      const chatOptions: ChatRunOptions = {
+      const chatRequestConfig: ChatRequestConfig = {
         model: requestedModel,
         tools,
         systemPrompt: systemInstruction,
@@ -141,7 +144,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
         iteration++;
 
         const generator = runChat({
-          options: chatOptions,
+          options: chatRequestConfig,
           continuation:
             pendingToolResults && state
               ? { state, toolResults: pendingToolResults }
@@ -172,7 +175,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
           yield {
             type: "error",
             message: `错误：缺少继续对话所需的状态 (model=${requestedModel})`,
-          } satisfies ChatResponseEvent;
+          } satisfies ChatServerToClientEvent;
           break;
         }
 
@@ -181,12 +184,12 @@ export const streamChatFn = createServerFn({ method: "POST" })
             type: "conversation_updated",
             conversationId: activeConversationId,
             updated_at: new Date().toISOString(),
-          } satisfies ChatResponseEvent;
+          } satisfies ChatServerToClientEvent;
         }
 
-        const toolGen = executeToolsGen(result.pendingToolCalls, logger);
+        const toolGen = executeToolsGen(result.pendingToolCalls);
         let toolGenResult: IteratorResult<
-          ChatResponseEvent,
+          ChatServerToClientEvent,
           ToolInvocationResult[]
         >;
         while (true) {
@@ -204,7 +207,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
         yield {
           type: "error",
           message: `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${maxIterations} model=${requestedModel}`,
-        } satisfies ChatResponseEvent;
+        } satisfies ChatServerToClientEvent;
       }
 
       if (activeConversationId) {
@@ -212,13 +215,13 @@ export const streamChatFn = createServerFn({ method: "POST" })
           type: "conversation_updated",
           conversationId: activeConversationId,
           updated_at: new Date().toISOString(),
-        } satisfies ChatResponseEvent;
+        } satisfies ChatServerToClientEvent;
       }
     } catch (error) {
       const errorName = error instanceof Error ? error.name : "UnknownError";
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      logger?.log("ERROR", "Chat stream error", {
+      getLogger().log("ERROR", "Chat stream error", {
         errorName,
         errorMessage,
         stack: error instanceof Error ? error.stack : undefined,
@@ -226,6 +229,6 @@ export const streamChatFn = createServerFn({ method: "POST" })
       yield {
         type: "error",
         message: `错误：${errorName}: ${errorMessage}`,
-      } satisfies ChatResponseEvent;
+      } satisfies ChatServerToClientEvent;
     }
   });
