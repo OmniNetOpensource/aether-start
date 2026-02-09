@@ -7,10 +7,7 @@ import {
   type ConversationLogger,
   createConversationLogger,
 } from "@/src/providers/logger";
-import {
-  runAnthropicChat,
-  continueAnthropicChat,
-} from "@/src/providers/anthropic";
+import { runChat } from "@/src/providers/anthropic";
 import { executeToolsGen } from "@/src/providers/tools/execute";
 import type {
   ChatResponseEvent,
@@ -143,10 +140,13 @@ export const streamChatFn = createServerFn({ method: "POST" })
       while (iteration < maxIterations) {
         iteration++;
 
-        const generator =
-          pendingToolResults && state
-            ? continueAnthropicChat(chatOptions, state, pendingToolResults)
-            : runAnthropicChat(chatOptions);
+        const generator = runChat({
+          options: chatOptions,
+          continuation:
+            pendingToolResults && state
+              ? { state, toolResults: pendingToolResults }
+              : undefined,
+        });
         let result: ChatRunResult | undefined;
 
         while (true) {

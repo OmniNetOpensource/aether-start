@@ -293,7 +293,7 @@ const appendToolResults = (state: AnthropicState, results: ToolInvocationResult[
   };
 };
 
-export async function* runAnthropicChat(
+async function* runAnthropicChat(
   options: ChatRunOptions,
   state?: ChatProviderState
 ): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
@@ -381,11 +381,23 @@ export async function* runAnthropicChat(
   };
 }
 
-export async function* continueAnthropicChat(
-  options: ChatRunOptions,
-  state: ChatProviderState,
-  toolResults: ToolInvocationResult[]
+type RunChatParams = {
+  options: ChatRunOptions;
+  continuation?: {
+    state: ChatProviderState;
+    toolResults: ToolInvocationResult[];
+  };
+};
+
+export async function* runChat(
+  params: RunChatParams
 ): AsyncGenerator<ChatStreamEvent, ChatRunResult> {
-  const nextState = appendToolResults(state.data as AnthropicState, toolResults);
-  return yield* runAnthropicChat(options, { data: nextState });
+  const continuationState = params.continuation
+    ? appendToolResults(
+      params.continuation.state.data as AnthropicState,
+      params.continuation.toolResults
+    )
+    : undefined;
+
+  return yield* runAnthropicChat(params.options, continuationState ? { data: continuationState } : undefined);
 }
