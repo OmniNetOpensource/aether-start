@@ -5,10 +5,11 @@ import {
   ToolProgressCallback,
 } from "./types";
 import { getLogger } from "@/src/server/functions/chat/logger";
+import { Supadata } from "@supadata/js";
 
 type FetchUrlArgs = {
   url: string;
-  response_type: "markdown" | "image";
+  response_type: "markdown" | "image" | "youtube";
 };
 
 const parseFetchUrlArgs = (args: unknown): FetchUrlArgs => {
@@ -28,9 +29,13 @@ const parseFetchUrlArgs = (args: unknown): FetchUrlArgs => {
   }
 
   const response_type = (args as { response_type?: unknown }).response_type;
-  if (response_type !== "markdown" && response_type !== "image") {
+  if (
+    response_type !== "markdown" &&
+    response_type !== "image" &&
+    response_type !== "youtube"
+  ) {
     throw new Error(
-      "fetch_url requires response_type to be 'markdown' or 'image'",
+      "fetch_url requires response_type to be 'markdown', 'image', or 'youtube'",
     );
   }
 
@@ -433,8 +438,120 @@ const performFetchUrl = async (
   }
 };
 
+const YOUTUBE_POLL_INTERVAL_MS = 3_000;
+const YOUTUBE_MAX_POLLS = 60;
+
+const fetchYoutubeTranscript = async (
+  url: string,
+  onProgress?: ToolProgressCallback,
+): Promise<string> => {
+  const apiKey = process.env.SUPADATA_API_KEY;
+  if (!apiKey) {
+    getLogger().log("FETCH", "Missing SUPADATA_API_KEY");
+    return "Error: SUPADATA_API_KEY is not set";
+  }
+
+  getLogger().log("FETCH", `Fetching YouTube transcript: ${url}`);
+  const supadata = new Supadata({ apiKey });
+
+  try {
+    await emitProgress(onProgress, {
+      stage: "start",
+      message: "正在获取 YouTube 字幕...",
+    });
+
+    const result = await supadata.transcript({
+      url,
+      text: true,
+      mode: "auto",
+    });
+
+    // If we get a jobId, poll for completion
+    if ("jobId" in result && result.jobId) {
+      const jobId = result.jobId;
+      getLogger().log("FETCH", `Transcript job created: ${jobId}`);
+
+      for (let i = 1; i <= YOUTUBE_MAX_POLLS; i++) {
+        await emitProgress(onProgress, {
+          stage: "polling",
+          message: `等待字幕处理完成... (${i}/${YOUTUBE_MAX_POLLS})`,
+        });
+
+        await sleep(YOUTUBE_POLL_INTERVAL_MS);
+
+        const job = await supadata.transcript.getJobStatus(jobId);
+
+        if (job.status === "completed" && job.result) {
+          const transcript = job.result;
+          const text =
+            typeof transcript.content === "string"
+              ? transcript.content
+              : JSON.stringify(transcript.content);
+          const sizeKB = (Buffer.byteLength(text) / 1024).toFixed(1);
+          getLogger().log(
+            "FETCH",
+            `Transcript job completed, size: ${sizeKB} KB`,
+          );
+          await emitProgress(onProgress, {
+            stage: "complete",
+            message: `字幕获取完成 (${sizeKB} KB)`,
+          });
+          return text;
+        }
+
+        if (job.status === "failed") {
+          const errMsg = job.error?.message || "Job failed";
+          getLogger().log("FETCH", `Transcript job failed: ${errMsg}`);
+          await emitProgress(onProgress, {
+            stage: "error",
+            message: `字幕处理失败：${errMsg}`,
+          });
+          return `Error: ${errMsg}`;
+        }
+      }
+
+      getLogger().log("FETCH", "Transcript job timed out");
+      await emitProgress(onProgress, {
+        stage: "error",
+        message: "字幕处理超时",
+      });
+      return "Error: Transcript job timed out after polling";
+    }
+
+    // Direct result — narrow to Transcript
+    const transcript = result as { content: unknown };
+    const text =
+      typeof transcript.content === "string"
+        ? transcript.content
+        : JSON.stringify(transcript.content);
+    const sizeKB = (Buffer.byteLength(text) / 1024).toFixed(1);
+    getLogger().log("FETCH", `Transcript success, size: ${sizeKB} KB`);
+    await emitProgress(onProgress, {
+      stage: "complete",
+      message: `字幕获取完成 (${sizeKB} KB)`,
+    });
+    return text;
+  } catch (error) {
+    const message =
+      typeof error === "object" && error !== null
+        ? (error as Error).message
+        : String(error);
+    getLogger().log("FETCH", `Transcript error: ${message}`);
+    await emitProgress(onProgress, {
+      stage: "error",
+      message: `字幕获取失败：${message}`,
+    });
+    return `Error: ${message}`;
+  }
+};
+
 const fetchUrl: ToolHandler = async (args, onProgress) => {
   const { url, response_type } = parseFetchUrlArgs(args);
+
+  if (response_type === "youtube") {
+    return fetchYoutubeTranscript(url, onProgress);
+  }
+
   const apiKey = process.env.JINA_API_KEY;
 
   if (!apiKey) {
@@ -461,7 +578,7 @@ const fetchUrlSpec: ChatTool = {
   function: {
     name: "fetch_url",
     description:
-      "Fetch content from a URL with two response modes: 'markdown' converts webpage content to readable text (useful for reading articles, documentation, or API responses); 'image' returns visual content as base64 - either fetches direct image URLs (jpg, png, gif, etc.) or captures a full-page screenshot of webpages.",
+      "Fetch content from a URL with three response modes: 'markdown' converts webpage content to readable text (useful for reading articles, documentation, or API responses); 'image' returns visual content as base64 - either fetches direct image URLs (jpg, png, gif, etc.) or captures a full-page screenshot of webpages; 'youtube' extracts transcript/subtitles from a YouTube video URL.",
     parameters: {
       type: "object",
       properties: {
@@ -472,9 +589,9 @@ const fetchUrlSpec: ChatTool = {
         },
         response_type: {
           type: "string",
-          enum: ["markdown", "image"],
+          enum: ["markdown", "image", "youtube"],
           description:
-            "Response format: 'markdown' for text content (converts HTML to readable text), 'image' for visual content (fetches images directly or captures webpage screenshots)",
+            "Response format: 'markdown' for text content (converts HTML to readable text), 'image' for visual content (fetches images directly or captures webpage screenshots), 'youtube' for extracting transcript/subtitles from YouTube videos",
         },
       },
       required: ["url", "response_type"],

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronDown, Image as ImageIcon, Link, Loader2, X } from "lucide-react";
+import { Captions, Check, ChevronDown, Image as ImageIcon, Link, Loader2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ResearchItem } from "@/src/features/chat/types/chat";
 import { ImagePreview } from "@/src/components/ImagePreview";
@@ -96,6 +96,7 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
   // Check if result is an image
   const imageResult = parseImageResult(resultText);
   const isImageMode = responseType === "image";
+  const isYoutubeMode = responseType === "youtube";
 
   const isSystemPromptTooLong =
     resultText.startsWith("[系统提示:") &&
@@ -103,7 +104,7 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
   const isError = resultText.startsWith("Error") || isSystemPromptTooLong;
   const errorInfo = isError ? parseFetchError(resultText) : null;
   const hasMarkdownContent =
-    responseType === "markdown" &&
+    (responseType === "markdown" || responseType === "youtube") &&
     !isError &&
     !imageResult &&
     resultText.trim().length > 0;
@@ -119,7 +120,7 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
   const description = !result ? (
     <>
       <Loader2 className="h-3 w-3 animate-spin text-foreground" />
-      <span>{isImageMode ? "Fetching image..." : "Loading..."}</span>
+      <span>{isYoutubeMode ? "Fetching transcript..." : isImageMode ? "Fetching image..." : "Loading..."}</span>
     </>
   ) : isError ? (
     <>
@@ -140,17 +141,21 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
     </>
   );
 
-  const cardIcon = isImageMode ? (
+  const cardIcon = isYoutubeMode ? (
+    <Captions className="h-3.5 w-3.5" />
+  ) : isImageMode ? (
     <ImageIcon className="h-3.5 w-3.5" />
   ) : (
     <Link className="h-3.5 w-3.5" />
   );
 
-  const cardTitle = isImageMode
-    ? imageResult?.source === "screenshot"
-      ? `Screenshot of ${url || "URL"}`
-      : `Fetching image from ${url || "URL"}`
-    : `Fetching ${url || "URL"}`;
+  const cardTitle = isYoutubeMode
+    ? `Fetching transcript from ${url || "URL"}`
+    : isImageMode
+      ? imageResult?.source === "screenshot"
+        ? `Screenshot of ${url || "URL"}`
+        : `Fetching image from ${url || "URL"}`
+      : `Fetching ${url || "URL"}`;
 
   const hasExpandableContent =
     imageResult || (isError && errorInfo) || hasMarkdownContent;
