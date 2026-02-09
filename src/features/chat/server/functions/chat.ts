@@ -11,7 +11,7 @@ import {
   enterLoggerContext,
   getLogger,
 } from "@/features/chat/server/services/logger";
-import { runChat } from "@/features/chat/server/services/anthropic";
+import { runAnthropicChat } from "@/features/chat/server/services/anthropic";
 import { executeToolsGen } from "@/features/chat/server/tools/execute";
 import type {
   ChatServerToClientEvent,
@@ -143,7 +143,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
       while (iteration < maxIterations) {
         iteration++;
 
-        const generator = runChat({
+        const generator = runAnthropicChat({
           options: chatRequestConfig,
           continuation:
             pendingToolResults && state

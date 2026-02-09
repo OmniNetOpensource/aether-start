@@ -284,13 +284,26 @@ const appendToolResults = (state: AnthropicState, results: ToolInvocationResult[
   };
 };
 
-async function* runAnthropicChat(
-  options: ChatRequestConfig,
-  state?: ChatProviderState
+type RunAnthropicChatParams = {
+  options: ChatRequestConfig;
+  continuation?: {
+    state: ChatProviderState;
+    toolResults: ToolInvocationResult[];
+  };
+};
+
+export async function* runAnthropicChat(
+  params: RunAnthropicChatParams
 ): AsyncGenerator<ChatServerToClientEvent, ChatRunResult> {
-  const workingState = state
-    ? (state.data as AnthropicState)
-    : createInitialState(options);
+  const continuationState = params.continuation
+    ? appendToolResults(
+      params.continuation.state.data as AnthropicState,
+      params.continuation.toolResults
+    )
+    : undefined;
+
+  const options = params.options;
+  const workingState = continuationState ?? createInitialState(options);
 
   const anthropicTools = options.tools.length > 0 ? convertToolsToAnthropic(options.tools) : undefined;
 
@@ -370,25 +383,4 @@ async function* runAnthropicChat(
     assistantText,
     state: toChatState(nextState),
   };
-}
-
-type RunChatParams = {
-  options: ChatRequestConfig;
-  continuation?: {
-    state: ChatProviderState;
-    toolResults: ToolInvocationResult[];
-  };
-};
-
-export async function* runChat(
-  params: RunChatParams
-): AsyncGenerator<ChatServerToClientEvent, ChatRunResult> {
-  const continuationState = params.continuation
-    ? appendToolResults(
-      params.continuation.state.data as AnthropicState,
-      params.continuation.toolResults
-    )
-    : undefined;
-
-  return yield* runAnthropicChat(params.options, continuationState ? { data: continuationState } : undefined);
 }
