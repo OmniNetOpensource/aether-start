@@ -11,7 +11,6 @@ Aether-start is a full-stack AI chat application built with TanStack Start (Reac
 Use `pnpm` for all package management:
 
 - `pnpm install` - Install dependencies
-- `pnpm test` - Run Vitest tests
 - `pnpm check` - Run type-check, lint, and build together
 
 ## Architecture & Key Patterns
@@ -72,12 +71,6 @@ Environment variables in `.env.local`:
 - `ANTHROPIC_API_KEY` - Anthropic API key (required)
 - `SERP_API_KEY` - Search API key (optional, enables search tool)
 - Additional provider keys: OpenAI, OpenRouter, Gemini, Jina (if used)
-
-## Testing
-
-- Vitest with jsdom environment
-- Test files: `*.test.tsx` next to source files
-- Testing Library for React components
 
 ## Styling
 

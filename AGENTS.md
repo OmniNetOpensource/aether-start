@@ -11,7 +11,6 @@
 ## Build, Test, and Development Commands
 Use `pnpm` for all tasks.
 - `pnpm install` - Install dependencies
-- `pnpm test` - Run Vitest tests
 - `pnpm check` - Run type-check, lint, and build together
 
 
@@ -21,17 +20,13 @@ Use `pnpm` for all tasks.
 - Route file names mirror paths (e.g., `index.tsx`, `__root.tsx`, `$param.tsx`).
 - Keep changes ESLint-clean; lint rules live in `eslint.config.mjs`.
 
-## Testing Guidelines
-- Use Vitest + Testing Library; test files live next to code as `*.test.tsx` (example: `src/components/Markdown.test.tsx`).
-- Add tests for new UI states, async flows, or provider logic; update snapshots only with intent.
-
 ## Configuration & Secrets
 - Local secrets live in `.env.local` (API keys for OpenAI/OpenRouter/Anthropic/Gemini/Serp/Jina and Convex URLs).
 - Never commit real secrets; `NEXT_PUBLIC_*` values are exposed to the client.
 
 ## Commit & Pull Request Guidelines
 - Commit messages are short and imperative; optional conventional prefixes like `feat:` or `fix:` appear in history.
-- PRs should include: a clear summary, testing notes (`pnpm test` or `pnpm check`), and screenshots for UI changes.
+- PRs should include: a clear summary, validation notes (`pnpm check`), and screenshots for UI changes.
 - Link relevant issues and call out any config or env changes.
 
 
