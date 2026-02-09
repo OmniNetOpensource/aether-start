@@ -11,12 +11,7 @@ Aether-start is a full-stack AI chat application built with TanStack Start (Reac
 Use `pnpm` for all package management:
 
 - `pnpm install` - Install dependencies
-- `pnpm dev` - Start dev server on port 3000
-- `pnpm build` - Production build
-- `pnpm preview` - Preview production build
 - `pnpm test` - Run Vitest tests
-- `pnpm lint` - Run ESLint
-- `pnpm type-check` - TypeScript type checking
 - `pnpm check` - Run type-check, lint, and build together
 
 ## Architecture & Key Patterns
@@ -142,4 +137,10 @@ Environment variables in `.env.local`:
 - Use block system for structured content
 
 
-没有我的同意，不允许revert changes
+# IMPORTANT， USER PREFERENCE
+
+- 没有我的同意，不允许revert changes
+
+- commit的时候，先pnpm check（如果这个命令的报错不是你造成的，不必理会）并review，然后只commit自己在本轮对话中修改的部分，不是你在本轮对话中改的你不要管。并且在commit之后自动push
+
+- 修改之前，你必须要通过问问题得到我的确认

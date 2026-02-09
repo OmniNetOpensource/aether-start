@@ -10,14 +10,10 @@
 
 ## Build, Test, and Development Commands
 Use `pnpm` for all tasks.
-- `pnpm install` installs dependencies.
-- `pnpm dev` runs the Vite dev server on port 3000.
-- `pnpm build` creates a production build.
-- `pnpm preview` serves the production build locally.
-- `pnpm test` runs Vitest in jsdom.
-- `pnpm lint` runs ESLint.
-- `pnpm type-check` runs `tsc --noEmit`.
-- `pnpm check` runs type-check, lint, and build.
+- `pnpm install` - Install dependencies
+- `pnpm test` - Run Vitest tests
+- `pnpm check` - Run type-check, lint, and build together
+
 
 ## Coding Style & Naming Conventions
 - TypeScript + React; follow existing patterns (2-space indent, single quotes, no semicolons).
@@ -39,4 +35,11 @@ Use `pnpm` for all tasks.
 - Link relevant issues and call out any config or env changes.
 
 
-没有我的同意，不允许revert changes
+
+# IMPORTANT， USER PREFERENCE
+
+- 没有我的同意，不允许revert changes
+
+- commit的时候，先pnpm check（如果这个命令的报错不是你造成的，不必理会）并review，然后只commit自己在本轮对话中修改的部分，不是你在本轮对话中改的你不要管。并且在commit之后自动push
+
+- 修改之前，你必须要通过问问题得到我的确认
