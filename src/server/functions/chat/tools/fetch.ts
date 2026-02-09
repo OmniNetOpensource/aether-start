@@ -269,6 +269,7 @@ const fetchScreenshot = async (
         "Content-Type": "application/json",
         "X-Return-Format": "pageshot",
         ...JINA_ENGINE_HEADER,
+        "X-Timeout": "20",
       },
       body: JSON.stringify({ url }),
       signal: controller.signal,
@@ -372,6 +373,7 @@ const performFetchUrl = async (
         Authorization: `Bearer ${apiKey}`,
         "X-Token-Budget": "200000",
         ...JINA_ENGINE_HEADER,
+        "X-Timeout": "20",
       },
       signal: controller.signal,
     });
