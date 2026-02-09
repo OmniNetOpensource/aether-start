@@ -3,8 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Composer } from "@/features/chat/components/composer/Composer";
 import { MessageList } from "@/features/chat/components/message/display/MessageList";
 import { useConversationLoader } from "@/features/chat/hooks/useConversationLoader";
-import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
-import { localDB } from "@/shared/lib/storage/indexed-db/conversations";
+import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
+import { localDB } from "@/features/conversation/storage/indexed-db";
 
 export const Route = createFileRoute("/app/c/$conversationId")({
   component: ConversationPage,

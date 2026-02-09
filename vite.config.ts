@@ -26,7 +26,7 @@ const config = defineConfig({
     tanstackStart({
       srcDirectory: 'src',
       router: {
-        routesDirectory: 'app',
+        routesDirectory: 'routes',
       },
     }),
     viteReact(),

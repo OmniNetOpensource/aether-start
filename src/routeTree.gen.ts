@@ -8,12 +8,12 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './app/__root'
-import { Route as R404RouteImport } from './app/404'
-import { Route as AppRouteRouteImport } from './app/app/route'
-import { Route as IndexRouteImport } from './app/index'
-import { Route as AppIndexRouteImport } from './app/app/index'
-import { Route as AppCConversationIdRouteImport } from './app/app/c/$conversationId'
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as R404RouteImport } from './routes/404'
+import { Route as AppRouteRouteImport } from './routes/app/route'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
 
 const R404Route = R404RouteImport.update({
   id: '/404',

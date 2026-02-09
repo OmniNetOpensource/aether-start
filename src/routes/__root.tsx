@@ -5,9 +5,9 @@ import { useEffect } from "react";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { ToastContainer } from "@/shared/ui/toast-container";
 import { ResponsiveProvider } from "@/features/responsive/ResponsiveContext";
-import { NotFound } from "@/app/-not-found";
+import { NotFound } from "@/routes/-not-found";
 
-import appCss from "@/app/globals.css?url";
+import appCss from "@/routes/globals.css?url";
 import katexCss from "katex/dist/katex.min.css?url";
 
 const THEME_INIT_SCRIPT = `(function () {
