@@ -13,9 +13,9 @@ export type {
   SerializedMessage,
   MessageLike,
   BranchInfo,
-} from '@/features/conversation/types/message'
+} from '@/features/conversation/model/types/message'
 
-import type { Attachment, ContentBlock, SerializedMessage } from '@/features/conversation/types/message'
+import type { Attachment, ContentBlock, SerializedMessage } from '@/features/conversation/model/types/message'
 
 export type EditingState = {
   messageId: number;

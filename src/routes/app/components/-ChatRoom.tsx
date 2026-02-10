@@ -1,5 +1,5 @@
-import { NewChatButton } from "@/features/chat/components/NewChatButton";
-import { SidebarToggleButton } from "@/features/sidebar/components/SidebarToggleButton";
+import { NewChatButton } from "@/features/chat/session/components/NewChatButton";
+import { SidebarToggleButton } from "@/features/sidebar/layout/components/SidebarToggleButton";
 
 interface ChatRoomProps {
   children: React.ReactNode;

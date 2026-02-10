@@ -1,77 +1,50 @@
-import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
-import { Composer } from "@/features/chat/components/composer/Composer";
-import { MessageList } from "@/features/chat/components/message/display/MessageList";
-import { useConversationLoader } from "@/features/chat/hooks/useConversationLoader";
-import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
-import { localDB } from "@/features/conversation/storage/indexed-db";
+import { useEffect } from 'react'
+import { createFileRoute } from '@tanstack/react-router'
+import { Composer } from '@/features/chat/composer/components/Composer'
+import { MessageList } from '@/features/chat/messages/components/display/MessageList'
+import { useConversationLoader } from '@/features/chat/session/hooks/useConversationLoader'
+import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
 
-export const Route = createFileRoute("/app/c/$conversationId")({
+export const Route = createFileRoute('/app/c/$conversationId')({
   component: ConversationPage,
-});
+})
 
 function ConversationPage() {
-  const { conversationId } = Route.useParams();
-  const { isLoading } = useConversationLoader(conversationId);
+  const { conversationId } = Route.useParams()
+  const { isLoading } = useConversationLoader(conversationId)
 
-  const pinnedConversations = useConversationsStore((s) => s.pinnedConversations);
-  const normalConversations = useConversationsStore((s) => s.normalConversations);
+  const conversations = useConversationsStore((state) => state.conversations)
 
-  const currentConversation = [...pinnedConversations, ...normalConversations].find(
-    (c) => c.id === conversationId,
-  );
-  const storeTitle = currentConversation?.title;
-
-  const [dbTitle, setDbTitle] = useState<string | null>(null);
+  const currentConversation = conversations.find((conversation) => conversation.id === conversationId)
 
   useEffect(() => {
-    if (storeTitle || !conversationId) {
-      return;
-    }
-
-    const loadTitle = async () => {
-      try {
-        const conversation = await localDB.get(conversationId);
-        if (conversation?.title) {
-          setDbTitle(conversation.title);
-        }
-      } catch (error) {
-        console.error("Failed to load conversation title:", error);
-      }
-    };
-
-    void loadTitle();
-  }, [conversationId, storeTitle]);
-
-  const title = storeTitle ?? dbTitle;
-
-  useEffect(() => {
-    const defaultTitle = "Aether";
+    const defaultTitle = 'Aether'
+    const title = currentConversation?.title
 
     if (title) {
-      const truncatedTitle = title.length > 50 ? `${title.slice(0, 50)}...` : title;
-      document.title = `${truncatedTitle} - Aether`;
+      const truncatedTitle = title.length > 50 ? `${title.slice(0, 50)}...` : title
+      document.title = `${truncatedTitle} - Aether`
     } else {
-      document.title = defaultTitle;
+      document.title = defaultTitle
     }
 
     return () => {
-      document.title = defaultTitle;
-    };
-  }, [title]);
+      document.title = defaultTitle
+    }
+  }, [currentConversation?.title])
 
   if (isLoading) {
-    return null;
+    return null
   }
 
   return (
-    <div className="flex h-full w-full flex-col">
-      <main className="relative flex-1 min-h-0 flex">
-        <div className="flex-1 min-w-0 flex flex-col relative">
+    <div className='flex h-full w-full flex-col'>
+      <main className='relative flex min-h-0 flex-1'>
+        <div className='relative flex min-w-0 flex-1 flex-col'>
           <MessageList />
           <Composer />
         </div>
       </main>
     </div>
-  );
+  )
 }

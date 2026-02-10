@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import Sidebar from "@/features/sidebar/components/Sidebar";
+import Sidebar from "@/features/sidebar/layout/components/Sidebar";
 import { ChatRoom } from "@/routes/app/components/-ChatRoom";
 
 export const Route = createFileRoute("/app")({
