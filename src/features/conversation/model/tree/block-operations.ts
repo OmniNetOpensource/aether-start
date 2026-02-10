@@ -63,6 +63,19 @@ export const applyAssistantAddition = (
   blocks: ContentBlock[],
   addition: AssistantAddition
 ): ContentBlock[] => {
+  // Fast path: content append (hot path during text streaming)
+  if ("type" in addition && addition.type === "content") {
+    const text = addition.content;
+    if (!text) return blocks;
+    const last = blocks[blocks.length - 1];
+    if (last?.type === "content") {
+      const next = blocks.slice();
+      next[next.length - 1] = { ...last, content: last.content + text };
+      return next;
+    }
+    return [...blocks, { type: "content" as const, content: text }];
+  }
+
   const nextBlocks = cloneBlocks(blocks ?? []);
 
   const ensureResearchBlock = (targetBlocks: ContentBlock[]) => {
@@ -219,24 +232,6 @@ export const applyAssistantAddition = (
 
     if (addition.type === "error") {
       nextBlocks.push({ type: "error", message: addition.message });
-      return nextBlocks;
-    }
-
-    if (addition.type === "content") {
-      const additionText = addition.content;
-      if (!additionText) {
-        return nextBlocks;
-      }
-
-      const lastBlock = nextBlocks[nextBlocks.length - 1];
-      if (lastBlock?.type === "content") {
-        nextBlocks[nextBlocks.length - 1] = {
-          ...lastBlock,
-          content: lastBlock.content + additionText,
-        };
-      } else {
-        nextBlocks.push({ type: "content", content: additionText });
-      }
       return nextBlocks;
     }
   }

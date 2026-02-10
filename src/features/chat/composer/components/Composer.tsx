@@ -70,29 +70,9 @@ export function Composer() {
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
-    if (!textarea) {
-      return;
-    }
-
-    textarea.style.height = "auto";
-    const computedStyle = window.getComputedStyle(textarea);
-    const lineHeightValue = parseFloat(computedStyle.lineHeight);
-    const paddingTopValue = parseFloat(computedStyle.paddingTop);
-    const paddingBottomValue = parseFloat(computedStyle.paddingBottom);
-
-    const fallbackLineHeight = 20;
-    const lineHeight = Number.isFinite(lineHeightValue)
-      ? lineHeightValue
-      : fallbackLineHeight;
-    const paddingTop = Number.isFinite(paddingTopValue) ? paddingTopValue : 0;
-    const paddingBottom = Number.isFinite(paddingBottomValue)
-      ? paddingBottomValue
-      : 0;
-    const maxLines = 5;
-    const maxHeight = lineHeight * maxLines + paddingTop + paddingBottom;
-    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
-
-    textarea.style.height = `${newHeight}px`;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
   };
 
   useEffect(() => {

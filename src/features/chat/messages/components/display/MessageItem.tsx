@@ -1,9 +1,10 @@
 "use client";
 
-import { memo, useState, type ReactNode } from "react";
+import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
 import Markdown from "@/shared/components/Markdown";
 import { ImagePreview } from "@/shared/components/ImagePreview";
-import { BranchInfo, Message } from "@/features/chat/types/chat";
+import { Message } from "@/features/chat/types/chat";
+import { getBranchInfo as getBranchInfoFn } from "@/features/conversation/model/tree/message-tree";
 import { ResearchBlock } from "../research/ResearchBlock";
 import {
   Copy,
@@ -173,22 +174,21 @@ const BranchConversationButton = ({
 };
 
 type MessageItemProps = {
-  message: Message;
   messageId: number;
   index: number;
   depth: number;
   isStreaming: boolean;
-  branchInfo: BranchInfo | null;
 };
 
 export const MessageItem = memo(function MessageItem({
-  message,
   messageId,
   index,
   depth,
   isStreaming,
-  branchInfo,
 }: MessageItemProps) {
+  const message = useMessageTreeStore(
+    (state) => state.messages[messageId - 1]
+  );
   const pending = useChatRequestStore((state) => state.pending);
   const isEditing = useEditingStore(
     (state) => state.editingState?.messageId === messageId,
@@ -196,6 +196,33 @@ export const MessageItem = memo(function MessageItem({
   const startEditing = useEditingStore((state) => state.startEditing);
   const retryFromMessage = useEditingStore((state) => state.retryFromMessage);
   const navigateBranch = useMessageTreeStore((state) => state.navigateBranch);
+
+  const branchInfo = useMemo(
+    () => getBranchInfoFn(useMessageTreeStore.getState().messages, messageId),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [message?.prevSibling, message?.nextSibling, messageId]
+  );
+
+  const handleStartEditing = useCallback(
+    () => startEditing(messageId),
+    [startEditing, messageId]
+  );
+
+  const handleRetry = useCallback(
+    () => retryFromMessage(messageId, depth),
+    [retryFromMessage, messageId, depth]
+  );
+
+  const handleNavigate = useCallback(
+    (direction: "prev" | "next") => {
+      if (!useChatRequestStore.getState().pending) {
+        navigateBranch(messageId, depth, direction);
+      }
+    },
+    [navigateBranch, messageId, depth]
+  );
+
+  if (!message) return null;
   const isUser = message.role === "user";
   const attachmentBlocks = message.blocks.filter(
     (
@@ -314,16 +341,14 @@ export const MessageItem = memo(function MessageItem({
               {isUser && (
                 <>
                   <ActionButton
-                    onClick={() => startEditing(messageId)}
+                    onClick={handleStartEditing}
                     disabled={pending}
                     title="编辑消息"
                     icon={<Pencil className="h-3.5 w-3.5" />}
                     label="编辑"
                   />
                   <ActionButton
-                    onClick={() =>
-                      retryFromMessage(messageId, depth)
-                    }
+                    onClick={handleRetry}
                     disabled={pending}
                     title="重试生成"
                     icon={<RotateCcw className="h-3.5 w-3.5" />}
@@ -334,9 +359,7 @@ export const MessageItem = memo(function MessageItem({
               <CopyButton blocks={message.blocks} />
               {!isUser && (
                 <ActionButton
-                  onClick={() =>
-                    retryFromMessage(messageId, depth)
-                  }
+                  onClick={handleRetry}
                   disabled={pending}
                   title="重试生成"
                   icon={<RotateCcw className="h-3.5 w-3.5" />}
@@ -357,11 +380,7 @@ export const MessageItem = memo(function MessageItem({
             >
               <BranchNavigator
                 branchInfo={branchInfo}
-                onNavigate={(direction) => {
-                  if (!pending) {
-                    navigateBranch(messageId, depth, direction);
-                  }
-                }}
+                onNavigate={handleNavigate}
                 disabled={pending}
               />
             </div>

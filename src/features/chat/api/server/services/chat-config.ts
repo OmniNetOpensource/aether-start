@@ -28,7 +28,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   aether: {
     id: "aether",
     name: "aether",
-    model: "claude-opus-4-6",
+    model: "claude-opus-4-5",
     systemPrompt: `
 你是谁
 
