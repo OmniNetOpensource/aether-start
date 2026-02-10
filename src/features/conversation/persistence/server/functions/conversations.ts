@@ -190,18 +190,16 @@ export const upsertConversationFn = createServerFn({ method: 'POST' })
       ).bind(data.id, data.title, data.created_at, data.updated_at),
       DB.prepare(
         `
-        INSERT INTO conversation_bodies(id, current_path_json, messages_json, updated_at)
-        VALUES (?1, ?2, ?3, ?4)
+        INSERT INTO conversation_bodies(id, current_path_json, messages_json)
+        VALUES (?1, ?2, ?3)
         ON CONFLICT(id) DO UPDATE SET
           current_path_json = excluded.current_path_json,
-          messages_json = excluded.messages_json,
-          updated_at = excluded.updated_at
+          messages_json = excluded.messages_json
         `,
       ).bind(
         data.id,
         JSON.stringify(data.currentPath ?? []),
         JSON.stringify(data.messages ?? []),
-        data.updated_at,
       ),
     ])
 
@@ -254,7 +252,6 @@ export const updateConversationTitleFn = createServerFn({ method: 'POST' })
         now,
         data.id,
       ),
-      DB.prepare('UPDATE conversation_bodies SET updated_at = ?1 WHERE id = ?2').bind(now, data.id),
     ])
 
     return { ok: true, updated_at: now }
