@@ -4,7 +4,7 @@ import type {
   Message,
   ResearchItem,
   ToolProgress,
-} from "@/features/conversation/types/message";
+} from "@/features/conversation/model/types/message";
 import { cloneBlocks, cloneResearchItem } from "./message-tree";
 
 type ToolLifecycleUpdate =

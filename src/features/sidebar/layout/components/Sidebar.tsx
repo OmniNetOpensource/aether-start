@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ConversationList } from "./history/ConversationList";
-import { ProfileMenu } from "./profile/ProfileMenu";
-import { NewChatButton } from "@/features/chat/components/NewChatButton";
+import { ConversationList } from "@/features/sidebar/history/components/ConversationList";
+import { ProfileMenu } from "@/features/sidebar/profile/components/ProfileMenu";
+import { NewChatButton } from "@/features/chat/session/components/NewChatButton";
 import { useResponsive } from "@/features/responsive/ResponsiveContext";
-import { useSidebarStore } from "@/features/sidebar/store/useSidebarStore";
+import { useSidebarStore } from "@/features/sidebar/layout/store/useSidebarStore";
 
 export default function Sidebar() {
   const deviceType = useResponsive();

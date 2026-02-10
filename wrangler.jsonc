@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "aether-start",
+  "main": "@tanstack/react-start/server-entry",
+  "compatibility_date": "2026-02-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "observability": {
+    "enabled": true
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "aether-db",
+      "database_id": "bf11eda3-d112-4212-8388-a22828a2133e",
+      "migrations_dir": "./migrations"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "CHAT_ASSETS",
+      "bucket_name": "chat-assets"
+    }
+  ]
+}

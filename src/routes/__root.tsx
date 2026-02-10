@@ -1,7 +1,8 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
-import { SpeedInsights } from "@vercel/speed-insights/react";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
+import { setNavigate } from "@/shared/lib/navigation";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { ToastContainer } from "@/shared/ui/toast-container";
 import { ResponsiveProvider } from "@/features/responsive/ResponsiveContext";
@@ -50,6 +51,12 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    setNavigate((path) => navigate({ to: path }));
+  }, [navigate]);
+
   useEffect(() => {
     if (!import.meta.env.DEV) return;
 
@@ -77,7 +84,6 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           </TooltipProvider>
         </ResponsiveProvider>
         <div className="grain-overlay" aria-hidden="true" />
-        <SpeedInsights />
         <Scripts />
       </body>
     </html>

@@ -1,11 +1,32 @@
-import { callToolByName } from "@/features/chat/server/tools/registry";
-import type { ToolProgressUpdate } from "@/features/chat/server/tools/types";
-import { getLogger } from "@/features/chat/server/services/logger";
-import type { PendingToolInvocation, ToolInvocationResult, ChatServerToClientEvent } from "../schemas/types";
+import { callToolByName } from "@/features/chat/api/server/tools/registry";
+import type { ToolProgressUpdate } from "@/features/chat/api/server/tools/types";
+import { getLogger } from "@/features/chat/api/server/services/logger";
+import type { PendingToolInvocation, ToolInvocationResult, ChatServerToClientEvent } from "../../types/schemas/types";
 
 export type ExecuteToolsOptions = {
   onEvent: (event: ChatServerToClientEvent) => void;
 };
+
+const isFetchResultError = (result: string) => {
+  const text = result.trim()
+  if (!text) {
+    return false
+  }
+
+  const isSystemPromptTooLong =
+    text.startsWith("[系统提示:") &&
+    (text.includes("内容过长") || text.includes("已省略不返回"))
+
+  return text.startsWith("Error") || isSystemPromptTooLong
+}
+
+const formatToolResultForClient = (toolName: string, result: string) => {
+  if (toolName !== "fetch_url") {
+    return result
+  }
+
+  return isFetchResultError(result) ? "Error: Fetch failed" : "Success"
+}
 
 export async function executeTools(
   toolCalls: PendingToolInvocation[],
@@ -30,11 +51,12 @@ export async function executeTools(
       });
 
       const normalizedResult = typeof result === "string" ? result : JSON.stringify(result);
+      const clientResult = formatToolResultForClient(tc.name, normalizedResult)
 
       onEvent({
         type: "tool_result",
         tool: tc.name,
-        result: normalizedResult,
+        result: clientResult,
         callId: tc.id,
       });
 
@@ -70,11 +92,12 @@ export async function* executeToolsGen(
     }
 
     const normalizedResult = typeof result === "string" ? result : JSON.stringify(result)
+    const clientResult = formatToolResultForClient(tc.name, normalizedResult)
 
     yield {
       type: "tool_result",
       tool: tc.name,
-      result: normalizedResult,
+      result: clientResult,
       callId: tc.id,
     }
 

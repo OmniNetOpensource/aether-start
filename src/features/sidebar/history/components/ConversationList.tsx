@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { Loader2 } from "lucide-react";
-import { useMessageTreeStore } from "@/features/chat/store/useMessageTreeStore";
-import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
+import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
+import { useConversationsStore } from "@/features/conversation/persistence/store/useConversationsStore";
 import { ConversationItem } from "./ConversationItem";
 
 type ConversationListProps = {
@@ -11,35 +11,30 @@ type ConversationListProps = {
 };
 
 export function ConversationList({ scrollRootRef }: ConversationListProps) {
-  const pinnedConversations = useConversationsStore(
-    (state) => state.pinnedConversations
-  );
-  const normalConversations = useConversationsStore(
-    (state) => state.normalConversations
-  );
+  const conversations = useConversationsStore((state) => state.conversations);
   const conversationsLoading = useConversationsStore(
     (state) => state.conversationsLoading
   );
-  const loadLocalConversations = useConversationsStore(
-    (state) => state.loadLocalConversations
+  const loadInitialConversations = useConversationsStore(
+    (state) => state.loadInitialConversations
   );
-  const loadMoreLocalConversations = useConversationsStore(
-    (state) => state.loadMoreLocalConversations
+  const loadMoreConversations = useConversationsStore(
+    (state) => state.loadMoreConversations
   );
-  const hasLoadedLocal = useConversationsStore((state) => state.hasLoadedLocal);
+  const hasLoaded = useConversationsStore((state) => state.hasLoaded);
   const loadingMore = useConversationsStore((state) => state.loadingMore);
-  const hasMoreLocal = useConversationsStore((state) => state.hasMoreLocal);
+  const hasMore = useConversationsStore((state) => state.hasMore);
   const activeConversationId = useMessageTreeStore(
     (state) => state.conversationId
   );
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    void loadLocalConversations();
-  }, [loadLocalConversations]);
+    void loadInitialConversations();
+  }, [loadInitialConversations]);
 
   useEffect(() => {
-    if (!hasMoreLocal) {
+    if (!hasMore) {
       return;
     }
 
@@ -53,10 +48,10 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
         if (!entries.some((entry) => entry.isIntersecting)) {
           return;
         }
-        if (loadingMore || !hasMoreLocal) {
+        if (loadingMore || !hasMore) {
           return;
         }
-        void loadMoreLocalConversations();
+        void loadMoreConversations();
       },
       {
         root: scrollRootRef?.current ?? null,
@@ -66,9 +61,9 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [scrollRootRef, hasMoreLocal, loadingMore, loadMoreLocalConversations]);
+  }, [scrollRootRef, hasMore, loadingMore, loadMoreConversations]);
 
-  if (conversationsLoading && !hasLoadedLocal) {
+  if (conversationsLoading && !hasLoaded) {
     return (
       <div className="flex items-center justify-center py-6 text-(--text-tertiary)">
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -77,11 +72,7 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
     );
   }
 
-  if (
-    !pinnedConversations.length &&
-    !normalConversations.length &&
-    hasLoadedLocal
-  ) {
+  if (!conversations.length && hasLoaded) {
     return (
       <div className="rounded-xl border border-dashed border-(--border-primary) bg-(--surface-primary)/50 p-4 text-center text-xs text-(--text-tertiary)">
         暂无会话，发送第一条消息后会自动出现在这里。
@@ -89,47 +80,21 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
     );
   }
 
-  const hasPinned = pinnedConversations.length > 0;
-  const hasRegular = normalConversations.length > 0;
-
   return (
     <div className="flex flex-col gap-1">
-      {hasPinned ? (
-        <>
-          <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">
-            置顶
-          </div>
-          <div className="flex flex-col gap-1">
-            {pinnedConversations.map((conversation) => (
-              <ConversationItem
-                key={conversation.id}
-                conversation={conversation}
-                isActive={conversation.id === activeConversationId}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
-      {hasPinned && hasRegular ? (
-        <div className="my-2 h-px w-full bg-(--border-primary)" />
-      ) : null}
-      {hasRegular ? (
-        <>
-          <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">
-            最近
-          </div>
-          <div className="flex flex-col gap-1">
-            {normalConversations.map((conversation) => (
-              <ConversationItem
-                key={conversation.id}
-                conversation={conversation}
-                isActive={conversation.id === activeConversationId}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
-      {hasMoreLocal || loadingMore ? (
+      <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">
+        最近
+      </div>
+      <div className="flex flex-col gap-1">
+        {conversations.map((conversation) => (
+          <ConversationItem
+            key={conversation.id}
+            conversation={conversation}
+            isActive={conversation.id === activeConversationId}
+          />
+        ))}
+      </div>
+      {hasMore || loadingMore ? (
         <div
           ref={sentinelRef}
           className="flex items-center justify-center py-3 text-(--text-tertiary)"

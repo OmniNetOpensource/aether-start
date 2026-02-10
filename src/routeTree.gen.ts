@@ -14,6 +14,7 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
+import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
 
 const R404Route = R404RouteImport.update({
   id: '/404',
@@ -40,18 +41,25 @@ const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
   path: '/c/$conversationId',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const ApiAssetsKeyRoute = ApiAssetsKeyRouteImport.update({
+  id: '/api/assets/$key',
+  path: '/api/assets/$key',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/app/': typeof AppIndexRoute
+  '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
   '/app': typeof AppIndexRoute
+  '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRoutesById {
@@ -60,20 +68,35 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/app/': typeof AppIndexRoute
+  '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/app' | '/404' | '/app/' | '/app/c/$conversationId'
+  fullPaths:
+    | '/'
+    | '/app'
+    | '/404'
+    | '/app/'
+    | '/api/assets/$key'
+    | '/app/c/$conversationId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/404' | '/app' | '/app/c/$conversationId'
-  id: '__root__' | '/' | '/app' | '/404' | '/app/' | '/app/c/$conversationId'
+  to: '/' | '/404' | '/app' | '/api/assets/$key' | '/app/c/$conversationId'
+  id:
+    | '__root__'
+    | '/'
+    | '/app'
+    | '/404'
+    | '/app/'
+    | '/api/assets/$key'
+    | '/app/c/$conversationId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   R404Route: typeof R404Route
+  ApiAssetsKeyRoute: typeof ApiAssetsKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -113,6 +136,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCConversationIdRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/api/assets/$key': {
+      id: '/api/assets/$key'
+      path: '/api/assets/$key'
+      fullPath: '/api/assets/$key'
+      preLoaderRoute: typeof ApiAssetsKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -134,6 +164,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   R404Route: R404Route,
+  ApiAssetsKeyRoute: ApiAssetsKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

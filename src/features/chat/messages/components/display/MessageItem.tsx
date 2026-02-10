@@ -1,7 +1,6 @@
 "use client";
 
 import { memo, useState, type ReactNode } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import Markdown from "@/shared/components/Markdown";
 import { ImagePreview } from "@/shared/components/ImagePreview";
 import { BranchInfo, Message } from "@/features/chat/types/chat";
@@ -17,9 +16,9 @@ import {
 import { Button } from "@/shared/ui/button";
 import {
   useMessageTreeStore,
-} from "@/features/chat/store/useMessageTreeStore";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
-import { useEditingStore } from "@/features/chat/store/useEditingStore";
+} from "@/features/chat/messages/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
 import { MessageEditor } from "../editing/MessageEditor";
 import { BranchNavigator } from "../editing/BranchNavigator";
 import {
@@ -112,7 +111,6 @@ const BranchConversationButton = ({
   messageId,
   disabled,
 }: BranchConversationButtonProps) => {
-  const navigate = useNavigate();
   const branchToNewConversation = useMessageTreeStore(
     (state) => state.branchToNewConversation,
   );
@@ -123,7 +121,11 @@ const BranchConversationButton = ({
     if (isBranching) return;
     setIsBranching(true);
     try {
-      await branchToNewConversation(messageId, (path) => navigate({ to: path }));
+      const requestState = useChatRequestStore.getState();
+      if (requestState.pending) {
+        requestState.stop();
+      }
+      await branchToNewConversation(messageId);
       setOpen(false);
     } finally {
       setIsBranching(false);
@@ -187,7 +189,6 @@ export const MessageItem = memo(function MessageItem({
   isStreaming,
   branchInfo,
 }: MessageItemProps) {
-  const navigate = useNavigate();
   const pending = useChatRequestStore((state) => state.pending);
   const isEditing = useEditingStore(
     (state) => state.editingState?.messageId === messageId,
@@ -321,9 +322,7 @@ export const MessageItem = memo(function MessageItem({
                   />
                   <ActionButton
                     onClick={() =>
-                      retryFromMessage(messageId, depth, (path: string) =>
-                        navigate({ to: path }),
-                      )
+                      retryFromMessage(messageId, depth)
                     }
                     disabled={pending}
                     title="重试生成"
@@ -336,9 +335,7 @@ export const MessageItem = memo(function MessageItem({
               {!isUser && (
                 <ActionButton
                   onClick={() =>
-                    retryFromMessage(messageId, depth, (path: string) =>
-                      navigate({ to: path }),
-                    )
+                    retryFromMessage(messageId, depth)
                   }
                   disabled={pending}
                   title="重试生成"
@@ -360,9 +357,11 @@ export const MessageItem = memo(function MessageItem({
             >
               <BranchNavigator
                 branchInfo={branchInfo}
-                onNavigate={(direction) =>
-                  navigateBranch(messageId, depth, direction)
-                }
+                onNavigate={(direction) => {
+                  if (!pending) {
+                    navigateBranch(messageId, depth, direction);
+                  }
+                }}
                 disabled={pending}
               />
             </div>

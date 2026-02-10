@@ -2,17 +2,17 @@
 
 import {
   ClipboardEvent,
-  FormEvent,
   KeyboardEvent,
+  useCallback,
   useEffect,
   useRef,
 } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { ArrowUp, Quote, Square, X } from "lucide-react";
 import { ImagePreview } from "@/shared/components/ImagePreview";
-import { useComposerStore } from "@/features/chat/store/useComposerStore";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
-import { useIsNewChat } from "@/features/chat/store/useMessageTreeStore";
+import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useIsNewChat } from "@/features/chat/messages/store/useMessageTreeStore";
+import { setComposerTextarea } from "@/features/chat/composer/lib/composer-focus";
 import { ComposerToolbar } from "./ComposerToolbar";
 import { Button } from "@/shared/ui/button";
 import { Textarea } from "@/shared/ui/textarea";
@@ -21,7 +21,6 @@ import { toast } from "@/shared/hooks/useToast";
 import { useResponsive } from "@/features/responsive/ResponsiveContext";
 
 export function Composer() {
-  const navigate = useNavigate();
   const input = useComposerStore((state) => state.input);
   const pending = useChatRequestStore((state) => state.pending);
   const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
@@ -34,7 +33,6 @@ export function Composer() {
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
   const removeQuotedText = useComposerStore((state) => state.removeQuotedText);
-  const setTextareaRef = useComposerStore((state) => state.setTextareaRef);
   const sendMessage = useChatRequestStore((state) => state.sendMessage);
   const stop = useChatRequestStore((state) => state.stop);
 
@@ -52,15 +50,15 @@ export function Composer() {
       return;
     }
 
-    await sendMessage((path) => navigate({ to: path }));
-  };
-
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    await submitMessage();
+    await sendMessage();
   };
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  const textareaCallbackRef = useCallback((el: HTMLTextAreaElement | null) => {
+    textareaRef.current = el;
+    setComposerTextarea(el);
+  }, []);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     const isEnter = event.key === "Enter";
@@ -100,10 +98,6 @@ export function Composer() {
   useEffect(() => {
     adjustTextareaHeight();
   }, [input]);
-
-  useEffect(() => {
-    setTextareaRef(textareaRef);
-  }, [setTextareaRef]);
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = event.clipboardData;
@@ -156,7 +150,10 @@ export function Composer() {
     return (
       <form
         key="form-initial"
-        onSubmit={handleSubmit}
+        onSubmit={(e) => {
+          e.preventDefault()
+          void submitMessage()
+        }}
         className="flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
         <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-black/[0.03] dark:bg-white/[0.03] p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
@@ -217,7 +214,7 @@ export function Composer() {
 
           <div className="flex w-full items-end gap-2">
             <Textarea
-              ref={textareaRef}
+              ref={textareaCallbackRef}
               id="message-input"
               name="message"
               value={input}
@@ -278,7 +275,10 @@ export function Composer() {
       />
       <form
         key="form-bottom"
-        onSubmit={handleSubmit}
+        onSubmit={(e) => {
+          e.preventDefault()
+          void submitMessage()
+        }}
         className="relative flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
         <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-black/[0.03] dark:bg-white/[0.03] p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">

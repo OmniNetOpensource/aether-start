@@ -4,6 +4,7 @@ import {
   convertFileToBase64,
 } from "@/shared/lib/utils/file";
 import { toast } from "@/shared/hooks/useToast";
+import { uploadAttachmentFn } from '@/features/chat/api/server/functions/attachment-upload'
 
 export const buildAttachmentsFromFiles = async (
   files: File[],
@@ -29,7 +30,14 @@ export const buildAttachmentsFromFiles = async (
     }
 
     try {
-      const displayUrl = await convertFileToBase64(file);
+      const dataUrl = await convertFileToBase64(file)
+      const uploaded = await uploadAttachmentFn({
+        data: {
+          filename: file.name,
+          mimeType,
+          dataUrl,
+        },
+      })
 
       attachments.push({
         id:
@@ -40,7 +48,8 @@ export const buildAttachmentsFromFiles = async (
         name: file.name,
         size: file.size,
         mimeType,
-        displayUrl,
+        displayUrl: uploaded.displayUrl,
+        storageKey: uploaded.storageKey,
       });
     } catch (error) {
       const detail =

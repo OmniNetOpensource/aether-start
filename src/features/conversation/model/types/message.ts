@@ -36,10 +36,12 @@ type AttachmentBase = {
 
 export type Attachment = AttachmentBase & {
   displayUrl: string;
+  storageKey?: string;
 };
 
 export type SerializedAttachment = AttachmentBase & {
   url: string;
+  storageKey?: string;
 };
 
 export type LegacyAttachment = SerializedAttachment;

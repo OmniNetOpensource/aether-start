@@ -1,19 +1,19 @@
 "use client";
 
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
-import type { Conversation } from "@/features/conversation/types/conversation";
+import { MoreHorizontal, Trash2 } from "lucide-react";
+import type { ConversationMeta } from "@/features/conversation/model/types/conversation";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/shared/ui/dropdown-menu";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
-import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useConversationsStore } from "@/features/conversation/persistence/store/useConversationsStore";
 
 type ConversationItemProps = {
-  conversation: Conversation;
+  conversation: ConversationMeta;
   isActive: boolean;
 };
 
@@ -22,17 +22,10 @@ export function ConversationItem({
   isActive,
 }: ConversationItemProps) {
   const title = conversation.title || "未命名会话";
-  const isPinned = Boolean(conversation.pinned);
 
   const pending = useChatRequestStore((state) => state.pending);
   const stop = useChatRequestStore((state) => state.stop);
   const navigate = useNavigate();
-  const pinConversation = useConversationsStore(
-    (state) => state.pinConversation
-  );
-  const unpinConversation = useConversationsStore(
-    (state) => state.unpinConversation
-  );
   const deleteConversation = useConversationsStore(
     (state) => state.deleteConversation
   );
@@ -95,9 +88,6 @@ export function ConversationItem({
           <span className="min-w-0 flex-1 truncate text-base font-semibold text-(--text-secondary)">
             {title}
           </span>
-          {isPinned ? (
-            <Pin className="size-3.5 text-(--text-tertiary)" />
-          ) : null}
         </div>
       </div>
       <div className="relative z-20">
@@ -118,25 +108,6 @@ export function ConversationItem({
             className="min-w-[8.5rem]"
             onClick={(e) => e.stopPropagation()}
           >
-            {isPinned ? (
-              <DropdownMenuItem
-                onSelect={() => {
-                  void unpinConversation(conversation.id);
-                }}
-              >
-                <PinOff className="size-4" />
-                取消置顶
-              </DropdownMenuItem>
-            ) : (
-              <DropdownMenuItem
-                onSelect={() => {
-                  void pinConversation(conversation.id);
-                }}
-              >
-                <Pin className="size-4" />
-                置顶会话
-              </DropdownMenuItem>
-            )}
             <DropdownMenuItem
               onSelect={() => {
                 void handleDelete();

@@ -1,5 +1,6 @@
 import { ChatTool, ToolDefinition, ToolHandler } from "./types";
-import { getLogger } from "@/features/chat/server/services/logger";
+import { getLogger } from "@/features/chat/api/server/services/logger";
+import { getServerEnv } from '@/server/env'
 
 type SearchArgs = {
   query: string;
@@ -182,7 +183,7 @@ const performSearch = async (
 
 const search: ToolHandler = async (args) => {
   const { query } = parseSearchArgs(args);
-  const apiKey = process.env.SERP_API_KEY;
+  const { SERP_API_KEY: apiKey } = getServerEnv()
 
   if (!apiKey) {
     getLogger().log("SEARCH", "Missing SERP_API_KEY");

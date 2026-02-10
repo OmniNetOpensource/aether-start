@@ -1,26 +1,28 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { fetchUrlTool } from "@/features/chat/server/tools/fetch";
-import { searchTool } from "@/features/chat/server/tools/search";
+import { fetchUrlTool } from "@/features/chat/api/server/tools/fetch";
+import { searchTool } from "@/features/chat/api/server/tools/search";
 import {
   getDefaultRoleConfig,
   getRoleConfig,
-} from "@/features/chat/server/services/chat-config";
+} from "@/features/chat/api/server/services/chat-config";
 import {
   createConversationLogger,
   enterLoggerContext,
   getLogger,
-} from "@/features/chat/server/services/logger";
-import { runAnthropicChat } from "@/features/chat/server/services/anthropic";
-import { executeToolsGen } from "@/features/chat/server/tools/execute";
+} from "@/features/chat/api/server/services/logger";
+import { runAnthropicChat } from "@/features/chat/api/server/services/anthropic";
+import { executeToolsGen } from "@/features/chat/api/server/tools/execute";
+import { generateTitleFromUserMessage } from "@/features/chat/api/server/functions/chat-title";
+import { getServerEnv } from '@/server/env'
 import type {
   ChatServerToClientEvent,
   ChatRequestConfig,
   ChatRunResult,
   ChatProviderState,
   ToolInvocationResult,
-} from "@/features/chat/server/schemas/types";
-import type { ChatTool } from "@/features/chat/server/tools/types";
+} from "@/features/chat/api/types/schemas/types";
+import type { ChatTool } from "@/features/chat/api/server/tools/types";
 
 const generateConversationId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -41,6 +43,9 @@ const chatInputSchema = z.object({
 export const streamChatFn = createServerFn({ method: "POST" })
   .inputValidator(chatInputSchema)
   .handler(async function* ({ data }) {
+    // Workaround: TanStack Start NDJSON race condition (TanStack/router#6604)
+    await new Promise(resolve => setTimeout(resolve, 0))
+
     try {
       const { conversationHistory, conversationId, role } = data;
 
@@ -100,11 +105,12 @@ export const streamChatFn = createServerFn({ method: "POST" })
       const requestedModel = roleConfig.model;
       const systemInstruction = roleConfig.systemPrompt;
 
+      const env = getServerEnv()
       const tools: ChatTool[] = []
-      if (process.env.JINA_API_KEY) {
+      if (env.JINA_API_KEY) {
         tools.push(fetchUrlTool.spec)
       }
-      if (process.env.SERP_API_KEY) {
+      if (env.SERP_API_KEY) {
         tools.push(searchTool.spec)
       }
 
@@ -113,7 +119,15 @@ export const streamChatFn = createServerFn({ method: "POST" })
       if (!activeConversationId) {
         const newId = generateConversationId();
         activeConversationId = newId;
-        const title = "New Chat";
+
+        const userText = latestUserMessage.blocks
+          .filter((block: { type: string; content?: string }) => block.type === 'content')
+          .map((block: { type: string; content?: string }) => block.content ?? '')
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim()
+
+        const title = await generateTitleFromUserMessage(userText);
         const now = new Date().toISOString();
         yield {
           type: "conversation_created",

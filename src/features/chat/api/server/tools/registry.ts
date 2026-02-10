@@ -1,14 +1,16 @@
 import { fetchUrlTool } from './fetch'
 import { searchTool } from './search'
+import { getServerEnv } from '@/server/env'
 import {
   type ToolDefinition,
   type ToolHandler,
   type ToolProgressCallback,
   type ToolName,
 } from './types'
-import { getLogger } from '@/features/chat/server/services/logger'
+import { getLogger } from '@/features/chat/api/server/services/logger'
 
-const hasSearchKey = Boolean(process.env.SERP_API_KEY)
+const env = getServerEnv()
+const hasSearchKey = Boolean(env.SERP_API_KEY)
 
 const toolMap: Partial<Record<ToolName, ToolDefinition>> = {
   fetch_url: fetchUrlTool,

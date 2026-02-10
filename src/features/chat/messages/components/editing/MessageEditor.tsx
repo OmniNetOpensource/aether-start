@@ -1,7 +1,6 @@
 "use client";
 
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import { ArrowUp, ImagePlus, X } from "lucide-react";
 import { ImagePreview } from "@/shared/components/ImagePreview";
 import { Button } from "@/shared/ui/button";
@@ -9,10 +8,10 @@ import { Textarea } from "@/shared/ui/textarea";
 import { cn } from "@/shared/lib/utils";
 import { toast } from "@/shared/hooks/useToast";
 import { useResponsive } from "@/features/responsive/ResponsiveContext";
-import { useEditingStore } from "@/features/chat/store/useEditingStore";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
-import { useComposerStore } from "@/features/chat/store/useComposerStore";
-import { buildAttachmentsFromFiles } from "@/features/chat/lib/attachments";
+import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
+import { buildAttachmentsFromFiles } from "@/features/chat/composer/lib/attachments";
 
 type MessageEditorProps = {
   messageId: number;
@@ -20,7 +19,6 @@ type MessageEditorProps = {
 };
 
 export function MessageEditor({ messageId, depth }: MessageEditorProps) {
-  const navigate = useNavigate();
   const editingState = useEditingStore((state) => state.editingState);
   const updateEditContent = useEditingStore((state) => state.updateEditContent);
   const updateEditAttachments = useEditingStore(
@@ -133,7 +131,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
     if (event.key === "Enter" && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       if (!sendDisabled) {
-        submitEdit(depth, (path) => navigate({ to: path }));
+        submitEdit(depth);
       }
     }
   };
@@ -220,7 +218,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
         </div>
         <Button
           type="button"
-          onClick={() => submitEdit(depth, (path) => navigate({ to: path }))}
+          onClick={() => submitEdit(depth)}
           disabled={sendDisabled}
           size="icon"
           aria-label="发送编辑"

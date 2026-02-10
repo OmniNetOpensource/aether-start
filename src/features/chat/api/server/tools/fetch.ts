@@ -4,8 +4,10 @@ import {
   ToolHandler,
   ToolProgressCallback,
 } from "./types";
-import { getLogger } from "@/features/chat/server/services/logger";
+import { getLogger } from "@/features/chat/api/server/services/logger";
 import { Supadata } from "@supadata/js";
+import { getServerEnv } from '@/server/env'
+import { arrayBufferToBase64 } from '@/server/base64'
 
 type FetchUrlArgs = {
   url: string;
@@ -204,7 +206,7 @@ const fetchDirectImage = async (
       receivedBytes: arrayBuffer.byteLength,
     });
 
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    const base64 = arrayBufferToBase64(arrayBuffer)
     const mimeType = contentType.split(";")[0].trim();
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
@@ -315,7 +317,7 @@ const fetchScreenshot = async (
     });
 
     const contentType = response.headers.get("content-type") || "image/png";
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
+    const base64 = arrayBufferToBase64(arrayBuffer)
     const mimeType = contentType.split(";")[0].trim();
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
@@ -401,7 +403,7 @@ const performFetchUrl = async (
         ? Number(totalBytesHeader)
         : undefined;
     const jinaText = await jinaResponse.text();
-    const receivedBytes = Buffer.byteLength(jinaText);
+    const receivedBytes = new TextEncoder().encode(jinaText).byteLength
     await emitProgress(onProgress, {
       stage: "complete",
       message: `接收完成，总计 ${formatKilobytes(receivedBytes)} KB${
@@ -445,7 +447,7 @@ const fetchYoutubeTranscript = async (
   url: string,
   onProgress?: ToolProgressCallback,
 ): Promise<string> => {
-  const apiKey = process.env.SUPADATA_API_KEY;
+  const { SUPADATA_API_KEY: apiKey } = getServerEnv()
   if (!apiKey) {
     getLogger().log("FETCH", "Missing SUPADATA_API_KEY");
     return "Error: SUPADATA_API_KEY is not set";
@@ -487,7 +489,7 @@ const fetchYoutubeTranscript = async (
             typeof transcript.content === "string"
               ? transcript.content
               : JSON.stringify(transcript.content);
-          const sizeKB = (Buffer.byteLength(text) / 1024).toFixed(1);
+          const sizeKB = (new TextEncoder().encode(text).byteLength / 1024).toFixed(1)
           getLogger().log(
             "FETCH",
             `Transcript job completed, size: ${sizeKB} KB`,
@@ -524,7 +526,7 @@ const fetchYoutubeTranscript = async (
       typeof transcript.content === "string"
         ? transcript.content
         : JSON.stringify(transcript.content);
-    const sizeKB = (Buffer.byteLength(text) / 1024).toFixed(1);
+    const sizeKB = (new TextEncoder().encode(text).byteLength / 1024).toFixed(1)
     getLogger().log("FETCH", `Transcript success, size: ${sizeKB} KB`);
     await emitProgress(onProgress, {
       stage: "complete",
@@ -552,7 +554,7 @@ const fetchUrl: ToolHandler = async (args, onProgress) => {
     return fetchYoutubeTranscript(url, onProgress);
   }
 
-  const apiKey = process.env.JINA_API_KEY;
+  const { JINA_API_KEY: apiKey } = getServerEnv()
 
   if (!apiKey) {
     getLogger().log("FETCH", "Missing JINA_API_KEY");

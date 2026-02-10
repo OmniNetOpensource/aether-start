@@ -15,16 +15,16 @@ import {
   editMessage,
   getBranchInfo,
   switchBranch,
-} from "@/features/conversation/lib/tree/message-tree";
+} from "@/features/conversation/model/tree/message-tree";
 import {
   applyAssistantAddition,
   cloneMessages,
   type AssistantAddition,
-} from "@/features/conversation/lib/tree/block-operations";
-import { buildConversationTitle } from "@/features/conversation/lib/format";
-import { localDB } from "@/features/conversation/storage/indexed-db";
-import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
-import { useChatRequestStore } from "./useChatRequestStore";
+} from "@/features/conversation/model/tree/block-operations";
+import { buildConversationTitle } from "@/features/conversation/formatting/format";
+import { conversationRepository } from "@/features/conversation/persistence/repository";
+import { useConversationsStore } from "@/features/conversation/persistence/store/useConversationsStore";
+import { appNavigate } from "@/shared/lib/navigation";
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 
@@ -46,7 +46,6 @@ type MessageTreeActions = {
   ) => void;
   branchToNewConversation: (
     messageId: number,
-    navigate: (path: string) => void
   ) => Promise<void>;
   clear: () => void;
   _getTreeState: () => TreeSnapshot;
@@ -162,10 +161,6 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
       },
       getBranchInfo: (messageId) => getBranchInfo(get().messages, messageId),
       navigateBranch: (messageId, depth, direction) => {
-        if (useChatRequestStore.getState().pending) {
-          return;
-        }
-
         const state = get();
         const info = getBranchInfo(state.messages, messageId);
         if (!info) {
@@ -248,17 +243,12 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
             nextId,
           };
         }),
-      branchToNewConversation: async (messageId, navigate) => {
+      branchToNewConversation: async (messageId) => {
         const state = get();
         const currentPath = state.currentPath;
         const targetIndex = currentPath.indexOf(messageId);
         if (targetIndex === -1) {
           return;
-        }
-
-        const requestState = useChatRequestStore.getState();
-        if (requestState.pending) {
-          requestState.stop();
         }
 
         const pathIds = currentPath.slice(0, targetIndex + 1);
@@ -288,7 +278,7 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
           ? buildConversationTitle(titleSource)
           : "新会话";
 
-        await localDB.save({
+        await conversationRepository.save({
           id: newConversationId,
           title,
           currentPath: linearState.currentPath,
@@ -306,7 +296,7 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
           updated_at: now,
         });
 
-        navigate(`/app/c/${newConversationId}`);
+        appNavigate(`/app/c/${newConversationId}`);
       },
     }),
     { name: "MessageTreeStore" }

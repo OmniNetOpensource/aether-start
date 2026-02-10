@@ -1,7 +1,7 @@
 import type { SerializedMessage } from "@/features/chat/types/chat";
-import type { ChatTool } from "@/features/chat/server/tools/types";
+import type { ChatTool } from "@/features/chat/api/server/tools/types";
 
-export type { ChatServerToClientEvent } from "@/features/chat/types/server-events";
+export type { ChatServerToClientEvent } from "@/features/chat/api/types/server-events";
 
 // Tool call pending execution
 export type PendingToolInvocation = {

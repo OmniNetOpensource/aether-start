@@ -2,7 +2,7 @@
 
 import { PanelLeft } from "lucide-react";
 import { Button } from "@/shared/ui/button";
-import { useSidebarStore } from "@/features/sidebar/store/useSidebarStore";
+import { useSidebarStore } from "@/features/sidebar/layout/store/useSidebarStore";
 
 export function SidebarToggleButton() {
   const isOpen = useSidebarStore((state) => state.isOpen);

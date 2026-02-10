@@ -1,20 +1,16 @@
-export type Conversation = {
+export type ConversationMeta = {
   id: string;
   user_id: string;
   title: string | null;
   created_at: string;
   updated_at: string;
-  pinned?: boolean;
-  pinned_at?: string;
 };
 
-export type LocalConversation = {
+export type ConversationDetail = {
   id: string;
   title: string | null;
   currentPath: number[];
   messages: import('./message').Message[];
   created_at: string;
   updated_at: string;
-  pinned?: boolean;
-  pinned_at?: string;
 };

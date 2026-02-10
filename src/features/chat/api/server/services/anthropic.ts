@@ -1,7 +1,9 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { buildSystemPrompt } from "@/features/chat/server/services/utils";
-import { getAnthropicConfig } from "@/features/chat/server/services/chat-config";
+import { buildSystemPrompt } from "@/features/chat/api/server/services/utils";
+import { getAnthropicConfig } from "@/features/chat/api/server/services/chat-config";
 import { getLogger } from "./logger";
+import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
+import { getServerBindings } from '@/server/env'
 import type {
   ChatRequestConfig,
   ChatRunResult,
@@ -9,8 +11,8 @@ import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
-} from "../schemas/types";
-import type { ChatTool } from "@/features/chat/server/tools/types";
+} from "../../types/schemas/types";
+import type { ChatTool } from "@/features/chat/api/server/tools/types";
 import type { SerializedMessage } from "@/features/chat/types/chat";
 
 type AnthropicImageSource = {
@@ -113,10 +115,68 @@ const getClient = () => {
   });
 };
 
-function convertToAnthropicMessages(history: SerializedMessage[]): AnthropicMessage[] {
+const resolveAttachmentToBase64 = async (attachment: {
+  name: string
+  mimeType: string
+  url?: string
+  storageKey?: string
+}): Promise<{ media_type: string; data: string } | null> => {
+  if (attachment.url) {
+    const parsed = parseDataUrl(attachment.url)
+    if (parsed) {
+      return {
+        media_type: parsed.mimeType,
+        data: parsed.base64,
+      }
+    }
+  }
+
+  if (attachment.storageKey) {
+    try {
+      const { CHAT_ASSETS } = getServerBindings()
+      const object = await CHAT_ASSETS.get(attachment.storageKey)
+      if (!object) {
+        getLogger().log('ANTHROPIC', `R2 object not found for ${attachment.storageKey}`)
+      } else {
+        const buffer = await object.arrayBuffer()
+        return {
+          media_type: object.httpMetadata?.contentType || attachment.mimeType,
+          data: arrayBufferToBase64(buffer),
+        }
+      }
+    } catch (error) {
+      getLogger().log('ANTHROPIC', `Failed to read storageKey ${attachment.storageKey}`, error)
+    }
+  }
+
+  if (attachment.url && /^https?:\/\//.test(attachment.url)) {
+    try {
+      const response = await fetch(attachment.url)
+      if (!response.ok) {
+        getLogger().log('ANTHROPIC', `Failed to fetch attachment url`, {
+          url: attachment.url,
+          status: response.status,
+        })
+        return null
+      }
+
+      const arrayBuffer = await response.arrayBuffer()
+      return {
+        media_type: response.headers.get('content-type') || attachment.mimeType,
+        data: arrayBufferToBase64(arrayBuffer),
+      }
+    } catch (error) {
+      getLogger().log('ANTHROPIC', `Failed to fetch http attachment`, error)
+    }
+  }
+
+  return null
+}
+
+async function convertToAnthropicMessages(history: SerializedMessage[]): Promise<AnthropicMessage[]> {
   getLogger().log('ANTHROPIC', '转换为 Anthropic 格式', { messageCount: history.length });
 
-  return history.map((message, msgIdx) => {
+  return Promise.all(history.map(async (message, msgIdx) => {
     const contentBlocks: AnthropicContentBlock[] = [];
 
     for (const block of message.blocks) {
@@ -124,23 +184,29 @@ function convertToAnthropicMessages(history: SerializedMessage[]): AnthropicMess
         contentBlocks.push({ type: "text", text: block.content });
       } else if (block.type === "attachments") {
         for (const attachment of block.attachments) {
-          if (attachment.kind === "image" && attachment.url) {
-            const base64Match = attachment.url.match(/^data:([^;]+);base64,(.+)$/);
-            if (base64Match) {
-              getLogger().log('ANTHROPIC', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 匹配 base64`, {
-                media_type: base64Match[1],
-                dataLength: base64Match[2].length,
+          if (attachment.kind === "image") {
+            const resolved = await resolveAttachmentToBase64({
+              name: attachment.name,
+              mimeType: attachment.mimeType,
+              url: attachment.url,
+              storageKey: attachment.storageKey,
+            })
+
+            if (resolved) {
+              getLogger().log('ANTHROPIC', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 转换成功`, {
+                media_type: resolved.media_type,
+                dataLength: resolved.data.length,
               });
               contentBlocks.push({
                 type: "image",
                 source: {
                   type: "base64",
-                  media_type: base64Match[1],
-                  data: base64Match[2],
+                  media_type: resolved.media_type,
+                  data: resolved.data,
                 },
               });
             } else {
-              getLogger().log('ANTHROPIC', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 未能匹配 base64`);
+              getLogger().log('ANTHROPIC', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`)
             }
           }
         }
@@ -151,7 +217,7 @@ function convertToAnthropicMessages(history: SerializedMessage[]): AnthropicMess
       role: message.role,
       content: contentBlocks.length > 0 ? contentBlocks : "",
     };
-  });
+  }))
 }
 
 function convertToolsToAnthropic(tools: ChatTool[]): AnthropicTool[] {
@@ -248,7 +314,7 @@ async function* streamAnthropicCompletion(requestParams: {
   }
 }
 
-const createInitialState = (options: ChatRequestConfig): AnthropicState => {
+const createInitialState = async (options: ChatRequestConfig): Promise<AnthropicState> => {
   const systemPrompt = buildSystemPrompt();
   const rolePrompt = options.systemPrompt?.trim();
   const rolePromptMessages: AnthropicMessage[] = rolePrompt
@@ -259,7 +325,7 @@ const createInitialState = (options: ChatRequestConfig): AnthropicState => {
     messages: [
       { role: "user", content: systemPrompt },
       ...rolePromptMessages,
-      ...convertToAnthropicMessages(options.messages),
+      ...(await convertToAnthropicMessages(options.messages)),
     ],
     lastAssistantText: "",
     lastPendingToolCalls: [],
@@ -356,7 +422,7 @@ export async function* runAnthropicChat(
     : undefined;
 
   const options = params.options;
-  const workingState = continuationState ?? createInitialState(options);
+  const workingState = continuationState ?? (await createInitialState(options));
 
   const anthropicTools = options.tools.length > 0 ? convertToolsToAnthropic(options.tools) : undefined;
 

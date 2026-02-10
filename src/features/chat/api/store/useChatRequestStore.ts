@@ -1,22 +1,22 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { toast } from "@/shared/hooks/useToast";
-import type { ChatClient } from "@/features/chat/lib/network/chat-client";
-import { startChatRequest } from "@/features/chat/lib/network/chat-request";
-import { DEFAULT_ROLE_ID, ROLES } from "@/features/chat/config/roles";
+import type { ChatClient } from "@/features/chat/api/client/chat-request";
+import { startChatRequest } from "@/features/chat/api/client/chat-request";
+import { DEFAULT_ROLE_ID, ROLES } from "@/features/chat/session/config/roles";
 import {
   computeMessagesFromPath,
-} from "@/features/conversation/lib/tree/message-tree";
+} from "@/features/conversation/model/tree/message-tree";
 import {
   buildUserBlocks,
-  cloneMessages,
-} from "@/features/conversation/lib/tree/block-operations";
-import type { Message } from "@/features/chat/types/chat";
-import { buildConversationTitle } from "@/features/conversation/lib/format";
-import { localDB } from "@/features/conversation/storage/indexed-db";
-import { useConversationsStore } from "@/features/conversation/store/useConversationsStore";
-import { useComposerStore } from "./useComposerStore";
-import { useMessageTreeStore } from "./useMessageTreeStore";
+} from "@/features/conversation/model/tree/block-operations";
+import {
+  buildConversationPayload,
+  persistConversation as persistConversationService,
+  resolveExistingConversation,
+} from "@/features/conversation/persistence/persist-service";
+import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
+import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
 
 type ChatRequestState = {
   pending: boolean;
@@ -26,7 +26,7 @@ type ChatRequestState = {
 };
 
 type ChatRequestActions = {
-  sendMessage: (navigate?: (path: string) => void) => Promise<void>;
+  sendMessage: () => Promise<void>;
   stop: () => void;
   setCurrentRole: (role: string) => void;
   clear: () => void;
@@ -36,6 +36,7 @@ type ChatRequestActions = {
 };
 
 const ROLE_STORAGE_KEY = "selected-role";
+
 const getInitialRole = (): string => {
   if (typeof window === "undefined") {
     return DEFAULT_ROLE_ID;
@@ -53,46 +54,6 @@ const getInitialRole = (): string => {
   return ROLES[0]?.id ?? "";
 };
 
-const persistConversation = async (
-  id: string,
-  messages: Message[],
-  currentPath: number[]
-) => {
-  const now = new Date().toISOString();
-  const existing = await localDB.get(id);
-  const allMessages = cloneMessages(messages);
-  const resolvedCurrentPath =
-    currentPath.length > 0 ? currentPath : existing?.currentPath ?? [];
-  const pathMessages = computeMessagesFromPath(messages, resolvedCurrentPath);
-  const { pinnedConversations, normalConversations } =
-    useConversationsStore.getState();
-  const storedConversation = [
-    ...pinnedConversations,
-    ...normalConversations,
-  ].find((item) => item.id === id);
-  const pinned = storedConversation?.pinned ?? existing?.pinned;
-  const pinned_at = storedConversation?.pinned_at ?? existing?.pinned_at;
-  const titleSource =
-    pathMessages.find((message) => message.role === "user") ??
-    pathMessages[0];
-  const title =
-    existing?.title ??
-    (titleSource ? buildConversationTitle(titleSource) : "New Chat");
-  const created_at = existing?.created_at ?? now;
-
-  await localDB.save({
-    id,
-    title,
-    currentPath: resolvedCurrentPath,
-    messages: allMessages,
-    created_at,
-    updated_at: now,
-    pinned,
-    pinned_at,
-  });
-
-};
-
 export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>()(
   devtools(
     (set, get) => ({
@@ -100,7 +61,7 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       chatClient: null,
       activeRequestId: null,
       currentRole: getInitialRole(),
-      sendMessage: async (navigate) => {
+      sendMessage: async () => {
         const { input, pendingAttachments, quotedTexts } =
           useComposerStore.getState();
         const trimmed = input.trim();
@@ -143,12 +104,8 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
 
         useComposerStore.getState().clear();
 
-        const { get: getRequestState, set: setRequestState } =
-          getChatRequestHandlers();
-
-        await startChatRequest(getRequestState, setRequestState, {
+        await startChatRequest({
           messages: pathMessages,
-          navigate,
           titleSource: { role: "user", blocks: result.addedMessage.blocks },
         });
       },
@@ -157,7 +114,16 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
         const treeState = useMessageTreeStore.getState();
         const { conversationId, messages, currentPath } = treeState;
         if (conversationId) {
-          void persistConversation(conversationId, messages, currentPath);
+          void (async () => {
+            const existing = await resolveExistingConversation(conversationId);
+            const payload = buildConversationPayload({
+              id: conversationId,
+              messages,
+              currentPath,
+              existingConversation: existing,
+            });
+            persistConversationService(payload, { force: true });
+          })();
         }
         if (!chatClient) {
           set({ pending: false, chatClient: null, activeRequestId: null });
@@ -190,75 +156,3 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
     { name: "ChatRequestStore" }
   )
 );
-
-const buildStoreStateSnapshot = () => {
-  const treeState = useMessageTreeStore.getState();
-  const requestState = useChatRequestStore.getState();
-  return {
-    messages: treeState.messages,
-    currentPath: treeState.currentPath,
-    conversationId: treeState.conversationId,
-    pending: requestState.pending,
-    chatClient: requestState.chatClient,
-    activeRequestId: requestState.activeRequestId,
-  };
-};
-
-const applyRequestPartial = (
-  partial: Partial<ReturnType<typeof buildStoreStateSnapshot>>
-) => {
-  const treeStore = useMessageTreeStore.getState();
-  const nextRequestState: Partial<ChatRequestState> = {};
-
-  if (Object.prototype.hasOwnProperty.call(partial, "pending")) {
-    nextRequestState.pending = partial.pending ?? false;
-  }
-  if (Object.prototype.hasOwnProperty.call(partial, "chatClient")) {
-    nextRequestState.chatClient = partial.chatClient ?? null;
-  }
-  if (Object.prototype.hasOwnProperty.call(partial, "activeRequestId")) {
-    nextRequestState.activeRequestId = partial.activeRequestId ?? null;
-  }
-
-  if (Object.keys(nextRequestState).length > 0) {
-    useChatRequestStore.setState(nextRequestState);
-  }
-
-  if (Object.prototype.hasOwnProperty.call(partial, "conversationId")) {
-    treeStore.setConversationId(partial.conversationId ?? null);
-  }
-};
-
-export const getChatRequestHandlers = () => {
-  const getRequestState = () => {
-    const treeState = useMessageTreeStore.getState();
-    const requestState = useChatRequestStore.getState();
-    return {
-      messages: treeState.messages,
-      currentPath: treeState.currentPath,
-      conversationId: treeState.conversationId,
-      currentRole: requestState.currentRole,
-      pending: requestState.pending,
-      activeRequestId: requestState.activeRequestId,
-      appendToAssistant: treeState.appendToAssistant,
-    };
-  };
-
-  const setRequestState = (
-    partial:
-      | Partial<ReturnType<typeof buildStoreStateSnapshot>>
-      | ((state: ReturnType<typeof buildStoreStateSnapshot>) => Partial<
-          ReturnType<typeof buildStoreStateSnapshot>
-        >)
-  ) => {
-    if (typeof partial === "function") {
-      const snapshot = buildStoreStateSnapshot();
-      const resolved = partial(snapshot);
-      applyRequestPartial(resolved);
-      return;
-    }
-    applyRequestPartial(partial);
-  };
-
-  return { get: getRequestState, set: setRequestState };
-};

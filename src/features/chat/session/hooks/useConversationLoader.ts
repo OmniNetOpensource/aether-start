@@ -1,13 +1,13 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useComposerStore } from "@/features/chat/store/useComposerStore";
-import { useEditingStore } from "@/features/chat/store/useEditingStore";
-import { useMessageTreeStore } from "@/features/chat/store/useMessageTreeStore";
-import { localDB } from "@/features/conversation/storage/indexed-db";
+import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
+import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
+import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
+import { conversationRepository } from "@/features/conversation/persistence/repository";
 import {
   buildCurrentPath,
   createLinearMessages,
-} from "@/features/conversation/lib/tree/message-tree";
+} from "@/features/conversation/model/tree/message-tree";
 import type {
   Attachment,
   LegacyAttachment,
@@ -25,6 +25,7 @@ const restoreDisplayUrls = (
       size: att.size,
       mimeType: att.mimeType,
       displayUrl: "url" in att ? att.url : att.displayUrl,
+      storageKey: 'storageKey' in att ? att.storageKey : undefined,
     }))
     .filter((att) => att.mimeType?.startsWith("image/") && !!att.displayUrl);
 
@@ -99,7 +100,7 @@ export function useConversationLoader(conversationId: string | undefined) {
 
     const load = async () => {
       try {
-        const conversation = await localDB.get(conversationId);
+        const conversation = await conversationRepository.get(conversationId);
         if (canceled || signal.aborted) {
           return;
         }

@@ -9,8 +9,8 @@ import {
   PopoverTrigger,
 } from "@/shared/ui/popover";
 import { cn } from "@/shared/lib/utils";
-import { ROLES } from "@/features/chat/config/roles";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
+import { ROLES } from "@/features/chat/session/config/roles";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
 
 export function RoleSelector() {
   const currentRole = useChatRequestStore((state) => state.currentRole);

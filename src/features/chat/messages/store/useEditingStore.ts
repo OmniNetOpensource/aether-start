@@ -6,15 +6,15 @@ import {
   cloneBlocks,
   computeMessagesFromPath,
   editMessage,
-} from "@/features/conversation/lib/tree/message-tree";
+} from "@/features/conversation/model/tree/message-tree";
 import {
   buildUserBlocks,
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
-} from "@/features/conversation/lib/tree/block-operations";
-import { startChatRequest } from "@/features/chat/lib/network/chat-request";
+} from "@/features/conversation/model/tree/block-operations";
+import { startChatRequest } from "@/features/chat/api/client/chat-request";
 import { useMessageTreeStore } from "./useMessageTreeStore";
-import { getChatRequestHandlers, useChatRequestStore } from "./useChatRequestStore";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
 
 type EditingStoreState = {
   editingState: EditingState | null;
@@ -25,11 +25,10 @@ type EditingStoreActions = {
   updateEditContent: (content: string) => void;
   updateEditAttachments: (attachments: Attachment[]) => void;
   cancelEditing: () => void;
-  submitEdit: (depth: number, navigate?: (path: string) => void) => Promise<void>;
+  submitEdit: (depth: number) => Promise<void>;
   retryFromMessage: (
     messageId: number,
     depth: number,
-    navigate?: (path: string) => void
   ) => Promise<void>;
   clear: () => void;
 };
@@ -86,7 +85,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           };
         }),
       cancelEditing: () => set({ editingState: null }),
-      submitEdit: async (depth, navigate) => {
+      submitEdit: async (depth) => {
         const editingState = get().editingState;
         if (!editingState) {
           return;
@@ -136,16 +135,12 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           result.currentPath
         );
 
-        const { get: getRequestState, set: setRequestState } =
-          getChatRequestHandlers();
-
-        await startChatRequest(getRequestState, setRequestState, {
+        await startChatRequest({
           messages: pathMessages,
-          navigate,
           titleSource: { role: "user", blocks: result.addedMessage.blocks },
         });
       },
-      retryFromMessage: async (messageId, depth, navigate) => {
+      retryFromMessage: async (messageId, depth) => {
         const treeStore = useMessageTreeStore.getState();
         const treeState = treeStore._getTreeState();
         const targetNode = treeState.messages[messageId - 1];
@@ -189,12 +184,8 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
             result.currentPath
           );
 
-          const { get: getRequestState, set: setRequestState } =
-            getChatRequestHandlers();
-
-          await startChatRequest(getRequestState, setRequestState, {
+          await startChatRequest({
             messages: pathMessages,
-            navigate,
             titleSource: { role: "user", blocks: result.addedMessage.blocks },
           });
           return;
@@ -214,12 +205,8 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           [...pathMessages].reverse().find((message) => message.role === "user") ??
           pathMessages[0];
 
-        const { get: getRequestState, set: setRequestState } =
-          getChatRequestHandlers();
-
-        await startChatRequest(getRequestState, setRequestState, {
+        await startChatRequest({
           messages: pathMessages,
-          navigate,
           titleSource,
         });
       },

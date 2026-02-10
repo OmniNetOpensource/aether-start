@@ -3,11 +3,12 @@
 import { useEffect, useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { PendingIndicator } from "./PendingIndicator";
-import { useMessageTreeStore } from "@/features/chat/store/useMessageTreeStore";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
-import { useComposerStore } from "@/features/chat/store/useComposerStore";
-import { computeMessagesFromPath } from "@/features/conversation/lib/tree/message-tree";
-import { useTextSelection } from "@/features/chat/hooks/useTextSelection";
+import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
+import { focusComposerTextarea } from "@/features/chat/composer/lib/composer-focus";
+import { computeMessagesFromPath } from "@/features/conversation/model/tree/message-tree";
+import { useTextSelection } from "@/features/chat/messages/hooks/useTextSelection";
 import { SelectionQuoteButton } from "./SelectionQuoteButton";
 
 export function MessageList() {
@@ -25,7 +26,7 @@ export function MessageList() {
   const handleQuote = () => {
     if (selection.text) {
       useComposerStore.getState().addQuotedText(selection.text);
-      useComposerStore.getState().focusTextarea();
+      focusComposerTextarea();
       clearSelection();
     }
   };

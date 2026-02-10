@@ -35,6 +35,6 @@ Use `pnpm` for all tasks.
 
 - 没有我的同意，不允许revert changes
 
-- commit的时候，先pnpm check（如果这个命令的报错不是你造成的，不必理会）并review，然后只commit自己修改的部分，不是修改的代码你不要commit。并且在commit之后自动push
+- commit的时候，先pnpm check（如果这个命令的报错不是你造成的，不必理会）并review，然后只commit自己修改的部分，不是你自己修改的diff你不要管不要理会也不要动。并且在commit之后自动push
 
 - 修改之前，你必须要通过问问题得到我的确认
