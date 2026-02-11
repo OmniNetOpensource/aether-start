@@ -1,12 +1,26 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "aether-start",
-  "main": "@tanstack/react-start/server-entry",
+  "main": "server-entry.ts",
   "compatibility_date": "2026-02-10",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
     "enabled": true
   },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "ChatAgent",
+        "class_name": "ChatAgent"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ChatAgent"]
+    }
+  ],
   "d1_databases": [
     {
       "binding": "DB",

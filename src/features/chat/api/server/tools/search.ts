@@ -125,6 +125,7 @@ const formatSearchResponse = (
 const performSearch = async (
   query: string,
   apiKey: string,
+  signal?: AbortSignal,
 ): Promise<string> => {
   getLogger().log("SEARCH", `Searching: ${query}`);
 
@@ -138,6 +139,8 @@ const performSearch = async (
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20_000);
+  const linkedAbort = () => controller.abort()
+  signal?.addEventListener('abort', linkedAbort)
 
   const requestOptions: RequestInit = {
     method: "POST",
@@ -177,11 +180,12 @@ const performSearch = async (
     getLogger().log("SEARCH", `Error: ${message}`);
     return `Search error: ${message}`;
   } finally {
+    signal?.removeEventListener('abort', linkedAbort)
     clearTimeout(timeoutId);
   }
 };
 
-const search: ToolHandler = async (args) => {
+const search: ToolHandler = async (args, _onProgress, signal) => {
   const { query } = parseSearchArgs(args);
   const { SERP_API_KEY: apiKey } = getServerEnv()
 
@@ -190,7 +194,11 @@ const search: ToolHandler = async (args) => {
     return "Error: SERP_API_KEY is not set";
   }
 
-  return enqueueSearchCall(() => performSearch(query, apiKey));
+  if (signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError')
+  }
+
+  return enqueueSearchCall(() => performSearch(query, apiKey, signal));
 };
 
 const searchSpec: ChatTool = {

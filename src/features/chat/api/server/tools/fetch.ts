@@ -146,10 +146,13 @@ const JINA_ENGINE_HEADER = {
 const fetchDirectImage = async (
   url: string,
   onProgress?: ToolProgressCallback,
+  signal?: AbortSignal,
 ): Promise<string> => {
   getLogger().log("FETCH", `Fetching direct image: ${url}`);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  const linkedAbort = () => controller.abort()
+  signal?.addEventListener('abort', linkedAbort)
 
   try {
     await emitProgress(onProgress, {
@@ -249,6 +252,7 @@ const fetchDirectImage = async (
     });
     return `Error: ${message}`;
   } finally {
+    signal?.removeEventListener('abort', linkedAbort)
     clearTimeout(timeoutId);
   }
 };
@@ -258,10 +262,13 @@ const fetchScreenshot = async (
   url: string,
   apiKey: string,
   onProgress?: ToolProgressCallback,
+  signal?: AbortSignal,
 ): Promise<string> => {
   getLogger().log("FETCH", `Fetching screenshot for: ${url}`);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60_000); // Longer timeout for screenshots
+  const linkedAbort = () => controller.abort()
+  signal?.addEventListener('abort', linkedAbort)
 
   try {
     await emitProgress(onProgress, {
@@ -360,6 +367,7 @@ const fetchScreenshot = async (
     });
     return `Error: ${message}`;
   } finally {
+    signal?.removeEventListener('abort', linkedAbort)
     clearTimeout(timeoutId);
   }
 };
@@ -368,11 +376,14 @@ const performFetchUrl = async (
   url: string,
   apiKey: string,
   onProgress?: ToolProgressCallback,
+  signal?: AbortSignal,
 ): Promise<string> => {
   const jinaUrl = `https://r.jina.ai/${url}`;
   getLogger().log("FETCH", `Fetching URL: ${url} via Jina: ${jinaUrl}`);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 80_000);
+  const linkedAbort = () => controller.abort()
+  signal?.addEventListener('abort', linkedAbort)
 
   try {
     const jinaResponse = await fetch(jinaUrl, {
@@ -436,6 +447,7 @@ const performFetchUrl = async (
     });
     return `Error: ${message}`;
   } finally {
+    signal?.removeEventListener('abort', linkedAbort)
     clearTimeout(timeoutId);
   }
 };
@@ -446,6 +458,7 @@ const YOUTUBE_MAX_POLLS = 60;
 const fetchYoutubeTranscript = async (
   url: string,
   onProgress?: ToolProgressCallback,
+  signal?: AbortSignal,
 ): Promise<string> => {
   const { SUPADATA_API_KEY: apiKey } = getServerEnv()
   if (!apiKey) {
@@ -474,6 +487,10 @@ const fetchYoutubeTranscript = async (
       getLogger().log("FETCH", `Transcript job created: ${jobId}`);
 
       for (let i = 1; i <= YOUTUBE_MAX_POLLS; i++) {
+        if (signal?.aborted) {
+          throw new DOMException('Aborted', 'AbortError')
+        }
+
         await emitProgress(onProgress, {
           stage: "polling",
           message: `等待字幕处理完成... (${i}/${YOUTUBE_MAX_POLLS})`,
@@ -547,11 +564,15 @@ const fetchYoutubeTranscript = async (
   }
 };
 
-const fetchUrl: ToolHandler = async (args, onProgress) => {
+const fetchUrl: ToolHandler = async (args, onProgress, signal) => {
   const { url, response_type } = parseFetchUrlArgs(args);
 
+  if (signal?.aborted) {
+    throw new DOMException('Aborted', 'AbortError')
+  }
+
   if (response_type === "youtube") {
-    return fetchYoutubeTranscript(url, onProgress);
+    return fetchYoutubeTranscript(url, onProgress, signal);
   }
 
   const { JINA_API_KEY: apiKey } = getServerEnv()
@@ -563,16 +584,16 @@ const fetchUrl: ToolHandler = async (args, onProgress) => {
 
   if (response_type === "image") {
     if (isDirectImageUrl(url)) {
-      return enqueueFetchUrlCall(() => fetchDirectImage(url, onProgress));
+      return enqueueFetchUrlCall(() => fetchDirectImage(url, onProgress, signal));
     } else {
       return enqueueFetchUrlCall(() =>
-        fetchScreenshot(url, apiKey, onProgress),
+        fetchScreenshot(url, apiKey, onProgress, signal),
       );
     }
   }
 
   // markdown mode (existing behavior)
-  return enqueueFetchUrlCall(() => performFetchUrl(url, apiKey, onProgress));
+  return enqueueFetchUrlCall(() => performFetchUrl(url, apiKey, onProgress, signal));
 };
 
 const fetchUrlSpec: ChatTool = {

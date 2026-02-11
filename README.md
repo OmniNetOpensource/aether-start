@@ -79,8 +79,10 @@ src/
 ## 📝 环境变量
 
 ```env
-ANTHROPIC_API_KEY=必填 不然啥也干不了
-ANTHROPIC_BASE_URL=可选 用代理的话填这个
+ANTHROPIC_API_KEY_RIGHTCODE=必填 basic线路key
+ANTHROPIC_BASE_URL_RIGHTCODE=必填 basic线路baseURL
+ANTHROPIC_API_KEY_IKUNCODE=必填 pro线路key
+ANTHROPIC_BASE_URL_IKUNCODE=必填 pro线路baseURL
 SERP_API_KEY=可选 搜索功能要用
 JINA_API_KEY=可选 URL 抓取要用
 ```

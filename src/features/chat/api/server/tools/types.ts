@@ -24,7 +24,8 @@ export type ToolProgressCallback = (
 
 export type ToolHandler = (
   args: unknown,
-  onProgress?: ToolProgressCallback
+  onProgress?: ToolProgressCallback,
+  signal?: AbortSignal,
 ) => Promise<string>;
 
 export type ToolDefinition = {

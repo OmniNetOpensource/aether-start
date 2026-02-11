@@ -3,6 +3,8 @@ import { useNavigate } from "@tanstack/react-router";
 import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
 import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
 import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { resetConversationEventCursor } from '@/features/chat/api/client/chat-request'
 import { conversationRepository } from "@/features/conversation/persistence/repository";
 import {
   buildCurrentPath,
@@ -86,6 +88,7 @@ export function useConversationLoader(conversationId: string | undefined) {
   );
   const initializeTree = useMessageTreeStore((state) => state.initializeTree);
   const setConversationId = useMessageTreeStore((state) => state.setConversationId);
+  const resumeIfRunning = useChatRequestStore((state) => state.resumeIfRunning)
 
   useEffect(() => {
     if (!conversationId || currentConversationId === conversationId) {
@@ -152,6 +155,8 @@ export function useConversationLoader(conversationId: string | undefined) {
         useEditingStore.getState().clear();
         setConversationId(conversationId);
         initializeTree(mappedMessages, currentPath);
+        resetConversationEventCursor(conversationId)
+        await resumeIfRunning(conversationId)
       } catch (error) {
         if (canceled || signal.aborted) {
           return;
@@ -176,6 +181,7 @@ export function useConversationLoader(conversationId: string | undefined) {
     navigate,
     setConversationId,
     initializeTree,
+    resumeIfRunning,
   ]);
 
   return { isLoading: conversationId !== currentConversationId };

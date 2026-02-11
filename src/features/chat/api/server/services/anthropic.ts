@@ -106,8 +106,8 @@ const buildThinkingParams = (model: string, maxTokens: number): AnthropicThinkin
   };
 };
 
-const getClient = () => {
-  const anthropicConfig = getAnthropicConfig();
+const getClient = (backend: ChatRequestConfig["backend"]) => {
+  const anthropicConfig = getAnthropicConfig(backend);
   return new Anthropic({
     apiKey: anthropicConfig.apiKey,
     baseURL: anthropicConfig.baseURL,
@@ -255,12 +255,14 @@ function logHttpRequest(params: {
 
 async function* streamAnthropicCompletion(requestParams: {
   model: string;
+  backend: ChatRequestConfig["backend"];
   messages: AnthropicMessage[];
   system?: string;
   tools?: AnthropicTool[];
+  signal?: AbortSignal;
 }): AsyncGenerator<AnthropicStreamChunk> {
-  const client = getClient();
-  const anthropicConfig = getAnthropicConfig();
+  const client = getClient(requestParams.backend);
+  const anthropicConfig = getAnthropicConfig(requestParams.backend);
   const thinkingParams = buildThinkingParams(requestParams.model, ANTHROPIC_MAX_TOKENS);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -287,9 +289,15 @@ async function* streamAnthropicCompletion(requestParams: {
     },
   });
 
-  const stream = client.messages.stream(streamParams);
+  const stream = client.messages.stream(streamParams, {
+    signal: requestParams.signal,
+  });
 
   for await (const event of stream) {
+    if (requestParams.signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError')
+    }
+
     if (event.type === "content_block_start") {
       if (event.content_block.type === "tool_use") {
         yield {
@@ -409,6 +417,7 @@ type RunAnthropicChatParams = {
     state: ChatProviderState;
     toolResults: ToolInvocationResult[];
   };
+  signal?: AbortSignal;
 };
 
 export async function* runAnthropicChat(
@@ -436,9 +445,15 @@ export async function* runAnthropicChat(
   try {
     for await (const chunk of streamAnthropicCompletion({
       model: options.model,
+      backend: options.backend,
       messages: workingState.messages,
       tools: anthropicTools,
+      signal: params.signal,
     })) {
+      if (params.signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
+
       if (chunk.type === "text") {
         assistantText += chunk.text;
         yield { type: "content", content: chunk.text };
@@ -463,6 +478,20 @@ export async function* runAnthropicChat(
       }
     }
   } catch (error) {
+    if (
+      (error instanceof DOMException && error.name === 'AbortError') ||
+      (error instanceof Error && error.name === 'AbortError') ||
+      params.signal?.aborted
+    ) {
+      return {
+        shouldContinue: false,
+        pendingToolCalls: [],
+        assistantText,
+        state: toChatState(workingState),
+        aborted: true,
+      }
+    }
+
     const message = error instanceof Error ? error.message : "Failed to start Anthropic completion";
     const model = options?.model ?? "unknown";
     yield {

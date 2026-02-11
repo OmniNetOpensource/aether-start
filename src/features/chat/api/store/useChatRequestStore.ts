@@ -2,7 +2,10 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { toast } from "@/shared/hooks/useToast";
 import type { ChatClient } from "@/features/chat/api/client/chat-request";
-import { startChatRequest } from "@/features/chat/api/client/chat-request";
+import {
+  resumeRunningConversation,
+  startChatRequest,
+} from "@/features/chat/api/client/chat-request";
 import { DEFAULT_ROLE_ID, ROLES } from "@/features/chat/session/config/roles";
 import {
   computeMessagesFromPath,
@@ -28,6 +31,7 @@ type ChatRequestState = {
 type ChatRequestActions = {
   sendMessage: () => Promise<void>;
   stop: () => void;
+  resumeIfRunning: (conversationId: string) => Promise<void>;
   setCurrentRole: (role: string) => void;
   clear: () => void;
   _setPending: (pending: boolean) => void;
@@ -129,8 +133,16 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
           set({ pending: false, chatClient: null, activeRequestId: null });
           return;
         }
-        chatClient.abort();
+        chatClient.abort(get().activeRequestId ?? undefined);
+        chatClient.disconnect();
         set({ pending: false, chatClient: null, activeRequestId: null });
+      },
+      resumeIfRunning: async (conversationId) => {
+        if (!conversationId) {
+          return;
+        }
+
+        await resumeRunningConversation(conversationId);
       },
       setCurrentRole: (role) => {
         set({ currentRole: role });
@@ -141,7 +153,8 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       clear: () => {
         const client = get().chatClient;
         if (client) {
-          client.abort();
+          client.abort(get().activeRequestId ?? undefined);
+          client.disconnect();
         }
         set({
           pending: false,

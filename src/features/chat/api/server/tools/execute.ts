@@ -5,6 +5,7 @@ import type { PendingToolInvocation, ToolInvocationResult, ChatServerToClientEve
 
 export type ExecuteToolsOptions = {
   onEvent: (event: ChatServerToClientEvent) => void;
+  signal?: AbortSignal;
 };
 
 const isFetchResultError = (result: string) => {
@@ -32,10 +33,14 @@ export async function executeTools(
   toolCalls: PendingToolInvocation[],
   options: ExecuteToolsOptions
 ): Promise<ToolInvocationResult[]> {
-  const { onEvent } = options;
+  const { onEvent, signal } = options;
 
   return Promise.all(
     toolCalls.map(async (tc) => {
+      if (signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
+
       onEvent({ type: "tool_call", tool: tc.name, args: tc.args as Record<string, object | string | number | boolean>, callId: tc.id });
 
       const result = await callToolByName(tc.name, tc.args, (progress: ToolProgressUpdate) => {
@@ -48,7 +53,7 @@ export async function executeTools(
           totalBytes: progress.totalBytes,
           callId: tc.id,
         });
-      });
+      }, signal);
 
       const normalizedResult = typeof result === "string" ? result : JSON.stringify(result);
       const clientResult = formatToolResultForClient(tc.name, normalizedResult)
@@ -67,10 +72,15 @@ export async function executeTools(
 
 export async function* executeToolsGen(
   toolCalls: PendingToolInvocation[],
+  signal?: AbortSignal,
 ): AsyncGenerator<ChatServerToClientEvent, ToolInvocationResult[]> {
   const results: ToolInvocationResult[] = []
 
   for (const tc of toolCalls) {
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError')
+    }
+
     yield { type: "tool_call", tool: tc.name, args: tc.args as Record<string, object | string | number | boolean>, callId: tc.id }
 
     const progressBuffer: ChatServerToClientEvent[] = []
@@ -85,7 +95,11 @@ export async function* executeToolsGen(
         totalBytes: progress.totalBytes,
         callId: tc.id,
       })
-    })
+    }, signal)
+
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError')
+    }
 
     for (const event of progressBuffer) {
       yield event

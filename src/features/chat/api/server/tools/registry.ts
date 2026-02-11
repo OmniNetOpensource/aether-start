@@ -37,7 +37,8 @@ const enabledToolHandlers = new Map<string, ToolHandler>(
 export const callToolByName = async (
   name: string,
   args: unknown,
-  onProgress?: ToolProgressCallback
+  onProgress?: ToolProgressCallback,
+  signal?: AbortSignal,
 ): Promise<string> => {
   const handler = enabledToolHandlers.get(name)
   if (!handler) {
@@ -46,8 +47,20 @@ export const callToolByName = async (
   }
 
   try {
-    return await handler(args, onProgress)
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError')
+    }
+    return await handler(args, onProgress, signal)
   } catch (error) {
+    if (
+      (error instanceof DOMException && error.name === 'AbortError') ||
+      (error instanceof Error && error.name === 'AbortError') ||
+      signal?.aborted
+    ) {
+      getLogger().log('TOOLS', `Tool aborted: ${name}`)
+      return 'Error: Aborted'
+    }
+
     getLogger().log(
       'TOOLS',
       `Error calling tool "${name}"`,

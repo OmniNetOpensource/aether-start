@@ -142,6 +142,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
 
       const chatRequestConfig: ChatRequestConfig = {
         model: requestedModel,
+        backend: roleConfig.backend,
         tools,
         systemPrompt: systemInstruction,
         messages: conversationHistory.map((message) => ({

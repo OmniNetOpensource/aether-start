@@ -1,8 +1,10 @@
 import { env as workerEnv } from 'cloudflare:workers'
 
 type ServerEnv = {
-  ANTHROPIC_API_KEY?: string
-  ANTHROPIC_BASE_URL?: string
+  ANTHROPIC_API_KEY_RIGHTCODE?: string
+  ANTHROPIC_BASE_URL_RIGHTCODE?: string
+  ANTHROPIC_API_KEY_IKUNCODE?: string
+  ANTHROPIC_BASE_URL_IKUNCODE?: string
   JINA_API_KEY?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
@@ -38,12 +40,18 @@ export const getServerEnv = (): ServerEnv => {
   const bindings = workerEnv as Partial<ServerEnv>
 
   return {
-    ANTHROPIC_API_KEY:
-      readString(bindings.ANTHROPIC_API_KEY) ??
-      readStringFromProcess('ANTHROPIC_API_KEY'),
-    ANTHROPIC_BASE_URL:
-      readString(bindings.ANTHROPIC_BASE_URL) ??
-      readStringFromProcess('ANTHROPIC_BASE_URL'),
+    ANTHROPIC_API_KEY_RIGHTCODE:
+      readString(bindings.ANTHROPIC_API_KEY_RIGHTCODE) ??
+      readStringFromProcess('ANTHROPIC_API_KEY_RIGHTCODE'),
+    ANTHROPIC_BASE_URL_RIGHTCODE:
+      readString(bindings.ANTHROPIC_BASE_URL_RIGHTCODE) ??
+      readStringFromProcess('ANTHROPIC_BASE_URL_RIGHTCODE'),
+    ANTHROPIC_API_KEY_IKUNCODE:
+      readString(bindings.ANTHROPIC_API_KEY_IKUNCODE) ??
+      readStringFromProcess('ANTHROPIC_API_KEY_IKUNCODE'),
+    ANTHROPIC_BASE_URL_IKUNCODE:
+      readString(bindings.ANTHROPIC_BASE_URL_IKUNCODE) ??
+      readStringFromProcess('ANTHROPIC_BASE_URL_IKUNCODE'),
     JINA_API_KEY:
       readString(bindings.JINA_API_KEY) ?? readStringFromProcess('JINA_API_KEY'),
     SERP_API_KEY:
