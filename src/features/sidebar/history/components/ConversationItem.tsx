@@ -72,7 +72,7 @@ export function ConversationItem({
 
   return (
     <div
-      className={`group relative flex w-full items-start gap-3 rounded-xl border ink-border bg-transparent p-4 text-left transition-all hover:bg-black/5 dark:hover:bg-white/5 ${
+      className={`group relative flex w-full items-start gap-3 rounded-xl bg-transparent p-4 text-left transition-all hover:bg-black/5 dark:hover:bg-white/5 ${
         isActive ? "bg-black/5 dark:bg-white/5" : ""
       }`}
     >

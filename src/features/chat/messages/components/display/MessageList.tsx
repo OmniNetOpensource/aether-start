@@ -2,7 +2,6 @@
 
 import { useEffect, useRef } from "react";
 import { MessageItem } from "./MessageItem";
-import { PendingIndicator } from "./PendingIndicator";
 import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
 import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
@@ -64,7 +63,6 @@ export function MessageList() {
             );
           })}
 
-          {pending && <PendingIndicator />}
         </div>
       </div>
 
