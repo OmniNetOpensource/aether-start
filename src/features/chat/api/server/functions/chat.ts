@@ -23,6 +23,7 @@ import type {
   ToolInvocationResult,
 } from "@/features/chat/api/types/schemas/types";
 import type { ChatTool } from "@/features/chat/api/server/tools/types";
+import type { SerializedMessage } from "@/features/chat/types/chat";
 
 const generateConversationId = () =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -146,7 +147,7 @@ export const streamChatFn = createServerFn({ method: "POST" })
         messages: conversationHistory.map((message) => ({
           ...message,
           blocks: Array.isArray(message.blocks) ? message.blocks : [],
-        })),
+        } as SerializedMessage)),
       };
 
       const maxIterations = 200;

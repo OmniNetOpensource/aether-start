@@ -51,21 +51,35 @@ type ResearchBlock = {
   items: ResearchItem[];
 };
 
-export type ContentBlock =
+// --- Role-specific block types ---
+
+export type UserContentBlock =
   | { type: "content"; content: string }
-  | { type: "attachments"; attachments: Attachment[] }
+  | { type: "attachments"; attachments: Attachment[] };
+
+export type AssistantContentBlock =
+  | { type: "content"; content: string }
+  | ResearchBlock
+  | { type: "error"; message: string };
+
+export type ContentBlock = UserContentBlock | AssistantContentBlock;
+
+export type SerializedUserContentBlock =
+  | { type: "content"; content: string }
+  | { type: "attachments"; attachments: SerializedAttachment[] };
+
+export type SerializedAssistantContentBlock =
+  | { type: "content"; content: string }
   | ResearchBlock
   | { type: "error"; message: string };
 
 export type SerializedContentBlock =
-  | { type: "content"; content: string }
-  | { type: "attachments"; attachments: SerializedAttachment[] }
-  | ResearchBlock
-  | { type: "error"; message: string };
+  | SerializedUserContentBlock
+  | SerializedAssistantContentBlock;
 
-type MessageBase<Block> = { role: "user" | "assistant"; blocks: Block[] };
+// --- Message types (discriminated union on role) ---
 
-export type Message = MessageBase<ContentBlock> & {
+type MessageFields = {
   id: number;
   prevSibling: number | null;
   nextSibling: number | null;
@@ -73,7 +87,33 @@ export type Message = MessageBase<ContentBlock> & {
   createdAt: string;
 };
 
-export type SerializedMessage = MessageBase<SerializedContentBlock>;
+export type UserMessage = MessageFields & {
+  role: "user";
+  blocks: UserContentBlock[];
+};
+
+export type AssistantMessage = MessageFields & {
+  role: "assistant";
+  blocks: AssistantContentBlock[];
+};
+
+export type Message = UserMessage | AssistantMessage;
+
+// --- Serialized message types ---
+
+export type SerializedUserMessage = {
+  role: "user";
+  blocks: SerializedUserContentBlock[];
+};
+
+export type SerializedAssistantMessage = {
+  role: "assistant";
+  blocks: SerializedAssistantContentBlock[];
+};
+
+export type SerializedMessage =
+  | SerializedUserMessage
+  | SerializedAssistantMessage;
 
 export type MessageLike =
   | Message

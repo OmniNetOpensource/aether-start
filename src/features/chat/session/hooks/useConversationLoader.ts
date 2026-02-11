@@ -61,7 +61,7 @@ const hydrateMessage = (msg: Message): Message => ({
   nextSibling: msg.nextSibling ?? null,
   latestChild: msg.latestChild ?? null,
   createdAt: msg.createdAt ?? new Date().toISOString(),
-});
+} as Message);
 
 const toLinearInput = (msg: RawMessage) => {
   const role = msg.role;

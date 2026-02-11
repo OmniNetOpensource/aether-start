@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type {
+  AssistantMessage,
   BranchInfo,
   ContentBlock,
   Message,
@@ -227,8 +228,8 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
             return state;
           }
 
-          const targetMessage = nextMessages[assistantId - 1];
-          const updatedMessage: Message = {
+          const targetMessage = nextMessages[assistantId - 1] as AssistantMessage;
+          const updatedMessage: AssistantMessage = {
             ...targetMessage,
             blocks: applyAssistantAddition(targetMessage.blocks ?? [], addition),
           };

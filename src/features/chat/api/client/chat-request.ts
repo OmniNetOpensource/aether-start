@@ -68,7 +68,7 @@ const serializeMessagesForRequest = async (
     messages.map(async (message) => ({
       role: message.role,
       blocks: await serializeBlocks(message.blocks),
-    }))
+    } as SerializedMessage))
   );
 
 // --- ChatClient ---

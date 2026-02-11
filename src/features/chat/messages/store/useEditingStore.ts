@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { Attachment, EditingState } from "@/features/chat/types/chat";
+import type { Attachment, EditingState, UserContentBlock } from "@/features/chat/types/chat";
 import { toast } from "@/shared/hooks/useToast";
 import {
   cloneBlocks,
@@ -44,7 +44,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        const originalBlocks = cloneBlocks(target.blocks ?? []);
+        const originalBlocks = cloneBlocks(target.blocks ?? []) as UserContentBlock[];
         const editedContent = extractContentFromBlocks(originalBlocks);
         const editedAttachments = extractAttachmentsFromBlocks(originalBlocks).map(
           (attachment) => ({ ...attachment })

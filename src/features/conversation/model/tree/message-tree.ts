@@ -80,14 +80,14 @@ export const createEmptyMessageState = (): MessageState => ({
 const updateMessage = (
   messages: Message[],
   messageId: number,
-  updater: (message: Message) => Message
+  updater: (message: Message) => Record<string, unknown>
 ) => {
   const index = messageId - 1;
   const current = messages[index];
   if (!current) {
     return;
   }
-  messages[index] = updater(current);
+  messages[index] = updater(current) as Message;
 };
 
 export const buildCurrentPath = (
@@ -129,7 +129,7 @@ export const addMessage = (
 
   const nextMessages = [...messages];
 
-  const newMessage: Message = {
+  const newMessage = {
     id,
     role,
     blocks,
@@ -137,7 +137,7 @@ export const addMessage = (
     nextSibling: null,
     latestChild: null,
     createdAt,
-  };
+  } as Message;
 
   if (parentId !== null) {
     const parent = nextMessages[parentId - 1];
@@ -276,7 +276,7 @@ export const editMessage = (
   }
 
   const id = nextId;
-  const newMessage: Message = {
+  const newMessage = {
     id,
     role: target.role,
     blocks: newBlocks,
@@ -284,7 +284,7 @@ export const editMessage = (
     nextSibling: target.nextSibling,
     latestChild: null,
     createdAt: new Date().toISOString(),
-  };
+  } as Message;
 
   const nextMessages = [...messages];
 
@@ -343,7 +343,7 @@ export const createLinearMessages = (
       nextSibling: null,
       latestChild: index < items.length - 1 ? id + 1 : null,
       createdAt,
-    });
+    } as Message);
     currentPath.push(id);
   }
 
@@ -409,7 +409,7 @@ export const migrateFromOldTree = (tree: LegacyMessageTree): MessageState => {
           ? idMap.get(node.children[node.children.length - 1]) ?? null
           : null,
       createdAt: node.createdAt ?? new Date().toISOString(),
-    });
+    } as Message);
   }
 
   messages.sort((a, b) => a.id - b.id);

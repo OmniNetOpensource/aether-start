@@ -76,14 +76,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="antialiased kraft-texture">
+      <body className="antialiased">
         <ResponsiveProvider initialDeviceType="desktop">
           <TooltipProvider>
             {children}
             <ToastContainer />
           </TooltipProvider>
         </ResponsiveProvider>
-        <div className="grain-overlay" aria-hidden="true" />
         <Scripts />
       </body>
     </html>

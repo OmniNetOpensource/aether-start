@@ -7,19 +7,27 @@ export type {
   Attachment,
   SerializedAttachment,
   LegacyAttachment,
+  UserContentBlock,
+  AssistantContentBlock,
   ContentBlock,
+  SerializedUserContentBlock,
+  SerializedAssistantContentBlock,
   SerializedContentBlock,
+  UserMessage,
+  AssistantMessage,
   Message,
+  SerializedUserMessage,
+  SerializedAssistantMessage,
   SerializedMessage,
   MessageLike,
   BranchInfo,
 } from '@/features/conversation/model/types/message'
 
-import type { Attachment, ContentBlock, SerializedMessage } from '@/features/conversation/model/types/message'
+import type { Attachment, UserContentBlock, SerializedMessage } from '@/features/conversation/model/types/message'
 
 export type EditingState = {
   messageId: number;
-  originalBlocks: ContentBlock[];
+  originalBlocks: UserContentBlock[];
   editedContent: string;
   editedAttachments: Attachment[];
 };

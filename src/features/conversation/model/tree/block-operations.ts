@@ -1,9 +1,11 @@
 import type {
+  AssistantContentBlock,
   Attachment,
   ContentBlock,
   Message,
   ResearchItem,
   ToolProgress,
+  UserContentBlock,
 } from "@/features/conversation/model/types/message";
 import { cloneBlocks, cloneResearchItem } from "./message-tree";
 
@@ -11,9 +13,9 @@ type ToolLifecycleUpdate =
   | ({ kind: "tool_progress"; tool: string } & ToolProgress)
   | { kind: "tool_result"; tool: string; result: string };
 
-export type AssistantAddition = ContentBlock | ResearchItem | ToolLifecycleUpdate;
+export type AssistantAddition = AssistantContentBlock | ResearchItem | ToolLifecycleUpdate;
 
-export const cloneMessages = (messages: Message[]) =>
+export const cloneMessages = (messages: Message[]): Message[] =>
   messages.map((msg) => ({
     id: msg.id,
     role: msg.role,
@@ -22,7 +24,7 @@ export const cloneMessages = (messages: Message[]) =>
     nextSibling: msg.nextSibling,
     latestChild: msg.latestChild,
     createdAt: msg.createdAt,
-  }));
+  } as Message));
 
 export const extractContentFromBlocks = (blocks: ContentBlock[]) =>
   blocks
@@ -47,8 +49,8 @@ export const collectAttachmentIds = (blocks: ContentBlock[]) =>
 export const buildUserBlocks = (
   content: string,
   attachments: Attachment[]
-): ContentBlock[] => {
-  const blocks: ContentBlock[] = [];
+): UserContentBlock[] => {
+  const blocks: UserContentBlock[] = [];
   const trimmed = content.trim();
   if (trimmed) {
     blocks.push({ type: "content", content: trimmed });
@@ -60,9 +62,9 @@ export const buildUserBlocks = (
 };
 
 export const applyAssistantAddition = (
-  blocks: ContentBlock[],
+  blocks: AssistantContentBlock[],
   addition: AssistantAddition
-): ContentBlock[] => {
+): AssistantContentBlock[] => {
   // Fast path: content append (hot path during text streaming)
   if ("type" in addition && addition.type === "content") {
     const text = addition.content;
@@ -76,9 +78,9 @@ export const applyAssistantAddition = (
     return [...blocks, { type: "content" as const, content: text }];
   }
 
-  const nextBlocks = cloneBlocks(blocks ?? []);
+  const nextBlocks = cloneBlocks(blocks ?? []) as AssistantContentBlock[];
 
-  const ensureResearchBlock = (targetBlocks: ContentBlock[]) => {
+  const ensureResearchBlock = (targetBlocks: AssistantContentBlock[]) => {
     const lastBlock = targetBlocks[targetBlocks.length - 1];
     if (!lastBlock || lastBlock.type !== "research") {
       targetBlocks.push({ type: "research", items: [] });
@@ -107,7 +109,7 @@ export const applyAssistantAddition = (
     if (addition.kind === "thinking") {
       const researchIndex = ensureResearchBlock(nextBlocks);
       const researchBlock = nextBlocks[researchIndex] as Extract<
-        ContentBlock,
+        AssistantContentBlock,
         { type: "research" }
       >;
       const items = [...researchBlock.items];
@@ -129,7 +131,7 @@ export const applyAssistantAddition = (
     if (addition.kind === "tool") {
       const researchIndex = ensureResearchBlock(nextBlocks);
       const researchBlock = nextBlocks[researchIndex] as Extract<
-        ContentBlock,
+        AssistantContentBlock,
         { type: "research" }
       >;
 
@@ -143,7 +145,7 @@ export const applyAssistantAddition = (
     if (addition.kind === "tool_progress") {
       const researchIndex = ensureResearchBlock(nextBlocks);
       const researchBlock = nextBlocks[researchIndex] as Extract<
-        ContentBlock,
+        AssistantContentBlock,
         { type: "research" }
       >;
       const items = [...researchBlock.items];
@@ -186,7 +188,7 @@ export const applyAssistantAddition = (
     if (addition.kind === "tool_result") {
       const researchIndex = ensureResearchBlock(nextBlocks);
       const researchBlock = nextBlocks[researchIndex] as Extract<
-        ContentBlock,
+        AssistantContentBlock,
         { type: "research" }
       >;
       const items = [...researchBlock.items];
