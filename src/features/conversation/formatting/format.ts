@@ -2,9 +2,10 @@
 import type { MessageLike } from "@/features/conversation/model/types/message";
 
 export const buildConversationTitle = (message: MessageLike) => {
-  const text = message.blocks
+  const blocks = message.blocks as Array<{ type: string; content?: string }>;
+  const text = blocks
     .filter((b) => b.type === "content")
-    .map((b) => b.content)
+    .map((b) => b.content!)
     .join(" ")
     .replace(/\s+/g, " ")
     .trim();
