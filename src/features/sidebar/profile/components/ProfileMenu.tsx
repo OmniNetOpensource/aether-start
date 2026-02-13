@@ -39,12 +39,12 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex cursor-pointer items-center gap-3 rounded-lg text-sm transition-all duration-500 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
+                className="flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
                 style={{
                   width: isCollapsed ? 40 : "100%",
                   height: isCollapsed ? 40 : "auto",
                   padding: isCollapsed ? 4 : "6px 8px",
-                  borderRadius: isCollapsed ? 8 : 8,
+                  borderRadius: isCollapsed ? 6 : 6,
                   justifyContent: isCollapsed ? "center" : "flex-start",
                 }}
               >

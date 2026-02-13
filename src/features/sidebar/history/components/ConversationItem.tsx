@@ -72,7 +72,7 @@ export function ConversationItem({
 
   return (
     <div
-      className={`group relative flex w-full items-start gap-3 rounded-xl bg-transparent p-4 text-left transition-all hover:bg-black/5 dark:hover:bg-white/5 ${
+      className={`group relative flex w-full items-start gap-3 rounded-lg bg-transparent p-3 text-left transition-all hover:bg-black/5 dark:hover:bg-white/5 ${
         isActive ? "bg-black/5 dark:bg-white/5" : ""
       }`}
     >
@@ -85,7 +85,7 @@ export function ConversationItem({
       />
       <div className="min-w-0 flex-1 pointer-events-none relative z-10">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-base font-semibold text-(--text-secondary)">
+          <span className="min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)">
             {title}
           </span>
         </div>
@@ -97,7 +97,7 @@ export function ConversationItem({
               type="button"
               onClick={handleMenuClick}
               aria-label="会话操作"
-              className="flex size-7 items-center justify-center rounded-lg text-(--text-tertiary) opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
+              className="flex size-7 items-center justify-center rounded-md text-(--text-tertiary) opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
             >
               <MoreHorizontal className="size-4" />
             </button>

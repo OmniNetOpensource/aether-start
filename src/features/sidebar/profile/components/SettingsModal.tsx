@@ -37,9 +37,9 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <h3 className="text-sm font-medium text-muted-foreground">
                 外观
               </h3>
-              <div className="flex items-center justify-between rounded-xl border bg-muted/30 p-3">
+              <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-(--surface-primary) text-foreground shadow-sm ring-1 ring-(--border-primary)">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-(--surface-primary) text-foreground shadow-sm ring-1 ring-(--border-primary)">
                     {theme === "dark" ? (
                       <Sun className="h-4 w-4" />
                     ) : (

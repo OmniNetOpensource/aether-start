@@ -3,11 +3,12 @@
 import {
   ClipboardEvent,
   KeyboardEvent,
+  MouseEvent,
   useCallback,
   useEffect,
   useRef,
 } from "react";
-import { ArrowUp, Quote, Square, X } from "lucide-react";
+import { Quote, X } from "lucide-react";
 import { ImagePreview } from "@/shared/components/ImagePreview";
 import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
@@ -16,7 +17,6 @@ import { setComposerTextarea } from "@/features/chat/composer/lib/composer-focus
 import { ComposerToolbar } from "./ComposerToolbar";
 import { Button } from "@/shared/ui/button";
 import { Textarea } from "@/shared/ui/textarea";
-import { cn } from "@/shared/lib/utils";
 import { toast } from "@/shared/hooks/useToast";
 import { useResponsive } from "@/features/responsive/ResponsiveContext";
 
@@ -115,6 +115,13 @@ export function Composer() {
     void addAttachments(pastedFiles);
   };
 
+  const handleSendButtonClick = (event: MouseEvent<HTMLButtonElement>) => {
+    if (pending) {
+      event.preventDefault();
+      stop();
+    }
+  };
+
   const hasText = input.trim().length > 0;
   const hasAttachments = pendingAttachments.length > 0;
   const hasQuotes = quotedTexts.length > 0;
@@ -210,32 +217,13 @@ export function Composer() {
               style={{ height: "44px" }}
             />
 
-            <Button
-              type={pending ? "button" : "submit"}
-              disabled={sendDisabled}
-              onClick={(event) => {
-                if (pending) {
-                  event.preventDefault();
-                  stop();
-                }
-              }}
-              size="icon"
-            className={cn(
-              "h-9 w-9 shrink-0 rounded-xl sm:h-10 sm:w-10 transition-all duration-200",
-              sendDisabled
-                ? "bg-black/10 text-black/30 dark:bg-white/10 dark:text-white/30 scale-90 cursor-not-allowed"
-                : "bg-black text-white dark:bg-white dark:text-black hover:scale-105 active:scale-95"
-            )}
-            >
-              {pending ? (
-                <Square className="h-4 w-4 fill-current" />
-              ) : (
-                <ArrowUp className="h-5 w-5" />
-              )}
-            </Button>
           </div>
 
-          <ComposerToolbar />
+          <ComposerToolbar
+            pending={pending}
+            sendDisabled={sendDisabled}
+            onSendButtonClick={handleSendButtonClick}
+          />
         </div>
       </form>
     );
@@ -335,32 +323,13 @@ export function Composer() {
             style={{ height: "44px" }}
           />
 
-          <Button
-            type={pending ? "button" : "submit"}
-            disabled={sendDisabled}
-            onClick={(event) => {
-              if (pending) {
-                event.preventDefault();
-                stop();
-              }
-            }}
-            size="icon"
-            className={cn(
-              "h-9 w-9 shrink-0 rounded-xl sm:h-10 sm:w-10 transition-all duration-200",
-              sendDisabled
-                ? "bg-black/10 text-black/30 dark:bg-white/10 dark:text-white/30 scale-90 cursor-not-allowed"
-                : "bg-black text-white dark:bg-white dark:text-black hover:scale-105 active:scale-95"
-            )}
-          >
-            {pending ? (
-              <Square className="h-4 w-4 fill-current" />
-            ) : (
-              <ArrowUp className="h-5 w-5" />
-            )}
-          </Button>
         </div>
 
-        <ComposerToolbar />
+        <ComposerToolbar
+          pending={pending}
+          sendDisabled={sendDisabled}
+          onSendButtonClick={handleSendButtonClick}
+        />
       </div>
       </form>
     </div>

@@ -72,14 +72,6 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
     );
   }
 
-  if (!conversations.length && hasLoaded) {
-    return (
-      <div className="rounded-xl border border-dashed border-(--border-primary) bg-(--surface-primary)/50 p-4 text-center text-xs text-(--text-tertiary)">
-        暂无会话，发送第一条消息后会自动出现在这里。
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col gap-1">
       <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">

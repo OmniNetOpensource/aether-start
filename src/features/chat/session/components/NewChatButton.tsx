@@ -2,7 +2,7 @@
 
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps, ReactNode, MouseEvent } from "react";
-import { Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
@@ -58,7 +58,7 @@ export function NewChatButton({
   const defaultContent = (
     <>
       <span className="flex h-10 w-10 shrink-0 items-center justify-center">
-        <Plus className="h-5 w-5 transition-transform duration-300 group-hover:rotate-90" />
+        <Pencil className="h-5 w-5 transition-transform duration-300 group-hover:rotate-90" />
       </span>
       {isTopbar ? (
         <span className="sr-only">新对话</span>
@@ -85,7 +85,7 @@ export function NewChatButton({
         "group relative h-10 overflow-hidden transition-all duration-300 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5",
         isTopbar
           ? "w-10 rounded-lg"
-          : "justify-start px-3 rounded-lg border ink-border bg-transparent text-(--text-secondary)",
+          : "justify-start px-3 rounded-md border ink-border bg-transparent text-(--text-secondary)",
         className
       )}
       style={isTopbar ? undefined : { width: isCollapsed ? 40 : "100%" }}
