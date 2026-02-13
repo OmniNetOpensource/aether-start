@@ -29,5 +29,6 @@ export type ChatServerToClientEvent =
   | {
       type: 'conversation_updated'
       conversationId: string
+      title?: string
       updated_at: string
     }

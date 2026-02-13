@@ -12,12 +12,11 @@ import {
 } from "@/features/conversation/model/tree/message-tree";
 import type {
   Attachment,
-  LegacyAttachment,
   Message,
 } from "@/features/chat/types/chat";
 
-const restoreDisplayUrls = (
-  attachments: Array<Attachment | LegacyAttachment>
+const restoreAttachments = (
+  attachments: Array<Attachment & { displayUrl?: string }>
 ): Attachment[] =>
   attachments
     .map((att) => ({
@@ -26,10 +25,10 @@ const restoreDisplayUrls = (
       name: att.name,
       size: att.size,
       mimeType: att.mimeType,
-      displayUrl: "url" in att ? att.url : att.displayUrl,
-      storageKey: 'storageKey' in att ? att.storageKey : undefined,
+      url: att.url ?? att.displayUrl ?? '',
+      storageKey: att.storageKey,
     }))
-    .filter((att) => att.mimeType?.startsWith("image/") && !!att.displayUrl);
+    .filter((att) => att.mimeType?.startsWith("image/") && !!att.url);
 
 const hydrateBlocks = (blocks: Message["blocks"]) =>
   Array.isArray(blocks)
@@ -42,7 +41,7 @@ const hydrateBlocks = (blocks: Message["blocks"]) =>
           : block.type === "attachments"
           ? {
               ...block,
-              attachments: restoreDisplayUrls(
+              attachments: restoreAttachments(
                 Array.isArray(block.attachments) ? block.attachments : []
               ),
             }

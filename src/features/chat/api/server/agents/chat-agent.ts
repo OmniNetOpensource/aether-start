@@ -9,7 +9,12 @@ import {
   enterLoggerContext,
   getLogger,
 } from '@/features/chat/api/server/services/logger'
-import { runAnthropicChat } from '@/features/chat/api/server/services/anthropic'
+import {
+  AnthropicChatProvider,
+  convertToAnthropicMessages,
+  formatToolContinuation,
+  type ThinkingBlockData,
+} from '@/features/chat/api/server/services/anthropic'
 import { generateTitleFromUserMessage } from '@/features/chat/api/server/functions/chat-title'
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/api/server/services/event-processor'
 import {
@@ -20,10 +25,8 @@ import type {
   ChatAgentClientMessage,
   ChatAgentServerMessage,
   ChatAgentStatus,
-  ChatRequestConfig,
-  ChatRunResult,
-  ChatProviderState,
   ChatServerToClientEvent,
+  PendingToolInvocation,
   PersistedChatEvent,
   ToolInvocationResult,
 } from '@/features/chat/api/shared/types'
@@ -43,6 +46,8 @@ type ChatAgentEnv = Cloudflare.Env & {
   ANTHROPIC_BASE_URL_RIGHTCODE?: string
   ANTHROPIC_API_KEY_IKUNCODE?: string
   ANTHROPIC_BASE_URL_IKUNCODE?: string
+  DMX_APIKEY?: string
+  DMX_BASEURL?: string
   JINA_API_KEY?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
@@ -182,6 +187,34 @@ const toEventError = (message: string): ChatServerToClientEvent => ({
   message,
 })
 
+const summarizeConversationHistory = (history: SerializedMessage[]) => {
+  let attachmentBlockCount = 0
+  let attachmentItemCount = 0
+
+  for (const message of history) {
+    if (!Array.isArray(message.blocks)) {
+      continue
+    }
+
+    for (const block of message.blocks) {
+      if (block.type !== 'attachments') {
+        continue
+      }
+
+      attachmentBlockCount += 1
+      attachmentItemCount += Array.isArray(block.attachments) ? block.attachments.length : 0
+    }
+  }
+
+  const lastMessageRole = history[history.length - 1]?.role ?? null
+
+  return {
+    lastMessageRole,
+    attachmentBlockCount,
+    attachmentItemCount,
+  }
+}
+
 export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   initialState: ChatAgentState = {
     status: 'idle',
@@ -306,6 +339,43 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       } satisfies ChatAgentServerMessage),
     )
 
+    // Persist initial D1 record so the conversation exists before streaming starts
+    try {
+      const existing = await getConversationById(this.env.DB, message.conversationId)
+      if (!existing) {
+        const now = new Date().toISOString()
+        const userText = extractLatestUserText(
+          message.treeSnapshot.messages,
+          message.treeSnapshot.currentPath,
+        )
+        const initialTitle = userText.length > 60
+          ? userText.slice(0, 60) + '…'
+          : userText || 'New Chat'
+
+        await upsertConversation(this.env.DB, {
+          id: message.conversationId,
+          title: initialTitle,
+          currentPath: message.treeSnapshot.currentPath,
+          messages: message.treeSnapshot.messages as unknown as object[],
+          created_at: now,
+          updated_at: now,
+        })
+
+        this.broadcast(
+          stringify({
+            type: 'conversation_update',
+            conversationId: message.conversationId,
+            title: initialTitle,
+            updated_at: now,
+          } satisfies ChatAgentServerMessage),
+        )
+      }
+    } catch (error) {
+      getLogger().log('AGENT', 'Initial conversation persist failed', {
+        error: error instanceof Error ? error.message : String(error),
+      })
+    }
+
     this.abortController = new AbortController()
     const signal = this.abortController.signal
 
@@ -344,6 +414,20 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     let finalStatus: Exclude<ChatAgentStatus, 'idle' | 'running'> = 'completed'
     let workingTree = cloneTreeSnapshot(message.treeSnapshot)
     let hasErrorEvent = false
+    let snapshotPersistQueue: Promise<void> = Promise.resolve()
+
+    const enqueueSnapshotPersist = () => {
+      const snapshot = cloneTreeSnapshot(workingTree)
+      snapshotPersistQueue = snapshotPersistQueue.then(async () => {
+        try {
+          await this.persistConversationSnapshot(message.conversationId, snapshot)
+        } catch (error) {
+          getLogger().log('AGENT', 'Persist conversation iteration snapshot failed', {
+            error: error instanceof Error ? error.message : String(error),
+          })
+        }
+      })
+    }
 
     const emitEvent = async (event: ChatServerToClientEvent) => {
       workingTree = processEventToTree(workingTree, event)
@@ -357,11 +441,15 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       const { conversationHistory, role } = message
 
       const messageCount = Array.isArray(conversationHistory) ? conversationHistory.length : 0
+      const historySummary = Array.isArray(conversationHistory)
+        ? summarizeConversationHistory(conversationHistory)
+        : null
       getLogger().log('AGENT', 'Received chat_request', {
         conversationId: message.conversationId,
         requestId: message.requestId,
         role,
         messageCount,
+        ...(historySummary ?? {}),
       })
 
       if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) {
@@ -386,20 +474,21 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         return
       }
 
-      const chatRequestConfig: ChatRequestConfig = {
+      const provider = new AnthropicChatProvider({
         model: roleConfig.model,
         backend: roleConfig.backend,
-        systemPrompt: roleConfig.systemPrompt,
         tools: getAvailableTools(),
-        messages: conversationHistory.map((historyMessage) => ({
-          ...historyMessage,
-          blocks: Array.isArray(historyMessage.blocks) ? historyMessage.blocks : [],
+        systemPrompt: roleConfig.systemPrompt,
+      })
+
+      let workingMessages = await convertToAnthropicMessages(
+        conversationHistory.map((m) => ({
+          ...m,
+          blocks: Array.isArray(m.blocks) ? m.blocks : [],
         } as SerializedMessage)),
-      }
+      )
 
       let iteration = 0
-      let providerState: ChatProviderState | undefined
-      let pendingToolResults: ToolInvocationResult[] | null = null
 
       while (iteration < MAX_ITERATIONS) {
         if (signal.aborted) {
@@ -408,90 +497,110 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         }
 
         iteration += 1
+        let iterationEndPayload: Record<string, unknown> = {
+          conversationId: message.conversationId,
+          requestId: message.requestId,
+          iteration,
+        }
+        try {
+          getLogger().log('AGENT', 'Sending provider request', {
+            conversationId: message.conversationId,
+            requestId: message.requestId,
+            iteration,
+          })
 
-        const generator = runAnthropicChat({
-          options: chatRequestConfig,
-          continuation:
-            pendingToolResults && providerState
-              ? {
-                  state: providerState,
-                  toolResults: pendingToolResults,
-                }
-              : undefined,
-          signal,
-        })
+          const generator = provider.run(workingMessages, signal)
 
-        let result: ChatRunResult | undefined
+          let pendingToolCalls: PendingToolInvocation[] = []
+          let thinkingBlocks: ThinkingBlockData[] = []
+          let assistantText = ''
 
-        while (true) {
-          const { done, value } = await generator.next()
-          if (done) {
-            result = value
-            break
+          while (true) {
+            const { done, value } = await generator.next()
+            if (done) {
+              pendingToolCalls = value.pendingToolCalls
+              thinkingBlocks = value.thinkingBlocks
+              break
+            }
+
+            if (value.type === 'content') {
+              assistantText += value.content
+            }
+
+            await emitEvent(value)
+
+            if (signal.aborted) {
+              finalStatus = 'aborted'
+              break
+            }
           }
-
-          await emitEvent(value)
 
           if (signal.aborted) {
             finalStatus = 'aborted'
+            iterationEndPayload = {
+              ...iterationEndPayload,
+              status: 'aborted',
+            }
             break
           }
-        }
 
-        if (signal.aborted || result?.aborted) {
-          finalStatus = 'aborted'
-          break
-        }
+          if (pendingToolCalls.length === 0) {
+            iterationEndPayload = {
+              ...iterationEndPayload,
+              status: 'completed',
+            }
+            break
+          }
 
-        if (!result) {
-          break
-        }
+          const toolGen = executeToolsGen(pendingToolCalls, signal)
+          let toolResults: ToolInvocationResult[] = []
 
-        providerState = result.state ?? providerState
+          while (true) {
+            const toolGenResult = await toolGen.next()
+            if (toolGenResult.done) {
+              toolResults = toolGenResult.value
+              break
+            }
+            await emitEvent(toolGenResult.value)
 
-        if (!result.shouldContinue) {
-          break
-        }
+            if (signal.aborted) {
+              finalStatus = 'aborted'
+              break
+            }
+          }
 
-        if (!providerState) {
-          await emitEvent(
-            toEventError(
-              `错误：缺少继续对话所需的状态 (model=${chatRequestConfig.model})`,
-            ),
+          if (signal.aborted) {
+            finalStatus = 'aborted'
+            iterationEndPayload = {
+              ...iterationEndPayload,
+              status: 'aborted',
+            }
+            break
+          }
+
+          const continuationMessages = formatToolContinuation(
+            assistantText,
+            thinkingBlocks,
+            pendingToolCalls,
+            toolResults,
           )
-          finalStatus = 'error'
-          break
-        }
+          workingMessages = [...workingMessages, ...continuationMessages]
 
-        const toolGen = executeToolsGen(result.pendingToolCalls, signal)
-        let toolResults: ToolInvocationResult[] | null = null
-
-        while (true) {
-          const toolGenResult = await toolGen.next()
-          if (toolGenResult.done) {
-            toolResults = toolGenResult.value
-            break
+          iterationEndPayload = {
+            ...iterationEndPayload,
+            status: 'continued',
+            toolResults,
           }
-          await emitEvent(toolGenResult.value)
-
-          if (signal.aborted) {
-            finalStatus = 'aborted'
-            break
-          }
+        } finally {
+          getLogger().log('AGENT', 'Iteration ended', iterationEndPayload)
+          enqueueSnapshotPersist()
         }
-
-        if (signal.aborted) {
-          finalStatus = 'aborted'
-          break
-        }
-
-        pendingToolResults = toolResults
       }
 
       if (iteration >= MAX_ITERATIONS && finalStatus === 'completed') {
         await emitEvent(
           toEventError(
-            `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${MAX_ITERATIONS} model=${chatRequestConfig.model}`,
+            `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${MAX_ITERATIONS} model=${roleConfig.model}`,
           ),
         )
         finalStatus = 'error'
@@ -515,10 +624,21 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       }
     } finally {
       try {
-        await this.persistConversationSnapshot(message.conversationId, workingTree)
+        await snapshotPersistQueue
+      } catch (error) {
+        getLogger().log('AGENT', 'Iteration snapshot queue failed', {
+          error: error instanceof Error ? error.message : String(error),
+        })
+      }
+
+      try {
+        await this.persistConversationSnapshot(
+          message.conversationId,
+          cloneTreeSnapshot(workingTree),
+        )
       } catch (error) {
         finalStatus = 'error'
-        getLogger().log('AGENT', 'Persist conversation failed', {
+        getLogger().log('AGENT', 'Persist final conversation snapshot failed', {
           error: error instanceof Error ? error.message : String(error),
         })
       }
@@ -615,5 +735,15 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       created_at: existing?.created_at ?? now,
       updated_at: now,
     })
+
+    const resolvedTitle = existing?.title ?? generatedTitle
+    this.broadcast(
+      stringify({
+        type: 'conversation_update',
+        conversationId,
+        title: resolvedTitle,
+        updated_at: now,
+      } satisfies ChatAgentServerMessage),
+    )
   }
 }

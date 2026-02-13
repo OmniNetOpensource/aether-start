@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { ConversationList } from "@/features/sidebar/history/components/ConversationList";
 import { ProfileMenu } from "@/features/sidebar/profile/components/ProfileMenu";
 import { NewChatButton } from "@/features/chat/session/components/NewChatButton";
@@ -8,6 +8,8 @@ import { useResponsive } from "@/features/responsive/ResponsiveContext";
 import { useSidebarStore } from "@/features/sidebar/layout/store/useSidebarStore";
 
 export default function Sidebar() {
+  const DESKTOP_RIGHT_LEAVE_TOLERANCE_PX = 1;
+  const DESKTOP_SIDEBAR_WIDTH_CLASS = "w-[22vw] min-w-[260px] max-w-[360px]";
   const deviceType = useResponsive();
   const isMobile = deviceType === "mobile";
   const isDesktop = deviceType === "desktop";
@@ -36,6 +38,18 @@ export default function Sidebar() {
       setIsDesktopOpen(false);
       closeTimerRef.current = null;
     }, 120);
+  };
+
+  const handleDesktopMouseLeave = (event: ReactMouseEvent<HTMLElement>) => {
+    const { right } = event.currentTarget.getBoundingClientRect();
+    const leftFromRightSide = event.clientX >= right - DESKTOP_RIGHT_LEAVE_TOLERANCE_PX;
+
+    if (leftFromRightSide) {
+      scheduleDesktopClose();
+      return;
+    }
+
+    clearCloseTimer();
   };
 
   useEffect(() => {
@@ -97,7 +111,7 @@ export default function Sidebar() {
               : "w-0"
           }`}
         >
-          <div className="flex h-full flex-col border-r ink-border bg-black/[0.02] dark:bg-white/[0.02]">
+          <div className="flex h-full flex-col border-r ink-border bg-(--surface-primary)">
             <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
               <div className="flex items-center">
                 <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-black text-[12px] font-bold text-white dark:bg-white dark:text-black">
@@ -132,15 +146,15 @@ export default function Sidebar() {
         <div
           className="absolute left-0 top-0 z-(--z-sidebar) h-full w-3"
           onMouseEnter={openDesktopSidebar}
-          onMouseLeave={scheduleDesktopClose}
+          onMouseLeave={handleDesktopMouseLeave}
         />
 
         <aside
-          className={`absolute left-0 top-0 z-(--z-sidebar) flex h-full w-64 flex-col overflow-hidden border-r ink-border bg-black/[0.02] transition-transform duration-300 dark:bg-white/[0.02] ${
+          className={`absolute left-0 top-0 z-(--z-sidebar) flex h-full ${DESKTOP_SIDEBAR_WIDTH_CLASS} flex-col overflow-hidden border-r ink-border bg-(--surface-primary) transition-transform duration-300 ${
             isDesktopOpen ? "translate-x-0" : "-translate-x-full"
           }`}
           onMouseEnter={openDesktopSidebar}
-          onMouseLeave={scheduleDesktopClose}
+          onMouseLeave={handleDesktopMouseLeave}
         >
           <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
             <div className="flex items-center">
@@ -171,7 +185,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`relative flex h-full flex-col overflow-hidden bg-black/[0.02] dark:bg-white/[0.02] transition-[width] duration-300 ${
+      className={`relative flex h-full flex-col overflow-hidden bg-(--surface-primary) transition-[width] duration-300 ${
         isOpen ? "w-64 shrink-0 border-r ink-border" : "w-0 border-r-0"
       }`}
     >

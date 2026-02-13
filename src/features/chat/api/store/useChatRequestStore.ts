@@ -13,11 +13,6 @@ import {
 import {
   buildUserBlocks,
 } from "@/features/conversation/model/tree/block-operations";
-import {
-  buildConversationPayload,
-  persistConversation as persistConversationService,
-  resolveExistingConversation,
-} from "@/features/conversation/persistence/persist-service";
 import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
 import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
 
@@ -115,20 +110,6 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       },
       stop: () => {
         const { chatClient } = get();
-        const treeState = useMessageTreeStore.getState();
-        const { conversationId, messages, currentPath } = treeState;
-        if (conversationId) {
-          void (async () => {
-            const existing = await resolveExistingConversation(conversationId);
-            const payload = buildConversationPayload({
-              id: conversationId,
-              messages,
-              currentPath,
-              existingConversation: existing,
-            });
-            persistConversationService(payload, { force: true });
-          })();
-        }
         if (!chatClient) {
           set({ pending: false, chatClient: null, activeRequestId: null });
           return;

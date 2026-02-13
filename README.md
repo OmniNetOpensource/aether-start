@@ -81,8 +81,10 @@ src/
 ```env
 ANTHROPIC_API_KEY_RIGHTCODE=必填 basic线路key
 ANTHROPIC_BASE_URL_RIGHTCODE=必填 basic线路baseURL
-ANTHROPIC_API_KEY_IKUNCODE=必填 pro线路key
-ANTHROPIC_BASE_URL_IKUNCODE=必填 pro线路baseURL
+DMX_APIKEY=推荐 pro线路key（优先）
+DMX_BASEURL=推荐 pro线路baseURL（优先）
+ANTHROPIC_API_KEY_IKUNCODE=兼容回退 pro线路key
+ANTHROPIC_BASE_URL_IKUNCODE=兼容回退 pro线路baseURL
 SERP_API_KEY=可选 搜索功能要用
 JINA_API_KEY=可选 URL 抓取要用
 ```

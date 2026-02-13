@@ -158,8 +158,7 @@ const parseSearchResults = (rawResult: string): SearchResult[] | null => {
       .filter((item): item is SearchResult => Boolean(item?.url));
 
     return normalized;
-  } catch (error) {
-    console.warn("[SearchCard] Failed to parse search result", error);
+  } catch {
     return null;
   }
 };

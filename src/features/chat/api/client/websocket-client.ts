@@ -227,6 +227,12 @@ export class ChatClient {
       const requestId = typeof payload.requestId === 'string' ? payload.requestId : undefined
       const events = Array.isArray(payload.events) ? payload.events : []
 
+      this.options.onStatus?.({
+        type: 'sync',
+        status,
+        requestId,
+      })
+
       for (const item of events) {
         if (!isRecord(item)) {
           continue
@@ -254,12 +260,6 @@ export class ChatClient {
           source: 'sync',
         })
       }
-
-      this.options.onStatus?.({
-        type: 'sync',
-        status,
-        requestId,
-      })
       return
     }
 
@@ -329,6 +329,31 @@ export class ChatClient {
         type: 'busy',
         currentRequestId: payload.currentRequestId,
       })
+      return
+    }
+
+    if (payload.type === 'conversation_update') {
+      const conversationId = typeof payload.conversationId === 'string' ? payload.conversationId : null
+      const title = typeof payload.title === 'string' ? payload.title : null
+      const updated_at = typeof payload.updated_at === 'string' ? payload.updated_at : null
+
+      if (!conversationId || !title || !updated_at) {
+        return
+      }
+
+      this.options.onEvent(
+        {
+          type: 'conversation_updated',
+          conversationId,
+          title,
+          updated_at,
+        },
+        {
+          requestId: '',
+          eventId: 0,
+          source: 'live',
+        },
+      )
     }
   }
 }

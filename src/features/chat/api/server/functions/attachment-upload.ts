@@ -57,6 +57,6 @@ export const uploadAttachmentFn = createServerFn({ method: 'POST' })
 
     return {
       storageKey: key,
-      displayUrl: `/api/assets/${encodeURIComponent(key)}`,
+      url: `/api/assets/${encodeURIComponent(key)}`,
     }
   })

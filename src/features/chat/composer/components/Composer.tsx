@@ -143,7 +143,7 @@ export function Composer() {
         }}
         className="flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
-        <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-black/[0.03] dark:bg-white/[0.03] p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
+        <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-(--surface-primary) p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
           {hasQuotes && (
             <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0 mb-2">
               {quotedTexts.map((quote) => (
@@ -180,7 +180,7 @@ export function Composer() {
               {pendingAttachments.map((attachment) => (
                 <div key={attachment.id} className="group relative">
                   <ImagePreview
-                    url={attachment.displayUrl}
+                    url={attachment.url}
                     name={attachment.name}
                     size={attachment.size}
                   />
@@ -249,7 +249,7 @@ export function Composer() {
         }}
         className="relative flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
-        <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-black/[0.03] dark:bg-white/[0.03] p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
+        <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-(--surface-primary) p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
         {hasQuotes && (
           <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0 mb-2">
             {quotedTexts.map((quote) => (
@@ -286,7 +286,7 @@ export function Composer() {
             {pendingAttachments.map((attachment) => (
               <div key={attachment.id} className="group relative">
                 <ImagePreview
-                  url={attachment.displayUrl}
+                  url={attachment.url}
                   name={attachment.name}
                   size={attachment.size}
                 />

@@ -154,7 +154,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
           {editedAttachments.map((attachment) => (
             <div key={attachment.id} className="group relative">
               <ImagePreview
-                url={attachment.displayUrl}
+                url={attachment.url}
                 name={attachment.name}
                 size={attachment.size}
               />

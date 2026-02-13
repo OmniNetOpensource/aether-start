@@ -60,10 +60,6 @@ const enqueueFetchUrlCall = async <T>(task: () => Promise<T>): Promise<T> => {
 
     if (elapsed < FETCH_URL_INTERVAL_MS) {
       const waitTime = FETCH_URL_INTERVAL_MS - elapsed;
-      getLogger().log(
-        "FETCH",
-        `Throttling request, waiting ${waitTime}ms`,
-      );
       await sleep(waitTime);
     }
 
@@ -148,7 +144,6 @@ const fetchDirectImage = async (
   onProgress?: ToolProgressCallback,
   signal?: AbortSignal,
 ): Promise<string> => {
-  getLogger().log("FETCH", `Fetching direct image: ${url}`);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
   const linkedAbort = () => controller.abort()
@@ -220,11 +215,6 @@ const fetchDirectImage = async (
       receivedBytes: arrayBuffer.byteLength,
     });
 
-    getLogger().log(
-      "FETCH",
-      `Direct image success, size: ${arrayBuffer.byteLength} bytes`,
-    );
-
     const result: ImageResult = {
       type: "image",
       data_url: dataUrl,
@@ -264,7 +254,6 @@ const fetchScreenshot = async (
   onProgress?: ToolProgressCallback,
   signal?: AbortSignal,
 ): Promise<string> => {
-  getLogger().log("FETCH", `Fetching screenshot for: ${url}`);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 60_000); // Longer timeout for screenshots
   const linkedAbort = () => controller.abort()
@@ -335,11 +324,6 @@ const fetchScreenshot = async (
       receivedBytes: arrayBuffer.byteLength,
     });
 
-    getLogger().log(
-      "FETCH",
-      `Screenshot success, size: ${arrayBuffer.byteLength} bytes`,
-    );
-
     const result: ImageResult = {
       type: "image",
       data_url: dataUrl,
@@ -379,7 +363,6 @@ const performFetchUrl = async (
   signal?: AbortSignal,
 ): Promise<string> => {
   const jinaUrl = `https://r.jina.ai/${url}`;
-  getLogger().log("FETCH", `Fetching URL: ${url} via Jina: ${jinaUrl}`);
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 80_000);
   const linkedAbort = () => controller.abort()
@@ -423,11 +406,6 @@ const performFetchUrl = async (
       receivedBytes,
       totalBytes,
     });
-    getLogger().log(
-      "FETCH",
-      `Jina AI Reader success, text length: ${jinaText.length} bytes`,
-    );
-
     return jinaText;
   } catch (error) {
     const isAbortError =
@@ -466,7 +444,6 @@ const fetchYoutubeTranscript = async (
     return "Error: SUPADATA_API_KEY is not set";
   }
 
-  getLogger().log("FETCH", `Fetching YouTube transcript: ${url}`);
   const supadata = new Supadata({ apiKey });
 
   try {
@@ -484,7 +461,6 @@ const fetchYoutubeTranscript = async (
     // If we get a jobId, poll for completion
     if ("jobId" in result && result.jobId) {
       const jobId = result.jobId;
-      getLogger().log("FETCH", `Transcript job created: ${jobId}`);
 
       for (let i = 1; i <= YOUTUBE_MAX_POLLS; i++) {
         if (signal?.aborted) {
@@ -507,10 +483,6 @@ const fetchYoutubeTranscript = async (
               ? transcript.content
               : JSON.stringify(transcript.content);
           const sizeKB = (new TextEncoder().encode(text).byteLength / 1024).toFixed(1)
-          getLogger().log(
-            "FETCH",
-            `Transcript job completed, size: ${sizeKB} KB`,
-          );
           await emitProgress(onProgress, {
             stage: "complete",
             message: `字幕获取完成 (${sizeKB} KB)`,
@@ -544,7 +516,6 @@ const fetchYoutubeTranscript = async (
         ? transcript.content
         : JSON.stringify(transcript.content);
     const sizeKB = (new TextEncoder().encode(text).byteLength / 1024).toFixed(1)
-    getLogger().log("FETCH", `Transcript success, size: ${sizeKB} KB`);
     await emitProgress(onProgress, {
       stage: "complete",
       message: `字幕获取完成 (${sizeKB} KB)`,

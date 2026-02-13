@@ -245,7 +245,7 @@ export const MessageItem = memo(function MessageItem({
   return (
     <div
       key={`${message.role}-${index}`}
-      className="w-full border-b ink-border py-10"
+      className="w-full py-10"
     >
       <div className="w-full min-w-0 flex flex-col items-start text-left">
         <div
@@ -257,7 +257,7 @@ export const MessageItem = memo(function MessageItem({
                 block.attachments.map((attachment) => (
                   <ImagePreview
                     key={attachment.id}
-                    url={attachment.displayUrl}
+                    url={attachment.url}
                     name={attachment.name}
                     size={attachment.size}
                     className="shrink-0"

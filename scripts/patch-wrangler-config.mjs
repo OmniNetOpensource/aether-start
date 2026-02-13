@@ -15,4 +15,3 @@ writeFileSync(
   configPath,
   config.replaceAll('REPLACE_WITH_D1_DATABASE_ID', dbId),
 )
-console.log(`Patched D1 database_id: ${dbId}`)

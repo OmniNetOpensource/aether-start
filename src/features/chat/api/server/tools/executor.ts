@@ -27,12 +27,10 @@ export const getAvailableTools = (): ChatTool[] => {
 
   if (env.JINA_API_KEY) {
     tools.push(fetchUrlTool.spec)
-    getLogger().log('TOOLS', 'Enabled tool: fetch_url')
   }
 
   if (env.SERP_API_KEY) {
     tools.push(searchTool.spec)
-    getLogger().log('TOOLS', 'Enabled tool: search')
   } else {
     getLogger().log('TOOLS', 'Skipping tool: search (missing SERP_API_KEY)')
   }
@@ -64,7 +62,6 @@ const callToolByName = async (
       (error instanceof Error && error.name === 'AbortError') ||
       signal?.aborted
     ) {
-      getLogger().log('TOOLS', `Tool aborted: ${name}`)
       return 'Error: Aborted'
     }
 
@@ -151,11 +148,6 @@ export async function* executeToolsGen(
       result: clientResult,
       callId: tc.id,
     }
-
-    getLogger().log('TOOL', `Tool result: ${tc.name}`, {
-      callId: tc.id,
-      resultLength: normalizedResult.length,
-    })
 
     results.push({ id: tc.id, name: tc.name, result: normalizedResult })
   }

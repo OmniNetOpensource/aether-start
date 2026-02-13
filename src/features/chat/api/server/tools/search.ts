@@ -53,10 +53,6 @@ const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
 
     if (elapsed < SEARCH_INTERVAL_MS) {
       const waitTime = SEARCH_INTERVAL_MS - elapsed;
-      getLogger().log(
-        "SEARCH",
-        `Throttling request, waiting ${waitTime}ms`,
-      );
       await sleep(waitTime);
     }
 
@@ -127,8 +123,6 @@ const performSearch = async (
   apiKey: string,
   signal?: AbortSignal,
 ): Promise<string> => {
-  getLogger().log("SEARCH", `Searching: ${query}`);
-
   const myHeaders = new Headers();
   myHeaders.append("X-API-KEY", apiKey);
   myHeaders.append("Content-Type", "application/json");

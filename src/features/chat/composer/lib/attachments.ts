@@ -48,7 +48,7 @@ export const buildAttachmentsFromFiles = async (
         name: file.name,
         size: file.size,
         mimeType,
-        displayUrl: uploaded.displayUrl,
+        url: uploaded.url,
         storageKey: uploaded.storageKey,
       });
     } catch (error) {

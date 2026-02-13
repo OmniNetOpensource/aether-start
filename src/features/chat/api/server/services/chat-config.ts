@@ -1,3 +1,5 @@
+import { getServerEnv } from '@/server/env'
+
 export type AnthropicBackend = "basic" | "pro";
 
 export type RoleConfig = {
@@ -113,7 +115,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   心灵导师: {
     id: "心灵导师",
     name: "心灵导师",
-    model: "claude-sonnet-4-5-20250929",
+    model: "glm-5",
     backend: "pro",
     systemPrompt: `请用朴实、平静、耐心的语言回答我的问题，就像一个有经验的朋友在认真地帮我理解一个话题。语气要温和、鼓励，让人感到你愿意花时间把事情讲清楚。不要使用夸张的形容词和营销式的表达，比如"非常棒"、"超级强大"这类词，而是具体说明实际情况就好。
 
@@ -128,7 +130,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   英语教学专家: {
     id: "英语教学专家",
     name: "英语教学专家",
-    model: "claude-opus-4-6",
+    model: "claude-opus-4-5",
     backend: "basic",
     systemPrompt: englishTeacherSystemPrompt,
   },
@@ -154,16 +156,16 @@ export const getAnthropicConfig = (backend: AnthropicBackend = "basic") => {
   const env = getServerEnv()
   const isProBackend = backend === "pro"
   const apiKey = isProBackend
-    ? env.ANTHROPIC_API_KEY_IKUNCODE
+    ? env.DMX_APIKEY ?? env.ANTHROPIC_API_KEY_IKUNCODE
     : env.ANTHROPIC_API_KEY_RIGHTCODE
   const baseURL = isProBackend
-    ? env.ANTHROPIC_BASE_URL_IKUNCODE
+    ? env.DMX_BASEURL ?? env.ANTHROPIC_BASE_URL_IKUNCODE
     : env.ANTHROPIC_BASE_URL_RIGHTCODE
 
   if (!apiKey) {
     throw new Error(
       isProBackend
-        ? "Missing ANTHROPIC_API_KEY_IKUNCODE"
+        ? "Missing DMX_APIKEY (or ANTHROPIC_API_KEY_IKUNCODE)"
         : "Missing ANTHROPIC_API_KEY_RIGHTCODE",
     )
   }
@@ -171,7 +173,7 @@ export const getAnthropicConfig = (backend: AnthropicBackend = "basic") => {
   if (!baseURL) {
     throw new Error(
       isProBackend
-        ? "Missing ANTHROPIC_BASE_URL_IKUNCODE"
+        ? "Missing DMX_BASEURL (or ANTHROPIC_BASE_URL_IKUNCODE)"
         : "Missing ANTHROPIC_BASE_URL_RIGHTCODE",
     )
   }
@@ -185,4 +187,3 @@ export const getAnthropicConfig = (backend: AnthropicBackend = "basic") => {
     },
   };
 };
-import { getServerEnv } from '@/server/env'

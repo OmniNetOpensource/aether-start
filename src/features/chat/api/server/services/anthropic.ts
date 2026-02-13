@@ -1,13 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { buildSystemPrompt } from "@/features/chat/api/server/services/utils";
-import { getAnthropicConfig } from "@/features/chat/api/server/services/chat-config";
+import { getAnthropicConfig, type AnthropicBackend } from "@/features/chat/api/server/services/chat-config";
 import { getLogger } from "./logger";
 import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
 import { getServerBindings } from '@/server/env'
 import type {
-  ChatRequestConfig,
-  ChatRunResult,
-  ChatProviderState,
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
@@ -21,13 +18,18 @@ type AnthropicImageSource = {
   data: string;
 };
 
-type AnthropicContentBlock =
+export type ThinkingBlockData =
+  | { type: 'thinking'; thinking: string; signature: string }
+  | { type: 'redacted_thinking'; data: string }
+
+export type AnthropicContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; source: AnthropicImageSource }
   | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
-  | { type: "tool_result"; tool_use_id: string; content: string };
+  | { type: "tool_result"; tool_use_id: string; content: string }
+  | ThinkingBlockData;
 
-type AnthropicMessage = {
+export type AnthropicMessage = {
   role: "user" | "assistant";
   content: string | AnthropicContentBlock[];
 };
@@ -43,13 +45,8 @@ type AnthropicStreamChunk =
   | { type: "thinking"; thinking: string }
   | { type: "tool_use_start"; id: string; name: string }
   | { type: "tool_use_delta"; partial_json: string }
-  | { type: "stop"; stop_reason: string };
-
-type AnthropicState = {
-  messages: AnthropicMessage[];
-  lastAssistantText: string;
-  lastPendingToolCalls: PendingToolInvocation[];
-};
+  | { type: "stop"; stop_reason: string }
+  | { type: "thinking_blocks"; blocks: ThinkingBlockData[] };
 
 const ANTHROPIC_MAX_TOKENS = 64000;
 const THINKING_BUDGET_RATIO = 0.8;
@@ -106,7 +103,7 @@ const buildThinkingParams = (model: string, maxTokens: number): AnthropicThinkin
   };
 };
 
-const getClient = (backend: ChatRequestConfig["backend"]) => {
+const getClient = (backend: AnthropicBackend) => {
   const anthropicConfig = getAnthropicConfig(backend);
   return new Anthropic({
     apiKey: anthropicConfig.apiKey,
@@ -173,9 +170,7 @@ const resolveAttachmentToBase64 = async (attachment: {
   return null
 }
 
-async function convertToAnthropicMessages(history: SerializedMessage[]): Promise<AnthropicMessage[]> {
-  getLogger().log('ANTHROPIC', '转换为 Anthropic 格式', { messageCount: history.length });
-
+export async function convertToAnthropicMessages(history: SerializedMessage[]): Promise<AnthropicMessage[]> {
   return Promise.all(history.map(async (message, msgIdx) => {
     const contentBlocks: AnthropicContentBlock[] = [];
 
@@ -193,10 +188,6 @@ async function convertToAnthropicMessages(history: SerializedMessage[]): Promise
             })
 
             if (resolved) {
-              getLogger().log('ANTHROPIC', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 转换成功`, {
-                media_type: resolved.media_type,
-                dataLength: resolved.data.length,
-              });
               contentBlocks.push({
                 type: "image",
                 source: {
@@ -230,39 +221,15 @@ function convertToolsToAnthropic(tools: ChatTool[]): AnthropicTool[] {
     }));
 }
 
-function logHttpRequest(params: {
-  url: string;
-  headers: Record<string, string>;
-  body: unknown;
-}) {
-  const maskedHeaders: Record<string, string> = {};
-  Object.entries(params.headers).forEach(([key, value]) => {
-    if (key.toLowerCase().includes('key') || key.toLowerCase().includes('authorization')) {
-      maskedHeaders[key] = value.length > 8
-        ? `${value.slice(0, 4)}...${value.slice(-4)}`
-        : '***';
-    } else {
-      maskedHeaders[key] = value;
-    }
-  });
-
-  getLogger().log('HTTP', 'Anthropic API request', {
-    url: params.url,
-    headers: maskedHeaders,
-    body: params.body,
-  });
-}
-
 async function* streamAnthropicCompletion(requestParams: {
   model: string;
-  backend: ChatRequestConfig["backend"];
+  backend: AnthropicBackend;
   messages: AnthropicMessage[];
   system?: string;
   tools?: AnthropicTool[];
   signal?: AbortSignal;
 }): AsyncGenerator<AnthropicStreamChunk> {
   const client = getClient(requestParams.backend);
-  const anthropicConfig = getAnthropicConfig(requestParams.backend);
   const thinkingParams = buildThinkingParams(requestParams.model, ANTHROPIC_MAX_TOKENS);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -274,20 +241,6 @@ async function* streamAnthropicCompletion(requestParams: {
     max_tokens: ANTHROPIC_MAX_TOKENS,
     ...thinkingParams,
   };
-
-  // 打印完整的 HTTP 请求信息
-  logHttpRequest({
-    url: `${anthropicConfig.baseURL || 'https://api.anthropic.com'}/v1/messages`,
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': anthropicConfig.apiKey,
-      ...anthropicConfig.defaultHeaders,
-    },
-    body: {
-      ...streamParams,
-      stream: true,
-    },
-  });
 
   const stream = client.messages.stream(streamParams, {
     signal: requestParams.signal,
@@ -320,73 +273,78 @@ async function* streamAnthropicCompletion(requestParams: {
       }
     }
   }
+
+  try {
+    const finalMessage = await stream.finalMessage()
+    const thinkingBlocks: ThinkingBlockData[] = []
+    for (const block of finalMessage.content) {
+      if (block.type === 'thinking') {
+        thinkingBlocks.push({ type: 'thinking', thinking: block.thinking, signature: block.signature })
+      } else if (block.type === 'redacted_thinking') {
+        thinkingBlocks.push({ type: 'redacted_thinking', data: block.data })
+      }
+    }
+    if (thinkingBlocks.length > 0) {
+      yield { type: 'thinking_blocks', blocks: thinkingBlocks }
+    }
+  } catch {
+    // finalMessage may fail if stream was aborted
+  }
 }
 
-const createInitialState = async (options: ChatRequestConfig): Promise<AnthropicState> => {
-  const systemPrompt = buildSystemPrompt();
-  const rolePrompt = options.systemPrompt?.trim();
-  const rolePromptMessages: AnthropicMessage[] = rolePrompt
-    ? [{ role: "user", content: rolePrompt }]
-    : [];
+export function formatToolContinuation(
+  assistantText: string,
+  thinkingBlocks: ThinkingBlockData[],
+  pendingToolCalls: PendingToolInvocation[],
+  toolResults: ToolInvocationResult[],
+): AnthropicMessage[] {
+  const assistantContent: AnthropicContentBlock[] = []
 
-  return {
-    messages: [
-      { role: "user", content: systemPrompt },
-      ...rolePromptMessages,
-      ...(await convertToAnthropicMessages(options.messages)),
-    ],
-    lastAssistantText: "",
-    lastPendingToolCalls: [],
-  };
-};
-
-const toChatState = (state: AnthropicState): ChatProviderState => ({
-  data: state,
-});
-
-const appendToolResults = (state: AnthropicState, results: ToolInvocationResult[]): AnthropicState => {
-  const assistantContent: Array<
-    | { type: "text"; text: string }
-    | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
-  > = [];
-
-  if (state.lastAssistantText) {
-    assistantContent.push({ type: "text", text: state.lastAssistantText });
+  for (const block of thinkingBlocks) {
+    assistantContent.push(block)
   }
 
-  for (const toolCall of state.lastPendingToolCalls) {
-    assistantContent.push({ type: "tool_use", id: toolCall.id, name: toolCall.name, input: toolCall.args });
+  if (assistantText) {
+    assistantContent.push({ type: 'text', text: assistantText })
+  }
+
+  for (const toolCall of pendingToolCalls) {
+    assistantContent.push({
+      type: 'tool_use',
+      id: toolCall.id,
+      name: toolCall.name,
+      input: toolCall.args,
+    })
   }
 
   type ToolResultContentItem =
-    | { type: "text"; text: string }
-    | { type: "image"; source: AnthropicImageSource };
+    | { type: 'text'; text: string }
+    | { type: 'image'; source: AnthropicImageSource }
 
   const toolResultContent: Array<{
-    type: "tool_result";
-    tool_use_id: string;
-    content: string | ToolResultContentItem[];
-  }> = results.map((toolResult) => {
-    // Check if result is a JSON image result
+    type: 'tool_result'
+    tool_use_id: string
+    content: string | ToolResultContentItem[]
+  }> = toolResults.map((toolResult) => {
     try {
-      const parsed = JSON.parse(toolResult.result);
-      if (parsed.type === "image" && parsed.data_url) {
-        const base64Match = parsed.data_url.match(/^data:([^;]+);base64,(.+)$/);
+      const parsed = JSON.parse(toolResult.result)
+      if (parsed.type === 'image' && parsed.data_url) {
+        const base64Match = parsed.data_url.match(/^data:([^;]+);base64,(.+)$/)
         if (base64Match) {
           return {
-            type: "tool_result" as const,
+            type: 'tool_result' as const,
             tool_use_id: toolResult.id,
             content: [
               {
-                type: "image" as const,
+                type: 'image' as const,
                 source: {
-                  type: "base64" as const,
+                  type: 'base64' as const,
                   media_type: base64Match[1],
                   data: base64Match[2],
                 },
               },
             ],
-          };
+          }
         }
       }
     } catch {
@@ -394,141 +352,126 @@ const appendToolResults = (state: AnthropicState, results: ToolInvocationResult[
     }
 
     return {
-      type: "tool_result" as const,
+      type: 'tool_result' as const,
       tool_use_id: toolResult.id,
       content: toolResult.result,
-    };
-  });
+    }
+  })
 
-  return {
-    messages: [
-      ...state.messages,
-      { role: "assistant", content: assistantContent },
-      { role: "user", content: toolResultContent as AnthropicMessage["content"] },
-    ],
-    lastAssistantText: "",
-    lastPendingToolCalls: [],
-  };
-};
+  return [
+    { role: 'assistant', content: assistantContent },
+    { role: 'user', content: toolResultContent as AnthropicMessage['content'] },
+  ]
+}
 
-type RunAnthropicChatParams = {
-  options: ChatRequestConfig;
-  continuation?: {
-    state: ChatProviderState;
-    toolResults: ToolInvocationResult[];
-  };
-  signal?: AbortSignal;
-};
+type AnthropicChatProviderConfig = {
+  model: string
+  backend: AnthropicBackend
+  tools: ChatTool[]
+  systemPrompt?: string
+}
 
-export async function* runAnthropicChat(
-  params: RunAnthropicChatParams
-): AsyncGenerator<ChatServerToClientEvent, ChatRunResult> {
-  const continuationState = params.continuation
-    ? appendToolResults(
-      params.continuation.state.data as AnthropicState,
-      params.continuation.toolResults
-    )
-    : undefined;
+export type ProviderRunResult = {
+  pendingToolCalls: PendingToolInvocation[]
+  thinkingBlocks: ThinkingBlockData[]
+}
 
-  const options = params.options;
-  const workingState = continuationState ?? (await createInitialState(options));
+export class AnthropicChatProvider {
+  private readonly model: string
+  private readonly backend: AnthropicBackend
+  private readonly anthropicTools: AnthropicTool[] | undefined
+  private readonly systemPrompt?: string
 
-  const anthropicTools = options.tools.length > 0 ? convertToolsToAnthropic(options.tools) : undefined;
+  constructor(config: AnthropicChatProviderConfig) {
+    this.model = config.model
+    this.backend = config.backend
+    this.systemPrompt = config.systemPrompt
+    this.anthropicTools = config.tools.length > 0
+      ? convertToolsToAnthropic(config.tools)
+      : undefined
+  }
 
-  let assistantText = "";
-  const pendingToolCalls: PendingToolInvocation[] = [];
-  let currentToolId = "";
-  let currentToolName = "";
-  let currentToolJson = "";
-  let stopReason = "";
+  async *run(
+    messages: AnthropicMessage[],
+    signal?: AbortSignal,
+  ): AsyncGenerator<ChatServerToClientEvent, ProviderRunResult> {
+    const systemPrompt = buildSystemPrompt()
+    const rolePromptMessages: AnthropicMessage[] = this.systemPrompt?.trim()
+      ? [{ role: 'user' as const, content: this.systemPrompt.trim() }]
+      : []
 
-  try {
-    for await (const chunk of streamAnthropicCompletion({
-      model: options.model,
-      backend: options.backend,
-      messages: workingState.messages,
-      tools: anthropicTools,
-      signal: params.signal,
-    })) {
-      if (params.signal?.aborted) {
-        throw new DOMException('Aborted', 'AbortError')
-      }
+    const fullMessages: AnthropicMessage[] = [
+      { role: 'user', content: systemPrompt },
+      ...rolePromptMessages,
+      ...messages,
+    ]
 
-      if (chunk.type === "text") {
-        assistantText += chunk.text;
-        yield { type: "content", content: chunk.text };
-      } else if (chunk.type === "thinking") {
-        yield { type: "thinking", content: chunk.thinking };
-      } else if (chunk.type === "tool_use_start") {
-        currentToolId = chunk.id;
-        currentToolName = chunk.name;
-        currentToolJson = "";
-      } else if (chunk.type === "tool_use_delta") {
-        currentToolJson += chunk.partial_json;
-      } else if (chunk.type === "stop") {
-        stopReason = chunk.stop_reason;
-        if (currentToolId && currentToolName) {
-          let toolArguments: Record<string, unknown> = {};
-          try {
-            toolArguments = JSON.parse(currentToolJson || "{}");
-          } catch {
+    const pendingToolCalls: PendingToolInvocation[] = []
+    let thinkingBlocks: ThinkingBlockData[] = []
+    let currentToolId = ''
+    let currentToolName = ''
+    let currentToolJson = ''
+    let stopReason = ''
+
+    const emptyResult: ProviderRunResult = { pendingToolCalls: [], thinkingBlocks: [] }
+
+    try {
+      for await (const chunk of streamAnthropicCompletion({
+        model: this.model,
+        backend: this.backend,
+        messages: fullMessages,
+        tools: this.anthropicTools,
+        signal,
+      })) {
+        if (signal?.aborted) {
+          throw new DOMException('Aborted', 'AbortError')
+        }
+
+        if (chunk.type === 'text') {
+          yield { type: 'content', content: chunk.text }
+        } else if (chunk.type === 'thinking') {
+          yield { type: 'thinking', content: chunk.thinking }
+        } else if (chunk.type === 'thinking_blocks') {
+          thinkingBlocks = chunk.blocks
+        } else if (chunk.type === 'tool_use_start') {
+          currentToolId = chunk.id
+          currentToolName = chunk.name
+          currentToolJson = ''
+        } else if (chunk.type === 'tool_use_delta') {
+          currentToolJson += chunk.partial_json
+        } else if (chunk.type === 'stop') {
+          stopReason = chunk.stop_reason
+          if (currentToolId && currentToolName) {
+            let toolArguments: Record<string, unknown> = {}
+            try {
+              toolArguments = JSON.parse(currentToolJson || '{}')
+            } catch {
+            }
+            pendingToolCalls.push({ id: currentToolId, name: currentToolName, args: toolArguments })
           }
-          pendingToolCalls.push({ id: currentToolId, name: currentToolName, args: toolArguments });
         }
       }
-    }
-  } catch (error) {
-    if (
-      (error instanceof DOMException && error.name === 'AbortError') ||
-      (error instanceof Error && error.name === 'AbortError') ||
-      params.signal?.aborted
-    ) {
-      return {
-        shouldContinue: false,
-        pendingToolCalls: [],
-        assistantText,
-        state: toChatState(workingState),
-        aborted: true,
+    } catch (error) {
+      if (
+        (error instanceof DOMException && error.name === 'AbortError') ||
+        (error instanceof Error && error.name === 'AbortError') ||
+        signal?.aborted
+      ) {
+        return emptyResult
       }
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start Anthropic completion'
+      yield {
+        type: 'error',
+        message: `错误：Anthropic 请求失败 (model=${this.model}): ${errorMessage}`,
+      }
+      return emptyResult
     }
 
-    const message = error instanceof Error ? error.message : "Failed to start Anthropic completion";
-    const model = options?.model ?? "unknown";
-    yield {
-      type: "error",
-      message: `错误：Anthropic 请求失败 (model=${model}): ${message}`,
-    };
-    return {
-      shouldContinue: false,
-      pendingToolCalls: [],
-      assistantText: "",
-      state: toChatState(workingState),
-    };
+    if (stopReason === 'end_turn' || pendingToolCalls.length === 0) {
+      return emptyResult
+    }
+
+    return { pendingToolCalls, thinkingBlocks }
   }
-
-  if (stopReason === "end_turn" || pendingToolCalls.length === 0) {
-    return {
-      shouldContinue: false,
-      pendingToolCalls: [],
-      assistantText,
-      state: toChatState({
-        ...workingState,
-        lastAssistantText: "",
-        lastPendingToolCalls: [],
-      }),
-    };
-  }
-
-  const nextState: AnthropicState = {
-    ...workingState,
-    lastAssistantText: assistantText,
-    lastPendingToolCalls: pendingToolCalls,
-  };
-
-  return {
-    shouldContinue: true,
-    pendingToolCalls,
-    assistantText,
-    state: toChatState(nextState),
-  };
 }

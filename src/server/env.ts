@@ -5,6 +5,8 @@ type ServerEnv = {
   ANTHROPIC_BASE_URL_RIGHTCODE?: string
   ANTHROPIC_API_KEY_IKUNCODE?: string
   ANTHROPIC_BASE_URL_IKUNCODE?: string
+  DMX_APIKEY?: string
+  DMX_BASEURL?: string
   JINA_API_KEY?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
@@ -52,6 +54,12 @@ export const getServerEnv = (): ServerEnv => {
     ANTHROPIC_BASE_URL_IKUNCODE:
       readString(bindings.ANTHROPIC_BASE_URL_IKUNCODE) ??
       readStringFromProcess('ANTHROPIC_BASE_URL_IKUNCODE'),
+    DMX_APIKEY:
+      readString(bindings.DMX_APIKEY) ??
+      readStringFromProcess('DMX_APIKEY'),
+    DMX_BASEURL:
+      readString(bindings.DMX_BASEURL) ??
+      readStringFromProcess('DMX_BASEURL'),
     JINA_API_KEY:
       readString(bindings.JINA_API_KEY) ?? readStringFromProcess('JINA_API_KEY'),
     SERP_API_KEY:

@@ -1,6 +1,4 @@
 import type { SerializedMessage } from '@/features/chat/types/chat'
-import type { ChatTool } from '@/features/chat/api/server/tools/types'
-import type { AnthropicBackend } from '@/features/chat/api/server/services/chat-config'
 import type { Message } from '@/features/conversation/model/types/message'
 import type { ChatServerToClientEvent } from './event-types'
 
@@ -18,26 +16,6 @@ export type ToolInvocationResult = {
   id: string
   name: string
   result: string
-}
-
-export type ChatRequestConfig = {
-  model: string
-  backend: AnthropicBackend
-  messages: SerializedMessage[]
-  tools: ChatTool[]
-  systemPrompt?: string
-}
-
-export type ChatProviderState = {
-  data: unknown
-}
-
-export type ChatRunResult = {
-  shouldContinue: boolean
-  pendingToolCalls: PendingToolInvocation[]
-  assistantText: string
-  state?: ChatProviderState
-  aborted?: boolean
 }
 
 export type MessageTreeSnapshot = {
@@ -100,4 +78,10 @@ export type ChatAgentServerMessage =
   | {
       type: 'busy'
       currentRequestId: string
+    }
+  | {
+      type: 'conversation_update'
+      conversationId: string
+      title: string
+      updated_at: string
     }

@@ -1,14 +1,6 @@
 import type { ChatServerToClientEvent } from '@/features/chat/api/shared/event-types'
-import type { MessageLike } from '@/features/chat/types/chat'
 import { useMessageTreeStore } from '@/features/chat/messages/store/useMessageTreeStore'
-
-type PersistConversationOptions = {
-  title?: string
-  created_at?: string
-  updated_at?: string
-  titleSource?: MessageLike
-  force?: boolean
-}
+import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
 
 export const enhanceServerErrorMessage = (safeMessage: string) => {
   const lowerMessage = safeMessage.toLowerCase()
@@ -62,12 +54,23 @@ export const enhanceServerErrorMessage = (safeMessage: string) => {
   )
 }
 
-export const applyChatEventToTree = async (
+export const applyChatEventToTree = (
   event: ChatServerToClientEvent,
-  conversationId: string,
-  persistConversation: (id: string, options?: PersistConversationOptions) => Promise<void>,
-  titleSource?: MessageLike,
 ) => {
+  if (event.type === 'conversation_updated') {
+    if (event.title) {
+      const now = event.updated_at ?? new Date().toISOString()
+      useConversationsStore.getState().addConversation({
+        id: event.conversationId,
+        title: event.title,
+        user_id: '',
+        created_at: now,
+        updated_at: now,
+      })
+    }
+    return
+  }
+
   if (event.type === 'thinking') {
     useMessageTreeStore.getState().appendToAssistant({
       kind: 'thinking',
@@ -151,11 +154,6 @@ export const applyChatEventToTree = async (
     useMessageTreeStore.getState().appendToAssistant({
       type: 'error',
       message: enhancedMessage,
-    })
-
-    await persistConversation(conversationId, {
-      updated_at: new Date().toISOString(),
-      titleSource,
     })
     return
   }

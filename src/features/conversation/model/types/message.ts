@@ -35,16 +35,9 @@ type AttachmentBase = {
 };
 
 export type Attachment = AttachmentBase & {
-  displayUrl: string;
-  storageKey?: string;
-};
-
-export type SerializedAttachment = AttachmentBase & {
   url: string;
   storageKey?: string;
 };
-
-export type LegacyAttachment = SerializedAttachment;
 
 type ResearchBlock = {
   type: "research";
@@ -63,19 +56,6 @@ export type AssistantContentBlock =
   | { type: "error"; message: string };
 
 export type ContentBlock = UserContentBlock | AssistantContentBlock;
-
-export type SerializedUserContentBlock =
-  | { type: "content"; content: string }
-  | { type: "attachments"; attachments: SerializedAttachment[] };
-
-export type SerializedAssistantContentBlock =
-  | { type: "content"; content: string }
-  | ResearchBlock
-  | { type: "error"; message: string };
-
-export type SerializedContentBlock =
-  | SerializedUserContentBlock
-  | SerializedAssistantContentBlock;
 
 // --- Message types (discriminated union on role) ---
 
@@ -103,12 +83,12 @@ export type Message = UserMessage | AssistantMessage;
 
 export type SerializedUserMessage = {
   role: "user";
-  blocks: SerializedUserContentBlock[];
+  blocks: UserContentBlock[];
 };
 
 export type SerializedAssistantMessage = {
   role: "assistant";
-  blocks: SerializedAssistantContentBlock[];
+  blocks: AssistantContentBlock[];
 };
 
 export type SerializedMessage =
