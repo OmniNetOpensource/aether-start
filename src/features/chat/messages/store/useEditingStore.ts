@@ -12,7 +12,7 @@ import {
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
 } from "@/features/conversation/model/tree/block-operations";
-import { startChatRequest } from "@/features/chat/api/client/chat-request";
+import { startChatRequest } from "@/features/chat/api/client/chat-orchestrator";
 import { useMessageTreeStore } from "./useMessageTreeStore";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
 

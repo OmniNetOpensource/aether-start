@@ -1,11 +1,11 @@
 import { applyAssistantAddition, cloneMessages } from '@/features/conversation/model/tree/block-operations'
 import { addMessage, buildCurrentPath } from '@/features/conversation/model/tree/message-tree'
-import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/features/chat/api/types/schemas/types'
+import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/features/chat/api/shared/types'
 import type { AssistantMessage, Message } from '@/features/conversation/model/types/message'
 
-type TreeAccumulatorState = MessageTreeSnapshot
+type TreeState = MessageTreeSnapshot
 
-const ensureAssistantTarget = (state: TreeAccumulatorState) => {
+const ensureAssistantTarget = (state: TreeState) => {
   const lastId = state.currentPath[state.currentPath.length - 1] ?? null
   const lastMessage = lastId ? state.messages[lastId - 1] : null
 
@@ -39,7 +39,7 @@ const ensureAssistantTarget = (state: TreeAccumulatorState) => {
 }
 
 const appendToAssistant = (
-  state: TreeAccumulatorState,
+  state: TreeState,
   addition:
     | { type: 'content'; content: string }
     | { type: 'error'; message: string }
@@ -54,7 +54,7 @@ const appendToAssistant = (
         totalBytes?: number
       }
     | { kind: 'tool_result'; tool: string; result: string },
-): TreeAccumulatorState => {
+): TreeState => {
   const target = ensureAssistantTarget(state)
   const nextMessages = [...target.state.messages]
   const assistant = nextMessages[target.assistantId - 1]
@@ -79,10 +79,10 @@ const appendToAssistant = (
 const normalizeToolArgs = (args: unknown) =>
   (args && typeof args === 'object' ? args : {}) as Record<string, unknown>
 
-export const applyServerEventToTree = (
-  state: TreeAccumulatorState,
+export const processEventToTree = (
+  state: TreeState,
   event: ChatServerToClientEvent,
-): TreeAccumulatorState => {
+): TreeState => {
   if (event.type === 'content') {
     return appendToAssistant(state, {
       type: 'content',

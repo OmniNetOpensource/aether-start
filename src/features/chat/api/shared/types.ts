@@ -1,44 +1,44 @@
-import type { SerializedMessage } from "@/features/chat/types/chat";
-import type { ChatTool } from "@/features/chat/api/server/tools/types";
-import type { AnthropicBackend } from "@/features/chat/api/server/services/chat-config";
+import type { SerializedMessage } from '@/features/chat/types/chat'
+import type { ChatTool } from '@/features/chat/api/server/tools/types'
+import type { AnthropicBackend } from '@/features/chat/api/server/services/chat-config'
 import type { Message } from '@/features/conversation/model/types/message'
-import type { ChatServerToClientEvent } from '@/features/chat/api/types/server-events'
+import type { ChatServerToClientEvent } from './event-types'
 
-export type { ChatServerToClientEvent } from "@/features/chat/api/types/server-events";
+export type { ChatServerToClientEvent } from './event-types'
 
 // Tool call pending execution
 export type PendingToolInvocation = {
-  id: string;
-  name: string;
-  args: Record<string, unknown>;
-};
+  id: string
+  name: string
+  args: Record<string, unknown>
+}
 
 // Result from tool execution
 export type ToolInvocationResult = {
-  id: string;
-  name: string;
-  result: string;
-};
+  id: string
+  name: string
+  result: string
+}
 
 export type ChatRequestConfig = {
-  model: string;
-  backend: AnthropicBackend;
-  messages: SerializedMessage[];
-  tools: ChatTool[];
-  systemPrompt?: string;
-};
+  model: string
+  backend: AnthropicBackend
+  messages: SerializedMessage[]
+  tools: ChatTool[]
+  systemPrompt?: string
+}
 
 export type ChatProviderState = {
-  data: unknown;
-};
+  data: unknown
+}
 
 export type ChatRunResult = {
-  shouldContinue: boolean;
-  pendingToolCalls: PendingToolInvocation[];
-  assistantText: string;
-  state?: ChatProviderState;
-  aborted?: boolean;
-};
+  shouldContinue: boolean
+  pendingToolCalls: PendingToolInvocation[]
+  assistantText: string
+  state?: ChatProviderState
+  aborted?: boolean
+}
 
 export type MessageTreeSnapshot = {
   messages: Message[]

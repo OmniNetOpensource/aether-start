@@ -32,7 +32,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     id: "aether",
     name: "aether",
     model: "claude-opus-4-6",
-    backend: "pro",
+    backend: "basic",
     systemPrompt: `
 你是谁
 

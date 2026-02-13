@@ -31,4 +31,3 @@ export type ChatServerToClientEvent =
       conversationId: string
       updated_at: string
     }
-

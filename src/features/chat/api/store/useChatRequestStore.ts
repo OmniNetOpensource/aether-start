@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { toast } from "@/shared/hooks/useToast";
-import type { ChatClient } from "@/features/chat/api/client/chat-request";
+import type { ChatClient } from "@/features/chat/api/client/websocket-client";
 import {
   resumeRunningConversation,
   startChatRequest,
-} from "@/features/chat/api/client/chat-request";
+} from "@/features/chat/api/client/chat-orchestrator";
 import { DEFAULT_ROLE_ID, ROLES } from "@/features/chat/session/config/roles";
 import {
   computeMessagesFromPath,

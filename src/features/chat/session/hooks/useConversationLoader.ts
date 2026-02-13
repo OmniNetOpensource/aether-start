@@ -4,7 +4,7 @@ import { useComposerStore } from "@/features/chat/composer/store/useComposerStor
 import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
 import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-import { resetConversationEventCursor } from '@/features/chat/api/client/chat-request'
+import { resetConversationEventCursor } from '@/features/chat/api/client/websocket-client'
 import { conversationRepository } from "@/features/conversation/persistence/repository";
 import {
   buildCurrentPath,

@@ -40,9 +40,9 @@ Code is organized by feature in `src/features/`:
 - `theme/` - Theme hook logic
 - `responsive/` - Responsive context and server helpers
 
-### Server Functions (TanStack Start)
-Server-side chat/persistence logic is implemented via `createServerFn`:
-- `src/features/chat/api/server/functions/chat.ts` - Main streaming chat pipeline
+### Server Functions & Chat Architecture
+Server-side chat logic is implemented via Cloudflare Durable Objects + WebSocket:
+- `src/features/chat/api/server/agents/chat-agent.ts` - Durable Object agent for chat streaming
 - `src/features/chat/api/server/functions/chat-title.ts` - Title generation
 - `src/features/chat/api/server/functions/attachment-upload.ts` - Upload image attachments to R2
 - `src/features/conversation/persistence/server/functions/conversations.ts` - D1 CRUD + pagination
@@ -90,17 +90,17 @@ Server-side chat/persistence logic is implemented via `createServerFn`:
 ## API/Event Contract
 
 ### Chat Input
-- Frontend sends serialized messages + role + optional conversationId to `streamChatFn`.
+- Frontend sends serialized messages + role + optional conversationId to the chat agent via WebSocket.
 
 ### Streaming Events
-`ChatServerToClientEvent` is defined in `src/features/chat/api/types/server-events.ts` and includes:
+`ChatServerToClientEvent` is defined in `src/features/chat/api/shared/event-types.ts` and includes:
 - `content`, `thinking`
 - `tool_call`, `tool_progress`, `tool_result`
 - `conversation_created`, `conversation_updated`
 - `error`
 
 ### Iterative Tool Loop
-- Chat flow can iterate tool calls and continuation up to a capped iteration count (currently 200 in `chat.ts`).
+- Chat flow can iterate tool calls and continuation up to a capped iteration count (currently 200 in `chat-agent.ts`).
 
 ## Type System
 
@@ -145,9 +145,8 @@ Server-side chat/persistence logic is implemented via `createServerFn`:
 ### Add a New Tool
 1. Create tool definition in `src/features/chat/api/server/tools/`
 2. Export `{ spec, handler }` with tool schema and implementation
-3. Register in `registry.ts`
-4. Expose tool spec in `chat.ts` based on env gating
-5. Ensure tool progress/result events match existing client expectations
+3. Register in `executor.ts` by adding to `getToolHandler` and `getAvailableTools`
+4. Ensure tool progress/result events match existing client expectations
 
 ### Add a New Route
 1. Add file under `src/routes/` with path-aligned naming

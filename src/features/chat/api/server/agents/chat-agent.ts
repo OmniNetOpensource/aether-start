@@ -1,6 +1,5 @@
 import { Agent, type Connection } from 'agents'
-import { fetchUrlTool } from '@/features/chat/api/server/tools/fetch'
-import { searchTool } from '@/features/chat/api/server/tools/search'
+import { getAvailableTools, executeToolsGen } from '@/features/chat/api/server/tools/executor'
 import {
   getDefaultRoleConfig,
   getRoleConfig,
@@ -11,9 +10,8 @@ import {
   getLogger,
 } from '@/features/chat/api/server/services/logger'
 import { runAnthropicChat } from '@/features/chat/api/server/services/anthropic'
-import { executeToolsGen } from '@/features/chat/api/server/tools/execute'
 import { generateTitleFromUserMessage } from '@/features/chat/api/server/functions/chat-title'
-import { applyServerEventToTree, cloneTreeSnapshot } from '@/features/chat/api/server/services/tree-accumulator'
+import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/api/server/services/event-processor'
 import {
   getConversationById,
   upsertConversation,
@@ -28,8 +26,7 @@ import type {
   ChatServerToClientEvent,
   PersistedChatEvent,
   ToolInvocationResult,
-} from '@/features/chat/api/types/schemas/types'
-import type { ChatTool } from '@/features/chat/api/server/tools/types'
+} from '@/features/chat/api/shared/types'
 import type { Message, SerializedMessage } from '@/features/chat/types/chat'
 
 type ChatAgentState = {
@@ -337,17 +334,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     this.abortController.abort()
   }
 
-  private buildTools() {
-    const tools: ChatTool[] = []
-    if (this.env.JINA_API_KEY) {
-      tools.push(fetchUrlTool.spec)
-    }
-    if (this.env.SERP_API_KEY) {
-      tools.push(searchTool.spec)
-    }
-    return tools
-  }
-
   private async runChatInBackground(
     message: Extract<ChatAgentClientMessage, { type: 'chat_request' }>,
     signal: AbortSignal,
@@ -360,7 +346,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     let hasErrorEvent = false
 
     const emitEvent = async (event: ChatServerToClientEvent) => {
-      workingTree = applyServerEventToTree(workingTree, event)
+      workingTree = processEventToTree(workingTree, event)
       if (event.type === 'error') {
         hasErrorEvent = true
       }
@@ -404,7 +390,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         model: roleConfig.model,
         backend: roleConfig.backend,
         systemPrompt: roleConfig.systemPrompt,
-        tools: this.buildTools(),
+        tools: getAvailableTools(),
         messages: conversationHistory.map((historyMessage) => ({
           ...historyMessage,
           blocks: Array.isArray(historyMessage.blocks) ? historyMessage.blocks : [],
