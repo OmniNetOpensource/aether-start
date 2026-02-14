@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { buildSystemPrompt } from "@/features/chat/api/server/services/utils";
-import { getAnthropicConfig, type AnthropicBackend } from "@/features/chat/api/server/services/chat-config";
+import { getAnthropicConfig, type ChatBackend } from "@/features/chat/api/server/services/chat-config";
 import { getLogger } from "./logger";
 import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
 import { getServerBindings } from '@/server/env'
@@ -53,13 +53,15 @@ const THINKING_BUDGET_RATIO = 0.8;
 const THINKING_MIN_BUDGET_TOKENS = 1024;
 const ADAPTIVE_THINKING_MODEL = "claude-opus-4-6";
 
+type AnthropicBackend = Extract<ChatBackend, 'rightcode'>
+
 type AnthropicThinkingParams =
   | {
       thinking: {
         type: "adaptive";
       };
       output_config: {
-        effort: "medium";
+        effort: "high";
       };
     }
   | {
@@ -90,7 +92,7 @@ const buildThinkingParams = (model: string, maxTokens: number): AnthropicThinkin
         type: "adaptive",
       },
       output_config: {
-        effort: "medium",
+        effort: "high",
       },
     };
   }
@@ -225,7 +227,7 @@ async function* streamAnthropicCompletion(requestParams: {
   model: string;
   backend: AnthropicBackend;
   messages: AnthropicMessage[];
-  system?: string;
+  system?: Array<{ type: 'text'; text: string }>;
   tools?: AnthropicTool[];
   signal?: AbortSignal;
 }): AsyncGenerator<AnthropicStreamChunk> {
@@ -395,16 +397,12 @@ export class AnthropicChatProvider {
     messages: AnthropicMessage[],
     signal?: AbortSignal,
   ): AsyncGenerator<ChatServerToClientEvent, ProviderRunResult> {
-    const systemPrompt = buildSystemPrompt()
-    const rolePromptMessages: AnthropicMessage[] = this.systemPrompt?.trim()
-      ? [{ role: 'user' as const, content: this.systemPrompt.trim() }]
-      : []
-
-    const fullMessages: AnthropicMessage[] = [
-      { role: 'user', content: systemPrompt },
-      ...rolePromptMessages,
-      ...messages,
+    const systemBlocks: Array<{ type: 'text'; text: string }> = [
+      { type: 'text', text: buildSystemPrompt() },
     ]
+    if (this.systemPrompt?.trim()) {
+      systemBlocks.push({ type: 'text', text: this.systemPrompt.trim() })
+    }
 
     const pendingToolCalls: PendingToolInvocation[] = []
     let thinkingBlocks: ThinkingBlockData[] = []
@@ -419,7 +417,8 @@ export class AnthropicChatProvider {
       for await (const chunk of streamAnthropicCompletion({
         model: this.model,
         backend: this.backend,
-        messages: fullMessages,
+        messages,
+        system: systemBlocks,
         tools: this.anthropicTools,
         signal,
       })) {
@@ -445,10 +444,20 @@ export class AnthropicChatProvider {
             let toolArguments: Record<string, unknown> = {}
             try {
               toolArguments = JSON.parse(currentToolJson || '{}')
-            } catch {
+            } catch (error) {
+              getLogger().log('ANTHROPIC', 'Failed to parse tool arguments on stop chunk', {
+                error,
+                currentToolId,
+                currentToolName,
+                currentToolJson,
+              })
             }
             pendingToolCalls.push({ id: currentToolId, name: currentToolName, args: toolArguments })
           }
+          getLogger().log('ANTHROPIC', 'Received stop chunk', {
+            chunk,
+            pendingTools: pendingToolCalls,
+          })
         }
       }
     } catch (error) {
@@ -459,6 +468,11 @@ export class AnthropicChatProvider {
       ) {
         return emptyResult
       }
+
+      getLogger().log('ANTHROPIC', 'Anthropic provider run failed', {
+        error,
+        model: this.model,
+      })
 
       const errorMessage = error instanceof Error ? error.message : 'Failed to start Anthropic completion'
       yield {

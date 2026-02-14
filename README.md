@@ -8,7 +8,7 @@
 ## 🤔 这是啥
 
 一个全栈 AI 对话应用 基于 TanStack Start + Cloudflare Workers 部署
-接的是 Anthropic Claude API 支持工具调用 能搜网页能抓链接
+接的是 Anthropic + OpenAI 兼容 API（DMX）支持工具调用 能搜网页能抓链接
 消息渲染支持 Markdown / 代码高亮 / LaTeX / Mermaid 图表
 对话历史持久化在 D1 数据库里 不会聊着聊着就没了
 
@@ -24,7 +24,7 @@
 | 部署 | Cloudflare Workers |
 | 数据库 | Cloudflare D1 (SQLite) |
 | 存储 | Cloudflare R2 |
-| AI | Anthropic Claude API |
+| AI | Anthropic Claude API + OpenAI-compatible API |
 
 ## 🚀 跑起来
 
@@ -83,11 +83,11 @@ ANTHROPIC_API_KEY_RIGHTCODE=必填 basic线路key
 ANTHROPIC_BASE_URL_RIGHTCODE=必填 basic线路baseURL
 DMX_APIKEY=推荐 pro线路key（优先）
 DMX_BASEURL=推荐 pro线路baseURL（优先）
-ANTHROPIC_API_KEY_IKUNCODE=兼容回退 pro线路key
-ANTHROPIC_BASE_URL_IKUNCODE=兼容回退 pro线路baseURL
 SERP_API_KEY=可选 搜索功能要用
 JINA_API_KEY=可选 URL 抓取要用
 ```
+
+说明：`backend=dmx` 的聊天请求使用 OpenAI `chat.completions` 协议，且仅读取 `DMX_APIKEY` / `DMX_BASEURL`。
 
 ---
 

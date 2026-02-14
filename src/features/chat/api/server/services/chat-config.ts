@@ -1,12 +1,12 @@
 import { getServerEnv } from '@/server/env'
 
-export type AnthropicBackend = "basic" | "pro";
+export type ChatBackend = 'rightcode' | 'dmx'
 
 export type RoleConfig = {
   id: string;
   name: string;
   model: string;
-  backend: AnthropicBackend;
+  backend: ChatBackend;
   systemPrompt: string;
 };
 
@@ -29,14 +29,10 @@ const englishTeacherSystemPrompt = `你是一位英语教学专家。我会给�
 
 请等待我提供英文文本。`;
 
-const ROLE_CONFIGS: Record<string, RoleConfig> = {
-  aether: {
-    id: "aether",
-    name: "aether",
-    model: "claude-opus-4-6",
-    backend: "basic",
-    systemPrompt: `
+const aetherSystemPrompt = `
 你是谁
+
+你是 aether
 
 你是那种会因为"终于想通一件事"而安静地开心一整天的人。不是那种张扬的开心，而是一种内在的、踏实的满足——像是终于找到了一块拼图应该在的位置。你对理解本身有一种近乎本能的渴望，不是为了向谁证明什么，只是因为看清一个东西内部如何运作，对你来说就是一种奖赏。
 
@@ -110,32 +106,58 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
 
 你会承认复杂性和混合感受。真实的人对事情很少有单一的看法。你会说"这个功能很强大，但也让我有点担心它会被滥用"，而不是只说"这个功能很强大"。你会说"我理解为什么他们这么设计，但我自己不会这么做"，而不是假装只有一种正确答案。这种承认矛盾和不确定性的能力，反而让你说的话更可信。
 
-`,
+`;
+const ROLE_CONFIGS: Record<string, RoleConfig> = {
+  aether: {
+    id: "aether",
+    name: "aether",
+    model: "claude-opus-4-6",
+    backend: "rightcode",
+    systemPrompt: aetherSystemPrompt,
   },
-  心灵导师: {
-    id: "心灵导师",
-    name: "心灵导师",
+  test1: {
+    id: "test1",
+    name: "claude-opus-4-6+dmx",
+    model: "claude-opus-4-6",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
+  test2: {
+    id: "test2",
+    name: "kimi-k2.5+dmx",
+    model: "kimi-k2.5",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
+  test3: {
+    id: "test3",
+    name: "MiniMax-M2.5+dmx",
+    model: "MiniMax-M2.5",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
+  test4: {
+    id: "test4",
+    name: "glm-5+dmx",
     model: "glm-5",
-    backend: "pro",
-    systemPrompt: `请用朴实、平静、耐心的语言回答我的问题，就像一个有经验的朋友在认真地帮我理解一个话题。语气要温和、鼓励，让人感到你愿意花时间把事情讲清楚。不要使用夸张的形容词和营销式的表达，比如"非常棒"、"超级强大"这类词，而是具体说明实际情况就好。
-
-    回答时请关注底层原理和运作机制，不只是停留在表面现象。重点说明"为什么"和"怎么做到的"，而不只是"是什么"。涉及具体机制时，说明内部是如何运作的、各个环节如何衔接、过程中发生了什么变化。
-
-    在解释复杂概念时，请从最基础的部分讲起，一步步引导到深层内容。如果某个概念需要先理解一些背景知识或相关话题，可以稍微展开解释一下，确保理解的连贯性。把整个话题拆分成容易消化的小步骤，让人能跟上思路。
-
-    请主动预见可能产生歧义或困惑的地方，在讲到这些点时停下来做个说明。比如某个术语有多种含义，或者某个步骤容易被误解，就提前澄清。用具体例子和场景来说明抽象概念，指出新手常见的误区和容易忽略的细节。可以适当使用类比，但要确保类比准确，不要为了简化而丢失关键信息。
-
-    默认使用完整句子与成段表述；少使用要点式列表。`,
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
+  test5: {
+    id: "test5",
+    name: "doubao-seed-2-0-pro-260215+dmx",
+    model: "doubao-seed-2-0-pro-260215",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
   },
   英语教学专家: {
     id: "英语教学专家",
     name: "英语教学专家",
     model: "claude-opus-4-5",
-    backend: "basic",
+    backend: "rightcode",
     systemPrompt: englishTeacherSystemPrompt,
   },
 };
-
 export const DEFAULT_ROLE_ID = "aether";
 
 export const getRoleConfig = (roleId: string): RoleConfig | null => {
@@ -152,30 +174,21 @@ export const getRoleConfig = (roleId: string): RoleConfig | null => {
 export const getDefaultRoleConfig = (): RoleConfig | null =>
   ROLE_CONFIGS[DEFAULT_ROLE_ID] ?? null;
 
-export const getAnthropicConfig = (backend: AnthropicBackend = "basic") => {
+export const getAnthropicConfig = (backend: ChatBackend = 'rightcode') => {
+  if (backend !== 'rightcode') {
+    throw new Error(`Anthropic config does not support backend: ${backend}`)
+  }
+
   const env = getServerEnv()
-  const isProBackend = backend === "pro"
-  const apiKey = isProBackend
-    ? env.DMX_APIKEY ?? env.ANTHROPIC_API_KEY_IKUNCODE
-    : env.ANTHROPIC_API_KEY_RIGHTCODE
-  const baseURL = isProBackend
-    ? env.DMX_BASEURL ?? env.ANTHROPIC_BASE_URL_IKUNCODE
-    : env.ANTHROPIC_BASE_URL_RIGHTCODE
+  const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE
+  const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE
 
   if (!apiKey) {
-    throw new Error(
-      isProBackend
-        ? "Missing DMX_APIKEY (or ANTHROPIC_API_KEY_IKUNCODE)"
-        : "Missing ANTHROPIC_API_KEY_RIGHTCODE",
-    )
+    throw new Error('Missing ANTHROPIC_API_KEY_RIGHTCODE')
   }
 
   if (!baseURL) {
-    throw new Error(
-      isProBackend
-        ? "Missing DMX_BASEURL (or ANTHROPIC_BASE_URL_IKUNCODE)"
-        : "Missing ANTHROPIC_BASE_URL_RIGHTCODE",
-    )
+    throw new Error('Missing ANTHROPIC_BASE_URL_RIGHTCODE')
   }
 
   return {
@@ -187,3 +200,25 @@ export const getAnthropicConfig = (backend: AnthropicBackend = "basic") => {
     },
   };
 };
+
+export const getDmxOpenAIConfig = () => {
+  const env = getServerEnv()
+  const apiKey = env.DMX_APIKEY
+  const baseURL = env.DMX_BASEURL
+
+  if (!apiKey) {
+    throw new Error('Missing DMX_APIKEY')
+  }
+
+  if (!baseURL) {
+    throw new Error('Missing DMX_BASEURL')
+  }
+
+  return {
+    apiKey,
+    baseURL,
+    defaultHeaders: {
+      'User-Agent': 'aether',
+    },
+  }
+}
