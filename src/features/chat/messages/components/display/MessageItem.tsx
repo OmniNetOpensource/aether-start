@@ -272,7 +272,7 @@ export const MessageItem = memo(function MessageItem({
               {isEditing ? (
                 <MessageEditor messageId={messageId} depth={depth} />
               ) : isUser ? (
-                <div className="text-base leading-relaxed text-(--text-primary) font-sans break-words [overflow-wrap:anywhere] [&_pre]:break-normal [&_pre]:[overflow-wrap:normal] [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-primary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:break-words [&_.markdown-body]:[overflow-wrap:anywhere] [&_.markdown-body_p]:text-(--text-primary)">
+                <div className="text-base leading-relaxed text-(--text-primary) break-words [overflow-wrap:anywhere] [&_pre]:break-normal [&_pre]:[overflow-wrap:normal] [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-primary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:break-words [&_.markdown-body]:[overflow-wrap:anywhere] [&_.markdown-body_p]:text-(--text-primary)">
                   {contentBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;
 
@@ -286,10 +286,6 @@ export const MessageItem = memo(function MessageItem({
               ) : (
                 <div
                   className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) break-words [overflow-wrap:anywhere] [&_pre]:break-normal [&_pre]:[overflow-wrap:normal] [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-secondary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:break-words [&_.markdown-body]:[overflow-wrap:anywhere]"
-                  style={{
-                    fontFamily:
-                      '"SimSun","STSong","Songti SC","Noto Serif SC",serif',
-                  }}
                 >
                   {contentBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;

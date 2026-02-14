@@ -1,4 +1,4 @@
-@import "@fontsource/noto-serif-sc";
+@import "lxgw-wenkai-webfont/lxgwwenkai-regular.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 
@@ -132,7 +132,7 @@ html.dark {
   /* Fonts */
   --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
-  --font-body: "Noto Serif SC", serif;
+  --font-body: "LXGW WenKai", serif;
 
   /* Transitions */
   --transition-smooth: cubic-bezier(0.32, 0.72, 0, 1);
@@ -154,7 +154,7 @@ html {
 body {
   background: transparent;
   color: var(--text-primary);
-  font-family: var(--font-sans);
+  font-family: var(--font-body);
   margin: 0;
   min-height: 100vh;
   overflow: hidden;
@@ -377,6 +377,29 @@ textarea,
 .katex-html {
   white-space: normal;
   word-wrap: break-word;
+}
+
+/* Hand-drawn underline */
+.hand-drawn-underline {
+  text-decoration: none;
+  position: relative;
+  padding-bottom: 2px;
+}
+
+.hand-drawn-underline::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: currentColor;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0 1.5 C5 1,10 2.2,20 1.5 C30 0.8,35 2,45 1.5 C55 0.8,60 2.2,70 1.5 L80 1.5' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 3'%3E%3Cpath d='M0 1.5 C5 1,10 2.2,20 1.5 C30 0.8,35 2,45 1.5 C55 0.8,60 2.2,70 1.5 L80 1.5' fill='none' stroke='black' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+  mask-size: auto 100%;
+  -webkit-mask-size: auto 100%;
+  mask-repeat: repeat-x;
+  -webkit-mask-repeat: repeat-x;
 }
 
 @layer base {

@@ -6,6 +6,7 @@ import { ProfileMenu } from "@/features/sidebar/profile/components/ProfileMenu";
 import { NewChatButton } from "@/features/chat/session/components/NewChatButton";
 import { useResponsive } from "@/features/responsive/ResponsiveContext";
 import { useSidebarStore } from "@/features/sidebar/layout/store/useSidebarStore";
+import { AetherLogo } from "@/shared/components/AetherLogo";
 
 export default function Sidebar() {
   const DESKTOP_RIGHT_LEAVE_TOLERANCE_PX = 1;
@@ -114,9 +115,7 @@ export default function Sidebar() {
           <div className="flex h-full flex-col border-r ink-border bg-(--surface-primary)">
             <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
               <div className="flex items-center">
-                <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-black text-[12px] font-bold text-white dark:bg-white dark:text-black">
-                  A
-                </div>
+                <AetherLogo className="h-6 text-black dark:text-white" />
               </div>
             </div>
 
@@ -158,9 +157,7 @@ export default function Sidebar() {
         >
           <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
             <div className="flex items-center">
-              <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-black text-[12px] font-bold text-white dark:bg-white dark:text-black">
-                A
-              </div>
+              <AetherLogo className="h-6 text-black dark:text-white" />
             </div>
           </div>
 
@@ -196,9 +193,7 @@ export default function Sidebar() {
       >
         <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
           <div className="flex items-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-black text-[12px] font-bold text-white dark:bg-white dark:text-black">
-              A
-            </div>
+            <AetherLogo className="h-6 text-black dark:text-white" />
           </div>
         </div>
 

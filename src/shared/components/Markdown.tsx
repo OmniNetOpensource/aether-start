@@ -122,13 +122,25 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     />
   ),
   hr: ({ className, ...props }) => (
-    <hr
+    <div
       {...props}
-      className={cn(
-        "my-6 last:mb-0 border-0 h-px bg-linear-to-r from-transparent via-(--border-primary) to-transparent",
-        className
-      )}
-    />
+      role="separator"
+      className={cn('my-6 last:mb-0', className)}
+    >
+      <svg
+        viewBox="0 0 400 6"
+        preserveAspectRatio="none"
+        className="w-full h-1.5"
+      >
+        <path
+          d="M0 3 C10 1.5, 30 4.5, 50 3 C70 1.5, 90 5, 110 2.5 C130 0.5, 150 4.5, 170 3 C190 1.5, 210 4.5, 230 3 C250 1.5, 270 5, 290 2.5 C310 1, 330 4.5, 350 3 C370 1.5, 390 4.5, 400 3"
+          fill="none"
+          stroke="var(--border-primary)"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
   ),
   strong: ({ className, ...props }) => (
     <strong
@@ -143,7 +155,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <a
       {...props}
       className={cn(
-        "text-(--interactive-primary) font-medium underline decoration-1 underline-offset-2 hover:text-(--interactive-primary-hover) hover:decoration-2 transition-all",
+        "text-(--interactive-primary) font-medium hand-drawn-underline hover:text-(--interactive-primary-hover) transition-colors",
         className
       )}
       target="_blank"

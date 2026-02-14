@@ -187,34 +187,6 @@ const toEventError = (message: string): ChatServerToClientEvent => ({
   message,
 })
 
-const summarizeConversationHistory = (history: SerializedMessage[]) => {
-  let attachmentBlockCount = 0
-  let attachmentItemCount = 0
-
-  for (const message of history) {
-    if (!Array.isArray(message.blocks)) {
-      continue
-    }
-
-    for (const block of message.blocks) {
-      if (block.type !== 'attachments') {
-        continue
-      }
-
-      attachmentBlockCount += 1
-      attachmentItemCount += Array.isArray(block.attachments) ? block.attachments.length : 0
-    }
-  }
-
-  const lastMessageRole = history[history.length - 1]?.role ?? null
-
-  return {
-    lastMessageRole,
-    attachmentBlockCount,
-    attachmentItemCount,
-  }
-}
-
 export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   initialState: ChatAgentState = {
     status: 'idle',
@@ -440,18 +412,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     try {
       const { conversationHistory, role } = message
 
-      const messageCount = Array.isArray(conversationHistory) ? conversationHistory.length : 0
-      const historySummary = Array.isArray(conversationHistory)
-        ? summarizeConversationHistory(conversationHistory)
-        : null
-      getLogger().log('AGENT', 'Received chat_request', {
-        conversationId: message.conversationId,
-        requestId: message.requestId,
-        role,
-        messageCount,
-        ...(historySummary ?? {}),
-      })
-
       if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) {
         await emitEvent(toEventError('Invalid conversation history: expected non-empty array.'))
         finalStatus = 'error'
@@ -497,18 +457,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         }
 
         iteration += 1
-        let iterationEndPayload: Record<string, unknown> = {
-          conversationId: message.conversationId,
-          requestId: message.requestId,
-          iteration,
-        }
         try {
-          getLogger().log('AGENT', 'Sending provider request', {
-            conversationId: message.conversationId,
-            requestId: message.requestId,
-            iteration,
-          })
-
           const generator = provider.run(workingMessages, signal)
 
           let pendingToolCalls: PendingToolInvocation[] = []
@@ -537,18 +486,10 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
           if (signal.aborted) {
             finalStatus = 'aborted'
-            iterationEndPayload = {
-              ...iterationEndPayload,
-              status: 'aborted',
-            }
             break
           }
 
           if (pendingToolCalls.length === 0) {
-            iterationEndPayload = {
-              ...iterationEndPayload,
-              status: 'completed',
-            }
             break
           }
 
@@ -571,10 +512,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
           if (signal.aborted) {
             finalStatus = 'aborted'
-            iterationEndPayload = {
-              ...iterationEndPayload,
-              status: 'aborted',
-            }
             break
           }
 
@@ -585,14 +522,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
             toolResults,
           )
           workingMessages = [...workingMessages, ...continuationMessages]
-
-          iterationEndPayload = {
-            ...iterationEndPayload,
-            status: 'continued',
-            toolResults,
-          }
         } finally {
-          getLogger().log('AGENT', 'Iteration ended', iterationEndPayload)
           enqueueSnapshotPersist()
         }
       }
