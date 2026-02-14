@@ -191,23 +191,18 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   private abortController: AbortController | null = null
   private eventCache: PersistedChatEvent[] = []
   private nextEventId = 1
+  private runtimeState: ChatAgentState = { ...this.initialState }
 
   async onStart() {
-    if (!this.state.conversationId) {
-      this.setState({
-        ...this.state,
-        conversationId: this.name,
-        updatedAt: Date.now(),
-      })
-    }
+    this.runtimeState.conversationId = this.name
   }
 
   async onConnect(connection: Connection) {
     connection.send(
       stringify({
         type: 'sync_response',
-        status: this.state.status,
-        requestId: this.state.currentRequestId ?? undefined,
+        status: this.runtimeState.status,
+        requestId: this.runtimeState.currentRequestId ?? undefined,
         events: [],
       } satisfies ChatAgentServerMessage),
     )
@@ -248,8 +243,8 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     connection.send(
       stringify({
         type: 'sync_response',
-        status: this.state.status,
-        requestId: this.state.currentRequestId ?? undefined,
+        status: this.runtimeState.status,
+        requestId: this.runtimeState.currentRequestId ?? undefined,
         events,
       } satisfies ChatAgentServerMessage),
     )
@@ -259,11 +254,11 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     connection: Connection,
     message: Extract<ChatAgentClientMessage, { type: 'chat_request' }>,
   ) {
-    if (this.state.status === 'running' && this.state.currentRequestId) {
+    if (this.runtimeState.status === 'running' && this.runtimeState.currentRequestId) {
       connection.send(
         stringify({
           type: 'busy',
-          currentRequestId: this.state.currentRequestId,
+          currentRequestId: this.runtimeState.currentRequestId,
         } satisfies ChatAgentServerMessage),
       )
       return
@@ -280,13 +275,12 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       return
     }
 
-    this.setState({
-      ...this.state,
+    this.runtimeState = {
       status: 'running',
       currentRequestId: message.requestId,
       conversationId: message.conversationId,
       updatedAt: Date.now(),
-    })
+    }
 
     this.broadcast(
       stringify({
@@ -349,11 +343,11 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   }
 
   private handleAbort(message: Extract<ChatAgentClientMessage, { type: 'abort' }>) {
-    if (this.state.status !== 'running' || !this.abortController) {
+    if (this.runtimeState.status !== 'running' || !this.abortController) {
       return
     }
 
-    if (message.requestId && this.state.currentRequestId && message.requestId !== this.state.currentRequestId) {
+    if (message.requestId && this.runtimeState.currentRequestId && message.requestId !== this.runtimeState.currentRequestId) {
       return
     }
 
@@ -565,11 +559,11 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         } satisfies ChatAgentServerMessage),
       )
 
-      this.setState({
-        ...this.state,
+      this.runtimeState = {
+        ...this.runtimeState,
         status: finalStatus,
         updatedAt: Date.now(),
-      })
+      }
 
       this.clearEventCache()
     }
