@@ -28,7 +28,7 @@ export function FetchUrlCard({ item, isActive = false }: FetchUrlCardProps) {
 
   const description = !result ? (
     <>
-      <Loader2 className="h-3 w-3 animate-spin text-foreground" />
+      <Loader2 className="h-3 w-3 animate-spin text-(--text-primary)" />
       <span>{isYoutubeMode ? "Fetching transcript..." : isImageMode ? "Fetching image..." : "Loading..."}</span>
     </>
   ) : isError ? (

@@ -74,7 +74,7 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
 
   return (
     <div className="flex flex-col gap-1">
-      <div className="px-3 py-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">
+      <div className="px-3 py-2 text-2xs font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">
         最近
       </div>
       <div className="flex flex-col gap-1">

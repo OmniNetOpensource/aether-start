@@ -53,13 +53,6 @@ type ChatAgentEnv = Cloudflare.Env & {
   SUPADATA_API_KEY?: string
 }
 
-type PersistedEventRow = {
-  id: number
-  request_id: string
-  event_json: string
-  created_at: number
-}
-
 const MAX_ITERATIONS = 200
 
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -196,19 +189,10 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   }
 
   private abortController: AbortController | null = null
+  private eventCache: PersistedChatEvent[] = []
+  private nextEventId = 1
 
   async onStart() {
-    void this.sql`
-      CREATE TABLE IF NOT EXISTS events (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        request_id TEXT NOT NULL,
-        event_json TEXT NOT NULL,
-        created_at INTEGER NOT NULL
-      )
-    `
-
-    void this.sql`CREATE INDEX IF NOT EXISTS idx_events_request_id ON events(request_id)`
-
     if (!this.state.conversationId) {
       this.setState({
         ...this.state,
@@ -592,39 +576,14 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   }
 
   private listEvents(lastEventId: number): PersistedChatEvent[] {
-    const rows = this.sql<PersistedEventRow>`
-      SELECT id, request_id, event_json, created_at
-      FROM events
-      WHERE id > ${lastEventId}
-      ORDER BY id ASC
-    `
-
-    return rows
-      .map((row) => {
-        try {
-          return {
-            eventId: Number(row.id),
-            requestId: row.request_id,
-            event: JSON.parse(row.event_json) as ChatServerToClientEvent,
-            createdAt: Number(row.created_at),
-          } satisfies PersistedChatEvent
-        } catch {
-          return null
-        }
-      })
-      .filter((item): item is PersistedChatEvent => !!item)
+    return this.eventCache.filter((e) => e.eventId > lastEventId)
   }
 
   private persistAndBroadcastEvent(requestId: string, event: ChatServerToClientEvent) {
+    const eventId = this.nextEventId++
     const createdAt = Date.now()
 
-    void this.sql`
-      INSERT INTO events (request_id, event_json, created_at)
-      VALUES (${requestId}, ${JSON.stringify(event)}, ${createdAt})
-    `
-
-    const inserted = this.sql<{ id: number }>`SELECT last_insert_rowid() AS id`
-    const eventId = Number(inserted[0]?.id ?? 0)
+    this.eventCache.push({ eventId, requestId, event, createdAt })
 
     this.broadcast(
       stringify({
@@ -637,7 +596,8 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   }
 
   private clearEventCache() {
-    void this.sql`DELETE FROM events`
+    this.eventCache = []
+    this.nextEventId = 1
   }
 
   private async persistConversationSnapshot(

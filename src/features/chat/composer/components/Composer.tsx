@@ -143,21 +143,21 @@ export function Composer() {
         }}
         className="flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
-        <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-(--surface-primary) p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
+        <div className="relative flex w-full flex-col gap-1 rounded-xl border ink-border bg-(--surface-primary) p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
           {hasQuotes && (
-            <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0 mb-2">
+            <div className="mb-2 flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
               {quotedTexts.map((quote) => (
                 <div
                   key={quote.id}
-                  className="flex min-w-[200px] max-w-full items-start gap-3 rounded-lg border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
+                  className="flex min-w-[200px] max-w-full items-start gap-3 rounded-xl border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
                 >
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border ink-border bg-muted">
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border ink-border bg-(--surface-muted)">
+                    <div className="flex h-full w-full items-center justify-center text-(--text-tertiary)">
                       <Quote className="h-4 w-4" />
                     </div>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-foreground line-clamp-2">
+                    <p className="text-xs text-(--text-primary) line-clamp-2">
                       {quote.text}
                     </p>
                   </div>
@@ -167,7 +167,7 @@ export function Composer() {
                     size="icon"
                     aria-label="移除引用"
                     onClick={() => removeQuotedText(quote.id)}
-                    className="h-6 w-6 rounded-full hover:text-destructive"
+                    className="h-6 w-6 rounded-full hover:text-(--status-destructive)"
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -176,7 +176,7 @@ export function Composer() {
             </div>
           )}
           {hasAttachments && (
-            <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0">
+            <div className="flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
               {pendingAttachments.map((attachment) => (
                 <div key={attachment.id} className="group relative">
                   <ImagePreview
@@ -190,7 +190,7 @@ export function Composer() {
                     size="icon"
                     aria-label="移除附件"
                     onClick={() => removeAttachment(attachment.id)}
-                    className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
+                    className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary)/50 text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary)/70 hover:text-(--status-destructive)"
                   >
                     <X className="h-3.5 w-3.5" />
                   </Button>
@@ -249,21 +249,21 @@ export function Composer() {
         }}
         className="relative flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
-        <div className="relative flex w-full flex-col gap-1 rounded-2xl border ink-border bg-(--surface-primary) p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
+        <div className="relative flex w-full flex-col gap-1 rounded-xl border ink-border bg-(--surface-primary) p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
         {hasQuotes && (
-          <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0 mb-2">
+          <div className="mb-2 flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
             {quotedTexts.map((quote) => (
               <div
                 key={quote.id}
-                className="flex min-w-[200px] max-w-full items-start gap-3 rounded-lg border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
+                className="flex min-w-[200px] max-w-full items-start gap-3 rounded-xl border ink-border bg-(--surface-primary) p-2 pr-3 shadow-sm"
               >
-                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg border ink-border bg-muted">
-                  <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border ink-border bg-(--surface-muted)">
+                  <div className="flex h-full w-full items-center justify-center text-(--text-tertiary)">
                     <Quote className="h-4 w-4" />
                   </div>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs text-foreground line-clamp-2">
+                  <p className="text-xs text-(--text-primary) line-clamp-2">
                     {quote.text}
                   </p>
                 </div>
@@ -273,7 +273,7 @@ export function Composer() {
                   size="icon"
                   aria-label="移除引用"
                   onClick={() => removeQuotedText(quote.id)}
-                  className="h-6 w-6 rounded-full hover:text-destructive"
+                  className="h-6 w-6 rounded-full hover:text-(--status-destructive)"
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -282,7 +282,7 @@ export function Composer() {
           </div>
         )}
         {hasAttachments && (
-          <div className="flex flex-wrap gap-2 rounded-2xl bg-card px-0 py-0">
+          <div className="flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
             {pendingAttachments.map((attachment) => (
               <div key={attachment.id} className="group relative">
                 <ImagePreview
@@ -296,7 +296,7 @@ export function Composer() {
                   size="icon"
                   aria-label="移除附件"
                   onClick={() => removeAttachment(attachment.id)}
-                  className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
+                  className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary)/50 text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary)/70 hover:text-(--status-destructive)"
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>

@@ -61,7 +61,7 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
       variant="ghost"
       size="sm"
       onClick={handleCopy}
-      className="h-auto gap-1.5 px-2 py-1 text-[11px] text-(--text-tertiary) hover:text-foreground"
+      className="h-auto gap-1.5 px-2 py-1 text-2xs text-(--text-tertiary) hover:text-(--text-primary)"
       title="复制内容"
     >
       {isCopied ? (
@@ -95,7 +95,7 @@ const ActionButton = ({
     size="sm"
     onClick={onClick}
     disabled={disabled}
-    className="h-auto gap-1.5 px-2 py-1 text-[11px] text-(--text-tertiary) hover:text-foreground"
+    className="h-auto gap-1.5 px-2 py-1 text-2xs text-(--text-tertiary) hover:text-(--text-primary)"
     title={title}
   >
     {icon}
@@ -140,7 +140,7 @@ const BranchConversationButton = ({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-auto gap-1.5 px-2 py-1 text-[11px] text-(--text-tertiary) hover:text-foreground"
+          className="h-auto gap-1.5 px-2 py-1 text-2xs text-(--text-tertiary) hover:text-(--text-primary)"
           title="创建新对话分支"
           disabled={disabled}
         >
@@ -305,7 +305,7 @@ export const MessageItem = memo(function MessageItem({
                       return (
                         <div
                           key={blockKey}
-                          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive not-italic"
+                          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-(--status-destructive)/10 px-3 py-2 text-sm text-(--status-destructive) not-italic"
                         >
                           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                           <div className="flex-1 whitespace-pre-wrap">

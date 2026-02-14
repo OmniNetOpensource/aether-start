@@ -183,7 +183,7 @@ function SearchResultCard({
       rel="noreferrer noopener"
       className={cn(
         "group relative flex w-full flex-col gap-1.5 rounded-md p-2",
-        "bg-card border border-transparent hover:border-(--border-primary) hover:bg-(--surface-hover) transition-all duration-200"
+        "bg-(--surface-muted) border border-transparent hover:border-(--border-primary) hover:bg-(--surface-hover) transition-all duration-200"
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -193,7 +193,7 @@ function SearchResultCard({
         </div>
         <div className="min-w-0 flex-1">
           <div
-            className="text-xs font-semibold leading-tight text-foreground"
+            className="text-xs font-semibold leading-tight text-(--text-primary)"
             style={{
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -205,7 +205,7 @@ function SearchResultCard({
           </div>
           {description ? (
             <div
-              className="mt-1 text-[11px] text-(--text-secondary)"
+              className="mt-1 text-2xs text-(--text-secondary)"
               style={{
                 display: "-webkit-box",
                 WebkitLineClamp: 2,
@@ -216,7 +216,7 @@ function SearchResultCard({
               {description}
             </div>
           ) : null}
-          <div className="mt-1 text-[10px] text-(--text-tertiary) truncate">
+          <div className="mt-1 text-2xs text-(--text-tertiary) truncate">
             {url}
           </div>
         </div>
@@ -245,7 +245,7 @@ export function SearchCard({ item, isActive = false }: SearchCardProps) {
 
   const description = !result ? (
     <>
-      <Loader2 className="h-3 w-3 animate-spin text-foreground" />
+      <Loader2 className="h-3 w-3 animate-spin text-(--text-primary)" />
       <span>Searching...</span>
     </>
   ) : isError ? (
@@ -280,7 +280,7 @@ export function SearchCard({ item, isActive = false }: SearchCardProps) {
       action={
         <ChevronRight
           className={cn(
-            "h-3.5 w-3.5 text-muted-foreground transition-all duration-200 group-hover/research-card:text-(--text-secondary)",
+            "h-3.5 w-3.5 text-(--text-tertiary) transition-all duration-200 group-hover/research-card:text-(--text-secondary)",
             isExpanded && "rotate-90"
           )}
         />
@@ -319,7 +319,7 @@ export function SearchCard({ item, isActive = false }: SearchCardProps) {
               No results found.
             </div>
           ) : isError ? (
-            <div className="text-xs text-destructive">
+            <div className="text-xs text-(--status-destructive)">
               <Markdown content={formatSearchErrorDetails(resultText)} />
             </div>
           ) : (

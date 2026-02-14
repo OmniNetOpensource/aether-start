@@ -34,12 +34,12 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           <div className="space-y-6">
             {/* Appearance Section */}
             <div className="space-y-3">
-              <h3 className="text-sm font-medium text-muted-foreground">
+              <h3 className="text-sm font-medium text-(--text-tertiary)">
                 外观
               </h3>
-              <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-3">
+              <div className="flex items-center justify-between rounded-lg border bg-(--surface-muted)/30 p-3">
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-(--surface-primary) text-foreground shadow-sm ring-1 ring-(--border-primary)">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-(--surface-primary) text-(--text-primary) shadow-sm ring-1 ring-(--border-primary)">
                     {theme === "dark" ? (
                       <Sun className="h-4 w-4" />
                     ) : (
@@ -47,10 +47,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     )}
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-medium text-foreground">
+                    <span className="text-sm font-medium text-(--text-primary)">
                       深色模式
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-(--text-tertiary)">
                       {theme === "dark" ? "已开启" : "已关闭"}
                     </span>
                   </div>

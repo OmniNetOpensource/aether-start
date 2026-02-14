@@ -23,7 +23,7 @@ export function ThinkingCard({ item, isActive = false }: ThinkingCardProps) {
       action={
         <ChevronRight
           className={cn(
-            "h-3.5 w-3.5 text-muted-foreground transition-all duration-200 group-hover/research-card:text-(--text-secondary)",
+            "h-3.5 w-3.5 text-(--text-tertiary) transition-all duration-200 group-hover/research-card:text-(--text-secondary)",
             isExpanded && "rotate-90"
           )}
         />

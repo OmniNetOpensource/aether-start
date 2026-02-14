@@ -82,7 +82,7 @@ export function NewChatButton({
       variant="ghost"
       size={isTopbar ? "icon-lg" : "default"}
       className={cn(
-        "group relative h-10 overflow-hidden transition-all duration-300 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5",
+        "group relative h-10 overflow-hidden transition-all duration-300 hover:bg-(--surface-hover) hover:text-(--text-primary)",
         isTopbar
           ? "w-10 rounded-lg"
           : "justify-start px-3 rounded-md border ink-border bg-transparent text-(--text-secondary)",

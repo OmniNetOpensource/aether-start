@@ -115,7 +115,7 @@ export default function Sidebar() {
           <div className="flex h-full flex-col border-r ink-border bg-(--surface-primary)">
             <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
               <div className="flex items-center">
-                <AetherLogo className="h-6 text-black dark:text-white" />
+                <AetherLogo className="h-6 text-(--text-primary)" />
               </div>
             </div>
 
@@ -157,7 +157,7 @@ export default function Sidebar() {
         >
           <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
             <div className="flex items-center">
-              <AetherLogo className="h-6 text-black dark:text-white" />
+              <AetherLogo className="h-6 text-(--text-primary)" />
             </div>
           </div>
 
@@ -193,7 +193,7 @@ export default function Sidebar() {
       >
         <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
           <div className="flex items-center">
-            <AetherLogo className="h-6 text-black dark:text-white" />
+            <AetherLogo className="h-6 text-(--text-primary)" />
           </div>
         </div>
 

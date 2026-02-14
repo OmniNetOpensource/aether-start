@@ -137,7 +137,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   };
 
   return (
-    <div className="relative flex w-full flex-col gap-2 rounded-xl border bg-card p-3 shadow-sm">
+    <div className="relative flex w-full flex-col gap-2 rounded-xl border bg-(--surface-muted) p-3 shadow-sm">
       <Button
         type="button"
         variant="ghost"
@@ -168,7 +168,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
                     editedAttachments.filter((item) => item.id !== attachment.id)
                   )
                 }
-                className="absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70 hover:text-destructive"
+                className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary)/50 text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary)/70 hover:text-(--status-destructive)"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -225,7 +225,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
           className={cn(
             "h-8 w-8 rounded-full transition-all duration-200",
             sendDisabled
-              ? "bg-muted text-muted-foreground cursor-not-allowed"
+              ? "bg-(--surface-muted) text-(--text-tertiary) cursor-not-allowed"
               : "hover:scale-105 active:scale-95"
           )}
         >

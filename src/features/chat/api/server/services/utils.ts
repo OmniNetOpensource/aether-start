@@ -29,19 +29,14 @@ export type ChatMessage = {
 
 export const buildSystemPrompt = () => {
   const now = new Date();
-  const localDate = now.toLocaleString("zh-CN", {
+  const localDate = now.toLocaleDateString("zh-CN", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    timeZoneName: "short",
   });
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
 
   const prompt = `
-今天的日期和时间是：${localDate} (时区: ${timezone})
+今天的日期是：${localDate}
 不需要在回答时引用出处。
 `;
 

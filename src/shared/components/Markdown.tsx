@@ -1,15 +1,11 @@
 "use client";
 
-import { isValidElement, lazy, memo, Suspense, type ReactElement, type ReactNode } from "react";
+import { isValidElement, memo, useEffect, useState, type ReactElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import rehypeHighlight from "rehype-highlight";
 import CodeBlock from "@/shared/components/CodeBlock";
 import { cn } from "@/shared/lib/utils";
-
-const MermaidBlock = lazy(() => import("@/shared/components/MermaidBlock"));
 
 type Props = {
   content: string;
@@ -35,14 +31,28 @@ const extractCodeFromNode = (node: ReactNode): string => {
 };
 
 const remarkPlugins = [remarkGfm, remarkMath];
-const rehypePlugins = [rehypeKatex, rehypeHighlight];
+type RehypePlugins = NonNullable<
+  React.ComponentProps<typeof ReactMarkdown>["rehypePlugins"]
+>;
+
+let rehypePluginsPromise: Promise<RehypePlugins> | null = null;
+
+const loadRehypePlugins = () => {
+  if (!rehypePluginsPromise) {
+    rehypePluginsPromise = Promise.all([
+      import("rehype-katex").then((module) => module.default),
+      import("rehype-highlight").then((module) => module.default),
+    ]);
+  }
+  return rehypePluginsPromise;
+};
 
 const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   h1: ({ className, ...props }) => (
     <h1
       {...props}
       className={cn(
-        "mt-8 mb-4 first:mt-0 last:mb-0 text-xl font-bold leading-snug tracking-tight text-foreground",
+        "mt-8 mb-4 first:mt-0 last:mb-0 text-xl font-bold leading-snug tracking-tight text-(--text-primary)",
         className
       )}
     />
@@ -51,7 +61,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <h2
       {...props}
       className={cn(
-        "mt-7 mb-3 first:mt-0 last:mb-0 text-lg font-semibold leading-snug text-foreground",
+        "mt-7 mb-3 first:mt-0 last:mb-0 text-lg font-semibold leading-snug text-(--text-primary)",
         className
       )}
     />
@@ -60,7 +70,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <h3
       {...props}
       className={cn(
-        "mt-6 mb-2.5 first:mt-0 last:mb-0 text-base font-semibold text-foreground",
+        "mt-6 mb-2.5 first:mt-0 last:mb-0 text-base font-semibold text-(--text-primary)",
         className
       )}
     />
@@ -69,7 +79,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <h4
       {...props}
       className={cn(
-        "mt-5 mb-2 first:mt-0 last:mb-0 text-sm font-semibold text-foreground",
+        "mt-5 mb-2 first:mt-0 last:mb-0 text-sm font-semibold text-(--text-primary)",
         className
       )}
     />
@@ -88,7 +98,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
       {...props}
       className={cn(
         "mb-4 last:mb-0 pl-6 space-y-1.5 text-(--text-secondary) list-none",
-        "[&>li]:relative [&>li]:before:absolute [&>li]:before:-left-4 [&>li]:before:top-[0.6em] [&>li]:before:h-1.5 [&>li]:before:w-1.5 [&>li]:before:rounded-full [&>li]:before:bg-[var(--content-accent)] [&>li]:before:opacity-70",
+        "[&>li]:relative [&>li]:before:absolute [&>li]:before:-left-4 [&>li]:before:top-[0.6em] [&>li]:before:h-1.5 [&>li]:before:w-1.5 [&>li]:before:rounded-full [&>li]:before:bg-(--content-accent) [&>li]:before:opacity-70",
         "[&_ul]:mt-1.5 [&_ul]:mb-0 [&_ul>li]:before:h-1 [&_ul>li]:before:w-1 [&_ul>li]:before:bg-(--text-tertiary)",
         "[&_ul_ul>li]:before:rounded-none [&_ul_ul>li]:before:h-0.5 [&_ul_ul>li]:before:w-2",
         className
@@ -100,7 +110,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
       {...props}
       className={cn(
         "mb-4 last:mb-0 pl-6 space-y-1.5 text-(--text-secondary) list-none [counter-reset:list-counter]",
-        "[&>li]:relative [&>li]:[counter-increment:list-counter] [&>li]:before:absolute [&>li]:before:-left-6 [&>li]:before:w-5 [&>li]:before:text-right [&>li]:before:content-[counter(list-counter)_'.'] [&>li]:before:text-xs [&>li]:before:font-medium [&>li]:before:text-[var(--content-accent)] [&>li]:before:opacity-80",
+        "[&>li]:relative [&>li]:[counter-increment:list-counter] [&>li]:before:absolute [&>li]:before:-left-6 [&>li]:before:w-5 [&>li]:before:text-right [&>li]:before:content-[counter(list-counter)_'.'] [&>li]:before:text-xs [&>li]:before:font-medium [&>li]:before:text-(--content-accent) [&>li]:before:opacity-80",
         "[&_ol]:mt-1.5 [&_ol]:mb-0 [&_ol>li]:before:text-(--text-tertiary)",
         className
       )}
@@ -145,11 +155,11 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   strong: ({ className, ...props }) => (
     <strong
       {...props}
-      className={cn("font-semibold text-foreground", className)}
+      className={cn("font-semibold text-(--text-primary)", className)}
     />
   ),
   em: ({ className, ...props }) => (
-    <em {...props} className={cn("text-foreground italic", className)} />
+    <em {...props} className={cn("text-(--text-primary) italic", className)} />
   ),
   a: ({ className, ...props }) => (
     <a
@@ -177,22 +187,6 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     const rawCode = extractCodeFromNode(
       codeElement?.props.children ?? children
     );
-
-    if (language === "mermaid") {
-      return (
-        <div className="my-4 last:mb-0 first:mt-0">
-          <Suspense
-            fallback={
-              <div className="rounded-lg border bg-muted/50 p-4 text-sm text-muted-foreground animate-pulse">
-                加载图表中...
-              </div>
-            }
-          >
-            <MermaidBlock code={rawCode} />
-          </Suspense>
-        </div>
-      );
-    }
 
     return (
       <div className="my-4 last:mb-0 first:mt-0">
@@ -256,6 +250,26 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
 };
 
 const Markdown = memo(function Markdown({ content }: Props) {
+  const [rehypePlugins, setRehypePlugins] = useState<RehypePlugins>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    loadRehypePlugins()
+      .then((plugins) => {
+        if (isMounted) {
+          setRehypePlugins(plugins);
+        }
+      })
+      .catch(() => {
+        if (isMounted) {
+          setRehypePlugins([]);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   return (
     <div className="markdown-body text-sm leading-relaxed text-(--text-secondary)">
       <ReactMarkdown

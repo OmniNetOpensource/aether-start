@@ -72,8 +72,8 @@ export function ConversationItem({
 
   return (
     <div
-      className={`group relative flex w-full items-start gap-3 rounded-lg bg-transparent p-3 text-left transition-all hover:bg-black/5 dark:hover:bg-white/5 ${
-        isActive ? "bg-black/5 dark:bg-white/5" : ""
+      className={`group relative flex w-full items-start gap-3 rounded-lg bg-transparent p-3 text-left transition-all hover:bg-(--surface-hover) ${
+        isActive ? "bg-(--surface-hover)" : ""
       }`}
     >
       <Link
@@ -97,7 +97,7 @@ export function ConversationItem({
               type="button"
               onClick={handleMenuClick}
               aria-label="会话操作"
-              className="flex size-7 items-center justify-center rounded-md text-(--text-tertiary) opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
+              className="flex size-7 items-center justify-center rounded-md text-(--text-tertiary) opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-(--text-primary) group-hover:opacity-100 data-[state=open]:opacity-100"
             >
               <MoreHorizontal className="size-4" />
             </button>
@@ -112,7 +112,7 @@ export function ConversationItem({
               onSelect={() => {
                 void handleDelete();
               }}
-              className="text-destructive"
+              className="text-(--status-destructive)"
             >
               <Trash2 className="size-4" />
               删除会话

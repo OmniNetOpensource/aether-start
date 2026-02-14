@@ -8,7 +8,7 @@ export function NotFound() {
         <p className="mt-4 text-lg text-(--text-secondary)">页面不存在</p>
         <Link
           to="/app"
-          className="mt-6 inline-block rounded-lg bg-(--interactive-primary) px-6 py-2 text-white transition-opacity hover:opacity-90"
+          className="mt-6 inline-block rounded-lg bg-(--interactive-primary) px-6 py-2 text-(--surface-primary) transition-opacity hover:opacity-90"
         >
           返回首页
         </Link>

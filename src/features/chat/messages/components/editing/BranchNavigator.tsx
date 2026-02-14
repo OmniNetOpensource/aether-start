@@ -22,7 +22,7 @@ export function BranchNavigator({
   const { currentIndex, total } = branchInfo;
 
   return (
-    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+    <div className="flex items-center gap-1 text-xs text-(--text-tertiary)">
       <Button
         type="button"
         variant="ghost"

@@ -15,7 +15,7 @@ type ProfileMenuProps = {
 };
 
 const menuItemClass =
-  "flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-(--surface-hover) hover:text-foreground [&_svg]:size-4";
+  "flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-(--surface-hover) hover:text-(--text-primary) [&_svg]:size-4";
 
 export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -39,7 +39,7 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
             <PopoverTrigger asChild>
               <button
                 type="button"
-                className="flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-black/5 hover:text-foreground dark:hover:bg-white/5"
+                className="flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-(--surface-hover) hover:text-(--text-primary)"
                 style={{
                   width: isCollapsed ? 40 : "100%",
                   height: isCollapsed ? 40 : "auto",
@@ -65,10 +65,10 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
                       opacity: isCollapsed ? 0 : 1,
                     }}
                   >
-                    <span className="truncate text-sm font-semibold text-foreground">
+                    <span className="truncate text-sm font-semibold text-(--text-primary)">
                       {displayName}
                     </span>
-                    <span className="truncate text-[11px] text-(--text-tertiary)">
+                    <span className="truncate text-2xs text-(--text-tertiary)">
                       {subtitle}
                     </span>
                   </span>
@@ -88,11 +88,11 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
                 </Avatar>
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="truncate text-sm font-medium text-foreground">
+                    <span className="truncate text-sm font-medium text-(--text-primary)">
                       {displayName}
                     </span>
                   </div>
-                  <div className="text-xs leading-tight text-muted-foreground">
+                  <div className="text-xs leading-tight text-(--text-tertiary)">
                     本地模式，仅保存到浏览器
                   </div>
                 </div>

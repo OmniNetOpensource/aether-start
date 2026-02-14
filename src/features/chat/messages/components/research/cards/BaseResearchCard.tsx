@@ -45,7 +45,7 @@ export function BaseResearchCard({
         )}
         {...restButtonProps}
       >
-        <span className="flex h-4 w-4 items-center justify-center text-foreground">
+        <span className="flex h-4 w-4 items-center justify-center text-(--text-primary)">
           {icon}
         </span>
         <span className="flex min-w-0 flex-1 items-center gap-2">
@@ -53,7 +53,7 @@ export function BaseResearchCard({
             {title}
           </span>
           {description && (
-            <span className="shrink-0 whitespace-nowrap text-[10px] text-(--text-tertiary)">
+            <span className="shrink-0 whitespace-nowrap text-2xs text-(--text-tertiary)">
               {description}
             </span>
           )}

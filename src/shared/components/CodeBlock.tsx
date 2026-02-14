@@ -44,7 +44,7 @@ export default function CodeBlock({
 
 
   return (
-    <div className="group relative w-full max-w-full overflow-hidden rounded-lg border bg-muted/50">
+    <div className="group relative w-full max-w-full overflow-hidden rounded-lg border bg-(--surface-muted)/50">
       {/* Sticky copy button */}
       <div className="sticky top-2 float-right mr-2 mt-2 z-10">
         <Button
@@ -54,10 +54,10 @@ export default function CodeBlock({
           title="复制到剪贴板"
           aria-label="复制到剪贴板"
           disabled={!hasCode}
-          className="h-7 gap-1 px-2 text-[11px] bg-transparent"
+          className="h-7 gap-1 px-2 text-2xs bg-transparent"
         >
           {isCopied ? (
-            <Check className="h-3.5 w-3.5 text-[var(--status-success)]" />
+            <Check className="h-3.5 w-3.5 text-(--status-success)" />
           ) : (
             <Copy className="h-3.5 w-3.5" />
           )}
@@ -70,11 +70,11 @@ export default function CodeBlock({
       {/* Language label */}
       <div className="px-3 py-2 ">
         {normalizedLanguage ? (
-          <span className="text-xs font-medium text-muted-foreground">
+          <span className="text-xs font-medium text-(--text-tertiary)">
             {normalizedLanguage.toUpperCase()}
           </span>
         ) : (
-          <span className="text-xs text-muted-foreground">Code</span>
+          <span className="text-xs text-(--text-tertiary)">Code</span>
         )}
       </div>
       {/* Code area */}

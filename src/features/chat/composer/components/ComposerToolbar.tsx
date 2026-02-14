@@ -115,8 +115,8 @@ export function ComposerToolbar({
           className={cn(
             "h-9 w-9 shrink-0 rounded-full sm:h-10 sm:w-10 transition-all duration-200",
             sendDisabled
-              ? "bg-black/10 text-black/30 dark:bg-white/10 dark:text-white/30 hover:bg-black/10 dark:hover:bg-white/10 scale-90 cursor-not-allowed"
-              : "bg-black text-white dark:bg-white dark:text-black hover:bg-black dark:hover:bg-white hover:scale-105 active:scale-95"
+              ? "bg-(--surface-muted) text-(--text-tertiary) hover:bg-(--surface-muted) scale-90 cursor-not-allowed"
+              : "bg-(--interactive-primary) text-(--surface-primary) hover:bg-(--interactive-primary) hover:scale-105 active:scale-95"
           )}
         >
           {pending ? (

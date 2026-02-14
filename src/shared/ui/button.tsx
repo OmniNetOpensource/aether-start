@@ -10,17 +10,17 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          "bg-[var(--interactive-primary)] text-[var(--surface-primary)] hover:bg-[var(--interactive-primary-hover)]",
+          "bg-(--interactive-primary) text-(--surface-primary) hover:bg-(--interactive-primary-hover)",
         destructive:
-          "bg-[var(--status-destructive)] text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
+          "bg-(--status-destructive) text-(--status-destructive-foreground) hover:bg-(--status-destructive)/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-(--status-destructive)/60",
         outline:
           "border bg-(--surface-primary) shadow-xs hover:bg-(--surface-hover) hover:text-(--text-primary) dark:bg-(--surface-muted)/30 dark:border-(--border-primary) dark:hover:bg-(--surface-muted)/50",
         secondary:
-          "bg-[var(--surface-muted)] text-[var(--text-primary)] hover:bg-[var(--surface-hover)]",
+          "bg-(--surface-muted) text-(--text-primary) hover:bg-(--surface-hover)",
         ghost:
           "hover:bg-(--surface-hover) hover:text-(--text-primary) dark:hover:bg-(--surface-hover)/50",
         link:
-          "text-[var(--interactive-primary)] underline-offset-4 hover:underline",
+          "text-(--interactive-primary) underline-offset-4 hover:underline",
       },
       size: {
         default: "h-9 px-4 py-2 has-[>svg]:px-3",
