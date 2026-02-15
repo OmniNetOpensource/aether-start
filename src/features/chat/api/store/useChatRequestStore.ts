@@ -6,7 +6,7 @@ import {
   resumeRunningConversation,
   startChatRequest,
 } from "@/features/chat/api/client/chat-orchestrator";
-import { DEFAULT_ROLE_ID, ROLES } from "@/features/chat/session/config/roles";
+import { DEFAULT_ROLE_ID } from "@/features/chat/session/config/roles";
 import {
   computeMessagesFromPath,
 } from "@/features/conversation/model/tree/message-tree";
@@ -34,23 +34,8 @@ type ChatRequestActions = {
   _setActiveRequestId: (id: string | null) => void;
 };
 
-const ROLE_STORAGE_KEY = "selected-role";
-
 const getInitialRole = (): string => {
-  if (typeof window === "undefined") {
-    return DEFAULT_ROLE_ID;
-  }
-
-  const stored = window.localStorage.getItem(ROLE_STORAGE_KEY);
-  if (stored && ROLES.some((role) => role.id === stored)) {
-    return stored;
-  }
-
-  if (ROLES.some((role) => role.id === DEFAULT_ROLE_ID)) {
-    return DEFAULT_ROLE_ID;
-  }
-
-  return ROLES[0]?.id ?? "";
+  return DEFAULT_ROLE_ID;
 };
 
 export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>()(
@@ -127,9 +112,6 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       },
       setCurrentRole: (role) => {
         set({ currentRole: role });
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem(ROLE_STORAGE_KEY, role);
-        }
       },
       clear: () => {
         const client = get().chatClient;

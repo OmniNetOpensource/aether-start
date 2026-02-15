@@ -7,6 +7,7 @@ export type ConversationRecord = {
   user_id: string
   id: string
   title: string | null
+  role: string | null
   currentPath: number[]
   messages: object[]
   created_at: string
@@ -17,6 +18,7 @@ export type ConversationPayload = {
   user_id: string
   id: string
   title: string | null
+  role?: string | null
   currentPath: number[]
   messages: object[]
   created_at: string
@@ -62,6 +64,7 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
   }
 
   const title = typeof row.title === 'string' || row.title === null ? row.title : null
+  const role = typeof row.role === 'string' ? row.role : null
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString()
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt
   const currentPathJson = typeof row.current_path_json === 'string' ? row.current_path_json : '[]'
@@ -71,6 +74,7 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
     user_id: row.user_id,
     id: row.id,
     title,
+    role,
     currentPath: safeParsePath(currentPathJson),
     messages: safeParseMessages(messagesJson),
     created_at: createdAt,
@@ -88,6 +92,7 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
   }
 
   const title = typeof row.title === 'string' || row.title === null ? row.title : null
+  const role = typeof row.role === 'string' ? row.role : null
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString()
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt
 
@@ -95,6 +100,7 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
     user_id: row.user_id,
     id: row.id,
     title,
+    role,
     currentPath: [],
     messages: [],
     created_at: createdAt,
@@ -110,7 +116,7 @@ export const listConversationsPage = async (
     ? await db
         .prepare(
           `
-          SELECT m.user_id, m.id, m.title, m.created_at, m.updated_at
+          SELECT m.user_id, m.id, m.title, m.role, m.created_at, m.updated_at
           FROM conversation_metas m
           WHERE m.user_id = ?1
             AND ((m.updated_at < ?2) OR (m.updated_at = ?2 AND m.id < ?3))
@@ -123,7 +129,7 @@ export const listConversationsPage = async (
     : await db
         .prepare(
           `
-          SELECT m.user_id, m.id, m.title, m.created_at, m.updated_at
+          SELECT m.user_id, m.id, m.title, m.role, m.created_at, m.updated_at
           FROM conversation_metas m
           WHERE m.user_id = ?1
           ORDER BY m.updated_at DESC, m.id DESC
@@ -159,7 +165,7 @@ export const getConversationById = async (
   const row = await db
     .prepare(
       `
-      SELECT m.user_id, m.id, m.title, m.created_at, m.updated_at, b.current_path_json, b.messages_json
+      SELECT m.user_id, m.id, m.title, m.role, m.created_at, m.updated_at, b.current_path_json, b.messages_json
       FROM conversation_metas m
       JOIN conversation_bodies b ON b.user_id = m.user_id AND b.id = m.id
       WHERE m.id = ?1 AND m.user_id = ?2
@@ -179,13 +185,14 @@ export const upsertConversation = async (
   await db.batch([
     db.prepare(
       `
-      INSERT INTO conversation_metas(user_id, id, title, created_at, updated_at)
-      VALUES (?1, ?2, ?3, ?4, ?5)
+      INSERT INTO conversation_metas(user_id, id, title, role, created_at, updated_at)
+      VALUES (?1, ?2, ?3, ?4, ?5, ?6)
       ON CONFLICT(user_id, id) DO UPDATE SET
         title = excluded.title,
+        role = excluded.role,
         updated_at = excluded.updated_at
       `,
-    ).bind(payload.user_id, payload.id, payload.title, payload.created_at, payload.updated_at),
+    ).bind(payload.user_id, payload.id, payload.title, payload.role ?? null, payload.created_at, payload.updated_at),
     db.prepare(
       `
       INSERT INTO conversation_bodies(user_id, id, current_path_json, messages_json)

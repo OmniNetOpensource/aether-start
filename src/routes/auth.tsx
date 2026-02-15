@@ -160,11 +160,11 @@ function AuthPage() {
   }
 
   return (
-    <main className='min-h-screen w-full bg-(--surface-primary) text-(--text-primary) flex items-center justify-center p-6'>
+    <main className='min-h-screen w-full bg-background text-foreground flex items-center justify-center p-6'>
       <div className='w-full max-w-sm rounded-xl border ink-border bg-(--surface-secondary) p-6 shadow-sm'>
         <div className='mb-6 space-y-1'>
           <h1 className='text-xl font-semibold'>登录 Aether</h1>
-          <p className='text-sm text-(--text-tertiary)'>
+          <p className='text-sm text-muted-foreground'>
             首次输入邮箱密码会自动创建账号
           </p>
         </div>

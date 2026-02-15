@@ -6,6 +6,7 @@ import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTr
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
 import { resetConversationEventCursor } from '@/features/chat/api/client/websocket-client'
 import { conversationRepository } from "@/features/conversation/persistence/repository";
+import { DEFAULT_ROLE_ID } from "@/features/chat/session/config/roles";
 import {
   buildCurrentPath,
   createLinearMessages,
@@ -154,6 +155,7 @@ export function useConversationLoader(conversationId: string | undefined) {
         useEditingStore.getState().clear();
         setConversationId(conversationId);
         initializeTree(mappedMessages, currentPath);
+        useChatRequestStore.getState().setCurrentRole(conversation.role ?? DEFAULT_ROLE_ID);
         resetConversationEventCursor(conversationId)
         await resumeIfRunning(conversationId)
       } catch (error) {

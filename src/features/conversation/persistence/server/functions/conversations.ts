@@ -21,6 +21,7 @@ const cursorSchema = z
 const conversationPayloadSchema = z.object({
   id: z.string().min(1),
   title: z.string().nullable(),
+  role: z.string().nullable().optional(),
   currentPath: z.array(z.number().int()),
   messages: z.array(z.record(z.any())),
   created_at: z.string(),

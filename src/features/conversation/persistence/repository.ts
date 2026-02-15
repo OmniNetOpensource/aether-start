@@ -26,6 +26,7 @@ export const conversationRepository = {
       data: {
         id: conversation.id,
         title: conversation.title,
+        role: conversation.role ?? null,
         currentPath: conversation.currentPath,
         messages: conversation.messages as Array<Record<string, unknown>>,
         created_at: conversation.created_at,

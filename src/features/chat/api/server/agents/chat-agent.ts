@@ -373,6 +373,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
           user_id: userId,
           id: message.conversationId,
           title: initialTitle,
+          role: message.role,
           currentPath: message.treeSnapshot.currentPath,
           messages: message.treeSnapshot.messages as unknown as object[],
           created_at: now,
@@ -667,6 +668,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
           message.conversationId,
           userId,
           cloneTreeSnapshot(workingTree),
+          message.role,
         )
       } catch (error) {
         finalStatus = 'error'
@@ -751,6 +753,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       latestRootId: number | null
       nextId: number
     },
+    role?: string,
   ) {
     const existing = await getConversationById(this.env.DB, conversationId, userId)
     const now = new Date().toISOString()
@@ -764,6 +767,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       user_id: userId,
       id: conversationId,
       title: existing?.title ?? generatedTitle,
+      role: role ?? existing?.role ?? null,
       currentPath: snapshot.currentPath,
       messages: snapshot.messages as unknown as object[],
       created_at: existing?.created_at ?? now,

@@ -4,6 +4,7 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { drizzle } from 'drizzle-orm/d1'
 import { getServerEnv } from '@/server/env'
 import * as authSchema from './auth.schema'
+import { hashPassword, verifyPassword } from './crypto'
 
 const isBetterAuthCli =
   typeof process !== 'undefined' &&
@@ -90,6 +91,10 @@ const createAuth = () => {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: false,
+      password: {
+        hash: hashPassword,
+        verify: verifyPassword,
+      },
     },
     plugins: [tanstackStartCookies()],
   })

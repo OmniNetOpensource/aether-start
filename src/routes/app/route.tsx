@@ -20,7 +20,7 @@ export const Route = createFileRoute('/app')({
 
 function AppLayout() {
   return (
-    <div className='relative flex h-screen w-screen overflow-hidden text-(--text-primary)'>
+    <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>
       <Sidebar />
       <div className='relative flex-1 min-w-0 flex'>
         <ChatRoom>

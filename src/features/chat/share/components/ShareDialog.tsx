@@ -241,18 +241,18 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
               >
                 反选
               </Button>
-              <span className="ml-auto text-xs text-(--text-tertiary)">
+              <span className="ml-auto text-xs text-muted-foreground">
                 已选 {selectedCount} / {pathMessages.length}
               </span>
             </div>
 
-            <div className="max-h-[52vh] overflow-y-auto rounded-lg border border-(--border-primary)">
+            <div className="max-h-[52vh] overflow-y-auto rounded-lg border border-border">
               {pathMessages.length === 0 ? (
-                <div className="p-4 text-sm text-(--text-tertiary)">
+                <div className="p-4 text-sm text-muted-foreground">
                   当前没有可分享的消息。
                 </div>
               ) : (
-                <div className="divide-y divide-(--border-primary)">
+                <div className="divide-y divide-border">
                   {pathMessages.map(({ id, message, pathIndex }) => {
                     const isChecked = selectedIds.has(id)
                     const snippet = buildMessageSnippet(message)
@@ -273,11 +273,11 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => toggleMessageSelection(id)}
-                          className="mt-1 h-4 w-4 rounded border-(--border-primary) bg-transparent"
+                          className="mt-1 h-4 w-4 rounded border-border bg-transparent"
                         />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
-                            <span className="rounded-md border border-(--border-primary) px-1.5 py-0.5 text-[10px]">
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <span className="rounded-md border border-border px-1.5 py-0.5 text-[10px]">
                               {ROLE_LABEL[message.role]}
                             </span>
                             <span>#{pathIndex + 1}</span>
@@ -295,25 +295,25 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
           </div>
         ) : (
           <div className="space-y-3">
-            <div className="max-h-[58vh] overflow-auto rounded-lg border border-(--border-primary) bg-(--surface-muted)/30 p-3">
+            <div className="max-h-[58vh] overflow-auto rounded-lg border border-border bg-(--surface-muted)/30 p-3">
               {isGenerating ? (
-                <div className="flex min-h-[280px] items-center justify-center gap-2 text-sm text-(--text-tertiary)">
+                <div className="flex min-h-70 items-center justify-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
                   <span>正在生成预览...</span>
                 </div>
               ) : error ? (
-                <div className="flex min-h-[280px] flex-col items-center justify-center gap-2 text-sm">
-                  <AlertCircle className="h-5 w-5 text-(--status-destructive)" />
-                  <p className="text-(--status-destructive)">{error}</p>
+                <div className="flex min-h-70 flex-col items-center justify-center gap-2 text-sm">
+                  <AlertCircle className="h-5 w-5 text-destructive" />
+                  <p className="text-destructive">{error}</p>
                 </div>
               ) : previewDataUrl ? (
                 <img
                   src={previewDataUrl}
                   alt="分享图片预览"
-                  className="mx-auto h-auto w-full rounded-md border border-(--border-primary) bg-(--surface-primary)"
+                  className="mx-auto h-auto w-full rounded-md border border-border bg-background"
                 />
               ) : (
-                <div className="flex min-h-[280px] items-center justify-center text-sm text-(--text-tertiary)">
+                <div className="flex min-h-70 items-center justify-center text-sm text-muted-foreground">
                   暂无预览
                 </div>
               )}
@@ -386,18 +386,18 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
         <div
           aria-hidden
-          className="pointer-events-none fixed left-[-12000px] top-0 opacity-100"
+          className="pointer-events-none fixed -left-3000 top-0 opacity-100"
         >
           <div
             ref={captureRef}
-            className="w-[900px] rounded-2xl border border-(--border-primary) bg-(--surface-primary) p-8 text-(--text-primary)"
+            className="w-225 rounded-2xl border border-border bg-background p-8 text-foreground"
             style={{ fontFamily: 'var(--font-body)' }}
           >
-            <header className="mb-6 border-b border-(--border-primary) pb-4">
-              <h2 className="text-xl font-semibold text-(--text-primary)">
+            <header className="mb-6 border-b border-border pb-4">
+              <h2 className="text-xl font-semibold text-foreground">
                 {conversationTitle}
               </h2>
-              <p className="mt-1 text-sm text-(--text-tertiary)">
+              <p className="mt-1 text-sm text-muted-foreground">
                 Exported at {new Date().toLocaleString()}
               </p>
             </header>
@@ -406,10 +406,10 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
               {selectedMessages.map(({ id, message, pathIndex }) => (
                 <article
                   key={id}
-                  className="rounded-xl border border-(--border-primary) bg-(--surface-secondary) p-4"
+                  className="rounded-xl border border-border bg-(--surface-secondary) p-4"
                 >
-                  <div className="mb-3 flex items-center gap-2 text-xs text-(--text-tertiary)">
-                    <span className="rounded-md border border-(--border-primary) px-2 py-0.5 text-[10px]">
+                  <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
+                    <span className="rounded-md border border-border px-2 py-0.5 text-[10px]">
                       {ROLE_LABEL[message.role]}
                     </span>
                     <span>#{pathIndex + 1}</span>
@@ -422,9 +422,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                           <div
                             key={`${id}-content-${blockIndex}`}
                             className={cn(
-                              'text-base leading-relaxed break-words [overflow-wrap:anywhere] [&_pre]:break-normal [&_pre]:[overflow-wrap:normal] [&_.markdown-body]:text-base [&_.markdown-body]:leading-relaxed [&_.markdown-body]:break-words [&_.markdown-body]:[overflow-wrap:anywhere]',
+                              'text-base leading-relaxed wrap-anywhere [&_pre]:wrap-normal [&_.markdown-body]:text-base [&_.markdown-body]:leading-relaxed [&_.markdown-body]:wrap-anywhere',
                               message.role === 'user'
-                                ? 'text-(--text-primary) [&_.markdown-body]:text-(--text-primary)'
+                                ? 'text-foreground [&_.markdown-body]:text-foreground'
                                 : 'text-(--text-secondary) [&_.markdown-body]:text-(--text-secondary)'
                             )}
                           >
@@ -471,14 +471,14 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                             {block.attachments.map((attachment) => (
                               <div
                                 key={attachment.id}
-                                className="overflow-hidden rounded-lg border border-(--border-primary) bg-(--surface-primary)"
+                                className="overflow-hidden rounded-lg border border-border bg-background"
                               >
                                 <img
                                   src={attachment.url}
                                   alt={attachment.name}
                                   className="h-28 w-full object-cover"
                                 />
-                                <div className="px-2 py-1.5 text-[10px] text-(--text-tertiary) truncate">
+                                <div className="px-2 py-1.5 text-[10px] text-muted-foreground truncate">
                                   {attachment.name}
                                 </div>
                               </div>
@@ -494,7 +494,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
               ))}
             </section>
 
-            <footer className="mt-6 border-t border-(--border-primary) pt-4 text-xs text-(--text-tertiary)">
+            <footer className="mt-6 border-t border-border pt-4 text-xs text-muted-foreground">
               Exported from Aether
             </footer>
           </div>

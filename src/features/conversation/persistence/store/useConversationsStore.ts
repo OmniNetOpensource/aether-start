@@ -3,6 +3,8 @@ import { devtools } from "zustand/middleware";
 import type { ConversationMeta } from "@/features/conversation/model/types/conversation";
 import type { ConversationDetail } from "@/features/conversation/model/types/conversation";
 import { conversationRepository } from "@/features/conversation/persistence/repository";
+import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
 
 type ConversationsState = {
   conversations: ConversationMeta[];
@@ -57,6 +59,7 @@ const mergeConversations = (
 const mapDetailToMeta = (detail: ConversationDetail): ConversationMeta => ({
   id: detail.id,
   title: detail.title,
+  role: detail.role,
   created_at: detail.created_at,
   updated_at: detail.updated_at,
   user_id: detail.user_id,
@@ -100,6 +103,11 @@ export const useConversationsStore = create<
             cursor: null,
           });
           const mapped = page.items.map(mapDetailToMeta);
+
+          const latestRole = mapped[0]?.role;
+          if (latestRole && !useMessageTreeStore.getState().conversationId) {
+            useChatRequestStore.getState().setCurrentRole(latestRole);
+          }
 
           set((state) => ({
             ...state,
