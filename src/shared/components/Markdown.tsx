@@ -1,4 +1,3 @@
-"use client";
 
 import { isValidElement, memo, useEffect, useState, type ReactElement, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";

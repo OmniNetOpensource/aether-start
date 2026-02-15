@@ -1,4 +1,3 @@
-"use client";
 
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MoreHorizontal, Trash2 } from "lucide-react";

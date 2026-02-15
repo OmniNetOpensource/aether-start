@@ -13,13 +13,12 @@ function ConversationPage() {
   const { conversationId } = Route.useParams()
   const { isLoading } = useConversationLoader(conversationId)
 
-  const conversations = useConversationsStore((state) => state.conversations)
-
-  const currentConversation = conversations.find((conversation) => conversation.id === conversationId)
+  const title = useConversationsStore(
+    (state) => state.conversations.find((c) => c.id === conversationId)?.title
+  )
 
   useEffect(() => {
     const defaultTitle = 'Aether'
-    const title = currentConversation?.title
 
     if (title) {
       const truncatedTitle = title.length > 50 ? `${title.slice(0, 50)}...` : title
@@ -31,7 +30,7 @@ function ConversationPage() {
     return () => {
       document.title = defaultTitle
     }
-  }, [currentConversation?.title])
+  }, [title])
 
   if (isLoading) {
     return null

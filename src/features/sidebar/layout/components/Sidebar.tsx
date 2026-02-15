@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { ConversationList } from "@/features/sidebar/history/components/ConversationList";

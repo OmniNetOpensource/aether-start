@@ -1,4 +1,3 @@
-"use client";
 
 import { useId, useState } from "react";
 import { Brain, ChevronRight } from "lucide-react";

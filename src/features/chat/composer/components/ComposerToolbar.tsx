@@ -1,4 +1,3 @@
-"use client";
 
 import { ChangeEvent, MouseEvent, useRef } from "react";
 import { ArrowUp, Loader2, Paperclip, Square } from "lucide-react";

@@ -1,4 +1,3 @@
-"use client";
 
 import { PanelLeft } from "lucide-react";
 import { Button } from "@/shared/ui/button";

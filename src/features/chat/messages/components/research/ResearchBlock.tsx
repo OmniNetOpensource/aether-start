@@ -1,4 +1,3 @@
-"use client";
 
 import { memo, useId, useState } from "react";
 import { ChevronRight } from "lucide-react";

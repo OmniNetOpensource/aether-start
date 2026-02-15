@@ -1,4 +1,3 @@
-"use client";
 
 import { AnimatePresence } from "framer-motion";
 import { useToastStore } from "@/shared/stores/toast";

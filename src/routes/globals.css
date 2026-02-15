@@ -227,7 +227,7 @@ input,
 select,
 textarea,
 [role="button"] {
-  transition-property: all;
+  transition-property: background-color, color, border-color, box-shadow, opacity;
   transition-duration: 0.3s;
   transition-timing-function: var(--transition-smooth);
 }

@@ -1,4 +1,3 @@
-"use client";
 
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from "react";
 import { ArrowUp, ImagePlus, X } from "lucide-react";

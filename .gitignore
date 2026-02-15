@@ -16,3 +16,6 @@ logs/
 src/routes/demo/
 
 resume.html
+coverage/
+test-results/
+playwright-report/

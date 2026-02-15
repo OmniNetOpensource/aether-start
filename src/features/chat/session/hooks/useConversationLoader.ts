@@ -7,10 +7,7 @@ import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestSto
 import { resetConversationEventCursor } from '@/features/chat/api/client/websocket-client'
 import { conversationRepository } from "@/features/conversation/persistence/repository";
 import { DEFAULT_ROLE_ID } from "@/features/chat/session/config/roles";
-import {
-  buildCurrentPath,
-  createLinearMessages,
-} from "@/features/conversation/model/tree/message-tree";
+import { buildCurrentPath } from "@/features/conversation/model/tree/message-tree";
 import type {
   Attachment,
   Message,
@@ -50,11 +47,6 @@ const hydrateBlocks = (blocks: Message["blocks"]) =>
       )
     : [];
 
-type RawMessage = Message | { role?: unknown; blocks?: unknown; createdAt?: unknown };
-
-const isStructuredMessage = (msg: RawMessage): msg is Message =>
-  typeof (msg as Message).id === "number";
-
 const hydrateMessage = (msg: Message): Message => ({
   id: msg.id,
   role: msg.role,
@@ -64,22 +56,6 @@ const hydrateMessage = (msg: Message): Message => ({
   latestChild: msg.latestChild ?? null,
   createdAt: msg.createdAt ?? new Date().toISOString(),
 } as Message);
-
-const toLinearInput = (msg: RawMessage) => {
-  const role = msg.role;
-  if (role !== "user" && role !== "assistant") {
-    return null;
-  }
-  const normalizedRole = role as "user" | "assistant";
-  const blocks = hydrateBlocks(
-    Array.isArray(msg.blocks) ? (msg.blocks as Message["blocks"]) : []
-  );
-  const createdAt =
-    typeof msg.createdAt === "string" ? msg.createdAt : undefined;
-  return { role: normalizedRole, blocks, createdAt };
-};
-
-type LinearInput = NonNullable<ReturnType<typeof toLinearInput>>;
 
 export function useConversationLoader(conversationId: string | undefined) {
   const navigate = useNavigate();
@@ -113,8 +89,8 @@ export function useConversationLoader(conversationId: string | undefined) {
           return;
         }
 
-        const rawMessages: RawMessage[] = Array.isArray(conversation.messages)
-          ? (conversation.messages as RawMessage[])
+        const rawMessages: Message[] = Array.isArray(conversation.messages)
+          ? (conversation.messages as Message[])
           : [];
         const rawCurrentPath = (conversation as { currentPath?: unknown })
           .currentPath;
@@ -123,20 +99,7 @@ export function useConversationLoader(conversationId: string | undefined) {
           rawCurrentPath.every((id) => typeof id === "number")
             ? rawCurrentPath
             : [];
-        let mappedMessages: Message[] = [];
-
-        if (rawMessages.length > 0) {
-          if (rawMessages.every(isStructuredMessage)) {
-            mappedMessages = rawMessages.map((msg) => hydrateMessage(msg));
-          } else {
-            const linearInputs = rawMessages
-              .map(toLinearInput)
-              .filter((item): item is LinearInput => !!item);
-            const linearState = createLinearMessages(linearInputs);
-            mappedMessages = linearState.messages;
-            currentPath = linearState.currentPath;
-          }
-        }
+        const mappedMessages = rawMessages.map((msg) => hydrateMessage(msg));
 
         if (currentPath.length === 0 && mappedMessages.length > 0) {
           const rawLatestRootId = (conversation as { latestRootId?: unknown })

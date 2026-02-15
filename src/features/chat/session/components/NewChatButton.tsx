@@ -1,4 +1,3 @@
-"use client";
 
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps, ReactNode, MouseEvent } from "react";

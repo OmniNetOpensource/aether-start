@@ -1,4 +1,3 @@
-"use client";
 
 import { Captions, Check, Image as ImageIcon, Link, Loader2, X } from "lucide-react";
 import type { ResearchItem } from "@/features/chat/types/chat";

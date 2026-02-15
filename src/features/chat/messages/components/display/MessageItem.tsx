@@ -1,4 +1,3 @@
-"use client";
 
 import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
 import Markdown from "@/shared/components/Markdown";

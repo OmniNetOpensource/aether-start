@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useId, useState } from "react";
 import { AlertTriangle, ChevronRight } from "lucide-react";
