@@ -2,7 +2,7 @@ import { toast } from '@/shared/hooks/useToast'
 import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
 import { buildConversationTitle } from '@/features/conversation/formatting/format'
 import { applyChatEventToTree } from '@/features/chat/api/client/event-handlers'
-import { ChatClient, checkAgentStatus } from '@/features/chat/api/client/websocket-client'
+import { ChatClient, checkAgentStatus, resetConversationEventCursor } from '@/features/chat/api/client/websocket-client'
 import type { Message, MessageLike, SerializedMessage } from '@/features/chat/types/chat'
 import type { MessageTreeSnapshot } from '@/features/chat/api/shared/types'
 import { appNavigate } from '@/shared/lib/navigation'
@@ -66,6 +66,8 @@ export const startChatRequest = async (
   } as SerializedMessage))
 
   const treeSnapshot = useMessageTreeStore.getState()._getTreeState() as MessageTreeSnapshot
+
+  resetConversationEventCursor(currentConversationId)
 
   let disconnectedHandled = false
   const chatClient = new ChatClient({

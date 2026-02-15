@@ -2,7 +2,6 @@
 import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { XIcon, InfoIcon, CheckCircle2Icon, AlertTriangleIcon, AlertCircleIcon } from "lucide-react";
-import { motion } from "framer-motion";
 
 import { cn } from "@/shared/lib/utils";
 import { Toast as ToastType } from "@/shared/stores/toast";
@@ -47,10 +46,12 @@ const iconMap = {
 
 interface ToastProps extends VariantProps<typeof toastVariants> {
   toast: ToastType;
+  isExiting?: boolean;
   onClose: () => void;
+  onExited: () => void;
 }
 
-export function Toast({ toast, onClose }: ToastProps) {
+export function Toast({ toast, isExiting, onClose, onExited }: ToastProps) {
   const Icon = iconMap[toast.variant];
 
   React.useEffect(() => {
@@ -64,12 +65,14 @@ export function Toast({ toast, onClose }: ToastProps) {
   }, [toast.duration, onClose]);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: -20, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -20, scale: 0.95 }}
-      transition={{ duration: 0.2, ease: [0.32, 0.72, 0, 1] }}
-      className={cn(toastVariants({ variant: toast.variant }))}
+    <div
+      className={cn(
+        toastVariants({ variant: toast.variant }),
+        isExiting
+          ? 'animate-[toast-exit_0.2s_var(--transition-smooth)_forwards]'
+          : 'animate-[toast-enter_0.2s_var(--transition-smooth)]'
+      )}
+      onAnimationEnd={isExiting ? onExited : undefined}
     >
       <Icon className={cn(iconVariants({ variant: toast.variant }), "size-5")} />
       <div className="flex-1 text-sm leading-relaxed">{toast.message}</div>
@@ -80,6 +83,6 @@ export function Toast({ toast, onClose }: ToastProps) {
       >
         <XIcon className="size-4" />
       </button>
-    </motion.div>
+    </div>
   );
 }
