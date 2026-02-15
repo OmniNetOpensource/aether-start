@@ -160,6 +160,9 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
 };
 export const DEFAULT_ROLE_ID = "aether";
 
+export const getAvailableRoles = (): { id: string; name: string }[] =>
+  Object.values(ROLE_CONFIGS).map(({ id, name }) => ({ id, name }));
+
 export const getRoleConfig = (roleId: string): RoleConfig | null => {
   const id = roleId.trim()
   return (

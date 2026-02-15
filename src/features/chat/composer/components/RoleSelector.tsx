@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -9,15 +10,22 @@ import {
   PopoverTrigger,
 } from "@/shared/ui/popover";
 import { cn } from "@/shared/lib/utils";
-import { ROLES } from "@/features/chat/session/config/roles";
+import { getAvailableRolesFn } from "@/features/chat/api/server/functions/roles";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+
+type RoleInfo = { id: string; name: string };
 
 export function RoleSelector() {
   const currentRole = useChatRequestStore((state) => state.currentRole);
   const setCurrentRole = useChatRequestStore((state) => state.setCurrentRole);
+  const [roles, setRoles] = useState<RoleInfo[]>([]);
+
+  useEffect(() => {
+    getAvailableRolesFn().then(setRoles).catch(() => {})
+  }, []);
 
   const currentRoleName =
-    ROLES.find((role) => role.id === currentRole)?.name ?? "角色";
+    roles.find((role) => role.id === currentRole)?.name ?? "角色";
 
   const toolButtonBaseClass =
     "h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground";
@@ -44,12 +52,12 @@ export function RoleSelector() {
         className="w-48 max-w-[calc(100vw-2rem)] p-1.5"
       >
         <div className="flex flex-col gap-1 px-1 py-1 max-h-75 overflow-y-auto">
-          {ROLES.length === 0 ? (
+          {roles.length === 0 ? (
             <div className="px-3 py-2 text-xs text-foreground">
               暂无角色
             </div>
           ) : (
-            ROLES.map((role) => (
+            roles.map((role) => (
               <PopoverClose key={role.id} asChild>
                 <button
                   onClick={() => setCurrentRole(role.id)}

@@ -132,10 +132,15 @@ export type ChatClientOptions = {
   onStatus?: (event: ChatStatusEvent) => void
 }
 
+const RECONNECT_TIMEOUT_MS = 30_000
+
 export class ChatClient {
   private client: AgentClient | null = null
   private conversationId: string | null = null
   private suppressCloseError = false
+  private connected = false
+  private reconnecting = false
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(private options: ChatClientOptions) {}
 
@@ -159,10 +164,12 @@ export class ChatClient {
     client.addEventListener('message', this.handleMessage)
     client.addEventListener('error', this.handleSocketError)
     client.addEventListener('close', this.handleSocketClose)
+    client.addEventListener('open', this.handleSocketOpen)
 
     this.client = client
 
     await client.ready
+    this.connected = true
   }
 
   public async sync(conversationId: string) {
@@ -211,10 +218,14 @@ export class ChatClient {
     }
 
     this.suppressCloseError = true
+    this.connected = false
+    this.reconnecting = false
+    this.clearReconnectTimer()
 
     this.client.removeEventListener('message', this.handleMessage)
     this.client.removeEventListener('error', this.handleSocketError)
     this.client.removeEventListener('close', this.handleSocketClose)
+    this.client.removeEventListener('open', this.handleSocketOpen)
 
     this.client.close()
     this.client = null
@@ -229,8 +240,32 @@ export class ChatClient {
     this.client.send(JSON.stringify(message))
   }
 
+  private clearReconnectTimer() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
+  }
+
+  private handleSocketOpen = () => {
+    if (!this.connected) {
+      return
+    }
+
+    this.reconnecting = false
+    this.clearReconnectTimer()
+
+    if (this.conversationId) {
+      this.send({
+        type: 'sync',
+        conversationId: this.conversationId,
+        lastEventId: getLastEventId(this.conversationId),
+      })
+    }
+  }
+
   private handleSocketError = () => {
-    this.options.onError(new Error('连接到聊天服务失败'))
+    // PartySocket will attempt to reconnect — don't tear down here.
   }
 
   private handleSocketClose = () => {
@@ -238,7 +273,16 @@ export class ChatClient {
       return
     }
 
-    this.options.onError(new Error('聊天连接已断开'))
+    this.reconnecting = true
+    this.clearReconnectTimer()
+
+    this.reconnectTimer = setTimeout(() => {
+      if (!this.reconnecting) {
+        return
+      }
+      this.reconnectTimer = null
+      this.options.onError(new Error('聊天连接已断开'))
+    }, RECONNECT_TIMEOUT_MS)
   }
 
   private handleMessage = (event: MessageEvent) => {

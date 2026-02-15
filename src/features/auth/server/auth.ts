@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { drizzle } from 'drizzle-orm/d1'
+import { Resend } from 'resend'
 import { getServerEnv } from '@/server/env'
 import * as authSchema from './auth.schema'
 import { hashPassword, verifyPassword } from './crypto'
@@ -90,10 +91,28 @@ const createAuth = () => {
     }),
     emailAndPassword: {
       enabled: true,
-      requireEmailVerification: false,
+      requireEmailVerification: true,
       password: {
         hash: hashPassword,
         verify: verifyPassword,
+      },
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: async ({ user, url }) => {
+        const resendApiKey = serverEnv.RESEND_API_KEY
+        if (!resendApiKey) {
+          console.warn('RESEND_API_KEY not configured, skipping verification email')
+          return
+        }
+        const resend = new Resend(resendApiKey)
+        await resend.emails.send({
+          from: 'noreply@mail.forkicks.fun',
+          to: user.email,
+          subject: 'Aether 邮箱验证',
+          html: `<p>请点击以下链接验证你的邮箱：</p><p><a href="${url}">${url}</a></p>`,
+        })
       },
     },
     plugins: [tanstackStartCookies()],

@@ -12,6 +12,7 @@ type ServerEnv = {
   JINA_API_KEY?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
+  RESEND_API_KEY?: string
   DB?: D1Database
   CHAT_ASSETS?: R2Bucket
   NODE_ENV?: string
@@ -75,6 +76,9 @@ export const getServerEnv = (): ServerEnv => {
     SUPADATA_API_KEY:
       readString(bindings.SUPADATA_API_KEY) ??
       readStringFromProcess('SUPADATA_API_KEY'),
+    RESEND_API_KEY:
+      readString(bindings.RESEND_API_KEY) ??
+      readStringFromProcess('RESEND_API_KEY'),
     NODE_ENV:
       readString(bindings.NODE_ENV) ??
       readStringFromProcess('NODE_ENV') ??

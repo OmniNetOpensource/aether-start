@@ -251,15 +251,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         ownerUserId: userId,
       }
     }
-
-    connection.send(
-      stringify({
-        type: 'sync_response',
-        status: this.runtimeState.status,
-        requestId: this.runtimeState.currentRequestId ?? undefined,
-        events: [],
-      } satisfies ChatAgentServerMessage),
-    )
   }
 
   async onMessage(connection: Connection, rawMessage: unknown) {

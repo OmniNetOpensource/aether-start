@@ -80,6 +80,20 @@ const isUserAlreadyExistsError = (error: unknown) => {
   return status === 422 || message.includes('USER_ALREADY_EXISTS')
 }
 
+const isEmailNotVerifiedError = (error: unknown) => {
+  const status =
+    typeof error === 'object' && error !== null && 'status' in error
+      ? (error as { status?: number }).status
+      : undefined
+
+  const message =
+    typeof error === 'object' && error !== null && 'message' in error
+      ? String((error as { message?: unknown }).message ?? '')
+      : ''
+
+  return status === 403 || message.includes('EMAIL_NOT_VERIFIED')
+}
+
 const getDefaultName = (email: string) => {
   const [prefix] = email.split('@')
   return prefix?.trim() || 'user'
@@ -109,6 +123,8 @@ function AuthPage() {
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [pendingVerification, setPendingVerification] = useState(false)
+  const [isResending, setIsResending] = useState(false)
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -121,6 +137,7 @@ function AuthPage() {
 
     setIsSubmitting(true)
     setErrorMessage(null)
+    setPendingVerification(false)
 
     const { error: signInError } = await authClient.signIn.email({
       email: normalizedEmail,
@@ -129,6 +146,12 @@ function AuthPage() {
 
     if (!signInError) {
       await navigate({ href: target, replace: true })
+      return
+    }
+
+    if (isEmailNotVerifiedError(signInError)) {
+      setPendingVerification(true)
+      setIsSubmitting(false)
       return
     }
 
@@ -145,7 +168,8 @@ function AuthPage() {
     })
 
     if (!signUpError) {
-      await navigate({ href: target, replace: true })
+      setPendingVerification(true)
+      setIsSubmitting(false)
       return
     }
 
@@ -157,6 +181,56 @@ function AuthPage() {
 
     setErrorMessage(getErrorMessage(signUpError))
     setIsSubmitting(false)
+  }
+
+  const resendVerification = async () => {
+    const normalizedEmail = email.trim().toLowerCase()
+    if (!normalizedEmail) return
+
+    setIsResending(true)
+    setErrorMessage(null)
+    await authClient.sendVerificationEmail({
+      email: normalizedEmail,
+      callbackURL: '/app',
+    })
+    setIsResending(false)
+  }
+
+  if (pendingVerification) {
+    return (
+      <main className='min-h-screen w-full bg-background text-foreground flex items-center justify-center p-6'>
+        <div className='w-full max-w-sm rounded-xl border ink-border bg-(--surface-secondary) p-6 shadow-sm'>
+          <div className='mb-4 space-y-1'>
+            <h1 className='text-xl font-semibold'>验证邮箱</h1>
+            <p className='text-sm text-muted-foreground'>
+              验证邮件已发送至 {email.trim().toLowerCase()}，请查收邮箱并点击验证链接。
+            </p>
+          </div>
+
+          {errorMessage ? (
+            <p className='mb-4 text-sm text-red-500'>{errorMessage}</p>
+          ) : null}
+
+          <div className='space-y-3'>
+            <Button
+              className='w-full'
+              variant='outline'
+              onClick={resendVerification}
+              disabled={isResending}
+            >
+              {isResending ? '发送中...' : '重新发送验证邮件'}
+            </Button>
+            <Button
+              className='w-full'
+              variant='ghost'
+              onClick={() => setPendingVerification(false)}
+            >
+              返回登录
+            </Button>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
