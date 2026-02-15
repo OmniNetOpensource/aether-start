@@ -1,7 +1,7 @@
 import { getRequestHeaders } from '@tanstack/react-start/server'
-import { auth } from '@/features/auth/server/auth'
+import { getAuth, type AuthInstance } from '@/features/auth/server/auth'
 
-type AuthSession = typeof auth.$Infer.Session
+type AuthSession = AuthInstance['$Infer']['Session']
 
 const unauthorizedResponse = () =>
   new Response('Unauthorized', {
@@ -9,7 +9,7 @@ const unauthorizedResponse = () =>
   })
 
 export const getSessionFromRequest = async (request: Request) => {
-  return auth.api.getSession({
+  return getAuth().api.getSession({
     headers: request.headers,
   })
 }
@@ -25,7 +25,7 @@ export const requireSessionFromRequest = async (request: Request): Promise<AuthS
 
 export const getSession = async () => {
   const headers = getRequestHeaders() as Headers
-  return auth.api.getSession({
+  return getAuth().api.getSession({
     headers,
   })
 }

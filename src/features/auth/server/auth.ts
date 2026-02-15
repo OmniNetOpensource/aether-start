@@ -63,32 +63,42 @@ const resolveD1Database = () => {
   throw new Error('Missing worker binding: DB')
 }
 
-const serverEnv = getServerEnv()
+const createAuth = () => {
+  const serverEnv = getServerEnv()
 
-const baseURL = requireEnvValue(
-  serverEnv.BETTER_AUTH_URL,
-  'BETTER_AUTH_URL',
-  'http://localhost:3000',
-)
-const secret = requireEnvValue(
-  serverEnv.BETTER_AUTH_SECRET,
-  'BETTER_AUTH_SECRET',
-  '4f2f7f59ad6d435c9f5f2ce7f0f6f2d3',
-)
-const db = drizzle(resolveD1Database(), { schema: authSchema })
+  const baseURL = requireEnvValue(
+    serverEnv.BETTER_AUTH_URL,
+    'BETTER_AUTH_URL',
+    'http://localhost:3000',
+  )
+  const secret = requireEnvValue(
+    serverEnv.BETTER_AUTH_SECRET,
+    'BETTER_AUTH_SECRET',
+    '4f2f7f59ad6d435c9f5f2ce7f0f6f2d3',
+  )
+  const db = drizzle(resolveD1Database(), { schema: authSchema })
 
-export const auth = betterAuth({
-  baseURL,
-  basePath: '/api/auth',
-  secret,
-  trustedOrigins: [toOrigin(baseURL)],
-  database: drizzleAdapter(db, {
-    provider: 'sqlite',
-    schema: authSchema,
-  }),
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: false,
-  },
-  plugins: [tanstackStartCookies()],
-})
+  return betterAuth({
+    baseURL,
+    basePath: '/api/auth',
+    secret,
+    trustedOrigins: [toOrigin(baseURL)],
+    database: drizzleAdapter(db, {
+      provider: 'sqlite',
+      schema: authSchema,
+    }),
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: false,
+    },
+    plugins: [tanstackStartCookies()],
+  })
+}
+
+export type AuthInstance = ReturnType<typeof createAuth>
+
+let _auth: AuthInstance
+export const getAuth = () => {
+  if (!_auth) _auth = createAuth()
+  return _auth
+}
