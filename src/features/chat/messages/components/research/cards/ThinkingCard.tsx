@@ -23,7 +23,7 @@ export function ThinkingCard({ item, isActive = false }: ThinkingCardProps) {
       action={
         <ChevronRight
           className={cn(
-            "h-3.5 w-3.5 text-(--text-tertiary) transition-all duration-200 group-hover/research-card:text-(--text-secondary)",
+            "h-3.5 w-3.5 text-muted-foreground transition-all duration-200 group-hover/research-card:text-(--text-secondary)",
             isExpanded && "rotate-90"
           )}
         />
@@ -40,11 +40,11 @@ export function ThinkingCard({ item, isActive = false }: ThinkingCardProps) {
         className={cn(
           "overflow-hidden transition-all duration-300 ease-in-out",
           isExpanded
-            ? "max-h-[420px] opacity-100"
+            ? "max-h-105 opacity-100"
             : "max-h-0 opacity-0"
         )}
       >
-        <div className="max-h-[420px] overflow-y-auto overflow-x-auto pr-1 text-xs text-(--text-secondary)">
+        <div className="max-h-105 overflow-y-auto overflow-x-auto pr-1 text-xs text-(--text-secondary)">
           <Markdown content={item.text} />
         </div>
       </div>

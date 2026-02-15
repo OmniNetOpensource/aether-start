@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { requireSession } from '@/features/auth/server/session'
 import { getServerBindings } from '@/server/env'
 import {
   clearConversations,
@@ -35,8 +36,10 @@ export const listConversationsPageFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { DB } = getServerBindings()
+    const session = await requireSession()
 
     return listConversationsPage(DB, {
+      userId: session.user.id,
       limit: data.limit,
       cursor: data.cursor,
     })
@@ -50,16 +53,21 @@ export const getConversationFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { DB } = getServerBindings()
+    const session = await requireSession()
 
-    return getConversationById(DB, data.id)
+    return getConversationById(DB, data.id, session.user.id)
   })
 
 export const upsertConversationFn = createServerFn({ method: 'POST' })
   .inputValidator(conversationPayloadSchema)
   .handler(async ({ data }) => {
     const { DB } = getServerBindings()
+    const session = await requireSession()
 
-    return upsertConversation(DB, data)
+    return upsertConversation(DB, {
+      ...data,
+      user_id: session.user.id,
+    })
   })
 
 export const deleteConversationFn = createServerFn({ method: 'POST' })
@@ -70,14 +78,16 @@ export const deleteConversationFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { DB } = getServerBindings()
+    const session = await requireSession()
 
-    return deleteConversationById(DB, data.id)
+    return deleteConversationById(DB, data.id, session.user.id)
   })
 
 export const clearConversationsFn = createServerFn({ method: 'POST' }).handler(async () => {
   const { DB } = getServerBindings()
+  const session = await requireSession()
 
-  return clearConversations(DB)
+  return clearConversations(DB, session.user.id)
 })
 
 export const updateConversationTitleFn = createServerFn({ method: 'POST' })
@@ -89,8 +99,10 @@ export const updateConversationTitleFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     const { DB } = getServerBindings()
+    const session = await requireSession()
 
     return updateConversationTitle(DB, {
+      userId: session.user.id,
       id: data.id,
       title: data.title,
     })

@@ -4,6 +4,7 @@ export type ConversationCursor = {
 } | null
 
 export type ConversationRecord = {
+  user_id: string
   id: string
   title: string | null
   currentPath: number[]
@@ -13,6 +14,7 @@ export type ConversationRecord = {
 }
 
 export type ConversationPayload = {
+  user_id: string
   id: string
   title: string | null
   currentPath: number[]
@@ -51,7 +53,11 @@ const safeParseMessages = (value: string): object[] => {
 }
 
 const toConversationRecord = (row: unknown): ConversationRecord | null => {
-  if (!isRecord(row) || typeof row.id !== 'string') {
+  if (
+    !isRecord(row) ||
+    typeof row.id !== 'string' ||
+    typeof row.user_id !== 'string'
+  ) {
     return null
   }
 
@@ -62,6 +68,7 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
   const messagesJson = typeof row.messages_json === 'string' ? row.messages_json : '[]'
 
   return {
+    user_id: row.user_id,
     id: row.id,
     title,
     currentPath: safeParsePath(currentPathJson),
@@ -72,7 +79,11 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
 }
 
 const toConversationSummaryRecord = (row: unknown): ConversationRecord | null => {
-  if (!isRecord(row) || typeof row.id !== 'string') {
+  if (
+    !isRecord(row) ||
+    typeof row.id !== 'string' ||
+    typeof row.user_id !== 'string'
+  ) {
     return null
   }
 
@@ -81,6 +92,7 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt
 
   return {
+    user_id: row.user_id,
     id: row.id,
     title,
     currentPath: [],
@@ -92,31 +104,33 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
 
 export const listConversationsPage = async (
   db: D1Database,
-  input: { limit: number; cursor: ConversationCursor },
+  input: { userId: string; limit: number; cursor: ConversationCursor },
 ) => {
   const rows = input.cursor
     ? await db
         .prepare(
           `
-          SELECT m.id, m.title, m.created_at, m.updated_at
+          SELECT m.user_id, m.id, m.title, m.created_at, m.updated_at
           FROM conversation_metas m
-          WHERE (m.updated_at < ?1) OR (m.updated_at = ?1 AND m.id < ?2)
+          WHERE m.user_id = ?1
+            AND ((m.updated_at < ?2) OR (m.updated_at = ?2 AND m.id < ?3))
           ORDER BY m.updated_at DESC, m.id DESC
-          LIMIT ?3
+          LIMIT ?4
           `,
         )
-        .bind(input.cursor.updated_at, input.cursor.id, input.limit)
+        .bind(input.userId, input.cursor.updated_at, input.cursor.id, input.limit)
         .all()
     : await db
         .prepare(
           `
-          SELECT m.id, m.title, m.created_at, m.updated_at
+          SELECT m.user_id, m.id, m.title, m.created_at, m.updated_at
           FROM conversation_metas m
+          WHERE m.user_id = ?1
           ORDER BY m.updated_at DESC, m.id DESC
-          LIMIT ?1
+          LIMIT ?2
           `,
         )
-        .bind(input.limit)
+        .bind(input.userId, input.limit)
         .all()
 
   const mapped = Array.isArray(rows.results)
@@ -137,18 +151,22 @@ export const listConversationsPage = async (
   }
 }
 
-export const getConversationById = async (db: D1Database, id: string) => {
+export const getConversationById = async (
+  db: D1Database,
+  id: string,
+  userId: string,
+) => {
   const row = await db
     .prepare(
       `
-      SELECT m.id, m.title, m.created_at, m.updated_at, b.current_path_json, b.messages_json
+      SELECT m.user_id, m.id, m.title, m.created_at, m.updated_at, b.current_path_json, b.messages_json
       FROM conversation_metas m
-      JOIN conversation_bodies b ON b.id = m.id
-      WHERE m.id = ?1
+      JOIN conversation_bodies b ON b.user_id = m.user_id AND b.id = m.id
+      WHERE m.id = ?1 AND m.user_id = ?2
       LIMIT 1
       `,
     )
-    .bind(id)
+    .bind(id, userId)
     .first()
 
   return toConversationRecord(row)
@@ -161,22 +179,23 @@ export const upsertConversation = async (
   await db.batch([
     db.prepare(
       `
-      INSERT INTO conversation_metas(id, title, created_at, updated_at)
-      VALUES (?1, ?2, ?3, ?4)
-      ON CONFLICT(id) DO UPDATE SET
+      INSERT INTO conversation_metas(user_id, id, title, created_at, updated_at)
+      VALUES (?1, ?2, ?3, ?4, ?5)
+      ON CONFLICT(user_id, id) DO UPDATE SET
         title = excluded.title,
         updated_at = excluded.updated_at
       `,
-    ).bind(payload.id, payload.title, payload.created_at, payload.updated_at),
+    ).bind(payload.user_id, payload.id, payload.title, payload.created_at, payload.updated_at),
     db.prepare(
       `
-      INSERT INTO conversation_bodies(id, current_path_json, messages_json)
-      VALUES (?1, ?2, ?3)
-      ON CONFLICT(id) DO UPDATE SET
+      INSERT INTO conversation_bodies(user_id, id, current_path_json, messages_json)
+      VALUES (?1, ?2, ?3, ?4)
+      ON CONFLICT(user_id, id) DO UPDATE SET
         current_path_json = excluded.current_path_json,
         messages_json = excluded.messages_json
       `,
     ).bind(
+      payload.user_id,
       payload.id,
       JSON.stringify(payload.currentPath ?? []),
       JSON.stringify(payload.messages ?? []),
@@ -186,19 +205,29 @@ export const upsertConversation = async (
   return { ok: true }
 }
 
-export const deleteConversationById = async (db: D1Database, id: string) => {
+export const deleteConversationById = async (
+  db: D1Database,
+  id: string,
+  userId: string,
+) => {
   await db.batch([
-    db.prepare('DELETE FROM conversation_bodies WHERE id = ?1').bind(id),
-    db.prepare('DELETE FROM conversation_metas WHERE id = ?1').bind(id),
+    db.prepare('DELETE FROM conversation_bodies WHERE user_id = ?1 AND id = ?2').bind(
+      userId,
+      id,
+    ),
+    db.prepare('DELETE FROM conversation_metas WHERE user_id = ?1 AND id = ?2').bind(
+      userId,
+      id,
+    ),
   ])
 
   return { ok: true }
 }
 
-export const clearConversations = async (db: D1Database) => {
+export const clearConversations = async (db: D1Database, userId: string) => {
   await db.batch([
-    db.prepare('DELETE FROM conversation_bodies'),
-    db.prepare('DELETE FROM conversation_metas'),
+    db.prepare('DELETE FROM conversation_bodies WHERE user_id = ?1').bind(userId),
+    db.prepare('DELETE FROM conversation_metas WHERE user_id = ?1').bind(userId),
   ])
 
   return { ok: true }
@@ -206,16 +235,16 @@ export const clearConversations = async (db: D1Database) => {
 
 export const updateConversationTitle = async (
   db: D1Database,
-  input: { id: string; title: string | null },
+  input: { userId: string; id: string; title: string | null },
 ) => {
   const now = new Date().toISOString()
 
   await db.batch([
-    db.prepare('UPDATE conversation_metas SET title = ?1, updated_at = ?2 WHERE id = ?3').bind(
-      input.title,
-      now,
-      input.id,
-    ),
+    db
+      .prepare(
+        'UPDATE conversation_metas SET title = ?1, updated_at = ?2 WHERE user_id = ?3 AND id = ?4',
+      )
+      .bind(input.title, now, input.userId, input.id),
   ])
 
   return { ok: true, updated_at: now }

@@ -13,10 +13,10 @@ const toastVariants = cva(
   {
     variants: {
       variant: {
-        info: "bg-(--surface-primary) border-(--border-primary) text-(--text-primary)",
-        success: "bg-(--surface-primary) border-(--border-primary) text-(--text-primary)",
-        warning: "bg-(--surface-primary) border-(--border-primary) text-(--text-primary)",
-        error: "bg-(--surface-primary) border-(--border-primary) text-(--text-primary)",
+        info: "bg-background border-border text-foreground",
+        success: "bg-background border-border text-foreground",
+        warning: "bg-background border-border text-foreground",
+        error: "bg-background border-border text-foreground",
       },
     },
     defaultVariants: {
@@ -76,7 +76,7 @@ export function Toast({ toast, onClose }: ToastProps) {
       <div className="flex-1 text-sm leading-relaxed">{toast.message}</div>
       <button
         onClick={onClose}
-        className="shrink-0 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-(--interactive-primary) focus:ring-offset-2"
+        className="shrink-0 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         aria-label="Close"
       >
         <XIcon className="size-4" />

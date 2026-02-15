@@ -10,6 +10,33 @@ import type { SerializedMessage } from '@/features/chat/types/chat'
 
 const AGENT_NAME = 'chat-agent'
 
+export type AgentStatusResponse = {
+  status: ChatAgentStatus
+  requestId?: string
+}
+
+export const checkAgentStatus = async (
+  conversationId: string,
+): Promise<AgentStatusResponse> => {
+  const protocol = typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'https' : 'http'
+  const host = resolveAgentHost()
+  const url = `${protocol}://${host}/agents/${AGENT_NAME}/${conversationId}`
+
+  const res = await fetch(url, { method: 'GET', credentials: 'include' })
+  if (res.status === 404) {
+    return { status: 'idle' }
+  }
+  if (!res.ok) {
+    throw new Error(`Agent status probe failed: ${res.status}`)
+  }
+
+  const data = await res.json() as Record<string, unknown>
+  const status = isChatAgentStatus(data.status) ? data.status : 'idle'
+  const requestId = typeof data.requestId === 'string' ? data.requestId : undefined
+
+  return { status, requestId }
+}
+
 const resolveAgentHost = () => {
   if (typeof window === 'undefined') {
     return 'localhost:3000'
@@ -49,6 +76,10 @@ export const resetConversationEventCursor = (conversationId: string) => {
   }
 
   eventCursorByConversation.delete(conversationId)
+}
+
+export const clearConversationEventCursors = () => {
+  eventCursorByConversation.clear()
 }
 
 const isChatAgentStatus = (value: unknown): value is ChatAgentStatus =>

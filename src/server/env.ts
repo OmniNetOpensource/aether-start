@@ -1,6 +1,8 @@
 import { env as workerEnv } from 'cloudflare:workers'
 
 type ServerEnv = {
+  BETTER_AUTH_SECRET?: string
+  BETTER_AUTH_URL?: string
   ANTHROPIC_API_KEY_RIGHTCODE?: string
   ANTHROPIC_BASE_URL_RIGHTCODE?: string
   ANTHROPIC_API_KEY_IKUNCODE?: string
@@ -42,6 +44,12 @@ export const getServerEnv = (): ServerEnv => {
   const bindings = workerEnv as Partial<ServerEnv>
 
   return {
+    BETTER_AUTH_SECRET:
+      readString(bindings.BETTER_AUTH_SECRET) ??
+      readStringFromProcess('BETTER_AUTH_SECRET'),
+    BETTER_AUTH_URL:
+      readString(bindings.BETTER_AUTH_URL) ??
+      readStringFromProcess('BETTER_AUTH_URL'),
     ANTHROPIC_API_KEY_RIGHTCODE:
       readString(bindings.ANTHROPIC_API_KEY_RIGHTCODE) ??
       readStringFromProcess('ANTHROPIC_API_KEY_RIGHTCODE'),

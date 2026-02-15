@@ -61,7 +61,7 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
       variant="ghost"
       size="sm"
       onClick={handleCopy}
-      className="h-auto gap-1.5 px-2 py-1 text-2xs text-(--text-tertiary) hover:text-(--text-primary)"
+      className="h-auto gap-1.5 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground"
       title="复制内容"
     >
       {isCopied ? (
@@ -95,7 +95,7 @@ const ActionButton = ({
     size="sm"
     onClick={onClick}
     disabled={disabled}
-    className="h-auto gap-1.5 px-2 py-1 text-2xs text-(--text-tertiary) hover:text-(--text-primary)"
+    className="h-auto gap-1.5 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground"
     title={title}
   >
     {icon}
@@ -140,7 +140,7 @@ const BranchConversationButton = ({
           type="button"
           variant="ghost"
           size="sm"
-          className="h-auto gap-1.5 px-2 py-1 text-2xs text-(--text-tertiary) hover:text-(--text-primary)"
+          className="h-auto gap-1.5 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground"
           title="创建新对话分支"
           disabled={disabled}
         >
@@ -272,7 +272,7 @@ export const MessageItem = memo(function MessageItem({
               {isEditing ? (
                 <MessageEditor messageId={messageId} depth={depth} />
               ) : isUser ? (
-                <div className="text-base leading-relaxed text-(--text-primary) break-words [overflow-wrap:anywhere] [&_pre]:break-normal [&_pre]:[overflow-wrap:normal] [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-primary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:break-words [&_.markdown-body]:[overflow-wrap:anywhere] [&_.markdown-body_p]:text-(--text-primary)">
+                <div className="text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal [&_.markdown-body]:text-base [&_.markdown-body]:text-foreground [&_.markdown-body]:leading-relaxed [&_.markdown-body]:wrap-anywhere [&_.markdown-body_p]:text-foreground">
                   {contentBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;
 
@@ -285,7 +285,7 @@ export const MessageItem = memo(function MessageItem({
                 </div>
               ) : (
                 <div
-                  className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) break-words [overflow-wrap:anywhere] [&_pre]:break-normal [&_pre]:[overflow-wrap:normal] [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-secondary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:break-words [&_.markdown-body]:[overflow-wrap:anywhere]"
+                  className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-secondary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:wrap-anywhere"
                 >
                   {contentBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;
@@ -305,7 +305,7 @@ export const MessageItem = memo(function MessageItem({
                       return (
                         <div
                           key={blockKey}
-                          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-(--status-destructive)/10 px-3 py-2 text-sm text-(--status-destructive) not-italic"
+                          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-(--status-destructive)/10 px-3 py-2 text-sm text-destructive not-italic"
                         >
                           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                           <div className="flex-1 whitespace-pre-wrap">

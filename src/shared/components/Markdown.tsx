@@ -52,7 +52,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <h1
       {...props}
       className={cn(
-        "mt-8 mb-4 first:mt-0 last:mb-0 text-xl font-bold leading-snug tracking-tight text-(--text-primary)",
+        "mt-8 mb-4 first:mt-0 last:mb-0 text-xl font-bold leading-snug tracking-tight text-foreground",
         className
       )}
     />
@@ -61,7 +61,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <h2
       {...props}
       className={cn(
-        "mt-7 mb-3 first:mt-0 last:mb-0 text-lg font-semibold leading-snug text-(--text-primary)",
+        "mt-7 mb-3 first:mt-0 last:mb-0 text-lg font-semibold leading-snug text-foreground",
         className
       )}
     />
@@ -70,7 +70,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <h3
       {...props}
       className={cn(
-        "mt-6 mb-2.5 first:mt-0 last:mb-0 text-base font-semibold text-(--text-primary)",
+        "mt-6 mb-2.5 first:mt-0 last:mb-0 text-base font-semibold text-foreground",
         className
       )}
     />
@@ -79,7 +79,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <h4
       {...props}
       className={cn(
-        "mt-5 mb-2 first:mt-0 last:mb-0 text-sm font-semibold text-(--text-primary)",
+        "mt-5 mb-2 first:mt-0 last:mb-0 text-sm font-semibold text-foreground",
         className
       )}
     />
@@ -99,7 +99,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
       className={cn(
         "mb-4 last:mb-0 pl-6 space-y-1.5 text-(--text-secondary) list-none",
         "[&>li]:relative [&>li]:before:absolute [&>li]:before:-left-4 [&>li]:before:top-[0.6em] [&>li]:before:h-1.5 [&>li]:before:w-1.5 [&>li]:before:rounded-full [&>li]:before:bg-(--content-accent) [&>li]:before:opacity-70",
-        "[&_ul]:mt-1.5 [&_ul]:mb-0 [&_ul>li]:before:h-1 [&_ul>li]:before:w-1 [&_ul>li]:before:bg-(--text-tertiary)",
+        "[&_ul]:mt-1.5 [&_ul]:mb-0 [&_ul>li]:before:h-1 [&_ul>li]:before:w-1 [&_ul>li]:before:bg-muted-foreground",
         "[&_ul_ul>li]:before:rounded-none [&_ul_ul>li]:before:h-0.5 [&_ul_ul>li]:before:w-2",
         className
       )}
@@ -111,7 +111,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
       className={cn(
         "mb-4 last:mb-0 pl-6 space-y-1.5 text-(--text-secondary) list-none [counter-reset:list-counter]",
         "[&>li]:relative [&>li]:[counter-increment:list-counter] [&>li]:before:absolute [&>li]:before:-left-6 [&>li]:before:w-5 [&>li]:before:text-right [&>li]:before:content-[counter(list-counter)_'.'] [&>li]:before:text-xs [&>li]:before:font-medium [&>li]:before:text-(--content-accent) [&>li]:before:opacity-80",
-        "[&_ol]:mt-1.5 [&_ol]:mb-0 [&_ol>li]:before:text-(--text-tertiary)",
+        "[&_ol]:mt-1.5 [&_ol]:mb-0 [&_ol>li]:before:text-muted-foreground",
         className
       )}
     />
@@ -155,17 +155,17 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
   strong: ({ className, ...props }) => (
     <strong
       {...props}
-      className={cn("font-semibold text-(--text-primary)", className)}
+      className={cn("font-semibold text-foreground", className)}
     />
   ),
   em: ({ className, ...props }) => (
-    <em {...props} className={cn("text-(--text-primary) italic", className)} />
+    <em {...props} className={cn("text-foreground italic", className)} />
   ),
   a: ({ className, ...props }) => (
     <a
       {...props}
       className={cn(
-        "text-(--interactive-primary) font-medium hand-drawn-underline hover:text-(--interactive-primary-hover) transition-colors",
+        "text-ring font-medium hand-drawn-underline hover:text-(--interactive-primary-hover) transition-colors",
         className
       )}
       target="_blank"
@@ -208,7 +208,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
           {...props}
           className={cn(
             className,
-            "rounded-md bg-(--code-inline-bg) ring-1 ring-(--border-primary) px-1.5 py-0.5 font-mono text-[0.85em] text-(--text-primary) font-medium"
+            "rounded-md bg-(--code-inline-bg) ring-1 ring-border px-1.5 py-0.5 font-mono text-[0.85em] text-foreground font-medium"
           )}
         >
           {children}
@@ -222,7 +222,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     );
   },
   table: ({ className, ...props }) => (
-    <div className="my-4 last:mb-0 first:mt-0 overflow-x-auto rounded-lg border border-(--border-primary)">
+    <div className="my-4 last:mb-0 first:mt-0 overflow-x-auto rounded-lg border border-border">
       <table
         {...props}
         className={cn("w-full border-collapse text-left text-sm", className)}
@@ -233,7 +233,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <th
       {...props}
       className={cn(
-        "border-b border-(--border-primary) bg-(--surface-muted) px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-(--text-secondary)",
+        "border-b border-border bg-(--surface-muted) px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-(--text-secondary)",
         className
       )}
     />
@@ -242,7 +242,7 @@ const components: React.ComponentProps<typeof ReactMarkdown>["components"] = {
     <td
       {...props}
       className={cn(
-        "border-b border-(--border-primary) px-4 py-2.5 align-top text-(--text-secondary)",
+        "border-b border-border px-4 py-2.5 align-top text-(--text-secondary)",
         className
       )}
     />

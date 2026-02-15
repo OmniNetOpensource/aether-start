@@ -57,7 +57,7 @@ export default function CodeBlock({
           className="h-7 gap-1 px-2 text-2xs bg-transparent"
         >
           {isCopied ? (
-            <Check className="h-3.5 w-3.5 text-(--status-success)" />
+            <Check className="h-3.5 w-3.5 text-success" />
           ) : (
             <Copy className="h-3.5 w-3.5" />
           )}
@@ -70,11 +70,11 @@ export default function CodeBlock({
       {/* Language label */}
       <div className="px-3 py-2 ">
         {normalizedLanguage ? (
-          <span className="text-xs font-medium text-(--text-tertiary)">
+          <span className="text-xs font-medium text-muted-foreground">
             {normalizedLanguage.toUpperCase()}
           </span>
         ) : (
-          <span className="text-xs text-(--text-tertiary)">Code</span>
+          <span className="text-xs text-muted-foreground">Code</span>
         )}
       </div>
       {/* Code area */}

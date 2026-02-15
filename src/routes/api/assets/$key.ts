@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
+import { requireSessionFromRequest } from '@/features/auth/server/session'
 import { getServerBindings } from '@/server/env'
 
 const KEY_PREFIX = 'chat-assets/'
@@ -10,7 +11,9 @@ export const Route = createFileRoute('/api/assets/$key')({
   server: {
     handlers: ({ createHandlers }) =>
       createHandlers({
-        GET: async ({ params }) => {
+        GET: async ({ params, request }) => {
+          await requireSessionFromRequest(request)
+
           const rawKey = decodeURIComponent(params.key)
           if (!isSafeStorageKey(rawKey)) {
             return new Response('Invalid asset key', { status: 400 })
@@ -25,7 +28,7 @@ export const Route = createFileRoute('/api/assets/$key')({
           const headers = new Headers()
           object.writeHttpMetadata(headers)
           headers.set('etag', object.httpEtag)
-          headers.set('cache-control', 'public, max-age=31536000, immutable')
+          headers.set('cache-control', 'private, max-age=31536000, immutable')
 
           return new Response(object.body, {
             status: 200,

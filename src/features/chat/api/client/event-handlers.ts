@@ -63,7 +63,6 @@ export const applyChatEventToTree = (
       useConversationsStore.getState().addConversation({
         id: event.conversationId,
         title: event.title,
-        user_id: '',
         created_at: now,
         updated_at: now,
       })

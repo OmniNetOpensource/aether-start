@@ -9,13 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as AuthRouteImport } from './routes/auth'
 import { Route as R404RouteImport } from './routes/404'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
 
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const R404Route = R404RouteImport.update({
   id: '/404',
   path: '/404',
@@ -41,6 +48,11 @@ const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
   path: '/c/$conversationId',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAssetsKeyRoute = ApiAssetsKeyRouteImport.update({
   id: '/api/assets/$key',
   path: '/api/assets/$key',
@@ -51,15 +63,19 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/auth': typeof AuthRoute
   '/app/': typeof AppIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
+  '/auth': typeof AuthRoute
   '/app': typeof AppIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRoutesById {
@@ -67,8 +83,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/auth': typeof AuthRoute
   '/app/': typeof AppIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
 }
 export interface FileRouteTypes {
@@ -77,18 +95,29 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/404'
+    | '/auth'
     | '/app/'
     | '/api/assets/$key'
+    | '/api/auth/$'
     | '/app/c/$conversationId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/404' | '/app' | '/api/assets/$key' | '/app/c/$conversationId'
+  to:
+    | '/'
+    | '/404'
+    | '/auth'
+    | '/app'
+    | '/api/assets/$key'
+    | '/api/auth/$'
+    | '/app/c/$conversationId'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/404'
+    | '/auth'
     | '/app/'
     | '/api/assets/$key'
+    | '/api/auth/$'
     | '/app/c/$conversationId'
   fileRoutesById: FileRoutesById
 }
@@ -96,11 +125,20 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   R404Route: typeof R404Route
+  AuthRoute: typeof AuthRoute
   ApiAssetsKeyRoute: typeof ApiAssetsKeyRoute
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/404': {
       id: '/404'
       path: '/404'
@@ -136,6 +174,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCConversationIdRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/assets/$key': {
       id: '/api/assets/$key'
       path: '/api/assets/$key'
@@ -164,7 +209,9 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   R404Route: R404Route,
+  AuthRoute: AuthRoute,
   ApiAssetsKeyRoute: ApiAssetsKeyRoute,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -19,6 +19,7 @@ type ConversationsActions = {
   loadInitialConversations: () => Promise<void>;
   loadMoreConversations: () => Promise<void>;
   clear: () => Promise<void>;
+  reset: () => void;
   deleteConversation: (id: string) => Promise<void>;
   updateConversationTitle: (id: string, title: string) => Promise<void>;
 };
@@ -58,7 +59,7 @@ const mapDetailToMeta = (detail: ConversationDetail): ConversationMeta => ({
   title: detail.title,
   created_at: detail.created_at,
   updated_at: detail.updated_at,
-  user_id: "",
+  user_id: detail.user_id,
 });
 
 export const useConversationsStore = create<
@@ -174,6 +175,17 @@ export const useConversationsStore = create<
           ...state,
           conversations: [],
           hasLoaded: true,
+          loadingMore: false,
+          hasMore: false,
+          conversationsCursor: null,
+        }));
+      },
+      reset: () => {
+        set((state) => ({
+          ...state,
+          conversations: [],
+          conversationsLoading: false,
+          hasLoaded: false,
           loadingMore: false,
           hasMore: false,
           conversationsCursor: null,

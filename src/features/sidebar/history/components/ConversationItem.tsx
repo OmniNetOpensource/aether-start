@@ -97,7 +97,7 @@ export function ConversationItem({
               type="button"
               onClick={handleMenuClick}
               aria-label="会话操作"
-              className="flex size-7 items-center justify-center rounded-md text-(--text-tertiary) opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-(--text-primary) group-hover:opacity-100 data-[state=open]:opacity-100"
+              className="flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
             >
               <MoreHorizontal className="size-4" />
             </button>
@@ -105,14 +105,14 @@ export function ConversationItem({
           <DropdownMenuContent
             align="end"
             side="right"
-            className="min-w-[8.5rem]"
+            className="min-w-34"
             onClick={(e) => e.stopPropagation()}
           >
             <DropdownMenuItem
               onSelect={() => {
                 void handleDelete();
               }}
-              className="text-(--status-destructive)"
+              className="text-destructive"
             >
               <Trash2 className="size-4" />
               删除会话

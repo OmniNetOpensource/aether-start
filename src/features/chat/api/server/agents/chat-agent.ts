@@ -1,4 +1,4 @@
-import { Agent, type Connection } from 'agents'
+import { Agent, type Connection, type ConnectionContext } from 'agents'
 import { getAvailableTools, executeToolsGen } from '@/features/chat/api/server/tools/executor'
 import {
   getDefaultRoleConfig,
@@ -41,7 +41,12 @@ type ChatAgentState = {
   status: ChatAgentStatus
   currentRequestId: string | null
   conversationId: string | null
+  ownerUserId: string | null
   updatedAt: number
+}
+
+type ConnectionAuthState = {
+  userId: string
 }
 
 type ChatAgentEnv = Cloudflare.Env & {
@@ -190,19 +195,63 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     status: 'idle',
     currentRequestId: null,
     conversationId: null,
+    ownerUserId: null,
     updatedAt: Date.now(),
   }
 
   private abortController: AbortController | null = null
   private eventCache: PersistedChatEvent[] = []
   private nextEventId = 1
+  private eventCacheClearTimer: ReturnType<typeof setTimeout> | null = null
   private runtimeState: ChatAgentState = { ...this.initialState }
 
   async onStart() {
     this.runtimeState.conversationId = this.name
   }
 
-  async onConnect(connection: Connection) {
+  async onRequest(request: Request) {
+    if (request.method === 'GET') {
+      return Response.json({
+        status: this.runtimeState.status,
+        requestId: this.runtimeState.currentRequestId ?? undefined,
+      })
+    }
+
+    return new Response('Method not allowed', { status: 405 })
+  }
+
+  private getConnectionUserId(connection: Connection) {
+    const state = connection.state as ConnectionAuthState | null
+    return state?.userId ?? null
+  }
+
+  private closeUnauthorized(connection: Connection) {
+    connection.close(1008, 'Unauthorized')
+  }
+
+  async onConnect(connection: Connection, ctx: ConnectionContext) {
+    const userId = ctx.request.headers.get('x-aether-user-id')?.trim()
+    if (!userId) {
+      this.closeUnauthorized(connection)
+      return
+    }
+
+    if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
+      this.closeUnauthorized(connection)
+      return
+    }
+
+    connection.setState({
+      userId,
+    } satisfies ConnectionAuthState)
+
+    if (!this.runtimeState.ownerUserId) {
+      this.runtimeState = {
+        ...this.runtimeState,
+        ownerUserId: userId,
+      }
+    }
+
     connection.send(
       stringify({
         type: 'sync_response',
@@ -214,6 +263,12 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   }
 
   async onMessage(connection: Connection, rawMessage: unknown) {
+    const connectionUserId = this.getConnectionUserId(connection)
+    if (!connectionUserId) {
+      this.closeUnauthorized(connection)
+      return
+    }
+
     const parsed = parseMessage(rawMessage)
     if (!parsed) {
       return
@@ -230,7 +285,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     }
 
     if (parsed.type === 'chat_request') {
-      await this.handleChatRequest(connection, parsed)
+      await this.handleChatRequest(connection, parsed, connectionUserId)
     }
   }
 
@@ -258,6 +313,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
   private async handleChatRequest(
     connection: Connection,
     message: Extract<ChatAgentClientMessage, { type: 'chat_request' }>,
+    userId: string,
   ) {
     if (this.runtimeState.status === 'running' && this.runtimeState.currentRequestId) {
       connection.send(
@@ -280,10 +336,16 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       return
     }
 
+    // Starting a new request: ensure stale timers can't clear the cache mid-run, and
+    // avoid mixing events from a previous request in sync responses.
+    this.cancelEventCacheClear()
+    this.eventCache = []
+
     this.runtimeState = {
       status: 'running',
       currentRequestId: message.requestId,
       conversationId: message.conversationId,
+      ownerUserId: this.runtimeState.ownerUserId ?? userId,
       updatedAt: Date.now(),
     }
 
@@ -296,7 +358,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
     // Persist initial D1 record so the conversation exists before streaming starts
     try {
-      const existing = await getConversationById(this.env.DB, message.conversationId)
+      const existing = await getConversationById(this.env.DB, message.conversationId, userId)
       if (!existing) {
         const now = new Date().toISOString()
         const userText = extractLatestUserText(
@@ -308,6 +370,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
           : userText || 'New Chat'
 
         await upsertConversation(this.env.DB, {
+          user_id: userId,
           id: message.conversationId,
           title: initialTitle,
           currentPath: message.treeSnapshot.currentPath,
@@ -334,7 +397,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     this.abortController = new AbortController()
     const signal = this.abortController.signal
 
-    const task = this.runChatInBackground(message, signal)
+    const task = this.runChatInBackground(message, userId, signal)
       .catch((error) => {
         getLogger().log('AGENT', 'runChatInBackground failed', {
           error: error instanceof Error ? error.message : String(error),
@@ -361,6 +424,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
   private async runChatInBackground(
     message: Extract<ChatAgentClientMessage, { type: 'chat_request' }>,
+    userId: string,
     signal: AbortSignal,
   ) {
     const logger = createConversationLogger()
@@ -369,20 +433,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     let finalStatus: Exclude<ChatAgentStatus, 'idle' | 'running'> = 'completed'
     let workingTree = cloneTreeSnapshot(message.treeSnapshot)
     let hasErrorEvent = false
-    let snapshotPersistQueue: Promise<void> = Promise.resolve()
-
-    const enqueueSnapshotPersist = () => {
-      const snapshot = cloneTreeSnapshot(workingTree)
-      snapshotPersistQueue = snapshotPersistQueue.then(async () => {
-        try {
-          await this.persistConversationSnapshot(message.conversationId, snapshot)
-        } catch (error) {
-          getLogger().log('AGENT', 'Persist conversation iteration snapshot failed', {
-            error: error instanceof Error ? error.message : String(error),
-          })
-        }
-      })
-    }
 
     const emitEvent = async (event: ChatServerToClientEvent) => {
       workingTree = processEventToTree(workingTree, event)
@@ -440,8 +490,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
           }
 
           iteration += 1
-          try {
-            const generator = provider.run(workingMessages, signal)
+          const generator = provider.run(workingMessages, signal)
 
             let pendingToolCalls: PendingToolInvocation[] = []
             let assistantText = ''
@@ -502,9 +551,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
               toolResults,
             )
             workingMessages = [...workingMessages, ...continuationMessages]
-          } finally {
-            enqueueSnapshotPersist()
-          }
         }
       } else {
         const provider = new AnthropicChatProvider({
@@ -523,8 +569,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
           }
 
           iteration += 1
-          try {
-            const generator = provider.run(workingMessages, signal)
+          const generator = provider.run(workingMessages, signal)
 
             let pendingToolCalls: PendingToolInvocation[] = []
             let thinkingBlocks: ThinkingBlockData[] = []
@@ -588,9 +633,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
               toolResults,
             )
             workingMessages = [...workingMessages, ...continuationMessages]
-          } finally {
-            enqueueSnapshotPersist()
-          }
         }
       }
 
@@ -621,16 +663,9 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       }
     } finally {
       try {
-        await snapshotPersistQueue
-      } catch (error) {
-        getLogger().log('AGENT', 'Iteration snapshot queue failed', {
-          error: error instanceof Error ? error.message : String(error),
-        })
-      }
-
-      try {
         await this.persistConversationSnapshot(
           message.conversationId,
+          userId,
           cloneTreeSnapshot(workingTree),
         )
       } catch (error) {
@@ -654,7 +689,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         updatedAt: Date.now(),
       }
 
-      this.clearEventCache()
+      this.scheduleEventCacheClear(message.requestId)
     }
   }
 
@@ -678,13 +713,38 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     )
   }
 
-  private clearEventCache() {
-    this.eventCache = []
-    this.nextEventId = 1
+  private cancelEventCacheClear() {
+    if (!this.eventCacheClearTimer) {
+      return
+    }
+
+    clearTimeout(this.eventCacheClearTimer)
+    this.eventCacheClearTimer = null
+  }
+
+  private scheduleEventCacheClear(requestId: string) {
+    this.cancelEventCacheClear()
+
+    this.eventCacheClearTimer = setTimeout(() => {
+      this.eventCacheClearTimer = null
+
+      // If a new request started since scheduling, don't clear its cache.
+      if (this.runtimeState.currentRequestId !== requestId) {
+        return
+      }
+
+      // A running request still needs the cache for reconnect/sync.
+      if (this.runtimeState.status === 'running') {
+        return
+      }
+
+      this.eventCache = []
+    }, 30_000)
   }
 
   private async persistConversationSnapshot(
     conversationId: string,
+    userId: string,
     snapshot: {
       messages: Message[]
       currentPath: number[]
@@ -692,7 +752,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       nextId: number
     },
   ) {
-    const existing = await getConversationById(this.env.DB, conversationId)
+    const existing = await getConversationById(this.env.DB, conversationId, userId)
     const now = new Date().toISOString()
 
     const latestUserText = extractLatestUserText(snapshot.messages, snapshot.currentPath)
@@ -701,6 +761,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       : 'New Chat'
 
     await upsertConversation(this.env.DB, {
+      user_id: userId,
       id: conversationId,
       title: existing?.title ?? generatedTitle,
       currentPath: snapshot.currentPath,

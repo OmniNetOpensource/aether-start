@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
+import { requireSession } from '@/features/auth/server/session'
 import { parseDataUrl, base64ToUint8Array } from '@/server/base64'
 import { getServerBindings } from '@/server/env'
 
@@ -25,6 +26,8 @@ const uploadAttachmentInputSchema = z.object({
 export const uploadAttachmentFn = createServerFn({ method: 'POST' })
   .inputValidator(uploadAttachmentInputSchema)
   .handler(async ({ data }) => {
+    await requireSession()
+
     const parsed = parseDataUrl(data.dataUrl)
     if (!parsed) {
       throw new Error('Invalid data URL payload')

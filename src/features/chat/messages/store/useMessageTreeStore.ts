@@ -292,7 +292,6 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
         addConversation({
           id: newConversationId,
           title,
-          user_id: "",
           created_at: now,
           updated_at: now,
         });

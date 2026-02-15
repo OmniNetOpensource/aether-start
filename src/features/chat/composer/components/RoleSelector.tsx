@@ -20,7 +20,7 @@ export function RoleSelector() {
     ROLES.find((role) => role.id === currentRole)?.name ?? "角色";
 
   const toolButtonBaseClass =
-    "h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)";
+    "h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground";
 
   return (
     <Popover>
@@ -30,10 +30,10 @@ export function RoleSelector() {
           size="sm"
           className={cn(
             toolButtonBaseClass,
-            "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-(--text-primary)"
+            "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground"
           )}
         >
-          <span className="max-w-[100px] truncate">{currentRoleName}</span>
+          <span className="max-w-25 truncate">{currentRoleName}</span>
           <ChevronDown
             className="h-3 w-3 transition-transform duration-300 group-data-[state=open]:rotate-180"
           />
@@ -43,9 +43,9 @@ export function RoleSelector() {
         align="start"
         className="w-48 max-w-[calc(100vw-2rem)] p-1.5"
       >
-        <div className="flex flex-col gap-1 px-1 py-1 max-h-[300px] overflow-y-auto">
+        <div className="flex flex-col gap-1 px-1 py-1 max-h-75 overflow-y-auto">
           {ROLES.length === 0 ? (
-            <div className="px-3 py-2 text-xs text-(--text-primary)">
+            <div className="px-3 py-2 text-xs text-foreground">
               暂无角色
             </div>
           ) : (
@@ -60,7 +60,7 @@ export function RoleSelector() {
                 >
                   <span>{role.name}</span>
                   {currentRole === role.id && (
-                    <Check className="w-3.5 h-3.5 text-(--text-primary)" />
+                    <Check className="w-3.5 h-3.5 text-foreground" />
                   )}
                 </button>
               </PopoverClose>

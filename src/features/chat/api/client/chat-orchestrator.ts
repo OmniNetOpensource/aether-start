@@ -2,7 +2,7 @@ import { toast } from '@/shared/hooks/useToast'
 import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
 import { buildConversationTitle } from '@/features/conversation/formatting/format'
 import { applyChatEventToTree } from '@/features/chat/api/client/event-handlers'
-import { ChatClient } from '@/features/chat/api/client/websocket-client'
+import { ChatClient, checkAgentStatus } from '@/features/chat/api/client/websocket-client'
 import type { Message, MessageLike, SerializedMessage } from '@/features/chat/types/chat'
 import type { MessageTreeSnapshot } from '@/features/chat/api/shared/types'
 import { appNavigate } from '@/shared/lib/navigation'
@@ -53,7 +53,6 @@ export const startChatRequest = async (
     useConversationsStore.getState().addConversation({
       id: currentConversationId,
       title: fallbackTitle,
-      user_id: '',
       created_at: now,
       updated_at: now,
     })
@@ -184,10 +183,30 @@ export const resumeRunningConversation = async (conversationId: string) => {
     store.chatClient.disconnect()
   }
 
+  // Step 1: Check DO status via HTTP — no WebSocket needed
+  let agentStatus: Awaited<ReturnType<typeof checkAgentStatus>> | null = null
+  let probeFailed = false
+  try {
+    agentStatus = await checkAgentStatus(conversationId)
+  } catch {
+    probeFailed = true
+  }
+
+  // Step 2: If not running, nothing to do — D1 data is already loaded
+  if (!probeFailed && agentStatus && agentStatus.status !== 'running') {
+    return
+  }
+
+  // Step 3: Establish WebSocket to receive live events (probe failure falls back to sync)
   let disconnectedHandled = false
 
   const chatClient = new ChatClient({
-    onEvent: (event) => {
+    onEvent: (event, meta) => {
+      const activeRequestId = useChatRequestStore.getState().activeRequestId
+      if (activeRequestId && activeRequestId !== meta.requestId) {
+        return
+      }
+
       applyChatEventToTree(event)
     },
     onStatus: (statusEvent) => {
@@ -253,6 +272,16 @@ export const resumeRunningConversation = async (conversationId: string) => {
     },
   })
 
+  // If the HTTP probe confirmed running, show pending immediately.
+  if (!probeFailed && agentStatus?.status === 'running') {
+    useChatRequestStore.setState({
+      pending: true,
+      chatClient,
+      activeRequestId: agentStatus.requestId ?? null,
+    })
+  }
+
+  // Step 4: Connect and sync — get missed events from eventCache, deduplicated
   try {
     await chatClient.sync(conversationId)
   } catch (error) {

@@ -112,10 +112,10 @@ export default function Sidebar() {
               : "w-0"
           }`}
         >
-          <div className="flex h-full flex-col border-r ink-border bg-(--surface-primary)">
+          <div className="flex h-full flex-col border-r ink-border bg-background">
             <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
               <div className="flex items-center">
-                <AetherLogo className="h-6 text-(--text-primary)" />
+                <AetherLogo className="h-6 text-foreground" />
               </div>
             </div>
 
@@ -149,7 +149,7 @@ export default function Sidebar() {
         />
 
         <aside
-          className={`absolute left-0 top-0 z-(--z-sidebar) flex h-full ${DESKTOP_SIDEBAR_WIDTH_CLASS} flex-col overflow-hidden border-r ink-border bg-(--surface-primary) transition-transform duration-300 ${
+          className={`absolute left-0 top-0 z-(--z-sidebar) flex h-full ${DESKTOP_SIDEBAR_WIDTH_CLASS} flex-col overflow-hidden border-r ink-border bg-background transition-transform duration-300 ${
             isDesktopOpen ? "translate-x-0" : "-translate-x-full"
           }`}
           onMouseEnter={openDesktopSidebar}
@@ -157,7 +157,7 @@ export default function Sidebar() {
         >
           <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
             <div className="flex items-center">
-              <AetherLogo className="h-6 text-(--text-primary)" />
+              <AetherLogo className="h-6 text-foreground" />
             </div>
           </div>
 
@@ -182,7 +182,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`relative flex h-full flex-col overflow-hidden bg-(--surface-primary) transition-[width] duration-300 ${
+      className={`relative flex h-full flex-col overflow-hidden bg-background transition-[width] duration-300 ${
         isOpen ? "w-64 shrink-0 border-r ink-border" : "w-0 border-r-0"
       }`}
     >
@@ -193,7 +193,7 @@ export default function Sidebar() {
       >
         <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
           <div className="flex items-center">
-            <AetherLogo className="h-6 text-(--text-primary)" />
+            <AetherLogo className="h-6 text-foreground" />
           </div>
         </div>
 
