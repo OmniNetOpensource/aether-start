@@ -130,9 +130,9 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   },
   test2: {
     id: "test2",
-    name: "claude-sonnet-4-6+rightcode",
-    model: "claude-sonnet-4-6",
-    backend: "rightcode",
+    name: "gemini-3.1-pro-preview+dmx",
+    model: "gemini-3.1-pro-preview",
+    backend: "dmx",
     systemPrompt: aetherSystemPrompt,
   },
   // test3: {
