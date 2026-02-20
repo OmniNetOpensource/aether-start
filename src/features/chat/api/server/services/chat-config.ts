@@ -135,13 +135,13 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     backend: "dmx",
     systemPrompt: aetherSystemPrompt,
   },
-  // test3: {
-  //   id: "test3",
-  //   name: "qwen3.5-plus+dmx",
-  //   model: "qwen3.5-plus",
-  //   backend: "dmx",
-  //   systemPrompt: aetherSystemPrompt,
-  // },
+  test3: {
+    id: "test3",
+    name: "qwen3.5-plus+dmx",
+    model: "qwen3.5-plus",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
   // test4: {
   //   id: "test4",
   //   name: "glm-5+dmx",
