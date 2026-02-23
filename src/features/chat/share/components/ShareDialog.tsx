@@ -421,10 +421,10 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                           <div
                             key={`${id}-content-${blockIndex}`}
                             className={cn(
-                              'text-base leading-relaxed wrap-anywhere [&_pre]:wrap-normal [&_.markdown-body]:text-base [&_.markdown-body]:leading-relaxed [&_.markdown-body]:wrap-anywhere',
+                              'text-base leading-relaxed wrap-anywhere [&_pre]:wrap-normal',
                               message.role === 'user'
-                                ? 'text-foreground [&_.markdown-body]:text-foreground'
-                                : 'text-(--text-secondary) [&_.markdown-body]:text-(--text-secondary)'
+                                ? 'text-foreground'
+                                : 'text-(--text-secondary)'
                             )}
                           >
                             <Markdown content={block.content} />

@@ -271,7 +271,7 @@ export const MessageItem = memo(function MessageItem({
               {isEditing ? (
                 <MessageEditor messageId={messageId} depth={depth} />
               ) : isUser ? (
-                <div className="text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal [&_.markdown-body]:text-base [&_.markdown-body]:text-foreground [&_.markdown-body]:leading-relaxed [&_.markdown-body]:wrap-anywhere [&_.markdown-body_p]:text-foreground">
+                <div className="text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
                   {contentBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;
 
@@ -284,7 +284,7 @@ export const MessageItem = memo(function MessageItem({
                 </div>
               ) : (
                 <div
-                  className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal [&_.markdown-body]:text-base [&_.markdown-body]:text-(--text-secondary) [&_.markdown-body]:leading-relaxed [&_.markdown-body]:wrap-anywhere"
+                  className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal"
                 >
                   {contentBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;

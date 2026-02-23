@@ -1,7 +1,6 @@
 import { createContext } from 'react'
 import * as CollapsiblePrimitive from '@radix-ui/react-collapsible'
-import { ChevronRight, Check, Loader2, Brain, Circle } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
+import { ChevronRight, Brain } from 'lucide-react'
 import { cn } from '@/shared/lib/utils'
 import { Badge } from './badge'
 
@@ -45,8 +44,8 @@ function ChainOfThoughtHeader({
     <CollapsiblePrimitive.CollapsibleTrigger
       data-slot="chain-of-thought-header"
       className={cn(
-        'group flex w-full items-center gap-2 text-sm font-medium text-(--text-primary)',
-        'hover:text-(--text-secondary) transition-colors',
+        'group flex w-full items-center gap-2 text-sm font-medium text-(--text-secondary)',
+        'hover:text-(--interactive-primary-hover) transition-colors',
         className
       )}
       {...props}
@@ -86,47 +85,35 @@ function ChainOfThoughtContent({
 type StepStatus = 'complete' | 'active' | 'pending'
 
 type ChainOfThoughtStepProps = React.HTMLAttributes<HTMLDivElement> & {
-  icon: LucideIcon
-  label: string
+  icon?: React.ReactNode
+  label?: string
   description?: string
   status?: StepStatus
   hideConnector?: boolean
 }
 
 function ChainOfThoughtStep({
-  icon: Icon,
-  label,
+  icon,
   description,
-  status = 'complete',
   hideConnector = false,
   children,
   className,
   ...props
 }: ChainOfThoughtStepProps) {
-  const StatusIcon =
-    status === 'complete' ? Check : status === 'active' ? Loader2 : Circle
-
   return (
     <div
       data-slot="chain-of-thought-step"
-      className={cn('flex gap-3 py-2 first:pt-3', className)}
+      className={cn('flex gap-3 py-1 first:pt-3', className)}
       {...props}
     >
       {/* Icon column */}
-      <div className="flex flex-col items-center gap-1">
+      <div className="flex flex-col items-center py-0.5">
         <div
           className={cn(
-            'flex h-8 w-8 shrink-0 items-center justify-center rounded-full',
-            {
-              'bg-(--surface-hover) text-(--text-secondary)':
-                status === 'complete',
-              'bg-(--interactive-primary) text-white': status === 'active',
-              'bg-(--surface-muted) text-(--text-tertiary)':
-                status === 'pending',
-            }
+            'flex h-4 w-4 shrink-0 items-center justify-center rounded-full'
           )}
         >
-          <Icon className="h-4 w-4" />
+          {icon}
         </div>
         {/* Connector line - hidden for last step */}
         {!hideConnector && <div className="w-px flex-1 bg-border min-h-4" />}
@@ -134,28 +121,8 @@ function ChainOfThoughtStep({
 
       {/* Content column */}
       <div className="flex-1 min-w-0 pb-2">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn('text-sm font-medium', {
-              'text-(--text-primary)': status === 'complete',
-              'text-(--interactive-primary)': status === 'active',
-              'text-(--text-tertiary)': status === 'pending',
-            })}
-          >
-            {label}
-          </span>
-          {StatusIcon && (
-            <StatusIcon
-              className={cn('h-3.5 w-3.5', {
-                'text-success': status === 'complete',
-                'animate-spin text-(--interactive-primary)':
-                  status === 'active',
-              })}
-            />
-          )}
-        </div>
         {description && (
-          <div className="mt-1 text-xs text-(--text-secondary)">
+          <div className="text-xs text-(--text-secondary)">
             {description}
           </div>
         )}
@@ -184,35 +151,41 @@ function ChainOfThoughtSearchResults({
 // Individual search result badge
 type ChainOfThoughtSearchResultProps = {
   href?: string
+  icon?: React.ReactNode
+  url?: string
   children?: React.ReactNode
   className?: string
 }
 
 function ChainOfThoughtSearchResult({
   href,
+  icon,
+  url,
   className,
   children,
 }: ChainOfThoughtSearchResultProps) {
+  const content = (
+    <Badge variant="secondary" className={cn('gap-1.5 hover:bg-(--surface-hover) cursor-pointer', className)}>
+      {icon && <span className="shrink-0">{icon}</span>}
+      <span className="truncate">{children}</span>
+      {url && <span className="truncate text-(--text-tertiary)">{url}</span>}
+    </Badge>
+  )
+
   if (href) {
     return (
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className={cn('no-underline', className)}
+        className="no-underline max-w-full"
       >
-        <Badge variant="secondary" className="hover:bg-(--surface-hover) cursor-pointer">
-          {children}
-        </Badge>
+        {content}
       </a>
     )
   }
 
-  return (
-    <Badge variant="secondary" className={className}>
-      {children}
-    </Badge>
-  )
+  return content
 }
 
 // Image display

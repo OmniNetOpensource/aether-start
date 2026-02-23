@@ -7,7 +7,7 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { Quote, X } from "lucide-react";
+import { X } from "lucide-react";
 import { ImagePreview } from "@/shared/components/ImagePreview";
 import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
@@ -23,7 +23,6 @@ export function Composer() {
   const input = useComposerStore((state) => state.input);
   const pending = useChatRequestStore((state) => state.pending);
   const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
-  const quotedTexts = useComposerStore((state) => state.quotedTexts);
   const uploading = useComposerStore((state) => state.uploading);
   const currentRole = useChatRequestStore((state) => state.currentRole);
   const deviceType = useResponsive();
@@ -31,7 +30,6 @@ export function Composer() {
   const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
-  const removeQuotedText = useComposerStore((state) => state.removeQuotedText);
   const sendMessage = useChatRequestStore((state) => state.sendMessage);
   const stop = useChatRequestStore((state) => state.stop);
 
@@ -39,10 +37,9 @@ export function Composer() {
     const trimmed = input.trim();
     const hasContent = trimmed.length > 0;
     const hasAttachment = pendingAttachments.length > 0;
-    const hasQuotes = quotedTexts.length > 0;
     const hasRole = !!currentRole;
 
-    if (pending || (!hasContent && !hasAttachment && !hasQuotes) || !hasRole) {
+    if (pending || (!hasContent && !hasAttachment) || !hasRole) {
       if (!hasRole) {
         toast.warning("请先选择角色");
       }
@@ -123,11 +120,10 @@ export function Composer() {
 
   const hasText = input.trim().length > 0;
   const hasAttachments = pendingAttachments.length > 0;
-  const hasQuotes = quotedTexts.length > 0;
   const hasRole = !!currentRole;
   const sendDisabled = pending
     ? false
-    : (!hasText && !hasAttachments && !hasQuotes) ||
+    : (!hasText && !hasAttachments) ||
       !hasRole ||
       uploading;
   const isNewchat = useIsNewChat();
@@ -143,37 +139,6 @@ export function Composer() {
         className="flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
         <div className="relative flex w-full flex-col gap-1 rounded-xl border ink-border bg-background p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
-          {hasQuotes && (
-            <div className="mb-2 flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
-              {quotedTexts.map((quote) => (
-                <div
-                  key={quote.id}
-                  className="flex min-w-50 max-w-full items-start gap-3 rounded-xl border ink-border bg-background p-2 pr-3 shadow-sm"
-                >
-                  <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border ink-border bg-(--surface-muted)">
-                    <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                      <Quote className="h-4 w-4" />
-                    </div>
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-foreground line-clamp-2">
-                      {quote.text}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="移除引用"
-                    onClick={() => removeQuotedText(quote.id)}
-                    className="h-6 w-6 rounded-full hover:text-destructive"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
           {hasAttachments && (
             <div className="flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
               {pendingAttachments.map((attachment) => (
@@ -249,37 +214,6 @@ export function Composer() {
         className="relative flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
         <div className="relative flex w-full flex-col gap-1 rounded-xl border ink-border bg-background p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
-        {hasQuotes && (
-          <div className="mb-2 flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
-            {quotedTexts.map((quote) => (
-              <div
-                key={quote.id}
-                className="flex min-w-50 max-w-full items-start gap-3 rounded-xl border ink-border bg-background p-2 pr-3 shadow-sm"
-              >
-                <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-xl border ink-border bg-(--surface-muted)">
-                  <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-                    <Quote className="h-4 w-4" />
-                  </div>
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-xs text-foreground line-clamp-2">
-                    {quote.text}
-                  </p>
-                </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="移除引用"
-                  onClick={() => removeQuotedText(quote.id)}
-                  className="h-6 w-6 rounded-full hover:text-destructive"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        )}
         {hasAttachments && (
           <div className="flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
             {pendingAttachments.map((attachment) => (

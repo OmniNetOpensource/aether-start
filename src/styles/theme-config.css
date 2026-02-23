@@ -2,8 +2,10 @@
   /* Core Tailwind mappings */
   --color-background: var(--surface-primary);
   --color-foreground: var(--text-primary);
+  --color-primary: var(--interactive-primary);
   --color-muted: var(--surface-muted);
   --color-muted-foreground: var(--text-tertiary);
+  --color-sidebar: var(--surface-secondary);
   --color-card: var(--surface-muted);
   --color-border: var(--border-primary);
   --color-ring: var(--interactive-primary);

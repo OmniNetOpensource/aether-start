@@ -2,6 +2,10 @@
 @import "lxgw-wenkai-webfont/lxgwwenkai-regular.css";
 @import "tailwindcss";
 @import "tw-animate-css";
+@import "streamdown/styles.css";
+
+/* Ensure Tailwind picks up Streamdown utility classes */
+@source "../../node_modules/streamdown/dist/*.js";
 
 /* Custom styles - 按依赖顺序导入 */
 @import "@/styles/theme-tokens.css";

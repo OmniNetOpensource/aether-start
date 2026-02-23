@@ -3,8 +3,7 @@ import { useEffect, useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
-import { focusComposerTextarea } from "@/features/chat/composer/lib/composer-focus";
+import { insertQuoteAtCursor } from "@/features/chat/composer/lib/composer-focus";
 import { useTextSelection } from "@/features/chat/messages/hooks/useTextSelection";
 import { SelectionQuoteButton } from "./SelectionQuoteButton";
 
@@ -19,8 +18,7 @@ export function MessageList() {
 
   const handleQuote = () => {
     if (selection.text) {
-      useComposerStore.getState().addQuotedText(selection.text);
-      focusComposerTextarea();
+      insertQuoteAtCursor(selection.text);
       clearSelection();
     }
   };
