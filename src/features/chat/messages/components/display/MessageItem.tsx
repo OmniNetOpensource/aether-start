@@ -316,11 +316,10 @@ export const MessageItem = memo(function MessageItem({
 
                     return (
                       <div key={blockKey}>
-                        <Markdown content={block.content} />
-                        {isStreaming &&
-                          blockIndex === contentBlocks.length - 1 && (
-                            <span className="ml-1 inline-flex h-5 w-0.5 animate-pulse bg-(--feedback-cursor) align-middle" />
-                          )}
+                        <Markdown
+                          content={block.content}
+                          isAnimating={isStreaming && blockIndex === contentBlocks.length - 1}
+                        />
                       </div>
                     );
                   })}

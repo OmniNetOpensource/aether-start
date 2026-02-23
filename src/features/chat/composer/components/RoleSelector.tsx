@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import {
@@ -9,19 +9,17 @@ import {
   PopoverTrigger,
 } from "@/shared/ui/popover";
 import { cn } from "@/shared/lib/utils";
-import { getAvailableRolesFn } from "@/features/chat/api/server/functions/roles";
 import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-
-type RoleInfo = { id: string; name: string };
 
 export function RoleSelector() {
   const currentRole = useChatRequestStore((state) => state.currentRole);
   const setCurrentRole = useChatRequestStore((state) => state.setCurrentRole);
-  const [roles, setRoles] = useState<RoleInfo[]>([]);
+  const roles = useChatRequestStore((state) => state.availableRoles);
+  const loadRoles = useChatRequestStore((state) => state.loadRoles);
 
   useEffect(() => {
-    getAvailableRolesFn().then(setRoles).catch(() => {})
-  }, []);
+    loadRoles();
+  }, [loadRoles]);
 
   const currentRoleName =
     roles.find((role) => role.id === currentRole)?.name ?? "角色";

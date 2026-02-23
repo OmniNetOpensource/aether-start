@@ -15,12 +15,17 @@ import {
 } from "@/features/conversation/model/tree/block-operations";
 import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
 import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
+import { getAvailableRolesFn } from "@/features/chat/api/server/functions/roles";
+
+type RoleInfo = { id: string; name: string };
 
 type ChatRequestState = {
   pending: boolean;
   chatClient: ChatClient | null;
   activeRequestId: string | null;
   currentRole: string;
+  availableRoles: RoleInfo[];
+  rolesLoading: boolean;
 };
 
 type ChatRequestActions = {
@@ -28,6 +33,7 @@ type ChatRequestActions = {
   stop: () => void;
   resumeIfRunning: (conversationId: string) => Promise<void>;
   setCurrentRole: (role: string) => void;
+  loadRoles: () => Promise<void>;
   clear: () => void;
   _setPending: (pending: boolean) => void;
   _setChatClient: (client: ChatClient | null) => void;
@@ -45,6 +51,8 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       chatClient: null,
       activeRequestId: null,
       currentRole: getInitialRole(),
+      availableRoles: [],
+      rolesLoading: false,
       sendMessage: async () => {
         const { input, pendingAttachments, quotedTexts } =
           useComposerStore.getState();
@@ -112,6 +120,20 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       },
       setCurrentRole: (role) => {
         set({ currentRole: role });
+      },
+      loadRoles: async () => {
+        const { availableRoles, rolesLoading } = get();
+        if (availableRoles.length > 0 || rolesLoading) {
+          return;
+        }
+
+        set({ rolesLoading: true });
+        try {
+          const roles = await getAvailableRolesFn();
+          set({ availableRoles: roles, rolesLoading: false });
+        } catch {
+          set({ rolesLoading: false });
+        }
       },
       clear: () => {
         const client = get().chatClient;

@@ -31,17 +31,3 @@ Use `pnpm` for all tasks.
 - Cloudflare bindings are configured in `wrangler.jsonc` (`DB` for D1, `CHAT_ASSETS` for R2).
 - Never commit real secrets; `NEXT_PUBLIC_*` values are exposed to the client.
 
-## Commit & Pull Request Guidelines
-- Commit messages are short and imperative; optional conventional prefixes like `feat:` or `fix:` appear in history.
-- PRs should include: a clear summary, validation notes (`pnpm check`), and screenshots for UI changes.
-- Link relevant issues and call out any config or env changes.
-
-
-
-# IMPORTANT， USER PREFERENCE
-
-- 没有我的同意，不允许revert changes
-
-- commit的时候，先pnpm check（如果这个命令的报错不是你造成的，不必理会）并review，然后只commit自己修改的部分，不是你自己修改的diff你不要管不要理会也不要动。commit之后不着急push。
-
-- 修改之前，你必须要通过问问题得到我的确认

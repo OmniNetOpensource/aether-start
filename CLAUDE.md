@@ -159,11 +159,3 @@ Server-side chat logic is implemented via Cloudflare Durable Objects + WebSocket
 - Preserve message tree fields (`id`, sibling/child links, `createdAt`) when transforming
 - Use existing helpers in `conversation/model/tree/` for path/tree operations
 
-
-# IMPORTANT， USER PREFERENCE
-
-- 没有我的同意，不允许revert changes
-
-- commit的时候，先pnpm check（如果这个命令的报错不是你造成的，不必理会）并review，然后只commit自己修改的部分，不是你自己修改的diff你不要管不要理会也不要动。commit之后不着急push。
-
-- 修改之前，你必须要通过问问题得到我的确认

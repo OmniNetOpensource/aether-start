@@ -1,19 +1,28 @@
-import { lazy, memo, Suspense, type FC } from 'react'
+import { memo } from 'react'
+import { Streamdown } from 'streamdown'
+import { createCodePlugin } from '@streamdown/code'
+import { math } from '@streamdown/math'
+import { cjk } from '@streamdown/cjk'
 
 type Props = {
   content: string
+  isAnimating?: boolean
 }
 
-const MarkdownContent: FC<Props> = import.meta.env.SSR
-  ? () => null
-  : lazy(() => import('./MarkdownContent'))
+const codePlugin = createCodePlugin({
+  themes: ['github-light', 'github-dark'],
+})
 
-const Markdown = memo(function Markdown({ content }: Props) {
+const Markdown = memo(function Markdown({ content, isAnimating = false }: Props) {
   if (import.meta.env.SSR) return null
+
   return (
-    <Suspense fallback={null}>
-      <MarkdownContent content={content} />
-    </Suspense>
+    <Streamdown
+      plugins={{ code: codePlugin, math, cjk }}
+      isAnimating={isAnimating}
+    >
+      {content}
+    </Streamdown>
   )
 })
 

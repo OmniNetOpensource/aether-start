@@ -1,0 +1,114 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Light Theme - Paperlike */
+  /* Surfaces - Main backgrounds and elevated surfaces */
+  --surface-primary: #f3eee3;
+  --surface-secondary: #f7f1e6;
+  --surface-muted: rgba(0, 0, 0, 0.03);
+  --surface-hover: rgba(0, 0, 0, 0.05);
+
+  --border-primary: rgba(26, 26, 26, 0.08);
+
+  /* Text - Hierarchy of text colors */
+  --text-primary: #1a1a1a;
+  --text-secondary: rgba(26, 26, 26, 0.7);
+  --text-tertiary: rgba(26, 26, 26, 0.4);
+
+  /* Interactive - Buttons, links, toggles */
+  --interactive-primary: #1a1a1a;
+  --interactive-primary-hover: #000000;
+  --interactive-secondary: rgba(26, 26, 26, 0.7);
+  --interactive-secondary-hover: #1a1a1a;
+
+  /* Content - Decorative accents */
+  --content-accent: #a38b66;
+  --content-accent-muted: rgba(163, 139, 102, 0.6);
+
+  /* Feedback - Loading, cursor */
+  --feedback-loading: rgba(26, 26, 26, 0.6);
+  --feedback-cursor: rgba(26, 26, 26, 0.7);
+
+  /* Inline Code */
+  --code-inline-bg: rgba(26, 26, 26, 0.06);
+
+  /* Shiki Syntax Highlighting - Light Theme */
+  --sdm-bg: transparent;
+  --sdm-fg: #24292e;
+
+  /* Status Colors - Semantic feedback */
+  --status-destructive: #BF616A;
+  --status-destructive-foreground: #ffffff;
+  --status-info: #81A1C1;
+  --status-info-foreground: #ffffff;
+  --status-success: #A3BE8C;
+  --status-success-foreground: #ffffff;
+  --status-warning: #D08770;
+  --status-warning-foreground: #ffffff;
+
+  /* Z-index Scale - Semantic Layering System */
+  --z-base: 0;
+  --z-sidebar: 10;
+  --z-sticky: 10;
+  --z-card-inner: 10;
+  --z-composer: 9;
+  --z-mobile-overlay: 25;
+  --z-mobile-sidebar: 26;
+  --z-draggable: 40;
+  --z-modal-backdrop: 50;
+  --z-modal-content: 51;
+  --z-toast: 100;
+
+  color-scheme: light;
+
+  --radius: 0.625rem;
+}
+
+html.dark {
+  /* Dark Theme - Paperlike */
+  /* Surfaces - Main backgrounds and elevated surfaces */
+  --surface-primary: #161614;
+  --surface-secondary: #1c1a18;
+  --surface-muted: rgba(255, 255, 255, 0.03);
+  --surface-hover: rgba(255, 255, 255, 0.06);
+
+  --border-primary: rgba(227, 222, 211, 0.08);
+
+  /* Text - Hierarchy of text colors */
+  --text-primary: #e3ded3;
+  --text-secondary: rgba(227, 222, 211, 0.7);
+  --text-tertiary: rgba(227, 222, 211, 0.4);
+
+  /* Interactive - Buttons, links, toggles */
+  --interactive-primary: #e3ded3;
+  --interactive-primary-hover: #ffffff;
+  --interactive-secondary: rgba(227, 222, 211, 0.7);
+  --interactive-secondary-hover: #ffffff;
+
+  /* Content - Decorative accents */
+  --content-accent: #cbb693;
+  --content-accent-muted: rgba(203, 182, 147, 0.6);
+
+  /* Feedback - Loading, cursor */
+  --feedback-loading: rgba(227, 222, 211, 0.6);
+  --feedback-cursor: rgba(227, 222, 211, 0.7);
+
+  /* Inline Code */
+  --code-inline-bg: rgba(255, 255, 255, 0.08);
+
+  /* Shiki Syntax Highlighting - Dark Theme */
+  --shiki-dark-bg: transparent;
+  --shiki-dark: #e1e4e8;
+
+  /* Status Colors - Semantic feedback */
+  --status-destructive: #BF616A;
+  --status-destructive-foreground: #ffffff;
+  --status-success: #A3BE8C; /* nord14 */
+  --status-success-foreground: #022c22;
+  --status-warning: #EBCB8B; /* nord13 - Brighter yellow for dark mode */
+  --status-warning-foreground: #451a03;
+  --status-info: #88C0D0; /* nord8 */
+  --status-info-foreground: #1e3a8a;
+
+  color-scheme: dark;
+}
