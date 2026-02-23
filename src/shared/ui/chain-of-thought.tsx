@@ -165,10 +165,10 @@ function ChainOfThoughtSearchResult({
   children,
 }: ChainOfThoughtSearchResultProps) {
   const content = (
-    <Badge variant="secondary" className={cn('gap-1.5 hover:bg-(--surface-hover) cursor-pointer', className)}>
+    <Badge variant="secondary" className={cn('gap-1 px-1.5 py-0 text-[11px] max-w-full hover:bg-(--surface-hover) cursor-pointer', className)}>
       {icon && <span className="shrink-0">{icon}</span>}
-      <span className="truncate">{children}</span>
-      {url && <span className="truncate text-(--text-tertiary)">{url}</span>}
+      <span className="truncate min-w-0">{children}</span>
+      {url && <span className="shrink-0 text-(--text-tertiary)">{(() => { try { return new URL(url).host } catch { return url } })()}</span>}
     </Badge>
   )
 

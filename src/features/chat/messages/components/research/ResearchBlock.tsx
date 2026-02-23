@@ -9,6 +9,7 @@ import {
   ChainOfThoughtStep,
   ChainOfThoughtSearchResults,
   ChainOfThoughtSearchResult,
+  ChainOfThoughtImage,
 } from '@/shared/ui/chain-of-thought'
 import { getToolLifecycle, getSearchResultCount } from './utils'
 
@@ -204,6 +205,19 @@ function SearchStep({
   )
 }
 
+// Parse image result from fetch tool
+function parseFetchImageResult(tool: Tool): string | null {
+  const { result } = getToolLifecycle(tool)
+  if (!result) return null
+  try {
+    const parsed = JSON.parse(result.result)
+    if (parsed.type === 'image' && typeof parsed.data_url === 'string') {
+      return parsed.data_url
+    }
+  } catch { /* not JSON */ }
+  return null
+}
+
 // Render a fetch tool step
 function FetchStep({
   tool,
@@ -218,6 +232,7 @@ function FetchStep({
   const url = typeof args.url === 'string' ? args.url : ''
   const status = getStatusText(tool, isActive, 'fetch_url')
   const description = url ? `${url} · ${status}` : status
+  const imageDataUrl = parseFetchImageResult(tool)
 
   return (
     <ChainOfThoughtStep
@@ -225,7 +240,11 @@ function FetchStep({
       description={description}
       status={getStepStatus(tool, isActive)}
       hideConnector={hideConnector}
-    />
+    >
+      {imageDataUrl && (
+        <ChainOfThoughtImage src={imageDataUrl} alt={url} />
+      )}
+    </ChainOfThoughtStep>
   )
 }
 

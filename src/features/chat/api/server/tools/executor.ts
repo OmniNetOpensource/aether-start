@@ -100,7 +100,19 @@ const formatToolResultForClient = (toolName: string, result: string) => {
     return result
   }
 
-  return isFetchResultError(result) ? 'Error: Fetch failed' : 'Success'
+  if (isFetchResultError(result)) {
+    return 'Error: Fetch failed'
+  }
+
+  // Pass through image results so the client can display them
+  try {
+    const parsed = JSON.parse(result)
+    if (parsed.type === 'image' && parsed.data_url) {
+      return result
+    }
+  } catch { /* not JSON */ }
+
+  return 'Success'
 }
 
 // Execute tools with generator (used by chat-agent.ts)

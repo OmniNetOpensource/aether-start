@@ -54,7 +54,7 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       availableRoles: [],
       rolesLoading: false,
       sendMessage: async () => {
-        const { input, pendingAttachments, quotedTexts } =
+        const { input, pendingAttachments } =
           useComposerStore.getState();
         const trimmed = input.trim();
         const selectedRole = get().currentRole;
@@ -62,7 +62,7 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
         if (get().pending) {
           return;
         }
-        if (!trimmed && pendingAttachments.length === 0 && quotedTexts.length === 0) {
+        if (!trimmed && pendingAttachments.length === 0) {
           return;
         }
         if (!selectedRole) {
@@ -70,18 +70,7 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
           return;
         }
 
-        let finalInput = input;
-        if (quotedTexts.length > 0) {
-          const quotedBlocks = quotedTexts
-            .map((quote) =>
-              quote.text
-                .split(/\r?\n/)
-                .map((line) => `> ${line}`)
-                .join("\n")
-            )
-            .join("\n\n");
-          finalInput = trimmed ? `${quotedBlocks}\n\n${input}` : quotedBlocks;
-        }
+        const finalInput = input;
 
         const treeStore = useMessageTreeStore.getState();
         const result = treeStore._addMessage(
