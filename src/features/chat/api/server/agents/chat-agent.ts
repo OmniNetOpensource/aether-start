@@ -20,7 +20,7 @@ import {
   convertToOpenAIMessages,
   formatOpenAIToolContinuation,
 } from '@/features/chat/api/server/services/openai'
-import { generateTitleFromUserMessage } from '@/features/chat/api/server/functions/chat-title'
+import { generateTitleFromConversation } from '@/features/chat/api/server/functions/chat-title'
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/api/server/services/event-processor'
 import {
   getConversationById,
@@ -167,6 +167,29 @@ const extractLatestUserText = (messages: Message[], currentPath: number[]) => {
   for (const id of pathIds) {
     const message = messages[id - 1]
     if (!message || message.role !== 'user') {
+      continue
+    }
+
+    const text = message.blocks
+      .filter((block) => block.type === 'content')
+      .map((block) => block.content)
+      .join(' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+
+    if (text) {
+      return text
+    }
+  }
+
+  return ''
+}
+
+const extractLatestAssistantText = (messages: Message[], currentPath: number[]) => {
+  const pathIds = [...currentPath].reverse()
+  for (const id of pathIds) {
+    const message = messages[id - 1]
+    if (!message || message.role !== 'assistant') {
       continue
     }
 
@@ -352,13 +375,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       const existing = await getConversationById(this.env.DB, message.conversationId, userId)
       if (!existing) {
         const now = new Date().toISOString()
-        const userText = extractLatestUserText(
-          message.treeSnapshot.messages,
-          message.treeSnapshot.currentPath,
-        )
-        const initialTitle = userText.length > 60
-          ? userText.slice(0, 60) + '…'
-          : userText || 'New Chat'
+        const initialTitle = 'New Chat'
 
         await upsertConversation(this.env.DB, {
           user_id: userId,
@@ -749,15 +766,21 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     const existing = await getConversationById(this.env.DB, conversationId, userId)
     const now = new Date().toISOString()
 
-    const latestUserText = extractLatestUserText(snapshot.messages, snapshot.currentPath)
-    const generatedTitle = latestUserText
-      ? await generateTitleFromUserMessage(latestUserText)
-      : 'New Chat'
+    let resolvedTitle = existing?.title ?? 'New Chat'
+
+    if (!existing?.title || existing.title === 'New Chat') {
+      const userText = extractLatestUserText(snapshot.messages, snapshot.currentPath)
+      const assistantText = extractLatestAssistantText(snapshot.messages, snapshot.currentPath)
+
+      if (assistantText) {
+        resolvedTitle = await generateTitleFromConversation(userText, assistantText)
+      }
+    }
 
     await upsertConversation(this.env.DB, {
       user_id: userId,
       id: conversationId,
-      title: existing?.title ?? generatedTitle,
+      title: resolvedTitle,
       role: role ?? existing?.role ?? null,
       currentPath: snapshot.currentPath,
       messages: snapshot.messages as unknown as object[],
@@ -765,7 +788,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       updated_at: now,
     })
 
-    const resolvedTitle = existing?.title ?? generatedTitle
     this.broadcast(
       stringify({
         type: 'conversation_update',
