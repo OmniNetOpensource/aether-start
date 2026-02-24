@@ -370,35 +370,33 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       } satisfies ChatAgentServerMessage),
     )
 
-    // Persist initial D1 record so the conversation exists before streaming starts
+    // Persist user message snapshot so the conversation is saved before streaming starts
     try {
       const existing = await getConversationById(this.env.DB, message.conversationId, userId)
-      if (!existing) {
-        const now = new Date().toISOString()
-        const initialTitle = 'New Chat'
+      const now = new Date().toISOString()
+      const title = existing?.title ?? 'New Chat'
 
-        await upsertConversation(this.env.DB, {
-          user_id: userId,
-          id: message.conversationId,
-          title: initialTitle,
-          role: message.role,
-          currentPath: message.treeSnapshot.currentPath,
-          messages: message.treeSnapshot.messages as unknown as object[],
-          created_at: now,
+      await upsertConversation(this.env.DB, {
+        user_id: userId,
+        id: message.conversationId,
+        title,
+        role: message.role ?? existing?.role ?? null,
+        currentPath: message.treeSnapshot.currentPath,
+        messages: message.treeSnapshot.messages as unknown as object[],
+        created_at: existing?.created_at ?? now,
+        updated_at: now,
+      })
+
+      this.broadcast(
+        stringify({
+          type: 'conversation_update',
+          conversationId: message.conversationId,
+          title,
           updated_at: now,
-        })
-
-        this.broadcast(
-          stringify({
-            type: 'conversation_update',
-            conversationId: message.conversationId,
-            title: initialTitle,
-            updated_at: now,
-          } satisfies ChatAgentServerMessage),
-        )
-      }
+        } satisfies ChatAgentServerMessage),
+      )
     } catch (error) {
-      getLogger().log('AGENT', 'Initial conversation persist failed', {
+      getLogger().log('AGENT', 'User message persist failed', {
         error: error instanceof Error ? error.message : String(error),
       })
     }
