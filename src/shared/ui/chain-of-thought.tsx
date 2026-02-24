@@ -103,7 +103,7 @@ function ChainOfThoughtStep({
   return (
     <div
       data-slot="chain-of-thought-step"
-      className={cn('flex gap-3 py-1 first:pt-3', className)}
+      className={cn('flex gap-3 py-1 first:pt-3 animate-float-in', className)}
       {...props}
     >
       {/* Icon column */}
@@ -126,7 +126,7 @@ function ChainOfThoughtStep({
             {description}
           </div>
         )}
-        {children && <div className="mt-2">{children}</div>}
+        {children && <div className={description ? 'mt-2' : ''}>{children}</div>}
       </div>
     </div>
   )

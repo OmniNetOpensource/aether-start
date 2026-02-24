@@ -21,15 +21,6 @@ import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestSto
 import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
 import { MessageEditor } from "../editing/MessageEditor";
 import { BranchNavigator } from "../editing/BranchNavigator";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/shared/ui/dialog";
 
 type CopyButtonProps = {
   blocks: Message["blocks"];
@@ -60,15 +51,14 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
       variant="ghost"
       size="sm"
       onClick={handleCopy}
-      className="h-auto gap-1.5 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground"
+      className="text-2xs text-neutral-500 dark:text-neutral-400"
       title="复制内容"
     >
       {isCopied ? (
-        <Check className="h-3.5 w-3.5" />
+        <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
       ) : (
-        <Copy className="h-3.5 w-3.5" />
+        <Copy className="h-3.5 w-3.5" strokeWidth={2.5} />
       )}
-      {isCopied ? "已复制" : "复制"}
     </Button>
   );
 };
@@ -78,7 +68,6 @@ type ActionButtonProps = {
   disabled?: boolean;
   title: string;
   icon: ReactNode;
-  label: string;
 };
 
 const ActionButton = ({
@@ -86,7 +75,6 @@ const ActionButton = ({
   disabled,
   title,
   icon,
-  label,
 }: ActionButtonProps) => (
   <Button
     type="button"
@@ -94,11 +82,10 @@ const ActionButton = ({
     size="sm"
     onClick={onClick}
     disabled={disabled}
-    className="h-auto gap-1.5 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground"
+    className="text-2xs text-neutral-500 dark:text-neutral-400"
     title={title}
   >
     {icon}
-    {label}
   </Button>
 );
 
@@ -114,11 +101,10 @@ const BranchConversationButton = ({
   const branchToNewConversation = useMessageTreeStore(
     (state) => state.branchToNewConversation,
   );
-  const [open, setOpen] = useState(false);
   const [isBranching, setIsBranching] = useState(false);
 
-  const handleConfirm = async () => {
-    if (isBranching) return;
+  const handleBranch = async () => {
+    if (isBranching || disabled) return;
     setIsBranching(true);
     try {
       const requestState = useChatRequestStore.getState();
@@ -126,49 +112,25 @@ const BranchConversationButton = ({
         requestState.stop();
       }
       await branchToNewConversation(messageId);
-      setOpen(false);
     } finally {
       setIsBranching(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-auto gap-1.5 px-2 py-1 text-2xs text-muted-foreground hover:text-foreground"
-          title="创建新对话分支"
-          disabled={disabled}
-        >
-          <GitBranch className="h-3.5 w-3.5" />
-          分支对话
-        </Button>
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>创建分支对话</DialogTitle>
-          <DialogDescription>
-            将以此消息为止的内容创建一个新的对话，原对话保持不变。
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(false)}
-            disabled={isBranching}
-          >
-            取消
-          </Button>
-          <Button type="button" onClick={handleConfirm} disabled={isBranching}>
-            确认
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className="text-2xs text-neutral-500 dark:text-neutral-400"
+      aria-label="创建新对话分支"
+      disabled={disabled || isBranching}
+      onClick={() => {
+        void handleBranch();
+      }}
+    >
+      <GitBranch className="h-3.5 w-3.5" strokeWidth={2.5} />
+    </Button>
   );
 };
 
@@ -330,7 +292,7 @@ export const MessageItem = memo(function MessageItem({
 
           {shouldShowToolbar && (
             <div
-              className="mt-4 flex items-center gap-1.5 transition-opacity duration-150 opacity-100 pointer-events-auto"
+              className="mt-4 flex items-center transition-opacity duration-150 opacity-100 pointer-events-auto"
             >
               {isUser && (
                 <>
@@ -338,15 +300,13 @@ export const MessageItem = memo(function MessageItem({
                     onClick={handleStartEditing}
                     disabled={pending}
                     title="编辑消息"
-                    icon={<Pencil className="h-3.5 w-3.5" />}
-                    label="编辑"
+                    icon={<Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />}
                   />
                   <ActionButton
                     onClick={handleRetry}
                     disabled={pending}
                     title="重试生成"
-                    icon={<RotateCcw className="h-3.5 w-3.5" />}
-                    label="重试"
+                    icon={<RotateCcw className="h-3.5 w-3.5" strokeWidth={2.5} />}
                   />
                 </>
               )}
@@ -357,10 +317,9 @@ export const MessageItem = memo(function MessageItem({
                   disabled={pending}
                   title="重试生成"
                   icon={<RotateCcw className="h-3.5 w-3.5" />}
-                  label="重试"
                 />
               )}
-              {!isUser && !isStreaming && (
+              {!isUser && (
                 <BranchConversationButton
                   messageId={messageId}
                   disabled={pending}
@@ -370,7 +329,7 @@ export const MessageItem = memo(function MessageItem({
           )}
           {branchInfo && !isEditing && (
             <div
-              className="mt-2 flex items-center gap-1.5 transition-opacity duration-150 opacity-100 pointer-events-auto"
+              className="mt-2 flex items-center transition-opacity duration-150 pointer-events-auto"
             >
               <BranchNavigator
                 branchInfo={branchInfo}

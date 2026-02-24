@@ -41,3 +41,12 @@
   white-space: normal;
   word-wrap: break-word;
 }
+
+/* Streamdown Code Block Overrides */
+[data-streamdown="code-block-body"] code span::before {
+  display: none;
+}
+
+[data-streamdown="code-block-body"] pre {
+  overflow-x: auto;
+}

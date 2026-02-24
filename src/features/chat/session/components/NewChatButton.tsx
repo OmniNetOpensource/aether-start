@@ -1,10 +1,9 @@
 
 import { Link } from "@tanstack/react-router";
-import type { ComponentProps, ReactNode, MouseEvent } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import { Pencil } from "lucide-react";
 import { Button } from "@/shared/ui/button";
 import { cn } from "@/shared/lib/utils";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
 
 type LinkComponentProps = ComponentProps<typeof Link>;
 
@@ -25,34 +24,7 @@ export function NewChatButton({
   to = "/app",
   ...props
 }: NewChatButtonProps) {
-  const pending = useChatRequestStore((state) => state.pending);
   const isTopbar = variant === "topbar";
-
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    const isModifiedClick =
-      event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
-
-    if (isModifiedClick) {
-      if (onClick) {
-        onClick(event);
-      }
-      return;
-    }
-
-    if (pending) {
-      const confirmed = window.confirm(
-        "AI正在生成内容，离开当前对话可能会丢失正在生成的内容，确定要离开吗？"
-      );
-      if (!confirmed) {
-        event.preventDefault();
-        return;
-      }
-    }
-
-    if (onClick) {
-      onClick(event);
-    }
-  };
 
   const defaultContent = (
     <>
@@ -90,7 +62,7 @@ export function NewChatButton({
       style={isTopbar ? undefined : { width: isCollapsed ? 40 : "100%" }}
       aria-label="新对话"
     >
-      <Link to={to} onClick={handleClick} {...props}>
+      <Link to={to} onClick={onClick} {...props}>
         {children ?? defaultContent}
       </Link>
     </Button>

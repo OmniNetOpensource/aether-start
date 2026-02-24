@@ -10,7 +10,6 @@ export default function Sidebar() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRef = useRef<HTMLElement>(null);
-  const overlayRef = useRef<HTMLDivElement>(null);
 
   const clearCloseTimer = () => {
     if (!closeTimerRef.current) {
@@ -27,13 +26,11 @@ export default function Sidebar() {
   const openSidebar = () => {
     clearCloseTimer();
     sidebarRef.current?.classList.remove("-translate-x-full");
-    overlayRef.current?.classList.remove("pointer-events-none", "opacity-0");
     document.body.style.overflow = "hidden";
   };
 
   const closeSidebar = () => {
     sidebarRef.current?.classList.add("-translate-x-full");
-    overlayRef.current?.classList.add("pointer-events-none", "opacity-0");
     document.body.style.overflow = "";
   };
 
@@ -58,6 +55,16 @@ export default function Sidebar() {
   };
 
   useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (isSidebarOpen() && sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+        closeSidebar();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === "Escape" && isSidebarOpen()) {
         closeSidebar();
@@ -76,12 +83,6 @@ export default function Sidebar() {
 
   return (
     <div className="relative h-full w-0 shrink-0">
-      <div
-        ref={overlayRef}
-        className="fixed inset-0 z-[calc(var(--z-sidebar)-1)] pointer-events-none opacity-0 transition-opacity duration-300"
-        onClick={closeSidebar}
-      />
-
       <div
         className="absolute left-0 top-0 z-(--z-sidebar) h-full w-1.25"
         onMouseEnter={openSidebar}

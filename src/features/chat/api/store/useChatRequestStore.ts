@@ -127,7 +127,6 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       clear: () => {
         const client = get().chatClient;
         if (client) {
-          client.abort(get().activeRequestId ?? undefined);
           client.disconnect();
         }
         set({

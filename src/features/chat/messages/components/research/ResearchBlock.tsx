@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Search, Link, Wrench } from 'lucide-react'
+import Markdown from '@/shared/components/Markdown'
 import type { ResearchItem, Tool } from '@/features/chat/types/chat'
 import type { StepStatus } from '@/shared/ui/chain-of-thought'
 import {
@@ -149,9 +150,12 @@ function ThinkingStep({ text, hideConnector }: { text: string; hideConnector: bo
   return (
     <ChainOfThoughtStep
       icon={<div className="h-2 w-2 rounded-full bg-current opacity-40" />}
-      description={text}
       hideConnector={hideConnector}
-    />
+    >
+      <div className="text-xs text-(--text-secondary) [&_p]:m-0">
+        <Markdown content={text} />
+      </div>
+    </ChainOfThoughtStep>
   )
 }
 
@@ -167,11 +171,9 @@ function SearchStep({
   hideConnector: boolean
   stepKey: string
 }) {
-  const toolName = tool.call.tool
   const args = tool.call.args as Record<string, unknown>
   const query = typeof args.query === 'string' ? args.query : ''
-  const status = getStatusText(tool, isActive, toolName)
-  const description = query ? `${query} · ${status}` : status
+  const description = query ? `Reading the web · ${query}` : 'Reading the web'
 
   const { result } = getToolLifecycle(tool)
   let searchResults: SearchResultBadge[] = []
@@ -230,17 +232,32 @@ function FetchStep({
 }) {
   const args = tool.call.args as Record<string, unknown>
   const url = typeof args.url === 'string' ? args.url : ''
-  const status = getStatusText(tool, isActive, 'fetch_url')
-  const description = url ? `${url} · ${status}` : status
+  const stepStatus = getStepStatus(tool, isActive)
   const imageDataUrl = parseFetchImageResult(tool)
+
+  const { result } = getToolLifecycle(tool)
+  const resultText = result ? (typeof result.result === 'string' ? result.result : '') : ''
+  const isError = result && (
+    resultText.startsWith('Error') ||
+    (resultText.startsWith('[系统提示:') &&
+      (resultText.includes('内容过长') || resultText.includes('已省略不返回')))
+  )
+
+  const suffix = stepStatus === 'complete'
+    ? (isError ? '...failed.' : '...done!')
+    : ''
+  const description = `Take a closer look${suffix}`
 
   return (
     <ChainOfThoughtStep
       icon={url ? <Favicon url={url} fallback={<Link className="h-full w-full" />} /> : <Link className="h-full w-full" />}
       description={description}
-      status={getStepStatus(tool, isActive)}
+      status={stepStatus}
       hideConnector={hideConnector}
     >
+      {url && (
+        <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-muted-foreground hover:text-(--interactive-primary-hover) transition-colors break-all">{url}</a>
+      )}
       {imageDataUrl && (
         <ChainOfThoughtImage src={imageDataUrl} alt={url} />
       )}
