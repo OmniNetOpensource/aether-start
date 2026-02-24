@@ -75,6 +75,7 @@
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
     "@vitest/coverage-v8": "^4.0.18",
+    "babel-plugin-react-compiler": "^1.0.0",
     "drizzle-kit": "^0.31.9",
     "eslint": "^9.0.0",
     "eslint-plugin-react-hooks": "^7.0.1",
