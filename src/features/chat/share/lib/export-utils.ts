@@ -1,6 +1,15 @@
 import type { Message } from '@/features/chat/types/chat'
 
 const INVALID_FILENAME_CHARS = /[<>:"/\\|?*]/g
+const IMAGE_WAIT_TIMEOUT_MS = 8000
+const FALLBACK_IMAGE_DATA_URL =
+  'data:image/svg+xml;charset=utf-8,' +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320">' +
+      '<rect width="100%" height="100%" fill="#f3f4f6"/>' +
+      '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="16" font-family="sans-serif">Image unavailable</text>' +
+      '</svg>',
+  )
 
 export const sanitizeFilename = (title: string) => {
   const sanitized = title
@@ -36,31 +45,135 @@ export const waitForImages = async (container: HTMLElement) => {
 
   await Promise.all(
     images.map(async (image) => {
-      if (image.complete && image.naturalWidth > 0) {
+      if (image.complete) {
         return
       }
 
       await new Promise<void>((resolve) => {
+        let settled = false
         const cleanup = () => {
+          window.clearTimeout(timeoutId)
           image.removeEventListener('load', onLoad)
           image.removeEventListener('error', onError)
         }
 
         const onLoad = () => {
+          if (settled) return
+          settled = true
           cleanup()
           resolve()
         }
 
         const onError = () => {
+          if (settled) return
+          settled = true
           cleanup()
           resolve()
         }
 
-        image.addEventListener('load', onLoad)
-        image.addEventListener('error', onError)
+        const timeoutId = window.setTimeout(() => {
+          if (settled) return
+          settled = true
+          cleanup()
+          resolve()
+        }, IMAGE_WAIT_TIMEOUT_MS)
+
+        image.addEventListener('load', onLoad, { once: true })
+        image.addEventListener('error', onError, { once: true })
+
+        if (image.complete) {
+          onLoad()
+        }
       })
     })
   )
+}
+
+const blobToDataUrl = async (blob: Blob) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(reader.error ?? new Error('Failed to read blob'))
+    reader.readAsDataURL(blob)
+  })
+
+type ImageSnapshot = {
+  image: HTMLImageElement
+  src: string
+  srcset: string
+  crossorigin: string | null
+}
+
+export const prepareCrossOriginImagesForExport = async (container: HTMLElement) => {
+  const images = Array.from(container.querySelectorAll('img'))
+  const snapshots: ImageSnapshot[] = []
+
+  await Promise.all(
+    images.map(async (image) => {
+      const srcAttr = image.getAttribute('src') ?? ''
+      if (!srcAttr) {
+        return
+      }
+
+      const resolvedSrc = image.currentSrc || srcAttr
+      let parsedUrl: URL
+
+      try {
+        parsedUrl = new URL(resolvedSrc, window.location.href)
+      } catch {
+        return
+      }
+
+      if (
+        parsedUrl.protocol === 'data:' ||
+        parsedUrl.protocol === 'blob:' ||
+        parsedUrl.origin === window.location.origin
+      ) {
+        return
+      }
+
+      snapshots.push({
+        image,
+        src: srcAttr,
+        srcset: image.getAttribute('srcset') ?? '',
+        crossorigin: image.getAttribute('crossorigin'),
+      })
+
+      try {
+        const response = await fetch(parsedUrl.toString(), {
+          mode: 'cors',
+          credentials: 'omit',
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`)
+        }
+
+        const blob = await response.blob()
+        const dataUrl = await blobToDataUrl(blob)
+        image.setAttribute('src', dataUrl)
+        image.removeAttribute('srcset')
+      } catch {
+        image.setAttribute('src', FALLBACK_IMAGE_DATA_URL)
+        image.removeAttribute('srcset')
+      }
+    }),
+  )
+
+  return () => {
+    for (const snapshot of snapshots) {
+      snapshot.image.setAttribute('src', snapshot.src)
+      if (snapshot.srcset) {
+        snapshot.image.setAttribute('srcset', snapshot.srcset)
+      } else {
+        snapshot.image.removeAttribute('srcset')
+      }
+      if (snapshot.crossorigin === null) {
+        snapshot.image.removeAttribute('crossorigin')
+      } else {
+        snapshot.image.setAttribute('crossorigin', snapshot.crossorigin)
+      }
+    }
+  }
 }
 
 export const buildMessageSnippet = (message: Message) => {

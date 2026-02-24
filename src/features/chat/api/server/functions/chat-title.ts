@@ -32,7 +32,7 @@ const messageSchema = z.object({
 })
 
 const TITLE_GENERATION_TIMEOUT_MS = 10000
-const CONVERSATION_TITLE_TIMEOUT_MS = 20_000
+const CONVERSATION_TITLE_TIMEOUT_MS = 30_000
 const TITLE_MODEL = 'claude-haiku-4-5'
 
 export const generateTitleFromUserMessage = async (

@@ -1,6 +1,5 @@
 import { toast } from '@/shared/hooks/useToast'
 import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
-import { buildConversationTitle } from '@/features/conversation/formatting/format'
 import { applyChatEventToTree } from '@/features/chat/api/client/event-handlers'
 import { ChatClient, checkAgentStatus, resetConversationEventCursor } from '@/features/chat/api/client/websocket-client'
 import type { Message, MessageLike, SerializedMessage } from '@/features/chat/types/chat'
@@ -28,7 +27,7 @@ type StartRequestOptions = {
 export const startChatRequest = async (
   options: StartRequestOptions,
 ) => {
-  const { messages, titleSource } = options
+  const { messages } = options
   const selectedRole = useChatRequestStore.getState().currentRole
 
   if (useChatRequestStore.getState().pending) {
@@ -48,7 +47,7 @@ export const startChatRequest = async (
 
     useMessageTreeStore.getState().setConversationId(currentConversationId)
 
-    const fallbackTitle = titleSource ? buildConversationTitle(titleSource) : 'New Chat'
+    const fallbackTitle = 'New Chat'
 
     useConversationsStore.getState().addConversation({
       id: currentConversationId,
@@ -73,7 +72,11 @@ export const startChatRequest = async (
   const chatClient = new ChatClient({
     onEvent: (event, meta) => {
       const activeRequestId = useChatRequestStore.getState().activeRequestId
-      if (activeRequestId && activeRequestId !== meta.requestId) {
+      if (
+        event.type !== 'conversation_updated' &&
+        activeRequestId &&
+        activeRequestId !== meta.requestId
+      ) {
         return
       }
 
@@ -205,7 +208,11 @@ export const resumeRunningConversation = async (conversationId: string) => {
   const chatClient = new ChatClient({
     onEvent: (event, meta) => {
       const activeRequestId = useChatRequestStore.getState().activeRequestId
-      if (activeRequestId && activeRequestId !== meta.requestId) {
+      if (
+        event.type !== 'conversation_updated' &&
+        activeRequestId &&
+        activeRequestId !== meta.requestId
+      ) {
         return
       }
 

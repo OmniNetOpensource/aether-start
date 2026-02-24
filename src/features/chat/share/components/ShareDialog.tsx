@@ -28,6 +28,7 @@ import {
   buildMessageSnippet,
   downloadDataUrl,
   formatTimestampForFilename,
+  prepareCrossOriginImagesForExport,
   sanitizeFilename,
   waitForImages,
 } from '@/features/chat/share/lib/export-utils'
@@ -159,6 +160,8 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     setError(null)
     setIsGenerating(true)
 
+    let restoreCrossOriginImages: (() => void) | null = null
+
     try {
       if (document.fonts?.ready) {
         await document.fonts.ready
@@ -170,6 +173,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         throw new Error('capture node is not ready')
       }
 
+      restoreCrossOriginImages = await prepareCrossOriginImagesForExport(captureNode)
       await waitForImages(captureNode)
 
       const fontEmbedCSS = await buildFontEmbedCSS()
@@ -183,6 +187,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
       console.error('Failed to generate share preview', err)
       setError('导出失败，请重试')
     } finally {
+      restoreCrossOriginImages?.()
       setIsGenerating(false)
     }
   }, [selectedCount])
