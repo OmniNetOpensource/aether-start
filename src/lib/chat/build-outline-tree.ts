@@ -1,4 +1,4 @@
-import type { Message } from '@/features/chat/types/chat'
+import type { Message } from '@/types/chat'
 
 export type OutlineNode = {
   messageId: number

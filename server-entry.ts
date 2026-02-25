@@ -4,8 +4,8 @@ import { env as workerEnv } from 'cloudflare:workers'
 import { createServerEntry } from '@tanstack/react-start/server-entry'
 import type { RequestHandler } from '@tanstack/react-start/server'
 import type { Register } from '@tanstack/react-router'
-import { ChatAgent } from '@/features/chat/api/server/agents/chat-agent'
-import { getSessionFromRequest } from '@/features/auth/server/session'
+import { ChatAgent } from '@/server/agents/chat-agent'
+import { getSessionFromRequest } from '@/server/functions/auth/session'
 
 const startFetch = createStartHandler(defaultStreamHandler)
 

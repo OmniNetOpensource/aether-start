@@ -2,8 +2,8 @@
 import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
 import Markdown from "@/components/Markdown";
 import { ImagePreview } from "@/components/ImagePreview";
-import { Message } from "@/features/chat/types/chat";
-import { getBranchInfo as getBranchInfoFn } from "@/features/conversation/model/tree/message-tree";
+import { Message } from "@/types/chat";
+import { getBranchInfo as getBranchInfoFn } from "@/lib/conversation/tree/message-tree";
 import { ResearchBlock } from "./ResearchBlock";
 import {
   Copy,

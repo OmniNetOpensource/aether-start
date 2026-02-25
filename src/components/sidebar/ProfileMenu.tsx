@@ -2,9 +2,9 @@
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { LogOut, Settings, User2 } from "lucide-react";
-import { authClient } from "@/features/auth/client/auth-client";
+import { authClient } from "@/lib/auth/auth-client";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
-import { clearConversationEventCursors } from "@/features/chat/api/client/websocket-client";
+import { clearConversationEventCursors } from "@/lib/chat/api/websocket-client";
 import { useComposerStore } from "@/stores/useComposerStore";
 import { useEditingStore } from "@/stores/useEditingStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";

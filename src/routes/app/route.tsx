@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
 import Sidebar from '@/components/sidebar/Sidebar'
-import { getSessionStateFn } from '@/features/auth/server/session-state'
+import { getSessionStateFn } from '@/server/functions/auth/session-state'
 import { ChatRoom } from '@/routes/app/components/-ChatRoom'
 
 export const Route = createFileRoute('/app')({

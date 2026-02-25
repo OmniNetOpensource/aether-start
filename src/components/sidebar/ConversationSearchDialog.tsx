@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Loader2, Search } from 'lucide-react'
-import type { ConversationSearchItem } from '@/features/conversation/model/types/conversation'
+import type { ConversationSearchItem } from '@/types/conversation'
 import {
   searchConversationsFn,
   type ConversationCursor,
-} from '@/features/conversation/persistence/server/functions/conversations'
+} from '@/server/functions/conversations'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,

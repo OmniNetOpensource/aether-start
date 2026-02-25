@@ -1,7 +1,7 @@
 
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MoreHorizontal, Trash2 } from "lucide-react";
-import type { ConversationMeta } from "@/features/conversation/model/types/conversation";
+import type { ConversationMeta } from "@/types/conversation";
 import {
   DropdownMenu,
   DropdownMenuContent,

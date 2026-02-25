@@ -1,13 +1,13 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { ConversationMeta } from "@/features/conversation/model/types/conversation";
-import type { ConversationDetail } from "@/features/conversation/model/types/conversation";
+import type { ConversationMeta } from "@/types/conversation";
+import type { ConversationDetail } from "@/types/conversation";
 import {
   listConversationsPageFn,
   clearConversationsFn,
   deleteConversationFn,
   updateConversationTitleFn,
-} from "@/features/conversation/persistence/server/functions/conversations";
+} from "@/server/functions/conversations";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 

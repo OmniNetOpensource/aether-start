@@ -7,7 +7,7 @@ import {
   findPathToMessage,
 } from '@/lib/chat/build-outline-tree'
 import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
-import { switchBranch } from '@/features/conversation/model/tree/message-tree'
+import { switchBranch } from '@/lib/conversation/tree/message-tree'
 import { Button } from '@/components/ui/button'
 import {
   Popover,

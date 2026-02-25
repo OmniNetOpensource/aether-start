@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { requireSessionFromRequest } from '@/features/auth/server/session'
+import { requireSessionFromRequest } from '@/server/functions/auth/session'
 import { getServerBindings } from '@/server/env'
 
 const KEY_PREFIX = 'chat-assets/'

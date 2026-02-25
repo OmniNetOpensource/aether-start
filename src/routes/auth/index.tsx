@@ -1,8 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { authClient } from '@/features/auth/client/auth-client'
-import { getSessionStateFn } from '@/features/auth/server/session-state'
+import { authClient } from '@/lib/auth/auth-client'
+import { getSessionStateFn } from '@/server/functions/auth/session-state'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 

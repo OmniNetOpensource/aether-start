@@ -1,7 +1,7 @@
 import { FormEvent, useState } from 'react'
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
-import { authClient } from '@/features/auth/client/auth-client'
+import { authClient } from '@/lib/auth/auth-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
