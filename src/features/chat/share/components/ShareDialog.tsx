@@ -137,18 +137,6 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     setSelectedIds(new Set())
   }, [])
 
-  const handleInvertSelection = useCallback(() => {
-    setSelectedIds((prev) => {
-      const next = new Set<number>()
-      for (const item of pathMessages) {
-        if (!prev.has(item.id)) {
-          next.add(item.id)
-        }
-      }
-      return next
-    })
-  }, [pathMessages])
-
   const generatePreview = useCallback(async () => {
     if (selectedCount === 0) {
       return
@@ -203,92 +191,91 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="max-h-[90vh] sm:max-w-4xl">
-        <DialogHeader>
-          <DialogTitle>{step === 'select' ? '分享对话消息' : '导出预览'}</DialogTitle>
-          <DialogDescription>
+      <DialogContent className="max-h-[90vh] sm:max-w-4xl px-8 py-8">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="text-xl font-medium tracking-tight">
+            {step === 'select' ? '分享' : '预览'}
+          </DialogTitle>
+          <DialogDescription className="text-(--text-tertiary)">
             {step === 'select'
-              ? '勾选要分享的消息后生成图片预览。'
-              : '确认预览后即可下载 PNG 图片。'}
+              ? '选择要导出的消息'
+              : '确认后下载 PNG 图片'}
           </DialogDescription>
         </DialogHeader>
 
         {step === 'select' ? (
-          <div className="space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleSelectAll}
-                disabled={pathMessages.length === 0}
-              >
-                全选
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleClearAll}
-                disabled={selectedIds.size === 0}
-              >
-                清空
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleInvertSelection}
-                disabled={pathMessages.length === 0}
-              >
-                反选
-              </Button>
-              <span className="ml-auto text-xs text-muted-foreground">
-                已选 {selectedCount} / {pathMessages.length}
+          <div className="space-y-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleSelectAll}
+                  disabled={pathMessages.length === 0}
+                  className="text-(--text-secondary) hover:text-(--text-primary)"
+                >
+                  全选
+                </Button>
+                {selectedCount > 0 && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearAll}
+                    className="text-(--text-tertiary) hover:text-(--text-primary)"
+                  >
+                    清除
+                  </Button>
+                )}
+              </div>
+              <span className="text-xs text-(--text-tertiary)">
+                已选 {selectedCount} 则
               </span>
             </div>
 
-            <div className="max-h-[52vh] overflow-y-auto rounded-lg border border-border">
+            <div className="max-h-[52vh] overflow-y-auto -mx-1 px-1">
               {pathMessages.length === 0 ? (
-                <div className="p-4 text-sm text-muted-foreground">
-                  当前没有可分享的消息。
+                <div className="py-12 text-center text-sm text-(--text-tertiary)">
+                  当前没有可分享的消息
                 </div>
               ) : (
-                <div className="divide-y divide-border">
+                <div className="space-y-px">
                   {pathMessages.map(({ id, message, pathIndex }) => {
-                    const isChecked = selectedIds.has(id)
+                    const isSelected = selectedIds.has(id)
                     const snippet = buildMessageSnippet(message)
 
                     return (
-                      <label
+                      <button
                         key={id}
-                        htmlFor={`share-message-${id}`}
+                        type="button"
+                        onClick={() => toggleMessageSelection(id)}
                         className={cn(
-                          'flex cursor-pointer items-start gap-3 px-4 py-3 transition-colors',
-                          isChecked
-                            ? 'bg-(--surface-muted)'
-                            : 'hover:bg-(--surface-hover)'
+                          'flex w-full cursor-pointer items-start gap-3 rounded-lg border-l-2 px-4 py-3.5 text-left transition-colors',
+                          isSelected
+                            ? 'border-l-(--interactive-primary) bg-(--surface-muted)/50'
+                            : 'border-l-transparent hover:bg-(--surface-hover)'
                         )}
                       >
-                        <input
-                          id={`share-message-${id}`}
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => toggleMessageSelection(id)}
-                          className="mt-1 h-4 w-4 rounded border-border bg-transparent"
-                        />
                         <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <span className="rounded-md border border-border px-1.5 py-0.5 text-[10px]">
+                          <div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
+                            <span
+                              className={cn(
+                                message.role === 'user'
+                                  ? 'font-medium text-(--text-secondary)'
+                                  : ''
+                              )}
+                            >
                               {ROLE_LABEL[message.role]}
                             </span>
+                            <span>·</span>
                             <span>#{pathIndex + 1}</span>
                           </div>
                           <p className="mt-1 line-clamp-2 text-sm text-(--text-secondary)">
                             {snippet}
                           </p>
                         </div>
-                      </label>
+                      </button>
                     )
                   })}
                 </div>
@@ -296,15 +283,15 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
             </div>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="max-h-[58vh] overflow-auto rounded-lg border border-border bg-(--surface-muted)/30 p-3">
+          <div className="space-y-5">
+            <div className="max-h-[58vh] overflow-auto rounded-xl bg-(--surface-muted)/20 py-6 px-6">
               {isGenerating ? (
-                <div className="flex min-h-70 items-center justify-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>正在生成预览...</span>
+                <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-(--text-tertiary)">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <span className="text-sm">正在生成</span>
                 </div>
               ) : error ? (
-                <div className="flex min-h-70 flex-col items-center justify-center gap-2 text-sm">
+                <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-sm">
                   <AlertCircle className="h-5 w-5 text-destructive" />
                   <p className="text-destructive">{error}</p>
                 </div>
@@ -312,10 +299,10 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                 <img
                   src={previewDataUrl}
                   alt="分享图片预览"
-                  className="mx-auto h-auto w-full rounded-md border border-border bg-background"
+                  className="mx-auto h-auto w-full max-w-2xl rounded-lg shadow-sm"
                 />
               ) : (
-                <div className="flex min-h-70 items-center justify-center text-sm text-muted-foreground">
+                <div className="flex min-h-64 items-center justify-center text-sm text-(--text-tertiary)">
                   暂无预览
                 </div>
               )}
@@ -323,13 +310,14 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
           </div>
         )}
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-2">
           {step === 'select' ? (
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={() => handleDialogOpenChange(false)}
+                className="text-(--text-secondary)"
               >
                 取消
               </Button>
@@ -337,6 +325,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                 type="button"
                 onClick={generatePreview}
                 disabled={selectedCount === 0 || isGenerating || pending}
+                className="min-w-24"
               >
                 {isGenerating ? (
                   <>
@@ -352,18 +341,21 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
             <>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
+                size="icon"
                 onClick={() => setStep('select')}
                 disabled={isGenerating}
+                className="shrink-0"
+                title="返回选择"
               >
                 <ArrowLeft className="h-4 w-4" />
-                返回选择
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="ghost"
                 onClick={generatePreview}
                 disabled={isGenerating || pending}
+                className="text-(--text-secondary)"
               >
                 {isGenerating ? (
                   <>
@@ -378,9 +370,10 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                 type="button"
                 onClick={handleDownload}
                 disabled={!previewDataUrl || isGenerating}
+                className="min-w-28"
               >
                 <Download className="h-4 w-4" />
-                下载图片
+                下载
               </Button>
             </>
           )}

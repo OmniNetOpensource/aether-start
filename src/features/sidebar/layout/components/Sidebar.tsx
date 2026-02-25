@@ -34,12 +34,14 @@ export default function Sidebar() {
     document.body.style.overflow = "";
   };
 
+  const CLOSE_DELAY_MS = 200;
+
   const scheduleClose = () => {
     clearCloseTimer();
     closeTimerRef.current = setTimeout(() => {
       closeSidebar();
       closeTimerRef.current = null;
-    }, 120);
+    }, CLOSE_DELAY_MS);
   };
 
   const handleMouseLeave = (event: ReactMouseEvent<HTMLElement>) => {
@@ -83,34 +85,38 @@ export default function Sidebar() {
 
   return (
     <div className="relative h-full w-0 shrink-0">
+      {/* Reveal trigger: subtle visible hint (1px edge) so the affordance is discoverable */}
       <div
-        className="absolute left-0 top-0 z-(--z-sidebar) h-full w-1.25"
+        className="absolute left-0 top-0 z-(--z-sidebar) h-full w-1.5 border-r transition-colors duration-200"
+        style={{ borderColor: "var(--sidebar-reveal-hint)" }}
         onMouseEnter={openSidebar}
         onMouseLeave={handleMouseLeave}
         onClick={openSidebar}
+        aria-label="展开侧边栏"
       />
 
       <aside
         ref={sidebarRef}
-        className="absolute left-0 top-0 z-(--z-sidebar) flex h-full w-64 md:w-[22vw] md:min-w-65 md:max-w-90 flex-col overflow-hidden border-r ink-border bg-background transition-transform duration-300 -translate-x-full"
+        className="absolute left-0 top-0 z-(--z-sidebar) flex h-full w-64 md:w-[22vw] md:min-w-65 md:max-w-90 flex-col overflow-hidden bg-(--sidebar-surface) shadow-[2px_0_8px_-2px_rgba(0,0,0,0.04)] dark:shadow-[2px_0_8px_-2px_rgba(0,0,0,0.2)] transition-transform duration-300 ease-[var(--transition-smooth)] -translate-x-full"
         onMouseEnter={openSidebar}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="flex h-16 shrink-0 items-center border-b ink-border px-4">
-          <div className="flex items-center">
-            <AetherLogo className="h-6 text-foreground" />
-          </div>
+        {/* Header: more breathing room, lighter logo */}
+        <div className="flex h-20 shrink-0 items-center px-6">
+          <AetherLogo className="h-5 text-foreground/90" />
         </div>
 
-        <div className="px-4 pt-4">
+        {/* Primary action: generous spacing */}
+        <div className="px-6 pt-2">
           <NewChatButton isCollapsed={false} />
         </div>
 
+        {/* Content: 24px rhythm, less visual noise */}
         <div
           ref={scrollRef}
-          className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto px-4 py-4"
+          className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto px-6 py-6"
         >
-          <div className="flex h-full flex-col gap-3">
+          <div className="flex h-full flex-col gap-4">
             <ConversationList scrollRootRef={scrollRef} />
           </div>
         </div>

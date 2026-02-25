@@ -46,6 +46,10 @@
   --status-warning: #D08770;
   --status-warning-foreground: #ffffff;
 
+  /* Sidebar - Material differentiation */
+  --sidebar-surface: var(--surface-secondary);
+  --sidebar-reveal-hint: rgba(26, 26, 26, 0.04);
+
   /* Z-index Scale - Semantic Layering System */
   --z-base: 0;
   --z-sidebar: 10;
@@ -84,6 +88,10 @@ html.dark {
   --interactive-primary-hover: #ffffff;
   --interactive-secondary: rgba(227, 222, 211, 0.7);
   --interactive-secondary-hover: #ffffff;
+
+  /* Sidebar - Material differentiation */
+  --sidebar-surface: var(--surface-secondary);
+  --sidebar-reveal-hint: rgba(227, 222, 211, 0.04);
 
   /* Content - Decorative accents */
   --content-accent: #cbb693;

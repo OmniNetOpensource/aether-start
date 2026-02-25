@@ -71,9 +71,11 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
     );
   }
 
+  const isEmpty = conversations.length === 0;
+
   return (
-    <div className="flex flex-col gap-1">
-      <div className="px-3 py-2 text-2xs font-semibold uppercase tracking-[0.25em] text-(--text-tertiary)">
+    <div className="flex flex-col gap-2">
+      <div className="px-1 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-(--text-tertiary)">
         最近
       </div>
       <div className="flex flex-col gap-1">
@@ -85,6 +87,11 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
           />
         ))}
       </div>
+      {isEmpty && (
+        <p className="px-1 py-8 text-center text-sm text-(--text-tertiary)">
+          开始一次新对话
+        </p>
+      )}
       {hasMore || loadingMore ? (
         <div
           ref={sentinelRef}

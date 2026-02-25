@@ -303,7 +303,7 @@ export const ResearchBlock = memo(function ResearchBlock({
   isActive = false,
 }: ResearchBlockProps) {
   return (
-    <ChainOfThought defaultOpen={true}>
+    <ChainOfThought>
       <ChainOfThoughtHeader>思考过程</ChainOfThoughtHeader>
       <ChainOfThoughtContent>
         {items.map((item, index) => {

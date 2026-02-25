@@ -58,10 +58,10 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
 
   return (
     <div
-      className="border-t ink-border px-4 py-4 transition-all duration-500"
+      className="border-t ink-border py-5 transition-all duration-500"
       style={{
-        paddingLeft: isCollapsed ? 4 : 8,
-        paddingRight: isCollapsed ? 4 : 8,
+        paddingLeft: isCollapsed ? 16 : 24,
+        paddingRight: isCollapsed ? 16 : 24,
       }}
     >
       <div className="flex">
@@ -101,9 +101,6 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
                   >
                     <span className="truncate text-sm font-semibold text-foreground">
                       {displayName}
-                    </span>
-                    <span className="truncate text-2xs text-muted-foreground">
-                      {subtitle}
                     </span>
                   </span>
                 </span>
