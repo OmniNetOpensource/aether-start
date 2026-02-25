@@ -4,7 +4,7 @@ import Markdown from "@/components/Markdown";
 import { ImagePreview } from "@/components/ImagePreview";
 import { Message } from "@/features/chat/types/chat";
 import { getBranchInfo as getBranchInfoFn } from "@/features/conversation/model/tree/message-tree";
-import { ResearchBlock } from "../research/ResearchBlock";
+import { ResearchBlock } from "./ResearchBlock";
 import {
   Copy,
   Check,
@@ -18,8 +18,8 @@ import {
 } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { useEditingStore } from "@/stores/useEditingStore";
-import { MessageEditor } from "../editing/MessageEditor";
-import { BranchNavigator } from "../editing/BranchNavigator";
+import { MessageEditor } from "./MessageEditor";
+import { BranchNavigator } from "./BranchNavigator";
 
 type CopyButtonProps = {
   blocks: Message["blocks"];

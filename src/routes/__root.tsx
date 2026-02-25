@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { setNavigate } from "@/lib/navigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastContainer } from "@/components/ui/toast-container";
-import { ResponsiveProvider } from "@/features/responsive/ResponsiveContext";
+import { ResponsiveProvider } from "@/components/ResponsiveContext";
 import { NotFound } from "@/routes/-not-found";
 
 import appCss from "@/routes/globals.css?url";

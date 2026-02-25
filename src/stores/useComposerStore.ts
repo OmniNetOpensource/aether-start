@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type { Attachment } from "@/features/chat/types/chat";
-import { buildAttachmentsFromFiles } from "@/features/chat/composer/lib/attachments";
+import { buildAttachmentsFromFiles } from "@/lib/chat/attachments";
 
 type ComposerState = {
   input: string;

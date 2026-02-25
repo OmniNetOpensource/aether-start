@@ -12,12 +12,12 @@ import { ImagePreview } from "@/components/ImagePreview";
 import { useComposerStore } from "@/stores/useComposerStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { useIsNewChat } from "@/stores/useMessageTreeStore";
-import { setComposerTextarea } from "@/features/chat/composer/lib/composer-focus";
+import { setComposerTextarea } from "@/lib/chat/composer-focus";
 import { ComposerToolbar } from "./ComposerToolbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/useToast";
-import { useResponsive } from "@/features/responsive/ResponsiveContext";
+import { useResponsive } from "@/components/ResponsiveContext";
 
 export function Composer() {
   const input = useComposerStore((state) => state.input);

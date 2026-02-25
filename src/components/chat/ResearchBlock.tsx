@@ -12,7 +12,7 @@ import {
   ChainOfThoughtSearchResult,
   ChainOfThoughtImage,
 } from '@/components/ui/chain-of-thought'
-import { getToolLifecycle, getSearchResultCount } from './utils'
+import { getToolLifecycle, getSearchResultCount } from './research-utils'
 
 const SEARCH_TOOL_NAMES = new Set([
   'search',

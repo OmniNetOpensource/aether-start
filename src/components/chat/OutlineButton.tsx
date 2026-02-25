@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 import { GitBranch } from 'lucide-react'
 import { useChatRequestStore } from '@/stores/useChatRequestStore'
-import { OutlineTree } from '@/features/chat/outline/components/OutlineTree'
+import { OutlineTree } from './OutlineTree'
 import {
   buildOutlineTree,
   findPathToMessage,
-} from '@/features/chat/outline/lib/build-outline-tree'
+} from '@/lib/chat/build-outline-tree'
 import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
 import { switchBranch } from '@/features/conversation/model/tree/message-tree'
 import { Button } from '@/components/ui/button'

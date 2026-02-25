@@ -10,7 +10,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import type { Message } from '@/features/chat/types/chat'
 import { useChatRequestStore } from '@/stores/useChatRequestStore'
 import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
-import { ResearchBlock } from '@/features/chat/messages/components/research/ResearchBlock'
+import { ResearchBlock } from './ResearchBlock'
 import { useConversationsStore } from '@/stores/useConversationsStore'
 import Markdown from '@/components/Markdown'
 import { cn } from '@/lib/utils'
@@ -30,7 +30,7 @@ import {
   prepareCrossOriginImagesForExport,
   sanitizeFilename,
   waitForImages,
-} from '@/features/chat/share/lib/export-utils'
+} from '@/lib/chat/export-utils'
 
 type ShareStep = 'select' | 'preview'
 

@@ -5,8 +5,8 @@ import { useEditingStore } from "@/stores/useEditingStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { resetConversationEventCursor } from '@/features/chat/api/client/websocket-client'
-import { conversationRepository } from "@/features/conversation/persistence/repository";
-import { DEFAULT_ROLE_ID } from "@/features/chat/session/config/roles";
+import { getConversationFn } from "@/features/conversation/persistence/server/functions/conversations";
+import { DEFAULT_ROLE_ID } from "@/lib/chat/roles";
 import { buildCurrentPath } from "@/features/conversation/model/tree/message-tree";
 import type {
   Attachment,
@@ -79,7 +79,7 @@ export function useConversationLoader(conversationId: string | undefined) {
 
     const load = async () => {
       try {
-        const conversation = await conversationRepository.get(conversationId);
+        const conversation = await getConversationFn({ data: { id: conversationId } });
         if (canceled || signal.aborted) {
           return;
         }

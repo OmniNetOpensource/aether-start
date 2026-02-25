@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { OutlineNode } from '@/features/chat/outline/lib/build-outline-tree'
+import type { OutlineNode } from '@/lib/chat/build-outline-tree'
 import { cn } from '@/lib/utils'
 
 type OutlineTreeProps = {

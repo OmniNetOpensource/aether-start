@@ -2,7 +2,12 @@ import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type { ConversationMeta } from "@/features/conversation/model/types/conversation";
 import type { ConversationDetail } from "@/features/conversation/model/types/conversation";
-import { conversationRepository } from "@/features/conversation/persistence/repository";
+import {
+  listConversationsPageFn,
+  clearConversationsFn,
+  deleteConversationFn,
+  updateConversationTitleFn,
+} from "@/features/conversation/persistence/server/functions/conversations";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 
@@ -98,11 +103,10 @@ export const useConversationsStore = create<
         set((state) => ({ ...state, conversationsLoading: true }));
 
         try {
-          const page = await conversationRepository.getUpdatedAtPage({
-            limit: PAGE_SIZE,
-            cursor: null,
+          const page = await listConversationsPageFn({
+            data: { limit: PAGE_SIZE, cursor: null },
           });
-          const mapped = page.items.map(mapDetailToMeta);
+          const mapped = (page.items as ConversationDetail[]).map(mapDetailToMeta);
 
           const latestRole = mapped[0]?.role;
           if (latestRole && !useMessageTreeStore.getState().conversationId) {
@@ -148,11 +152,10 @@ export const useConversationsStore = create<
         set((state) => ({ ...state, loadingMore: true }));
 
         try {
-          const page = await conversationRepository.getUpdatedAtPage({
-            limit: PAGE_SIZE,
-            cursor: conversationsCursor,
+          const page = await listConversationsPageFn({
+            data: { limit: PAGE_SIZE, cursor: conversationsCursor },
           });
-          const mapped = page.items.map(mapDetailToMeta);
+          const mapped = (page.items as ConversationDetail[]).map(mapDetailToMeta);
 
           set((state) => ({
             ...state,
@@ -174,7 +177,7 @@ export const useConversationsStore = create<
 
       clear: async () => {
         try {
-          await conversationRepository.clear();
+          await clearConversationsFn();
         } catch (error) {
           console.error("Failed to clear conversations:", error);
         }
@@ -209,7 +212,7 @@ export const useConversationsStore = create<
         }));
 
         try {
-          await conversationRepository.delete(id);
+          await deleteConversationFn({ data: { id } });
         } catch (error) {
           console.error("Failed to delete conversation:", error);
         }
@@ -231,7 +234,7 @@ export const useConversationsStore = create<
         }));
 
         try {
-          await conversationRepository.updateTitle(id, title);
+          await updateConversationTitleFn({ data: { id, title } });
         } catch (error) {
           console.error("Failed to update conversation title:", error);
         }

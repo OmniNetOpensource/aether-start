@@ -3,9 +3,9 @@ import { useNavigate } from '@tanstack/react-router'
 import { Loader2, Search } from 'lucide-react'
 import type { ConversationSearchItem } from '@/features/conversation/model/types/conversation'
 import {
-  conversationRepository,
+  searchConversationsFn,
   type ConversationCursor,
-} from '@/features/conversation/persistence/repository'
+} from '@/features/conversation/persistence/server/functions/conversations'
 import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
@@ -149,12 +149,13 @@ export function ConversationSearchDialog({
     setCursor(null)
     setHasSearched(false)
 
-    void conversationRepository
-      .search({
+    void searchConversationsFn({
+      data: {
         query: debouncedQuery,
         limit: PAGE_SIZE,
         cursor: null,
-      })
+      },
+    })
       .then((page) => {
         if (requestIdRef.current !== currentRequestId) {
           return
@@ -194,10 +195,12 @@ export function ConversationSearchDialog({
     setLoadingMore(true)
 
     try {
-      const page = await conversationRepository.search({
-        query: debouncedQuery,
-        limit: PAGE_SIZE,
-        cursor,
+      const page = await searchConversationsFn({
+        data: {
+          query: debouncedQuery,
+          limit: PAGE_SIZE,
+          cursor,
+        },
       })
 
       if (requestIdRef.current !== currentRequestId) {

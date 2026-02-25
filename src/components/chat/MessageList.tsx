@@ -3,8 +3,8 @@ import { useEffect, useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
-import { insertQuoteAtCursor } from "@/features/chat/composer/lib/composer-focus";
-import { useTextSelection } from "@/features/chat/messages/hooks/useTextSelection";
+import { insertQuoteAtCursor } from "@/lib/chat/composer-focus";
+import { useTextSelection } from "@/hooks/useTextSelection";
 import { SelectionQuoteButton } from "./SelectionQuoteButton";
 
 export function MessageList() {

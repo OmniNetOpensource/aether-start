@@ -6,7 +6,7 @@ import {
   resumeRunningConversation,
   startChatRequest,
 } from "@/features/chat/api/client/chat-orchestrator";
-import { DEFAULT_ROLE_ID } from "@/features/chat/session/config/roles";
+import { DEFAULT_ROLE_ID } from "@/lib/chat/roles";
 import {
   computeMessagesFromPath,
 } from "@/features/conversation/model/tree/message-tree";

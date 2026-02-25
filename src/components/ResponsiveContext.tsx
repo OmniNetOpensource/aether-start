@@ -1,6 +1,6 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
-import { BREAKPOINTS, type DeviceType } from "./types";
+import { BREAKPOINTS, type DeviceType } from "@/lib/responsive-types";
 
 const MOBILE_QUERY = `(max-width: ${BREAKPOINTS.mobileMax}px)`;
 const TABLET_QUERY = `(min-width: ${BREAKPOINTS.tabletMin}px) and (max-width: ${BREAKPOINTS.tabletMax}px)`;

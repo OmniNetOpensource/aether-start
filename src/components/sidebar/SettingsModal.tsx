@@ -1,6 +1,6 @@
 
 import { Moon, Sun } from "lucide-react";
-import { useTheme } from "@/features/theme/hooks/useTheme";
+import { useTheme } from "@/hooks/useTheme";
 import {
   Dialog,
   DialogContent,

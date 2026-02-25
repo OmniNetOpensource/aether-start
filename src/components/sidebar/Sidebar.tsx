@@ -1,9 +1,9 @@
 
 import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
-import { ConversationList } from "@/features/sidebar/history/components/ConversationList";
-import { ConversationSearchTrigger } from "@/features/sidebar/history/components/ConversationSearchTrigger";
-import { ProfileMenu } from "@/features/sidebar/profile/components/ProfileMenu";
-import { NewChatButton } from "@/features/chat/session/components/NewChatButton";
+import { ConversationList } from "./ConversationList";
+import { ConversationSearchTrigger } from "./ConversationSearchTrigger";
+import { ProfileMenu } from "./ProfileMenu";
+import { NewChatButton } from "@/components/chat/NewChatButton";
 import { AetherLogo } from "@/components/AetherLogo";
 
 export default function Sidebar() {

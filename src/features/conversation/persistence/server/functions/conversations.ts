@@ -19,6 +19,8 @@ const cursorSchema = z
   })
   .nullable()
 
+export type ConversationCursor = { updated_at: string; id: string } | null
+
 const conversationPayloadSchema = z.object({
   id: z.string().min(1),
   title: z.string().nullable(),

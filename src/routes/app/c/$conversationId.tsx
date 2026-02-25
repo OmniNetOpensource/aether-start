@@ -1,8 +1,8 @@
 import { useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Composer } from '@/features/chat/composer/components/Composer'
-import { MessageList } from '@/features/chat/messages/components/display/MessageList'
-import { useConversationLoader } from '@/features/chat/session/hooks/useConversationLoader'
+import { Composer } from '@/components/chat/Composer'
+import { MessageList } from '@/components/chat/MessageList'
+import { useConversationLoader } from '@/hooks/useConversationLoader'
 import { useConversationsStore } from '@/stores/useConversationsStore'
 
 export const Route = createFileRoute('/app/c/$conversationId')({

@@ -153,7 +153,7 @@ Server-side chat logic is implemented via Cloudflare Durable Objects + WebSocket
 4. Do not edit `src/routeTree.gen.ts` manually
 
 ### Work with Conversations/Messages
-- Persist and fetch via `conversationRepository` instead of ad-hoc storage
+- Persist and fetch via server functions in `conversation/persistence/server/functions/conversations` (e.g. `listConversationsPageFn`, `getConversationFn`)
 - Preserve message tree fields (`id`, sibling/child links, `createdAt`) when transforming
 - Use existing helpers in `conversation/model/tree/` for path/tree operations
 

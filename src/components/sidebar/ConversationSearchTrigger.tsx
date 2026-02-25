@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
-import { ConversationSearchDialog } from '@/features/sidebar/history/components/ConversationSearchDialog'
+import { ConversationSearchDialog } from './ConversationSearchDialog'
 import { Button } from '@/components/ui/button'
 
 type ConversationSearchTriggerProps = {
