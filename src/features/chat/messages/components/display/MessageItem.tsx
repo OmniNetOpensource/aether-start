@@ -1,7 +1,7 @@
 
 import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
-import Markdown from "@/shared/components/Markdown";
-import { ImagePreview } from "@/shared/components/ImagePreview";
+import Markdown from "@/components/Markdown";
+import { ImagePreview } from "@/components/ImagePreview";
 import { Message } from "@/features/chat/types/chat";
 import { getBranchInfo as getBranchInfoFn } from "@/features/conversation/model/tree/message-tree";
 import { ResearchBlock } from "../research/ResearchBlock";
@@ -11,14 +11,13 @@ import {
   AlertCircle,
   Pencil,
   RotateCcw,
-  GitBranch,
 } from "lucide-react";
-import { Button } from "@/shared/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   useMessageTreeStore,
-} from "@/features/chat/messages/store/useMessageTreeStore";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
+} from "@/stores/useMessageTreeStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
+import { useEditingStore } from "@/stores/useEditingStore";
 import { MessageEditor } from "../editing/MessageEditor";
 import { BranchNavigator } from "../editing/BranchNavigator";
 
@@ -88,51 +87,6 @@ const ActionButton = ({
     {icon}
   </Button>
 );
-
-type BranchConversationButtonProps = {
-  messageId: number;
-  disabled?: boolean;
-};
-
-const BranchConversationButton = ({
-  messageId,
-  disabled,
-}: BranchConversationButtonProps) => {
-  const branchToNewConversation = useMessageTreeStore(
-    (state) => state.branchToNewConversation,
-  );
-  const [isBranching, setIsBranching] = useState(false);
-
-  const handleBranch = async () => {
-    if (isBranching || disabled) return;
-    setIsBranching(true);
-    try {
-      const requestState = useChatRequestStore.getState();
-      if (requestState.pending) {
-        requestState.stop();
-      }
-      await branchToNewConversation(messageId);
-    } finally {
-      setIsBranching(false);
-    }
-  };
-
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="sm"
-      className="text-2xs text-neutral-500 dark:text-neutral-400"
-      aria-label="创建新对话分支"
-      disabled={disabled || isBranching}
-      onClick={() => {
-        void handleBranch();
-      }}
-    >
-      <GitBranch className="h-3.5 w-3.5" strokeWidth={2.5} />
-    </Button>
-  );
-};
 
 type MessageItemProps = {
   messageId: number;
@@ -318,12 +272,6 @@ export const MessageItem = memo(function MessageItem({
                   disabled={pending}
                   title="重试生成"
                   icon={<RotateCcw className="h-3.5 w-3.5" />}
-                />
-              )}
-              {!isUser && (
-                <BranchConversationButton
-                  messageId={messageId}
-                  disabled={pending}
                 />
               )}
             </div>

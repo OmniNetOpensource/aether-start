@@ -2,8 +2,8 @@
 import { Link } from "@tanstack/react-router";
 import type { ComponentProps, ReactNode } from "react";
 import { Pencil } from "lucide-react";
-import { Button } from "@/shared/ui/button";
-import { cn } from "@/shared/lib/utils";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 type LinkComponentProps = ComponentProps<typeof Link>;
 

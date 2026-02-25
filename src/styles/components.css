@@ -50,3 +50,24 @@
 [data-streamdown="code-block-body"] pre {
   overflow-x: auto;
 }
+
+/* Hide code block download button */
+[data-streamdown="code-block-download-button"] {
+  display: none;
+}
+
+/* Make code block outer container use same bg as inner body (bg-background) */
+[data-streamdown="code-block"] {
+  background-color: var(--color-background);
+}
+
+/* Remove border from inner code block body */
+[data-streamdown="code-block-body"] {
+  border: none;
+}
+
+/* Remove background from code block action buttons (top-right) */
+[data-streamdown="code-block-actions"] {
+  background: transparent;
+  border: none;
+}

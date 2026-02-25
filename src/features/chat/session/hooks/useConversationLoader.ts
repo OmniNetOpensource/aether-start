@@ -1,9 +1,9 @@
 import { useEffect } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
-import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
-import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useComposerStore } from "@/stores/useComposerStore";
+import { useEditingStore } from "@/stores/useEditingStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { resetConversationEventCursor } from '@/features/chat/api/client/websocket-client'
 import { conversationRepository } from "@/features/conversation/persistence/repository";
 import { DEFAULT_ROLE_ID } from "@/features/chat/session/config/roles";

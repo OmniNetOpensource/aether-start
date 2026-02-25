@@ -1,8 +1,8 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { Loader2 } from "lucide-react";
-import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
-import { useConversationsStore } from "@/features/conversation/persistence/store/useConversationsStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
+import { useConversationsStore } from "@/stores/useConversationsStore";
 import { ConversationItem } from "./ConversationItem";
 
 type ConversationListProps = {

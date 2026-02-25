@@ -6,9 +6,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from "@/shared/ui/dialog";
-import { Switch } from "@/shared/ui/switch";
-import { Button } from "@/shared/ui/button";
+} from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 
 type SettingsModalProps = {
   open: boolean;

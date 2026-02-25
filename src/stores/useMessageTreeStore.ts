@@ -9,7 +9,6 @@ import type {
 import {
   addMessage,
   buildCurrentPath,
-  cloneBlocks,
   computeMessagesFromPath,
   createEmptyMessageState,
   createLinearMessages,
@@ -19,13 +18,8 @@ import {
 } from "@/features/conversation/model/tree/message-tree";
 import {
   applyAssistantAddition,
-  cloneMessages,
   type AssistantAddition,
 } from "@/features/conversation/model/tree/block-operations";
-import { buildConversationTitle } from "@/features/conversation/formatting/format";
-import { conversationRepository } from "@/features/conversation/persistence/repository";
-import { useConversationsStore } from "@/features/conversation/persistence/store/useConversationsStore";
-import { appNavigate } from "@/shared/lib/navigation";
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 
@@ -45,9 +39,6 @@ type MessageTreeActions = {
     depth: number,
     direction: "prev" | "next"
   ) => void;
-  branchToNewConversation: (
-    messageId: number,
-  ) => Promise<void>;
   clear: () => void;
   _getTreeState: () => TreeSnapshot;
   _setTreeState: (partial: Partial<TreeSnapshot>) => void;
@@ -62,12 +53,6 @@ type MessageTreeActions = {
     blocks: ContentBlock[]
   ) => ReturnType<typeof editMessage> | null;
 };
-
-// Create a stable-ish client id without requiring a backend.
-const generateConversationId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : `conv_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>()(
   devtools(
@@ -244,60 +229,6 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
             nextId,
           };
         }),
-      branchToNewConversation: async (messageId) => {
-        const state = get();
-        const currentPath = state.currentPath;
-        const targetIndex = currentPath.indexOf(messageId);
-        if (targetIndex === -1) {
-          return;
-        }
-
-        const pathIds = currentPath.slice(0, targetIndex + 1);
-        const pathMessages = pathIds
-          .map((id) => state.messages[id - 1])
-          .filter((message): message is Message => !!message);
-
-        if (pathMessages.length === 0) {
-          return;
-        }
-
-        // Copy the path into a new linear conversation to preserve history.
-        const linearState = createLinearMessages(
-          pathMessages.map((message) => ({
-            role: message.role,
-            blocks: cloneBlocks(message.blocks ?? []),
-            createdAt: message.createdAt,
-          }))
-        );
-
-        const newConversationId = generateConversationId();
-        const now = new Date().toISOString();
-        const titleSource =
-          pathMessages.find((message) => message.role === "user") ??
-          pathMessages[0];
-        const title = titleSource
-          ? buildConversationTitle(titleSource)
-          : "新会话";
-
-        await conversationRepository.save({
-          id: newConversationId,
-          title,
-          currentPath: linearState.currentPath,
-          messages: cloneMessages(linearState.messages),
-          created_at: now,
-          updated_at: now,
-        });
-
-        const { addConversation } = useConversationsStore.getState();
-        addConversation({
-          id: newConversationId,
-          title,
-          created_at: now,
-          updated_at: now,
-        });
-
-        appNavigate(`/app/c/${newConversationId}`);
-      },
     }),
     { name: "MessageTreeStore" }
   )

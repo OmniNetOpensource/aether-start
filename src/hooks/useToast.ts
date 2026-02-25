@@ -1,4 +1,4 @@
-import { useToastStore, type ToastVariant } from "@/shared/stores/toast";
+import { useToastStore, type ToastVariant } from "@/stores/toast";
 
 const defaultDuration = 4000;
 
@@ -20,5 +20,5 @@ export const toast = {
   error: createToast("error"),
 };
 
-export { useToastStore } from "@/shared/stores/toast";
-export type { Toast, ToastVariant } from "@/shared/stores/toast";
+export { useToastStore } from "@/stores/toast";
+export type { Toast, ToastVariant } from "@/stores/toast";

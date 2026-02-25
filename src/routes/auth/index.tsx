@@ -3,8 +3,8 @@ import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-ro
 import { z } from 'zod'
 import { authClient } from '@/features/auth/client/auth-client'
 import { getSessionStateFn } from '@/features/auth/server/session-state'
-import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const authSearchSchema = z.object({
   redirect: z.string().optional(),

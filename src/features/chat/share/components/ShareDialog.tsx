@@ -8,13 +8,13 @@ import {
 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import type { Message } from '@/features/chat/types/chat'
-import { useChatRequestStore } from '@/features/chat/api/store/useChatRequestStore'
-import { useMessageTreeStore } from '@/features/chat/messages/store/useMessageTreeStore'
+import { useChatRequestStore } from '@/stores/useChatRequestStore'
+import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
 import { ResearchBlock } from '@/features/chat/messages/components/research/ResearchBlock'
-import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
-import Markdown from '@/shared/components/Markdown'
-import { cn } from '@/shared/lib/utils'
-import { Button } from '@/shared/ui/button'
+import { useConversationsStore } from '@/stores/useConversationsStore'
+import Markdown from '@/components/Markdown'
+import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -22,7 +22,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/shared/ui/dialog'
+} from '@/components/ui/dialog'
 import {
   buildFontEmbedCSS,
   buildMessageSnippet,

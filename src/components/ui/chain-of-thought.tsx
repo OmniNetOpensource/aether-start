@@ -1,7 +1,7 @@
 import { createContext } from 'react'
 import * as CollapsiblePrimitive from '@radix-ui/react-collapsible'
 import { ChevronRight } from 'lucide-react'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/lib/utils'
 import { Badge } from './badge'
 
 // Context for sharing state between components
@@ -258,4 +258,3 @@ export {
   ChainOfThoughtImage,
 }
 export type { StepStatus, ChainOfThoughtStepProps }
-

@@ -3,18 +3,18 @@ import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { LogOut, Settings, User2 } from "lucide-react";
 import { authClient } from "@/features/auth/client/auth-client";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { clearConversationEventCursors } from "@/features/chat/api/client/websocket-client";
-import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
-import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
-import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
-import { useConversationsStore } from "@/features/conversation/persistence/store/useConversationsStore";
+import { useComposerStore } from "@/stores/useComposerStore";
+import { useEditingStore } from "@/stores/useEditingStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
+import { useConversationsStore } from "@/stores/useConversationsStore";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/shared/ui/popover";
-import { Avatar, AvatarFallback } from "@/shared/ui/avatar";
+} from "@/components/ui/popover";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SettingsModal } from "./SettingsModal";
 
 type ProfileMenuProps = {

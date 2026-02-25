@@ -40,4 +40,3 @@ export const useToastStore = create<ToastStore>()(
     { name: "ToastStore" }
   )
 );
-

@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import type { Attachment, EditingState, UserContentBlock } from "@/features/chat/types/chat";
-import { toast } from "@/shared/hooks/useToast";
+import { toast } from "@/hooks/useToast";
 import {
   cloneBlocks,
   computeMessagesFromPath,
@@ -13,8 +13,8 @@ import {
   extractContentFromBlocks,
 } from "@/features/conversation/model/tree/block-operations";
 import { startChatRequest } from "@/features/chat/api/client/chat-orchestrator";
-import { useMessageTreeStore } from "./useMessageTreeStore";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
 
 type EditingStoreState = {
   editingState: EditingState | null;

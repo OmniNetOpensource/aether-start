@@ -1,9 +1,9 @@
 
 import { ChangeEvent, MouseEvent, useRef } from "react";
 import { ArrowUp, Loader2, Paperclip, Square } from "lucide-react";
-import { Button } from "@/shared/ui/button";
-import { cn } from "@/shared/lib/utils";
-import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { useComposerStore } from "@/stores/useComposerStore";
 import { RoleSelector } from "./RoleSelector";
 
 type ComposerToolbarProps = {

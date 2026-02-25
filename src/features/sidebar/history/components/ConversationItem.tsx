@@ -7,9 +7,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/shared/ui/dropdown-menu";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-import { useConversationsStore } from "@/features/conversation/persistence/store/useConversationsStore";
+} from "@/components/ui/dropdown-menu";
+import { useConversationsStore } from "@/stores/useConversationsStore";
 
 type ConversationItemProps = {
   conversation: ConversationMeta;
@@ -22,8 +21,6 @@ export function ConversationItem({
 }: ConversationItemProps) {
   const title = conversation.title || "未命名会话";
 
-  const pending = useChatRequestStore((state) => state.pending);
-  const stop = useChatRequestStore((state) => state.stop);
   const navigate = useNavigate();
   const deleteConversation = useConversationsStore(
     (state) => state.deleteConversation

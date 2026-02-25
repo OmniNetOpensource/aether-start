@@ -1,15 +1,15 @@
 
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from "react";
 import { ArrowUp, ImagePlus, X } from "lucide-react";
-import { ImagePreview } from "@/shared/components/ImagePreview";
-import { Button } from "@/shared/ui/button";
-import { Textarea } from "@/shared/ui/textarea";
-import { cn } from "@/shared/lib/utils";
-import { toast } from "@/shared/hooks/useToast";
+import { ImagePreview } from "@/components/ImagePreview";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/useToast";
 import { useResponsive } from "@/features/responsive/ResponsiveContext";
-import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
+import { useEditingStore } from "@/stores/useEditingStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
+import { useComposerStore } from "@/stores/useComposerStore";
 import { buildAttachmentsFromFiles } from "@/features/chat/composer/lib/attachments";
 
 type MessageEditorProps = {

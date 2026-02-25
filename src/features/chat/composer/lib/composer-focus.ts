@@ -1,4 +1,4 @@
-import { useComposerStore } from '@/features/chat/composer/store/useComposerStore'
+import { useComposerStore } from '@/stores/useComposerStore'
 
 let composerTextarea: HTMLTextAreaElement | null = null
 

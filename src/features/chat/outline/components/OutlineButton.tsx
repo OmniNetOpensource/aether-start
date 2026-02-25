@@ -1,19 +1,19 @@
 import { useCallback, useMemo, useState } from 'react'
 import { GitBranch } from 'lucide-react'
-import { useChatRequestStore } from '@/features/chat/api/store/useChatRequestStore'
+import { useChatRequestStore } from '@/stores/useChatRequestStore'
 import { OutlineTree } from '@/features/chat/outline/components/OutlineTree'
 import {
   buildOutlineTree,
   findPathToMessage,
 } from '@/features/chat/outline/lib/build-outline-tree'
-import { useMessageTreeStore } from '@/features/chat/messages/store/useMessageTreeStore'
+import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
 import { switchBranch } from '@/features/conversation/model/tree/message-tree'
-import { Button } from '@/shared/ui/button'
+import { Button } from '@/components/ui/button'
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from '@/shared/ui/popover'
+} from '@/components/ui/popover'
 
 const SCROLL_RETRY_FRAMES = 4
 

@@ -3,7 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Composer } from '@/features/chat/composer/components/Composer'
 import { MessageList } from '@/features/chat/messages/components/display/MessageList'
 import { useConversationLoader } from '@/features/chat/session/hooks/useConversationLoader'
-import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
+import { useConversationsStore } from '@/stores/useConversationsStore'
 
 export const Route = createFileRoute('/app/c/$conversationId')({
   component: ConversationPage,

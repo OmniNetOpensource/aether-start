@@ -1,7 +1,7 @@
 
 import { useCallback, useState } from "react";
-import { useToastStore } from "@/shared/stores/toast";
-import { Toast } from "@/shared/ui/toast";
+import { useToastStore } from "@/stores/toast";
+import { Toast } from "@/components/ui/toast";
 
 export function ToastContainer() {
   const toasts = useToastStore((state) => state.toasts);

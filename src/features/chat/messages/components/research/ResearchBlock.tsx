@@ -1,8 +1,8 @@
 import { memo } from 'react'
 import { Search, Link, Wrench } from 'lucide-react'
-import Markdown from '@/shared/components/Markdown'
+import Markdown from '@/components/Markdown'
 import type { ResearchItem, Tool } from '@/features/chat/types/chat'
-import type { StepStatus } from '@/shared/ui/chain-of-thought'
+import type { StepStatus } from '@/components/ui/chain-of-thought'
 import {
   ChainOfThought,
   ChainOfThoughtHeader,
@@ -11,7 +11,7 @@ import {
   ChainOfThoughtSearchResults,
   ChainOfThoughtSearchResult,
   ChainOfThoughtImage,
-} from '@/shared/ui/chain-of-thought'
+} from '@/components/ui/chain-of-thought'
 import { getToolLifecycle, getSearchResultCount } from './utils'
 
 const SEARCH_TOOL_NAMES = new Set([

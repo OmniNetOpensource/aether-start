@@ -1,6 +1,6 @@
 import type { ChatServerToClientEvent } from '@/features/chat/api/shared/event-types'
-import { useMessageTreeStore } from '@/features/chat/messages/store/useMessageTreeStore'
-import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
+import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
+import { useConversationsStore } from '@/stores/useConversationsStore'
 
 export const enhanceServerErrorMessage = (safeMessage: string) => {
   const lowerMessage = safeMessage.toLowerCase()

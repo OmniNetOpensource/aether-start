@@ -1,10 +1,10 @@
 
 import { Share2 } from 'lucide-react'
 import { useState } from 'react'
-import { useChatRequestStore } from '@/features/chat/api/store/useChatRequestStore'
-import { useMessageTreeStore } from '@/features/chat/messages/store/useMessageTreeStore'
+import { useChatRequestStore } from '@/stores/useChatRequestStore'
+import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
 import { ShareDialog } from '@/features/chat/share/components/ShareDialog'
-import { Button } from '@/shared/ui/button'
+import { Button } from '@/components/ui/button'
 
 export function ShareButton() {
   const [open, setOpen] = useState(false)

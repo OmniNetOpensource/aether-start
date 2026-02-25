@@ -2,9 +2,9 @@ import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-r
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 
-import { setNavigate } from "@/shared/lib/navigation";
-import { TooltipProvider } from "@/shared/ui/tooltip";
-import { ToastContainer } from "@/shared/ui/toast-container";
+import { setNavigate } from "@/lib/navigation";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { ToastContainer } from "@/components/ui/toast-container";
 import { ResponsiveProvider } from "@/features/responsive/ResponsiveContext";
 import { NotFound } from "@/routes/-not-found";
 

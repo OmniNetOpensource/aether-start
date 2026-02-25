@@ -6,8 +6,8 @@ import type {
 } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { cn } from "@/shared/lib/utils";
-import { formatFileSize } from "@/shared/lib/utils/file";
+import { cn } from "@/lib/utils";
+import { formatFileSize } from "@/lib/utils/file";
 
 type ImagePreviewProps = {
   url: string;

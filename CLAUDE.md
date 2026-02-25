@@ -60,17 +60,15 @@ Server-side chat logic is implemented via Cloudflare Durable Objects + WebSocket
   - `fetch_url` enabled when `JINA_API_KEY` exists (also exposed to model tools list in chat function)
 
 ### State Management
-- Uses Zustand stores across features.
-- Shared toast store in `src/shared/stores/toast.ts`
-- Conversation store in `src/features/conversation/persistence/store/useConversationsStore.ts`
-- Message tree/editing/composer/chat request each have feature-local stores.
+- Uses Zustand stores in `src/stores/`:
+  - `toast.ts`, `useConversationsStore.ts`, `useComposerStore.ts`, `useMessageTreeStore.ts`, `useEditingStore.ts`, `useChatRequestStore.ts`
 
 ### Shared Layer
-- Shared reusable UI/components/hooks/utils live under `src/shared/`:
-  - `src/shared/ui/` (Radix-based primitives)
-  - `src/shared/components/` (Markdown, code block, image preview)
-  - `src/shared/lib/` (navigation, utils)
-  - `src/shared/hooks/` (toast)
+- Reusable UI/components/hooks/utils:
+  - `src/components/ui/` (Radix-based primitives)
+  - `src/components/` (Markdown, code block, image preview)
+  - `src/lib/` (navigation, utils)
+  - `src/hooks/` (toast)
 
 ## Data & Persistence
 
@@ -126,7 +124,7 @@ Server-side chat logic is implemented via Cloudflare Durable Objects + WebSocket
 ## Styling
 
 - Tailwind CSS v4 via `@tailwindcss/vite`
-- Radix UI primitives wrapped in `src/shared/ui/`
+- Radix UI primitives wrapped in `src/components/ui/`
 - Markdown rendering via shared components (`Markdown`, `CodeBlock`, `MermaidBlock`)
 - KaTeX styles injected from root route
 

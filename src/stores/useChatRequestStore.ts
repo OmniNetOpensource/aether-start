@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { toast } from "@/shared/hooks/useToast";
+import { toast } from "@/hooks/useToast";
 import type { ChatClient } from "@/features/chat/api/client/websocket-client";
 import {
   resumeRunningConversation,
@@ -13,8 +13,8 @@ import {
 import {
   buildUserBlocks,
 } from "@/features/conversation/model/tree/block-operations";
-import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
-import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
+import { useComposerStore } from "@/stores/useComposerStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { getAvailableRolesFn } from "@/features/chat/api/server/functions/roles";
 
 type RoleInfo = { id: string; name: string };

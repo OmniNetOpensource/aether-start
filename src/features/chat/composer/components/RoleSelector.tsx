@@ -1,15 +1,15 @@
 
 import { useEffect } from "react";
 import { Check, ChevronDown } from "lucide-react";
-import { Button } from "@/shared/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverClose,
   PopoverContent,
   PopoverTrigger,
-} from "@/shared/ui/popover";
-import { cn } from "@/shared/lib/utils";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
 
 export function RoleSelector() {
   const currentRole = useChatRequestStore((state) => state.currentRole);

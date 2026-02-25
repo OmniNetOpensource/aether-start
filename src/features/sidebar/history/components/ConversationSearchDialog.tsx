@@ -6,17 +6,15 @@ import {
   conversationRepository,
   type ConversationCursor,
 } from '@/features/conversation/persistence/repository'
-import { useConversationsStore } from '@/features/conversation/persistence/store/useConversationsStore'
-import { useChatRequestStore } from '@/features/chat/api/store/useChatRequestStore'
-import { Badge } from '@/shared/ui/badge'
+import { Badge } from '@/components/ui/badge'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/shared/ui/dialog'
-import { Input } from '@/shared/ui/input'
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 
 const PAGE_SIZE = 20
 
@@ -69,10 +67,6 @@ export function ConversationSearchDialog({
   onOpenChange,
 }: ConversationSearchDialogProps) {
   const navigate = useNavigate()
-  const pending = useChatRequestStore((state) => state.pending)
-  const stop = useChatRequestStore((state) => state.stop)
-  const addConversation = useConversationsStore((state) => state.addConversation)
-
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [items, setItems] = useState<ConversationSearchItem[]>([])

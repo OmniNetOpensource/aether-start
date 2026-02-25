@@ -2,8 +2,8 @@ import { FormEvent, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { z } from 'zod'
 import { authClient } from '@/features/auth/client/auth-client'
-import { Button } from '@/shared/ui/button'
-import { Input } from '@/shared/ui/input'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const getForgotPasswordErrorMessage = (error: unknown) => {
   const message =

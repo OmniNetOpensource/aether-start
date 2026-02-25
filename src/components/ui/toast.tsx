@@ -3,8 +3,8 @@ import * as React from "react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { XIcon, InfoIcon, CheckCircle2Icon, AlertTriangleIcon, AlertCircleIcon } from "lucide-react";
 
-import { cn } from "@/shared/lib/utils";
-import { Toast as ToastType } from "@/shared/stores/toast";
+import { cn } from "@/lib/utils";
+import { Toast as ToastType } from "@/stores/toast";
 
 const toastVariants = cva(
   "relative flex items-start gap-3 rounded-md border p-4 shadow-lg transition-all",

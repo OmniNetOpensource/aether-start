@@ -1,5 +1,5 @@
 import { Slot } from '@radix-ui/react-slot'
-import { cn } from '@/shared/lib/utils'
+import { cn } from '@/lib/utils'
 
 type BadgeProps = React.HTMLAttributes<HTMLDivElement> & {
   variant?: 'default' | 'secondary' | 'outline' | 'destructive'

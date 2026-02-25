@@ -1,8 +1,8 @@
 
 import { useEffect, useRef } from "react";
 import { MessageItem } from "./MessageItem";
-import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { insertQuoteAtCursor } from "@/features/chat/composer/lib/composer-focus";
 import { useTextSelection } from "@/features/chat/messages/hooks/useTextSelection";
 import { SelectionQuoteButton } from "./SelectionQuoteButton";

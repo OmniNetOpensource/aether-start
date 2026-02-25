@@ -3,8 +3,8 @@ import { devtools } from "zustand/middleware";
 import type { ConversationMeta } from "@/features/conversation/model/types/conversation";
 import type { ConversationDetail } from "@/features/conversation/model/types/conversation";
 import { conversationRepository } from "@/features/conversation/persistence/repository";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 
 type ConversationsState = {
   conversations: ConversationMeta[];

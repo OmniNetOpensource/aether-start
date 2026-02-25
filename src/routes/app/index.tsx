@@ -2,10 +2,10 @@ import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Composer } from "@/features/chat/composer/components/Composer";
 import { MessageList } from "@/features/chat/messages/components/display/MessageList";
-import { useMessageTreeStore } from "@/features/chat/messages/store/useMessageTreeStore";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-import { useEditingStore } from "@/features/chat/messages/store/useEditingStore";
-import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
+import { useEditingStore } from "@/stores/useEditingStore";
+import { useComposerStore } from "@/stores/useComposerStore";
 
 export const Route = createFileRoute("/app/")({
   component: HomePage,

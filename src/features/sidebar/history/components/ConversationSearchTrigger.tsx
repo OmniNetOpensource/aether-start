@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { ConversationSearchDialog } from '@/features/sidebar/history/components/ConversationSearchDialog'
-import { Button } from '@/shared/ui/button'
+import { Button } from '@/components/ui/button'
 
 type ConversationSearchTriggerProps = {
   variant?: 'sidebar' | 'icon'

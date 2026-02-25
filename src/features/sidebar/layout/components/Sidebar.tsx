@@ -4,7 +4,7 @@ import { ConversationList } from "@/features/sidebar/history/components/Conversa
 import { ConversationSearchTrigger } from "@/features/sidebar/history/components/ConversationSearchTrigger";
 import { ProfileMenu } from "@/features/sidebar/profile/components/ProfileMenu";
 import { NewChatButton } from "@/features/chat/session/components/NewChatButton";
-import { AetherLogo } from "@/shared/components/AetherLogo";
+import { AetherLogo } from "@/components/AetherLogo";
 
 export default function Sidebar() {
   const RIGHT_LEAVE_TOLERANCE_PX = 1;

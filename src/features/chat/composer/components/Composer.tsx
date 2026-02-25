@@ -8,15 +8,15 @@ import {
   useRef,
 } from "react";
 import { X } from "lucide-react";
-import { ImagePreview } from "@/shared/components/ImagePreview";
-import { useComposerStore } from "@/features/chat/composer/store/useComposerStore";
-import { useChatRequestStore } from "@/features/chat/api/store/useChatRequestStore";
-import { useIsNewChat } from "@/features/chat/messages/store/useMessageTreeStore";
+import { ImagePreview } from "@/components/ImagePreview";
+import { useComposerStore } from "@/stores/useComposerStore";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
+import { useIsNewChat } from "@/stores/useMessageTreeStore";
 import { setComposerTextarea } from "@/features/chat/composer/lib/composer-focus";
 import { ComposerToolbar } from "./ComposerToolbar";
-import { Button } from "@/shared/ui/button";
-import { Textarea } from "@/shared/ui/textarea";
-import { toast } from "@/shared/hooks/useToast";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/useToast";
 import { useResponsive } from "@/features/responsive/ResponsiveContext";
 
 export function Composer() {
