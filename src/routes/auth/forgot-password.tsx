@@ -1,5 +1,6 @@
 import { FormEvent, useState } from 'react'
 import { Link, createFileRoute } from '@tanstack/react-router'
+import { z } from 'zod'
 import { authClient } from '@/features/auth/client/auth-client'
 import { Button } from '@/shared/ui/button'
 import { Input } from '@/shared/ui/input'
@@ -21,12 +22,18 @@ const getForgotPasswordErrorMessage = (error: unknown) => {
   return '发送失败，请稍后重试'
 }
 
-export const Route = createFileRoute('/forgot-password')({
+const forgotPasswordSearchSchema = z.object({
+  email: z.string().optional(),
+})
+
+export const Route = createFileRoute('/auth/forgot-password')({
+  validateSearch: (search) => forgotPasswordSearchSchema.parse(search),
   component: ForgotPasswordPage,
 })
 
 function ForgotPasswordPage() {
-  const [email, setEmail] = useState('')
+  const { email: initialEmail } = Route.useSearch()
+  const [email, setEmail] = useState(initialEmail ?? '')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
@@ -46,7 +53,7 @@ function ForgotPasswordPage() {
     try {
       const { error } = await authClient.requestPasswordReset({
         email: normalizedEmail,
-        redirectTo: '/reset-password',
+        redirectTo: '/auth/reset-password',
       })
 
       if (error) {
@@ -79,7 +86,7 @@ function ForgotPasswordPage() {
               如果该邮箱已注册，你将收到重置邮件。
             </p>
             <Button asChild className='w-full'>
-              <Link to='/auth'>返回登录</Link>
+              <Link to='/auth' search={{ email: email.trim() || undefined }}>返回登录</Link>
             </Button>
           </div>
         ) : (
@@ -109,7 +116,7 @@ function ForgotPasswordPage() {
             </Button>
 
             <Button className='w-full' variant='ghost' asChild>
-              <Link to='/auth'>返回登录</Link>
+              <Link to='/auth' search={{ email: email.trim() || undefined }}>返回登录</Link>
             </Button>
           </form>
         )}

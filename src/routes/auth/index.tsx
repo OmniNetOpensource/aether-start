@@ -9,6 +9,7 @@ import { Input } from '@/shared/ui/input'
 const authSearchSchema = z.object({
   redirect: z.string().optional(),
   reset: z.enum(['success']).optional(),
+  email: z.string().optional(),
 })
 
 const getSafeRedirectTarget = (value: string | undefined) => {
@@ -100,7 +101,7 @@ const getDefaultName = (email: string) => {
   return prefix?.trim() || 'user'
 }
 
-export const Route = createFileRoute('/auth')({
+export const Route = createFileRoute('/auth/')({
   validateSearch: (search) => authSearchSchema.parse(search),
   beforeLoad: async () => {
     const sessionState = await getSessionStateFn()
@@ -113,14 +114,14 @@ export const Route = createFileRoute('/auth')({
 
 function AuthPage() {
   const navigate = useNavigate()
-  const { redirect: redirectTarget, reset } = Route.useSearch()
+  const { redirect: redirectTarget, reset, email: initialEmail } = Route.useSearch()
 
   const target = useMemo(
     () => getSafeRedirectTarget(redirectTarget),
     [redirectTarget],
   )
 
-  const [email, setEmail] = useState('')
+  const [email, setEmail] = useState(initialEmail ?? '')
   const [password, setPassword] = useState('')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -299,7 +300,8 @@ function AuthPage() {
 
           <div className='flex justify-end'>
             <Link
-              to='/forgot-password'
+              to='/auth/forgot-password'
+              search={{ email: email.trim() || undefined }}
               className='text-sm text-(--interactive-primary) underline-offset-4 hover:underline'
             >
               忘记密码？

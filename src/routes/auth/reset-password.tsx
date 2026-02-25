@@ -44,7 +44,7 @@ const getResetPasswordErrorMessage = (error: unknown) => {
   return '重置失败，请稍后重试'
 }
 
-export const Route = createFileRoute('/reset-password')({
+export const Route = createFileRoute('/auth/reset-password')({
   validateSearch: (search) => resetPasswordSearchSchema.parse(search),
   component: ResetPasswordPage,
 })
@@ -125,7 +125,7 @@ function ResetPasswordPage() {
             </div>
             <div className='space-y-3'>
               <Button asChild className='w-full'>
-                <Link to='/forgot-password'>重新发起重置</Link>
+                <Link to='/auth/forgot-password'>重新发起重置</Link>
               </Button>
               <Button asChild className='w-full' variant='ghost'>
                 <Link to='/auth'>返回登录</Link>
