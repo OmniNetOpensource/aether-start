@@ -1,9 +1,13 @@
-import type { ConversationDetail } from '@/features/conversation/model/types/conversation'
+import type {
+  ConversationDetail,
+  ConversationSearchPageResult,
+} from '@/features/conversation/model/types/conversation'
 import {
   clearConversationsFn,
   deleteConversationFn,
   getConversationFn,
   listConversationsPageFn,
+  searchConversationsFn,
   updateConversationTitleFn,
   upsertConversationFn,
 } from '@/features/conversation/persistence/server/functions/conversations'
@@ -53,6 +57,20 @@ export const conversationRepository = {
         cursor: params.cursor,
       },
     })) as ConversationPageResult
+  },
+
+  async search(params: {
+    query: string
+    limit: number
+    cursor: ConversationCursor
+  }): Promise<ConversationSearchPageResult> {
+    return (await searchConversationsFn({
+      data: {
+        query: params.query,
+        limit: params.limit,
+        cursor: params.cursor,
+      },
+    })) as ConversationSearchPageResult
   },
 
   async updateTitle(id: string, title: string): Promise<void> {

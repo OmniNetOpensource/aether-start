@@ -1,5 +1,5 @@
-import { FormEvent, useMemo, useState } from 'react'
-import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
+import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { authClient } from '@/features/auth/client/auth-client'
 import { getSessionStateFn } from '@/features/auth/server/session-state'
@@ -8,6 +8,7 @@ import { Input } from '@/shared/ui/input'
 
 const authSearchSchema = z.object({
   redirect: z.string().optional(),
+  reset: z.enum(['success']).optional(),
 })
 
 const getSafeRedirectTarget = (value: string | undefined) => {
@@ -112,7 +113,7 @@ export const Route = createFileRoute('/auth')({
 
 function AuthPage() {
   const navigate = useNavigate()
-  const { redirect: redirectTarget } = Route.useSearch()
+  const { redirect: redirectTarget, reset } = Route.useSearch()
 
   const target = useMemo(
     () => getSafeRedirectTarget(redirectTarget),
@@ -125,6 +126,20 @@ function AuthPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingVerification, setPendingVerification] = useState(false)
   const [isResending, setIsResending] = useState(false)
+  const [showResetSuccess] = useState(reset === 'success')
+
+  useEffect(() => {
+    if (reset !== 'success') {
+      return
+    }
+
+    void navigate({
+      href: redirectTarget
+        ? `/auth?redirect=${encodeURIComponent(redirectTarget)}`
+        : '/auth',
+      replace: true,
+    })
+  }, [navigate, redirectTarget, reset])
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -243,6 +258,12 @@ function AuthPage() {
           </p>
         </div>
 
+        {showResetSuccess ? (
+          <p className='mb-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600'>
+            密码已重置，请使用新密码登录
+          </p>
+        ) : null}
+
         <form className='space-y-4' onSubmit={submit}>
           <div className='space-y-2'>
             <label className='text-sm text-(--text-secondary)' htmlFor='email'>
@@ -274,6 +295,15 @@ function AuthPage() {
               disabled={isSubmitting}
               required
             />
+          </div>
+
+          <div className='flex justify-end'>
+            <Link
+              to='/forgot-password'
+              className='text-sm text-(--interactive-primary) underline-offset-4 hover:underline'
+            >
+              忘记密码？
+            </Link>
           </div>
 
           {errorMessage ? (

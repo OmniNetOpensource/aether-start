@@ -92,6 +92,23 @@ const createAuth = () => {
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
+      sendResetPassword: async ({ user, url }) => {
+        const resendApiKey = serverEnv.RESEND_API_KEY
+        if (!resendApiKey) {
+          console.warn('RESEND_API_KEY not configured, skipping reset password email')
+          return
+        }
+
+        const resend = new Resend(resendApiKey)
+        await resend.emails.send({
+          from: 'noreply@mail.forkicks.fun',
+          to: user.email,
+          subject: 'Aether 重置密码',
+          html: `<p>我们收到了重置密码请求。</p><p>请点击以下链接设置新密码：</p><p><a href="${url}">${url}</a></p><p>链接 1 小时内有效。</p>`,
+        })
+      },
+      resetPasswordTokenExpiresIn: 3600,
+      revokeSessionsOnPasswordReset: true,
       password: {
         hash: hashPassword,
         verify: verifyPassword,

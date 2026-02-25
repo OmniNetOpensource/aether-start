@@ -206,6 +206,7 @@ export const MessageItem = memo(function MessageItem({
   return (
     <div
       key={`${message.role}-${index}`}
+      data-message-id={messageId}
       className="w-full py-10"
     >
       <div className="w-full min-w-0 flex flex-col items-start text-left">

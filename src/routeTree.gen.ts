@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as R404RouteImport } from './routes/404'
 import { Route as AppRouteRouteImport } from './routes/app/route'
@@ -18,6 +20,16 @@ import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversa
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -64,6 +76,8 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/auth': typeof AuthRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app/': typeof AppIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -73,6 +87,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
   '/auth': typeof AuthRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app': typeof AppIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -84,6 +100,8 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/auth': typeof AuthRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/app/': typeof AppIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -96,6 +114,8 @@ export interface FileRouteTypes {
     | '/app'
     | '/404'
     | '/auth'
+    | '/forgot-password'
+    | '/reset-password'
     | '/app/'
     | '/api/assets/$key'
     | '/api/auth/$'
@@ -105,6 +125,8 @@ export interface FileRouteTypes {
     | '/'
     | '/404'
     | '/auth'
+    | '/forgot-password'
+    | '/reset-password'
     | '/app'
     | '/api/assets/$key'
     | '/api/auth/$'
@@ -115,6 +137,8 @@ export interface FileRouteTypes {
     | '/app'
     | '/404'
     | '/auth'
+    | '/forgot-password'
+    | '/reset-password'
     | '/app/'
     | '/api/assets/$key'
     | '/api/auth/$'
@@ -126,12 +150,28 @@ export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
   R404Route: typeof R404Route
   AuthRoute: typeof AuthRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   ApiAssetsKeyRoute: typeof ApiAssetsKeyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -210,6 +250,8 @@ const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
   R404Route: R404Route,
   AuthRoute: AuthRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   ApiAssetsKeyRoute: ApiAssetsKeyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

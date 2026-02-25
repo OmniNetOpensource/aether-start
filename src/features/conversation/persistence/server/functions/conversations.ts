@@ -7,6 +7,7 @@ import {
   deleteConversationById,
   getConversationById,
   listConversationsPage,
+  searchConversations,
   updateConversationTitle,
   upsertConversation,
 } from '@/features/conversation/persistence/server/services/conversations-db'
@@ -41,6 +42,26 @@ export const listConversationsPageFn = createServerFn({ method: 'POST' })
 
     return listConversationsPage(DB, {
       userId: session.user.id,
+      limit: data.limit,
+      cursor: data.cursor,
+    })
+  })
+
+export const searchConversationsFn = createServerFn({ method: 'POST' })
+  .inputValidator(
+    z.object({
+      query: z.string().trim().min(1).max(200),
+      limit: z.number().int().positive().max(50),
+      cursor: cursorSchema,
+    }),
+  )
+  .handler(async ({ data }) => {
+    const { DB } = getServerBindings()
+    const session = await requireSession()
+
+    return searchConversations(DB, {
+      userId: session.user.id,
+      query: data.query,
       limit: data.limit,
       cursor: data.cursor,
     })
