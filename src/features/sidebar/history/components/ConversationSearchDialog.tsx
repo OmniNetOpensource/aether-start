@@ -262,34 +262,12 @@ export function ConversationSearchDialog({
 
   const handleSelect = useCallback(
     (item: ConversationSearchItem) => {
-      if (pending) {
-        const confirmed = window.confirm(
-          'AI正在生成内容，离开当前对话可能会丢失正在生成的内容，确定要离开吗？',
-        )
-        if (!confirmed) {
-          return
-        }
-      }
-
-      stop()
-
-      addConversation({
-        id: item.id,
-        user_id: item.user_id,
-        title: item.title,
-        role: item.role,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-      })
-
       navigate({
         to: '/app/c/$conversationId',
         params: { conversationId: item.id },
       })
-
-      closeAndClear()
     },
-    [pending, stop, addConversation, navigate, closeAndClear],
+    [navigate],
   )
 
   return (

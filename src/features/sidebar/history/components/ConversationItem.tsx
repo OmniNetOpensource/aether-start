@@ -35,20 +35,6 @@ export function ConversationItem({
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) {
       return;
     }
-
-    // 如果正在生成，需要确认
-    if (pending) {
-      const confirmed = window.confirm(
-        "AI正在生成内容，离开当前对话可能会丢失正在生成的内容，确定要离开吗？"
-      );
-      if (!confirmed) {
-        e.preventDefault();
-        return;
-      }
-    }
-
-    // 停止当前生成，让 Link 自己完成导航
-    stop();
   };
 
   const handleMenuClick = (e: React.MouseEvent<HTMLButtonElement>) => {
