@@ -7,7 +7,7 @@ const FALLBACK_IMAGE_DATA_URL =
   encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="320">' +
       '<rect width="100%" height="100%" fill="#f3f4f6"/>' +
-      '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="16" font-family="sans-serif">Image unavailable</text>' +
+      '<text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9ca3af" font-size="36" font-family="sans-serif">Image unavailable</text>' +
       '</svg>',
   )
 
@@ -28,17 +28,6 @@ export const sanitizeFilename = (title: string) => {
   return safe || 'Aether'
 }
 
-const pad = (value: number) => value.toString().padStart(2, '0')
-
-export const formatTimestampForFilename = (date: Date = new Date()) => {
-  const year = date.getFullYear()
-  const month = pad(date.getMonth() + 1)
-  const day = pad(date.getDate())
-  const hour = pad(date.getHours())
-  const minute = pad(date.getMinutes())
-
-  return `${year}-${month}-${day}-${hour}-${minute}`
-}
 
 export const waitForImages = async (container: HTMLElement) => {
   const images = Array.from(container.querySelectorAll('img'))

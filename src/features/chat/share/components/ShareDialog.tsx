@@ -27,7 +27,6 @@ import {
   buildFontEmbedCSS,
   buildMessageSnippet,
   downloadDataUrl,
-  formatTimestampForFilename,
   prepareCrossOriginImagesForExport,
   sanitizeFilename,
   waitForImages,
@@ -198,8 +197,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     }
 
     const titlePart = sanitizeFilename(conversationTitle)
-    const timestamp = formatTimestampForFilename(new Date())
-    const filename = `Aether-${titlePart}-${timestamp}.png`
+    const filename = `Aether-${titlePart}.png`
     downloadDataUrl(previewDataUrl, filename)
   }, [conversationTitle, previewDataUrl])
 
@@ -394,30 +392,21 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         >
           <div
             ref={captureRef}
-            className="w-225 rounded-2xl border border-border bg-background p-8 text-foreground"
+            className="w-250 rounded-2xl border border-border bg-background p-10 text-foreground"
             style={{ fontFamily: 'var(--font-body)' }}
           >
-            <header className="mb-6 border-b border-border pb-4">
-              <h2 className="text-xl font-semibold text-foreground">
-                {conversationTitle}
-              </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Exported at {new Date().toLocaleString()}
-              </p>
-            </header>
 
             <section className="space-y-5">
               {selectedMessages.map(({ id, message, pathIndex }) => (
                 <article
                   key={id}
-                  className="rounded-xl border border-border bg-(--surface-secondary) p-4"
+                  className={cn(
+                    'rounded-xl p-4',
+                    message.role === 'user'
+                      ? 'border border-border bg-(--surface-secondary) ml-auto max-w-[60%] w-full text-left'
+                      : ''
+                  )}
                 >
-                  <div className="mb-3 flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="rounded-md border border-border px-2 py-0.5 text-[10px]">
-                      {ROLE_LABEL[message.role]}
-                    </span>
-                    <span>#{pathIndex + 1}</span>
-                  </div>
 
                   <div className="space-y-3">
                     {message.blocks.map((block, blockIndex) => {
@@ -426,7 +415,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                           <div
                             key={`${id}-content-${blockIndex}`}
                             className={cn(
-                              'text-base leading-relaxed wrap-anywhere [&_pre]:wrap-normal',
+                              'text-lg leading-relaxed wrap-anywhere [&_pre]:wrap-normal',
                               message.role === 'user'
                                 ? 'text-foreground'
                                 : 'text-(--text-secondary)'
@@ -452,7 +441,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                         return (
                           <div
                             key={`${id}-error-${blockIndex}`}
-                            className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                            className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-base text-destructive"
                           >
                             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                             <div className="whitespace-pre-wrap">
@@ -482,7 +471,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                                   alt={attachment.name}
                                   className="h-28 w-full object-cover"
                                 />
-                                <div className="px-2 py-1.5 text-[10px] text-muted-foreground truncate">
+                                <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
                                   {attachment.name}
                                 </div>
                               </div>
@@ -498,7 +487,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
               ))}
             </section>
 
-            <footer className="mt-6 border-t border-border pt-4 text-xs text-muted-foreground">
+            <footer className="mt-6 border-t border-border pt-4 text-sm text-muted-foreground">
               Exported from Aether
             </footer>
           </div>
