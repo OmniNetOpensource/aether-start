@@ -46,18 +46,18 @@ function ChainOfThoughtHeader({
       data-slot="chain-of-thought-header"
       title="点击展开或收起"
       className={cn(
-        'group flex w-full cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 -mx-2 text-sm text-(--text-secondary)',
-        'hover:bg-(--surface-hover) hover:text-(--interactive-primary-hover)',
+        'group flex w-fit cursor-pointer items-center gap-1.5 py-1 text-xs font-medium text-(--text-tertiary)',
+        'hover:text-(--text-primary)',
         'transition-colors duration-150',
         className
       )}
       {...props}
     >
-      <span>{children}</span>
       <ChevronRight
         aria-hidden
-        className="h-4 w-4 ml-auto shrink-0 opacity-70 transition-transform duration-200 group-data-[state=open]:rotate-90 group-hover:opacity-100"
+        className="h-3.5 w-3.5 opacity-50 transition-transform duration-200 group-data-[state=open]:rotate-90 group-hover:opacity-100"
       />
+      <span>{children}</span>
     </CollapsiblePrimitive.CollapsibleTrigger>
   )
 }

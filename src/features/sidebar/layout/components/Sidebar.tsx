@@ -1,6 +1,7 @@
 
 import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
 import { ConversationList } from "@/features/sidebar/history/components/ConversationList";
+import { ConversationSearchTrigger } from "@/features/sidebar/history/components/ConversationSearchTrigger";
 import { ProfileMenu } from "@/features/sidebar/profile/components/ProfileMenu";
 import { NewChatButton } from "@/features/chat/session/components/NewChatButton";
 import { AetherLogo } from "@/shared/components/AetherLogo";
@@ -107,8 +108,9 @@ export default function Sidebar() {
         </div>
 
         {/* Primary action: generous spacing */}
-        <div className="px-6 pt-2">
+        <div className="flex flex-col gap-2 px-6 pt-2">
           <NewChatButton isCollapsed={false} />
+          <ConversationSearchTrigger variant="sidebar" />
         </div>
 
         {/* Content: 24px rhythm, less visual noise */}
