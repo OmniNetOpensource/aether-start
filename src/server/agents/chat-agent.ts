@@ -22,6 +22,7 @@ import {
   getConversationById,
   upsertConversation,
 } from '@/server/db/conversations-db'
+import { consumePromptQuotaOnAccept } from '@/server/db/prompt-quota-db'
 import type {
   ChatAgentClientMessage,
   ChatAgentServerMessage,
@@ -350,6 +351,32 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     // avoid mixing events from a previous request in sync responses.
     this.cancelEventCacheClear()
     this.eventCache = []
+
+    const consumeResult = await consumePromptQuotaOnAccept(
+      this.env.DB,
+      userId,
+      message.requestId,
+    )
+    if (!consumeResult.ok) {
+      let errorMessage: string
+      if (consumeResult.reason === 'insufficient') {
+        errorMessage = '额度不足，请使用兑换码获取更多 prompt 额度'
+      } else {
+        errorMessage = `请求失败：${consumeResult.message}`
+      }
+      this.persistAndBroadcastEvent(message.requestId, {
+        type: 'error',
+        message: errorMessage,
+      })
+      this.broadcast(
+        stringify({
+          type: 'chat_finished',
+          requestId: message.requestId,
+          status: 'error',
+        } satisfies ChatAgentServerMessage),
+      )
+      return
+    }
 
     this.runtimeState = {
       status: 'running',
