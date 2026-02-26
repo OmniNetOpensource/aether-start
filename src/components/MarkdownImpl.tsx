@@ -13,13 +13,15 @@ const codePlugin = createCodePlugin({
   themes: ['github-light', 'github-dark'],
 })
 
+const plugins = { code: codePlugin, math, cjk }
+
 const MarkdownImpl = memo(function MarkdownImpl({
   content,
   isAnimating = false,
 }: Props) {
   return (
     <Streamdown
-      plugins={{ code: codePlugin, math, cjk }}
+      plugins={plugins}
       isAnimating={isAnimating}
     >
       {content}

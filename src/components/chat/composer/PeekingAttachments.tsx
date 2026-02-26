@@ -26,9 +26,6 @@ function seededOffset(id: string): number {
   return (hash % 7) - 3
 }
 
-/** 静止时整体再向下偏移（px） */
-const REST_OFFSET_Y = 6
-
 export function PeekingAttachments({
   attachments,
   onRemove,
@@ -44,21 +41,21 @@ export function PeekingAttachments({
   )
 
   return (
-    <div
-      className="relative flex items-end justify-start pl-3 pb-0 -mb-1 h-0 z-0"
-      style={{ transform: `translateY(${REST_OFFSET_Y}px)` }}
-    >
-      <div className="flex items-end">
-        {items.map(({ attachment, rotate, offsetY }, index) => (
+    <div className="relative flex items-end justify-start pl-3 pb-0 -mb-1 h-0 z-0">
+      <div
+        className="flex items-end"
+        style={{ transform: 'translateY(50%)' }}
+      >
+                                                                                                                                                                                                                                  {items.map(({ attachment, rotate, offsetY }, index) => (
           <div
             key={attachment.id}
             className="group relative flex-shrink-0 transition-transform duration-200 ease-out hover:!-translate-y-[14px] hover:!rotate-0"
-            style={{
+            style={{                                                                                                    
               transform: `translateY(${offsetY}px) rotate(${rotate}deg)`,
               marginLeft: index === 0 ? 0 : -12,
               zIndex: index,
             }}
-          >
+          >                                          
             <div
               className="relative rounded-lg overflow-hidden shadow-md ring-1 ring-black/5"
               style={{

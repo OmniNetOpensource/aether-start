@@ -1,5 +1,6 @@
 import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
+import { emailOTP } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
 import { drizzle } from 'drizzle-orm/d1'
 import { Resend } from 'resend'
@@ -115,24 +116,39 @@ const createAuth = () => {
       },
     },
     emailVerification: {
-      sendOnSignUp: true,
+      sendOnSignUp: false,
       autoSignInAfterVerification: true,
-      sendVerificationEmail: async ({ user, url }) => {
-        const resendApiKey = serverEnv.RESEND_API_KEY
-        if (!resendApiKey) {
-          console.warn('RESEND_API_KEY not configured, skipping verification email')
-          return
-        }
-        const resend = new Resend(resendApiKey)
-        await resend.emails.send({
-          from: 'noreply@mail.forkicks.fun',
-          to: user.email,
-          subject: 'Aether 邮箱验证',
-          html: `<p>请点击以下链接验证你的邮箱：</p><p><a href="${url}">${url}</a></p>`,
-        })
-      },
     },
-    plugins: [tanstackStartCookies()],
+    plugins: [
+      tanstackStartCookies(),
+      emailOTP({
+        otpLength: 6,
+        expiresIn: 300,
+        sendVerificationOnSignUp: true,
+        overrideDefaultEmailVerification: true,
+        async sendVerificationOTP({ email, otp, type }) {
+          const resendApiKey = serverEnv.RESEND_API_KEY
+          if (!resendApiKey) {
+            console.warn('RESEND_API_KEY not configured, skipping OTP email')
+            return
+          }
+
+          const resend = new Resend(resendApiKey)
+          const subjectMap = {
+            'email-verification': 'Aether 邮箱验证',
+            'sign-in': 'Aether 登录验证',
+            'forget-password': 'Aether 重置密码',
+          } as const
+
+          await resend.emails.send({
+            from: 'noreply@mail.forkicks.fun',
+            to: email,
+            subject: subjectMap[type],
+            html: `<p>你的验证码是：</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:16px 0">${otp}</p><p>验证码 5 分钟内有效，请勿泄露给他人。</p>`,
+          })
+        },
+      }),
+    ],
   })
 }
 

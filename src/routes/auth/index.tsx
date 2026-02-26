@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -108,6 +108,70 @@ function AuthPage() {
   const [pendingVerification, setPendingVerification] = useState(false)
   const [isResending, setIsResending] = useState(false)
   const [showResetSuccess] = useState(reset === 'success')
+  const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
+  const otpInputRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return
+    const next = [...otpValues]
+    next[index] = value.slice(-1)
+    setOtpValues(next)
+    if (value && index < 5) {
+      otpInputRefs.current[index + 1]?.focus()
+    }
+  }
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === 'Backspace' && !otpValues[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6)
+    if (!pasted) return
+    const next = [...otpValues]
+    for (let i = 0; i < 6; i++) {
+      next[i] = pasted[i] || ''
+    }
+    setOtpValues(next)
+    const focusIndex = Math.min(pasted.length, 5)
+    otpInputRefs.current[focusIndex]?.focus()
+  }
+
+  const verifyOtp = async () => {
+    const otp = otpValues.join('')
+    if (otp.length !== 6) return
+
+    setIsVerifyingOtp(true)
+    setErrorMessage(null)
+
+    const { error } = await authClient.emailOtp.verifyEmail({
+      email: email.trim().toLowerCase(),
+      otp,
+    })
+
+    if (!error) {
+      await navigate({ href: target, replace: true })
+      return
+    }
+
+    const msg = typeof error === 'object' && 'message' in error ? String(error.message) : ''
+    if (msg.includes('OTP_EXPIRED') || msg.includes('expired')) {
+      setErrorMessage('验证码已过期，请重新发送')
+    } else if (msg.includes('INVALID_OTP') || msg.includes('Invalid')) {
+      setErrorMessage('验证码错误，请重新输入')
+    } else if (msg.includes('TOO_MANY_ATTEMPTS')) {
+      setErrorMessage('尝试次数过多，请重新发送验证码')
+    } else {
+      setErrorMessage('验证失败，请稍后重试')
+    }
+    setOtpValues(['', '', '', '', '', ''])
+    otpInputRefs.current[0]?.focus()
+    setIsVerifyingOtp(false)
+  }
 
   useEffect(() => {
     if (reset !== 'success') {
@@ -178,20 +242,21 @@ function AuthPage() {
 
     setIsResending(true)
     setErrorMessage(null)
-    await authClient.sendVerificationEmail({
+    setOtpValues(['', '', '', '', '', ''])
+    await authClient.emailOtp.sendVerificationOtp({
       email: normalizedEmail,
-      callbackURL: '/app',
+      type: 'email-verification',
     })
     setIsResending(false)
+    otpInputRefs.current[0]?.focus()
   }
 
   if (pendingVerification) {
     return (
       <main className="min-h-screen w-full bg-background relative overflow-hidden flex items-center justify-center p-6">
-        {/* Subtle background noise/gradient */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-(--interactive-primary)/10 via-background to-background" />
-        
-        <motion.div 
+
+        <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           className="w-full max-w-sm rounded-2xl border ink-border bg-(--surface-secondary)/80 backdrop-blur-xl p-8 shadow-2xl relative z-10"
@@ -202,13 +267,35 @@ function AuthPage() {
             </div>
             <h1 className="text-2xl font-bold tracking-tight">验证邮箱</h1>
             <p className="text-sm text-muted-foreground">
-              验证邮件已发送至 <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>，请查收邮箱并点击验证链接。
+              验证码已发送至 <span className="font-medium text-foreground">{email.trim().toLowerCase()}</span>
             </p>
+          </div>
+
+          <div className="flex justify-center gap-2 mb-6" onPaste={handleOtpPaste}>
+            {otpValues.map((val, i) => (
+              <input
+                key={i}
+                ref={(el) => { otpInputRefs.current[i] = el }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={val}
+                onChange={(e) => handleOtpChange(i, e.target.value)}
+                onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                className={cn(
+                  'w-11 h-13 text-center text-xl font-semibold rounded-lg border bg-background outline-none transition-all',
+                  'focus:ring-2 focus:ring-(--interactive-primary)/40 focus:border-(--interactive-primary)',
+                  errorMessage ? 'border-(--status-destructive)' : 'ink-border',
+                )}
+                disabled={isVerifyingOtp}
+                autoFocus={i === 0}
+              />
+            ))}
           </div>
 
           <AnimatePresence>
             {errorMessage && (
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
@@ -219,7 +306,15 @@ function AuthPage() {
             )}
           </AnimatePresence>
 
-          <div className="space-y-3 mt-8">
+          <div className="space-y-3">
+            <Button
+              className="w-full"
+              onClick={verifyOtp}
+              disabled={isVerifyingOtp || otpValues.join('').length !== 6}
+            >
+              {isVerifyingOtp && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isVerifyingOtp ? '验证中...' : '验证'}
+            </Button>
             <Button
               className="w-full"
               variant="outline"
@@ -227,12 +322,16 @@ function AuthPage() {
               disabled={isResending}
             >
               {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isResending ? '发送中...' : '重新发送验证邮件'}
+              {isResending ? '发送中...' : '重新发送验证码'}
             </Button>
             <Button
               className="w-full"
               variant="ghost"
-              onClick={() => setPendingVerification(false)}
+              onClick={() => {
+                setPendingVerification(false)
+                setOtpValues(['', '', '', '', '', ''])
+                setErrorMessage(null)
+              }}
             >
               返回登录
             </Button>

@@ -10,6 +10,7 @@ import { fileURLToPath, URL } from 'url'
 const config = defineConfig({
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@': fileURLToPath(new URL('./src/', import.meta.url)),
     },
