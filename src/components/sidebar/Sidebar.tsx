@@ -86,15 +86,18 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <div className="relative h-full w-0 shrink-0">
-      {/* Reveal trigger: subtle visible hint (1px edge) so the affordance is discoverable */}
+    <div className="relative h-full w-0 shrink-0 group/sidebar-trigger">
+      {/* Invisible wider catch area to make it easier to trigger */}
       <div
-        className="absolute left-0 top-0 z-(--z-sidebar) h-full w-1.5 border-r transition-colors duration-200"
-        style={{ borderColor: "var(--sidebar-reveal-hint)" }}
+        className="absolute left-0 top-0 z-(--z-sidebar) h-full w-4"
         onMouseEnter={openSidebar}
         onMouseLeave={handleMouseLeave}
         onClick={openSidebar}
         aria-label="展开侧边栏"
+      />
+      {/* Visible physical handle affordance */}
+      <div
+        className="absolute left-0 top-1/2 -translate-y-1/2 z-(--z-sidebar) h-24 w-1.5 rounded-r-md transition-all duration-300 bg-border/40 group-hover/sidebar-trigger:w-2 group-hover/sidebar-trigger:bg-border/70 pointer-events-none"
       />
 
       <aside
@@ -116,13 +119,17 @@ export default function Sidebar() {
         </div>
 
         {/* Content: 24px rhythm, less visual noise */}
-        <div
-          ref={scrollRef}
-          className="flex-1 min-h-0 overflow-x-hidden overflow-y-auto px-6 py-6"
-        >
-          <div className="flex h-full flex-col gap-4">
-            <ConversationList scrollRootRef={scrollRef} />
+        <div className="relative flex-1 min-h-0">
+          <div className="absolute top-0 left-0 right-0 h-6 bg-gradient-to-b from-(--sidebar-surface) to-transparent z-10 pointer-events-none" />
+          <div
+            ref={scrollRef}
+            className="h-full overflow-x-hidden overflow-y-auto px-6 py-6"
+          >
+            <div className="flex h-full flex-col gap-4">
+              <ConversationList scrollRootRef={scrollRef} />
+            </div>
           </div>
+          <div className="absolute bottom-0 left-0 right-0 h-6 bg-gradient-to-t from-(--sidebar-surface) to-transparent z-10 pointer-events-none" />
         </div>
 
         <ProfileMenu isCollapsed={false} />

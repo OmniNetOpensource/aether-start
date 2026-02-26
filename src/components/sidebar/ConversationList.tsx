@@ -75,8 +75,8 @@ export function ConversationList({ scrollRootRef }: ConversationListProps) {
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="px-1 py-1 text-[11px] font-medium uppercase tracking-[0.2em] text-(--text-tertiary)">
-        最近
+      <div className="px-1 py-1 text-[10px] font-semibold uppercase tracking-widest text-(--text-tertiary) font-mono opacity-80">
+        History
       </div>
       <div className="flex flex-col gap-1">
         {conversations.map((conversation) => (

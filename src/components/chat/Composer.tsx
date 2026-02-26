@@ -6,14 +6,12 @@ import {
   useCallback,
   useRef,
 } from "react";
-import { X } from "lucide-react";
-import { ImagePreview } from "@/components/ImagePreview";
 import { useComposerStore } from "@/stores/useComposerStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { useIsNewChat } from "@/stores/useMessageTreeStore";
 import { setComposerTextarea } from "@/lib/chat/composer-focus";
 import { ComposerToolbar } from "./ComposerToolbar";
-import { Button } from "@/components/ui/button";
+import { PeekingAttachments } from "./PeekingAttachments";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/useToast";
 import { useResponsive } from "@/components/ResponsiveContext";
@@ -127,31 +125,13 @@ export function Composer() {
         }}
         className="flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
-        <div className="relative flex w-full flex-col gap-1 rounded-xl border ink-border bg-background p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
-          {hasAttachments && (
-            <div className="flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
-              {pendingAttachments.map((attachment) => (
-                <div key={attachment.id} className="group relative">
-                  <ImagePreview
-                    url={attachment.url}
-                    name={attachment.name}
-                    size={attachment.size}
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    aria-label="移除附件"
-                    onClick={() => removeAttachment(attachment.id)}
-                    className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary)/50 text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary)/70 hover:text-destructive"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-
+        {hasAttachments && (
+          <PeekingAttachments
+            attachments={pendingAttachments}
+            onRemove={removeAttachment}
+          />
+        )}
+        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl border ink-border bg-background p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
           <div className="flex w-full items-end gap-2">
             <Textarea
               ref={textareaCallbackRef}
@@ -201,30 +181,13 @@ export function Composer() {
         }}
         className="relative flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
-        <div className="relative flex w-full flex-col gap-1 rounded-xl border ink-border bg-background p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
         {hasAttachments && (
-          <div className="flex flex-wrap gap-2 rounded-xl bg-(--surface-muted) px-0 py-0">
-            {pendingAttachments.map((attachment) => (
-              <div key={attachment.id} className="group relative">
-                <ImagePreview
-                  url={attachment.url}
-                  name={attachment.name}
-                  size={attachment.size}
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label="移除附件"
-                  onClick={() => removeAttachment(attachment.id)}
-                  className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary)/50 text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary)/70 hover:text-destructive"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ))}
-          </div>
+          <PeekingAttachments
+            attachments={pendingAttachments}
+            onRemove={removeAttachment}
+          />
         )}
+        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl border ink-border bg-background p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
 
         <div className="flex w-full items-end gap-2">
           <Textarea

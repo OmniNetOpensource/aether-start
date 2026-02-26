@@ -63,9 +63,12 @@ export function ConversationItem({
   return (
     <div
       className={`group relative flex w-full items-start gap-3 rounded-lg bg-transparent p-3 text-left transition-all hover:bg-(--surface-hover) ${
-        isActive ? "bg-(--surface-hover)" : ""
+        isActive ? "bg-(--surface-hover)" : "opacity-80 hover:opacity-100"
       }`}
     >
+      {isActive && (
+        <div className="absolute left-0 top-[30%] bottom-[30%] w-[3px] rounded-r-full bg-foreground shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:shadow-[0_0_8px_rgba(255,255,255,0.1)]" />
+      )}
       <Link
         to="/app/c/$conversationId"
         params={{ conversationId: conversation.id }}
