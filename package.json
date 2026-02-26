@@ -52,6 +52,7 @@
     "katex": "^0.16.25",
     "lucide-react": "^0.561.0",
     "lxgw-wenkai-webfont": "^1.7.0",
+    "motion": "^12.34.3",
     "nes.css": "^2.3.0",
     "openai": "^5.23.2",
     "react": "^19.2.0",

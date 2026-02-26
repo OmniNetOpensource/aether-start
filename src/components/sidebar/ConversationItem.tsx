@@ -1,4 +1,3 @@
-
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MoreHorizontal, Trash2 } from "lucide-react";
 import type { ConversationMeta } from "@/types/conversation";
@@ -8,7 +7,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import { useConversationsStore } from "@/stores/useConversationsStore";
+
+const PLACEHOLDER_TITLES = ["New Chat", "未命名会话"];
+
+function isPlaceholderTitle(title: string | null): boolean {
+  if (!title || !title.trim()) return true;
+  return PLACEHOLDER_TITLES.includes(title.trim());
+}
 
 type ConversationItemProps = {
   conversation: ConversationMeta;
@@ -20,6 +27,7 @@ export function ConversationItem({
   isActive,
 }: ConversationItemProps) {
   const title = conversation.title || "未命名会话";
+  const useShimmer = isPlaceholderTitle(conversation.title);
 
   const navigate = useNavigate();
   const deleteConversation = useConversationsStore(
@@ -67,9 +75,18 @@ export function ConversationItem({
       />
       <div className="min-w-0 flex-1 pointer-events-none relative z-10">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)">
-            {title}
-          </span>
+          {useShimmer ? (
+            <Shimmer
+              as="span"
+              className="min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)"
+            >
+              {title}
+            </Shimmer>
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)">
+              {title}
+            </span>
+          )}
         </div>
       </div>
       <div className="relative z-20">

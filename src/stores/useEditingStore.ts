@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { Attachment, EditingState, UserContentBlock } from "@/types/chat";
+import type { Attachment, UserContentBlock } from "@/types/message";
 import { toast } from "@/hooks/useToast";
 import {
   cloneBlocks,
@@ -15,6 +15,13 @@ import {
 import { startChatRequest } from "@/lib/chat/api/chat-orchestrator";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
+
+type EditingState = {
+  messageId: number;
+  originalBlocks: UserContentBlock[];
+  editedContent: string;
+  editedAttachments: Attachment[];
+};
 
 type EditingStoreState = {
   editingState: EditingState | null;

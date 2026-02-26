@@ -18,7 +18,13 @@ function HomePage() {
   useEffect(() => {
     useChatRequestStore.getState().clear();
     useEditingStore.getState().clear();
-    useComposerStore.getState().clear();
+    const composer = useComposerStore.getState();
+    const hasPrefill =
+      composer.input.trim().length > 0 ||
+      composer.pendingAttachments.length > 0;
+    if (!hasPrefill) {
+      composer.clear();
+    }
     useMessageTreeStore.getState().clear();
   }, []);
 

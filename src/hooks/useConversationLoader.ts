@@ -11,7 +11,7 @@ import { buildCurrentPath } from "@/lib/conversation/tree/message-tree";
 import type {
   Attachment,
   Message,
-} from "@/types/chat";
+} from "@/types/message";
 
 const restoreAttachments = (
   attachments: Array<Attachment & { displayUrl?: string }>

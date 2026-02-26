@@ -186,6 +186,28 @@ export const getRoleConfig = (roleId: string): RoleConfig | null => {
 export const getDefaultRoleConfig = (): RoleConfig | null =>
   ROLE_CONFIGS[DEFAULT_ROLE_ID] ?? null;
 
+export const buildSystemPrompt = () => {
+  const now = new Date()
+  const localDate = now.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  })
+
+  const prompt = `
+今天的日期是：${localDate}
+不需要在回答时引用出处。
+`
+
+  return `${prompt}
+# 需要搜索的时候：非必要情况下不要用中文搜索；在没有足够上下文之前不要回答；如果没有搞清楚，就不断调研直到搞清楚，不要只是了解皮毛，要深入搜索资料去了解，要了解全方位的资料搜寻才能开始回答。
+
+# 什么时候不需要搜索：已知的知识
+
+- 学会利用google search高级技巧
+`
+}
+
 export const getAnthropicConfig = (backend: ChatBackend = 'rightcode') => {
   if (backend !== 'rightcode') {
     throw new Error(`Anthropic config does not support backend: ${backend}`)

@@ -1,4 +1,4 @@
-import type { Attachment } from "@/types/chat";
+import type { Attachment } from "@/types/message";
 import {
   MAX_IMAGE_SIZE,
   convertFileToBase64,

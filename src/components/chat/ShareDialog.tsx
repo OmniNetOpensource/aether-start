@@ -7,7 +7,7 @@ import {
   Loader2,
 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import type { Message } from '@/types/chat'
+import type { Message } from '@/types/message'
 import { useChatRequestStore } from '@/stores/useChatRequestStore'
 import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
 import { ResearchBlock } from './ResearchBlock'

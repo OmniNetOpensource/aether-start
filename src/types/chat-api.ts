@@ -1,4 +1,4 @@
-import type { SerializedMessage } from '@/types/chat'
+import type { SerializedMessage } from '@/types/message'
 import type { Message } from '@/types/message'
 import type { ChatServerToClientEvent } from './chat-event-types'
 

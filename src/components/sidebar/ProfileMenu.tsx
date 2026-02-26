@@ -9,6 +9,7 @@ import { useComposerStore } from "@/stores/useComposerStore";
 import { useEditingStore } from "@/stores/useEditingStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useConversationsStore } from "@/stores/useConversationsStore";
+import { useNotesStore } from "@/stores/useNotesStore";
 import {
   Popover,
   PopoverContent,
@@ -50,6 +51,7 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
       useEditingStore.getState().clear();
       useMessageTreeStore.getState().clear();
       useConversationsStore.getState().reset();
+      useNotesStore.getState().reset();
       clearConversationEventCursors();
       await navigate({ href: "/auth", replace: true });
       setIsSigningOut(false);

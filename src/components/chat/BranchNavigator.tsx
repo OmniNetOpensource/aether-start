@@ -1,7 +1,7 @@
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { BranchInfo } from "@/types/chat";
+import type { BranchInfo } from "@/types/message";
 
 type BranchNavigatorProps = {
   branchInfo: BranchInfo;

@@ -5,7 +5,7 @@ import type {
   BranchInfo,
   ContentBlock,
   Message,
-} from "@/types/chat";
+} from "@/types/message";
 import {
   addMessage,
   buildCurrentPath,

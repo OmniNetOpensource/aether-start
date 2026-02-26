@@ -1,7 +1,3 @@
-export type ToolName =
-  | "fetch_url"
-  | "search";
-
 export type ChatTool = {
   type: "function";
   function: {
@@ -32,11 +28,3 @@ export type ToolDefinition = {
   spec: ChatTool;
   handler: ToolHandler;
 };
-
-export const cleanHtmlToText = (html: string) =>
-  html
-    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();

@@ -5,6 +5,7 @@ import { ConversationSearchTrigger } from "./ConversationSearchTrigger";
 import { ProfileMenu } from "./ProfileMenu";
 import { NewChatButton } from "@/components/chat/NewChatButton";
 import { AetherLogo } from "@/components/AetherLogo";
+import { NotesButton } from "./NotesButton";
 
 export default function Sidebar() {
   const RIGHT_LEAVE_TOLERANCE_PX = 1;
@@ -111,6 +112,7 @@ export default function Sidebar() {
         <div className="flex flex-col gap-2 px-6 pt-2">
           <NewChatButton isCollapsed={false} />
           <ConversationSearchTrigger variant="sidebar" />
+          <NotesButton />
         </div>
 
         {/* Content: 24px rhythm, less visual noise */}

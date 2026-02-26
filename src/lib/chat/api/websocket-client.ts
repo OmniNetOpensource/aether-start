@@ -6,7 +6,7 @@ import type {
   ChatAgentStatus,
   MessageTreeSnapshot,
 } from '@/types/chat-api'
-import type { SerializedMessage } from '@/types/chat'
+import type { SerializedMessage } from '@/types/message'
 
 const AGENT_NAME = 'chat-agent'
 

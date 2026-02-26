@@ -1,7 +1,7 @@
 import { memo } from 'react'
 import { Search, Link, Wrench } from 'lucide-react'
 import Markdown from '@/components/Markdown'
-import type { ResearchItem, Tool } from '@/types/chat'
+import type { ResearchItem, Tool } from '@/types/message'
 import type { StepStatus } from '@/components/ui/chain-of-thought'
 import {
   ChainOfThought,

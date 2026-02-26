@@ -1,4 +1,4 @@
-import type { Message } from '@/types/chat'
+import type { Message } from '@/types/message'
 
 const INVALID_FILENAME_CHARS = /[<>:"/\\|?*]/g
 const IMAGE_WAIT_TIMEOUT_MS = 8000

@@ -1,19 +1,22 @@
 import { useCallback, useMemo, useState } from 'react'
 import { GitBranch } from 'lucide-react'
 import { useChatRequestStore } from '@/stores/useChatRequestStore'
-import { OutlineTree } from './OutlineTree'
+import { OutlineGraphDialog } from './OutlineGraphDialog'
 import {
   buildOutlineTree,
   findPathToMessage,
 } from '@/lib/chat/build-outline-tree'
+import { computeTreeLayout } from '@/lib/chat/tree-layout'
 import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
 import { switchBranch } from '@/lib/conversation/tree/message-tree'
 import { Button } from '@/components/ui/button'
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog'
 
 const SCROLL_RETRY_FRAMES = 4
 
@@ -54,7 +57,12 @@ export function OutlineButton() {
       return null
     }
 
-    return buildOutlineTree(messages, latestRootId)
+    const nextOutline = buildOutlineTree(messages, latestRootId)
+
+    return {
+      ...nextOutline,
+      layout: computeTreeLayout(nextOutline.roots),
+    }
   }, [open, messages, latestRootId])
 
   const handleSelect = useCallback(
@@ -101,8 +109,8 @@ export function OutlineButton() {
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
         <Button
           type="button"
           variant="ghost"
@@ -114,24 +122,26 @@ export function OutlineButton() {
         >
           <GitBranch className="h-5 w-5" />
         </Button>
-      </PopoverTrigger>
+      </DialogTrigger>
 
-      <PopoverContent
-        align="end"
-        className="w-[min(92vw,26rem)] max-w-[26rem] p-2"
+      <DialogContent
+        className="w-[min(94vw,72rem)] p-3 sm:max-w-4xl"
+        showCloseButton
       >
-        <div className="space-y-2">
-          <div className="px-2 pt-1 text-xs font-medium text-(--text-secondary)">
-            对话树导航
-          </div>
-          <OutlineTree
-            nodes={outline?.roots ?? []}
-            currentPath={currentPath}
-            onSelect={handleSelect}
-            disabled={pending}
-          />
+        <DialogHeader className="pb-1">
+          <DialogTitle className="text-base">对话树导航</DialogTitle>
+        </DialogHeader>
+        <OutlineGraphDialog
+          open={open}
+          layout={outline?.layout ?? null}
+          currentPath={currentPath}
+          onSelect={handleSelect}
+          disabled={pending}
+        />
+        <div className="pt-1 text-[11px] text-(--text-tertiary)">
+          点击节点可切换到对应分支并定位消息
         </div>
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   )
 }

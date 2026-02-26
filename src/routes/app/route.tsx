@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
+import { Outlet, createFileRoute, redirect, useMatch } from '@tanstack/react-router'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { getSessionStateFn } from '@/server/functions/auth/session-state'
 import { ChatRoom } from '@/routes/app/components/-ChatRoom'
@@ -19,13 +19,19 @@ export const Route = createFileRoute('/app')({
 })
 
 function AppLayout() {
+  const isNotesRoute = !!useMatch({ from: '/app/notes', shouldThrow: false })
+
   return (
     <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>
       <Sidebar />
       <div className='relative flex-1 min-w-0 flex'>
-        <ChatRoom>
+        {isNotesRoute ? (
           <Outlet />
-        </ChatRoom>
+        ) : (
+          <ChatRoom>
+            <Outlet />
+          </ChatRoom>
+        )}
       </div>
     </div>
   )

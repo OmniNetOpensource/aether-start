@@ -2,7 +2,7 @@
 import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
 import Markdown from "@/components/Markdown";
 import { ImagePreview } from "@/components/ImagePreview";
-import { Message } from "@/types/chat";
+import { Message } from "@/types/message";
 import { getBranchInfo as getBranchInfoFn } from "@/lib/conversation/tree/message-tree";
 import { ResearchBlock } from "./ResearchBlock";
 import {

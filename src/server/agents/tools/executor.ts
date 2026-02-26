@@ -1,7 +1,7 @@
 import { fetchUrlTool } from './fetch'
 import { searchTool } from './search'
 import { getServerEnv } from '@/server/env'
-import { getLogger } from '@/server/agents/services/logger'
+import { log } from '@/server/agents/services/logger'
 import type { ChatTool, ToolHandler, ToolProgressUpdate } from './types'
 import type { PendingToolInvocation, ToolInvocationResult, ChatServerToClientEvent } from '@/types/chat-api'
 
@@ -32,7 +32,7 @@ export const getAvailableTools = (): ChatTool[] => {
   if (env.SERP_API_KEY) {
     tools.push(searchTool.spec)
   } else {
-    getLogger().log('TOOLS', 'Skipping tool: search (missing SERP_API_KEY)')
+    log('TOOLS', 'Skipping tool: search (missing SERP_API_KEY)')
   }
 
   return tools
@@ -47,7 +47,7 @@ const callToolByName = async (
 ): Promise<string> => {
   const handler = getToolHandler(name)
   if (!handler) {
-    getLogger().log('TOOLS', `Tool not available: ${name}`)
+    log('TOOLS', `Tool not available: ${name}`)
     return `Error: Tool "${name}" is not available.`
   }
 
@@ -65,7 +65,7 @@ const callToolByName = async (
       return 'Error: Aborted'
     }
 
-    getLogger().log(
+    log(
       'TOOLS',
       `Error calling tool "${name}"`,
       typeof error === 'object' && error !== null

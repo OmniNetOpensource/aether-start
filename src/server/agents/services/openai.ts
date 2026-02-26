@@ -1,7 +1,6 @@
 import OpenAI from 'openai'
-import { buildSystemPrompt } from '@/server/agents/services/utils'
-import { getDmxOpenAIConfig } from '@/server/agents/services/chat-config'
-import { getLogger } from './logger'
+import { buildSystemPrompt, getDmxOpenAIConfig } from '@/server/agents/services/chat-config'
+import { log } from './logger'
 import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
 import { getServerBindings } from '@/server/env'
 import type {
@@ -10,7 +9,7 @@ import type {
   ToolInvocationResult,
 } from '@/types/chat-api'
 import type { ChatTool } from '@/server/agents/tools/types'
-import type { SerializedMessage } from '@/types/chat'
+import type { SerializedMessage } from '@/types/message'
 
 type OpenAIContentPart =
   | { type: 'text'; text: string }
@@ -58,7 +57,7 @@ const loggingFetch: typeof fetch = async (input, init) => {
     requestBody = init?.body
   }
 
-  getLogger().log('OPENAI', 'HTTP Request', {
+  log('OPENAI', 'HTTP Request', {
     method: init?.method ?? 'GET',
     url,
     headers: init?.headers,
@@ -67,7 +66,7 @@ const loggingFetch: typeof fetch = async (input, init) => {
 
   const response = await fetch(input, init)
 
-  getLogger().log('OPENAI', 'HTTP Response', {
+  log('OPENAI', 'HTTP Response', {
     status: response.status,
     statusText: response.statusText,
     headers: Object.fromEntries(response.headers.entries()),
@@ -80,7 +79,7 @@ const loggingFetch: typeof fetch = async (input, init) => {
   const transform = new TransformStream<Uint8Array, Uint8Array>({
     transform(chunk, controller) {
       const text = new TextDecoder().decode(chunk)
-      getLogger().log('OPENAI', 'HTTP SSE chunk', text)
+      log('OPENAI', 'HTTP SSE chunk', text)
       controller.enqueue(chunk)
     },
   })
@@ -123,7 +122,7 @@ const resolveAttachmentToBase64 = async (attachment: {
       const { CHAT_ASSETS } = getServerBindings()
       const object = await CHAT_ASSETS.get(attachment.storageKey)
       if (!object) {
-        getLogger().log('OPENAI', `R2 object not found for ${attachment.storageKey}`)
+        log('OPENAI', `R2 object not found for ${attachment.storageKey}`)
       } else {
         const buffer = await object.arrayBuffer()
         return {
@@ -132,7 +131,7 @@ const resolveAttachmentToBase64 = async (attachment: {
         }
       }
     } catch (error) {
-      getLogger().log('OPENAI', `Failed to read storageKey ${attachment.storageKey}`, error)
+      log('OPENAI', `Failed to read storageKey ${attachment.storageKey}`, error)
     }
   }
 
@@ -140,7 +139,7 @@ const resolveAttachmentToBase64 = async (attachment: {
     try {
       const response = await fetch(attachment.url)
       if (!response.ok) {
-        getLogger().log('OPENAI', 'Failed to fetch attachment url', {
+        log('OPENAI', 'Failed to fetch attachment url', {
           url: attachment.url,
           status: response.status,
         })
@@ -153,7 +152,7 @@ const resolveAttachmentToBase64 = async (attachment: {
         data: arrayBufferToBase64(arrayBuffer),
       }
     } catch (error) {
-      getLogger().log('OPENAI', 'Failed to fetch http attachment', error)
+      log('OPENAI', 'Failed to fetch http attachment', error)
     }
   }
 
@@ -242,7 +241,7 @@ export async function convertToOpenAIMessages(history: SerializedMessage[]): Pro
               },
             })
           } else {
-            getLogger().log('OPENAI', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`)
+            log('OPENAI', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`)
           }
         }
       }
@@ -387,7 +386,7 @@ export class OpenAIChatProvider {
         return emptyResult
       }
 
-      getLogger().log('OPENAI', 'OpenAI provider run failed', {
+      log('OPENAI', 'OpenAI provider run failed', {
         error,
         model: this.model,
       })
@@ -400,7 +399,7 @@ export class OpenAIChatProvider {
       return emptyResult
     }
 
-    getLogger().log('OPENAI', 'Stream completed', {
+    log('OPENAI', 'Stream completed', {
       model: this.model,
       toolCallCount: toolCallsByIndex.size,
     })
@@ -412,7 +411,7 @@ export class OpenAIChatProvider {
         try {
           args = JSON.parse(toolCall.argsJson || '{}')
         } catch (error) {
-          getLogger().log('OPENAI', 'Failed to parse tool arguments', {
+          log('OPENAI', 'Failed to parse tool arguments', {
             error,
             index,
             toolCall,

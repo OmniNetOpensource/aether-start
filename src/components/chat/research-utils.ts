@@ -2,7 +2,7 @@ import type {
   Tool,
   ToolProgress,
   ToolResult,
-} from "@/types/chat";
+} from "@/types/message";
 
 export function getToolLifecycle(tool: Tool): {
   progress: ToolProgress[];

@@ -4,11 +4,7 @@ import {
   getDefaultRoleConfig,
   getRoleConfig,
 } from '@/server/agents/services/chat-config'
-import {
-  createConversationLogger,
-  enterLoggerContext,
-  getLogger,
-} from '@/server/agents/services/logger'
+import { log } from '@/server/agents/services/logger'
 import {
   AnthropicChatProvider,
   convertToAnthropicMessages,
@@ -35,7 +31,7 @@ import type {
   PersistedChatEvent,
   ToolInvocationResult,
 } from '@/types/chat-api'
-import type { Message, SerializedMessage } from '@/types/chat'
+import type { Message, SerializedMessage } from '@/types/message'
 
 type ChatAgentState = {
   status: ChatAgentStatus
@@ -396,7 +392,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         } satisfies ChatAgentServerMessage),
       )
     } catch (error) {
-      getLogger().log('AGENT', 'User message persist failed', {
+      log('AGENT', 'User message persist failed', {
         error: error instanceof Error ? error.message : String(error),
       })
     }
@@ -406,7 +402,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
     const task = this.runChatInBackground(message, userId, signal)
       .catch((error) => {
-        getLogger().log('AGENT', 'runChatInBackground failed', {
+        log('AGENT', 'runChatInBackground failed', {
           error: error instanceof Error ? error.message : String(error),
         })
       })
@@ -434,9 +430,6 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
     userId: string,
     signal: AbortSignal,
   ) {
-    const logger = createConversationLogger()
-    enterLoggerContext(logger)
-
     let finalStatus: Exclude<ChatAgentStatus, 'idle' | 'running'> = 'completed'
     let workingTree = cloneTreeSnapshot(message.treeSnapshot)
     let hasErrorEvent = false
@@ -678,7 +671,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
         )
       } catch (error) {
         finalStatus = 'error'
-        getLogger().log('AGENT', 'Persist final conversation snapshot failed', {
+        log('AGENT', 'Persist final conversation snapshot failed', {
           error: error instanceof Error ? error.message : String(error),
         })
       }

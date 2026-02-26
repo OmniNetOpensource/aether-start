@@ -1,5 +1,5 @@
 import { ChatTool, ToolDefinition, ToolHandler } from "./types";
-import { getLogger } from "@/server/agents/services/logger";
+import { log } from "@/server/agents/services/logger";
 import { getServerEnv } from '@/server/env'
 
 type SearchArgs = {
@@ -151,7 +151,7 @@ const performSearch = async (
     );
 
     if (!response.ok) {
-      getLogger().log(
+      log(
         "SEARCH",
         `API error: ${response.status} ${response.statusText}`,
       );
@@ -171,7 +171,7 @@ const performSearch = async (
       : typeof error === "object" && error !== null
         ? (error as Error).message
         : String(error);
-    getLogger().log("SEARCH", `Error: ${message}`);
+    log("SEARCH", `Error: ${message}`);
     return `Search error: ${message}`;
   } finally {
     signal?.removeEventListener('abort', linkedAbort)
@@ -184,7 +184,7 @@ const search: ToolHandler = async (args, _onProgress, signal) => {
   const { SERP_API_KEY: apiKey } = getServerEnv()
 
   if (!apiKey) {
-    getLogger().log("SEARCH", "Missing SERP_API_KEY");
+    log("SEARCH", "Missing SERP_API_KEY");
     return "Error: SERP_API_KEY is not set";
   }
 

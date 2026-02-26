@@ -4,7 +4,7 @@ import {
   ToolHandler,
   ToolProgressCallback,
 } from "./types";
-import { getLogger } from "@/server/agents/services/logger";
+import { log } from "@/server/agents/services/logger";
 import { Supadata } from "@supadata/js";
 import { getServerEnv } from '@/server/env'
 import { arrayBufferToBase64 } from '@/server/base64'
@@ -235,7 +235,7 @@ const fetchDirectImage = async (
       : typeof error === "object" && error !== null
         ? (error as Error).message
         : String(error);
-    getLogger().log("FETCH", `Direct image error: ${message}`);
+    log("FETCH", `Direct image error: ${message}`);
     await emitProgress(onProgress, {
       stage: "error",
       message: `获取图片失败：${message}`,
@@ -279,7 +279,7 @@ const fetchScreenshot = async (
     });
 
     if (!response.ok) {
-      getLogger().log(
+      log(
         "FETCH",
         `Screenshot HTTP error: ${response.status} ${response.statusText}`,
       );
@@ -344,7 +344,7 @@ const fetchScreenshot = async (
       : typeof error === "object" && error !== null
         ? (error as Error).message
         : String(error);
-    getLogger().log("FETCH", `Screenshot error: ${message}`);
+    log("FETCH", `Screenshot error: ${message}`);
     await emitProgress(onProgress, {
       stage: "error",
       message: `截图失败：${message}`,
@@ -380,7 +380,7 @@ const performFetchUrl = async (
     });
 
     if (!jinaResponse.ok) {
-      getLogger().log(
+      log(
         "FETCH",
         `Jina AI Reader HTTP error: ${jinaResponse.status} ${jinaResponse.statusText}`,
       );
@@ -418,7 +418,7 @@ const performFetchUrl = async (
       : typeof error === "object" && error !== null
         ? (error as Error).message
         : String(error);
-    getLogger().log("FETCH", `Error: ${message}`);
+    log("FETCH", `Error: ${message}`);
     await emitProgress(onProgress, {
       stage: "error",
       message: `请求失败：${message}`,
@@ -440,7 +440,7 @@ const fetchYoutubeTranscript = async (
 ): Promise<string> => {
   const { SUPADATA_API_KEY: apiKey } = getServerEnv()
   if (!apiKey) {
-    getLogger().log("FETCH", "Missing SUPADATA_API_KEY");
+    log("FETCH", "Missing SUPADATA_API_KEY");
     return "Error: SUPADATA_API_KEY is not set";
   }
 
@@ -492,7 +492,7 @@ const fetchYoutubeTranscript = async (
 
         if (job.status === "failed") {
           const errMsg = job.error?.message || "Job failed";
-          getLogger().log("FETCH", `Transcript job failed: ${errMsg}`);
+          log("FETCH", `Transcript job failed: ${errMsg}`);
           await emitProgress(onProgress, {
             stage: "error",
             message: `字幕处理失败：${errMsg}`,
@@ -501,7 +501,7 @@ const fetchYoutubeTranscript = async (
         }
       }
 
-      getLogger().log("FETCH", "Transcript job timed out");
+      log("FETCH", "Transcript job timed out");
       await emitProgress(onProgress, {
         stage: "error",
         message: "字幕处理超时",
@@ -526,7 +526,7 @@ const fetchYoutubeTranscript = async (
       typeof error === "object" && error !== null
         ? (error as Error).message
         : String(error);
-    getLogger().log("FETCH", `Transcript error: ${message}`);
+    log("FETCH", `Transcript error: ${message}`);
     await emitProgress(onProgress, {
       stage: "error",
       message: `字幕获取失败：${message}`,
@@ -549,7 +549,7 @@ const fetchUrl: ToolHandler = async (args, onProgress, signal) => {
   const { JINA_API_KEY: apiKey } = getServerEnv()
 
   if (!apiKey) {
-    getLogger().log("FETCH", "Missing JINA_API_KEY");
+    log("FETCH", "Missing JINA_API_KEY");
     return "Error: JINA_API_KEY is not set";
   }
 

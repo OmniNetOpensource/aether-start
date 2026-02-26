@@ -1,7 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { buildSystemPrompt } from "@/server/agents/services/utils";
-import { getAnthropicConfig, type ChatBackend } from "@/server/agents/services/chat-config";
-import { getLogger } from "./logger";
+import {
+  buildSystemPrompt,
+  getAnthropicConfig,
+  type ChatBackend,
+} from "@/server/agents/services/chat-config";
+import { log } from "./logger";
 import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
 import { getServerBindings } from '@/server/env'
 import type {
@@ -10,7 +13,7 @@ import type {
   ToolInvocationResult,
 } from "@/types/chat-api";
 import type { ChatTool } from "@/server/agents/tools/types";
-import type { SerializedMessage } from "@/types/chat";
+import type { SerializedMessage } from "@/types/message";
 
 type AnthropicImageSource = {
   type: "base64";
@@ -135,7 +138,7 @@ const resolveAttachmentToBase64 = async (attachment: {
       const { CHAT_ASSETS } = getServerBindings()
       const object = await CHAT_ASSETS.get(attachment.storageKey)
       if (!object) {
-        getLogger().log('ANTHROPIC', `R2 object not found for ${attachment.storageKey}`)
+        log('ANTHROPIC', `R2 object not found for ${attachment.storageKey}`)
       } else {
         const buffer = await object.arrayBuffer()
         return {
@@ -144,7 +147,7 @@ const resolveAttachmentToBase64 = async (attachment: {
         }
       }
     } catch (error) {
-      getLogger().log('ANTHROPIC', `Failed to read storageKey ${attachment.storageKey}`, error)
+      log('ANTHROPIC', `Failed to read storageKey ${attachment.storageKey}`, error)
     }
   }
 
@@ -152,7 +155,7 @@ const resolveAttachmentToBase64 = async (attachment: {
     try {
       const response = await fetch(attachment.url)
       if (!response.ok) {
-        getLogger().log('ANTHROPIC', `Failed to fetch attachment url`, {
+        log('ANTHROPIC', `Failed to fetch attachment url`, {
           url: attachment.url,
           status: response.status,
         })
@@ -165,7 +168,7 @@ const resolveAttachmentToBase64 = async (attachment: {
         data: arrayBufferToBase64(arrayBuffer),
       }
     } catch (error) {
-      getLogger().log('ANTHROPIC', `Failed to fetch http attachment`, error)
+      log('ANTHROPIC', `Failed to fetch http attachment`, error)
     }
   }
 
@@ -199,7 +202,7 @@ export async function convertToAnthropicMessages(history: SerializedMessage[]): 
                 },
               });
             } else {
-              getLogger().log('ANTHROPIC', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`)
+              log('ANTHROPIC', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`)
             }
           }
         }
@@ -445,7 +448,7 @@ export class AnthropicChatProvider {
             try {
               toolArguments = JSON.parse(currentToolJson || '{}')
             } catch (error) {
-              getLogger().log('ANTHROPIC', 'Failed to parse tool arguments on stop chunk', {
+              log('ANTHROPIC', 'Failed to parse tool arguments on stop chunk', {
                 error,
                 currentToolId,
                 currentToolName,
@@ -454,7 +457,7 @@ export class AnthropicChatProvider {
             }
             pendingToolCalls.push({ id: currentToolId, name: currentToolName, args: toolArguments })
           }
-          getLogger().log('ANTHROPIC', 'Received stop chunk', {
+          log('ANTHROPIC', 'Received stop chunk', {
             chunk,
             pendingTools: pendingToolCalls,
           })
@@ -469,7 +472,7 @@ export class AnthropicChatProvider {
         return emptyResult
       }
 
-      getLogger().log('ANTHROPIC', 'Anthropic provider run failed', {
+      log('ANTHROPIC', 'Anthropic provider run failed', {
         error,
         model: this.model,
       })

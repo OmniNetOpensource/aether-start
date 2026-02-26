@@ -4,7 +4,6 @@ import {
   KeyboardEvent,
   MouseEvent,
   useCallback,
-  useEffect,
   useRef,
 } from "react";
 import { X } from "lucide-react";
@@ -64,16 +63,6 @@ export function Composer() {
     }
   };
 
-  const adjustTextareaHeight = () => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    textarea.style.height = 'auto';
-    textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
-  };
-
-  useEffect(() => {
-    adjustTextareaHeight();
-  }, [input]);
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = event.clipboardData;
@@ -177,8 +166,7 @@ export function Composer() {
               rows={1}
               placeholder="输入您的消息..."
               enterKeyHint={isDesktop ? undefined : "enter"}
-              className="min-h-10 max-h-50 flex-1 resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
-              style={{ height: "44px" }}
+              className="min-h-10 max-h-50 overflow-y-auto flex-1 resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
             />
 
           </div>
@@ -252,8 +240,7 @@ export function Composer() {
             rows={1}
             placeholder="输入您的消息..."
             enterKeyHint={isDesktop ? undefined : "enter"}
-            className="min-h-10 max-h-50 flex-1 resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
-            style={{ height: "44px" }}
+            className="min-h-10 max-h-50 overflow-y-auto flex-1 resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
           />
 
         </div>
