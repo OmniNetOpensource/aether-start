@@ -1,6 +1,6 @@
 import { NewChatButton } from "@/components/chat/NewChatButton";
-import { OutlineButton } from "@/components/chat/OutlineButton";
-import { ShareButton } from "@/components/chat/ShareButton";
+import { OutlineButton } from "@/components/chat/outline/OutlineButton";
+import { ShareButton } from "@/components/chat/share/ShareButton";
 
 interface ChatRoomProps {
   children: React.ReactNode;

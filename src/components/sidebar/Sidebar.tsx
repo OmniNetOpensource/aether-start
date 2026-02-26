@@ -1,8 +1,8 @@
 
 import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from "react";
-import { ConversationList } from "./ConversationList";
-import { ConversationSearchTrigger } from "./ConversationSearchTrigger";
-import { ProfileMenu } from "./ProfileMenu";
+import { ConversationList } from "./conversation/ConversationList";
+import { ConversationSearchTrigger } from "./search/ConversationSearchTrigger";
+import { ProfileMenu } from "./settings/ProfileMenu";
 import { NewChatButton } from "@/components/chat/NewChatButton";
 import { AetherLogo } from "@/components/AetherLogo";
 import { NotesButton } from "./NotesButton";
