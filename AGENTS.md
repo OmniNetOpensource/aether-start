@@ -31,3 +31,18 @@ Use `pnpm` for all tasks.
 - Cloudflare bindings are configured in `wrangler.jsonc` (`DB` for D1, `CHAT_ASSETS` for R2).
 - Never commit real secrets; `NEXT_PUBLIC_*` values are exposed to the client.
 
+## Cursor Cloud specific instructions
+
+### Service overview
+Single full-stack app (TanStack Start + Cloudflare Workers). No Docker or external services needed — D1, R2, and Durable Objects are emulated locally by Miniflare (bundled with `@cloudflare/vite-plugin`).
+
+### Starting the dev server
+1. Apply D1 migrations first: `pnpm cf:migrate:local` (idempotent, safe to re-run).
+2. Start dev server: `pnpm dev` (port 3000). The Cloudflare Vite plugin starts Miniflare automatically.
+3. Worker environment variables are read from `.dev.vars` (not `.env.local`). Required keys: `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`. The Anthropic keys (`ANTHROPIC_API_KEY_RIGHTCODE`, `ANTHROPIC_BASE_URL_RIGHTCODE`) are needed for chat to actually work but the app starts without them.
+
+### Gotchas
+- **pnpm v10 ignores build scripts by default.** After `pnpm install`, you must manually run install scripts for `esbuild` and `workerd` (see the update script for the exact commands). Without this, `wrangler` / Vite will fail to start.
+- **Email verification is required for login.** The auth system (`better-auth`) requires email verification. Without `RESEND_API_KEY`, verification emails are silently skipped. For local testing, manually set `emailVerified=1` in the D1 `user` table using `wrangler d1 execute`.
+- The Vite dev server uses TanStack devtools on port 42069 in addition to port 3000.
+- Standard commands for lint/test/build are in `package.json` `scripts` section — see "Build, Test, and Development Commands" above.
