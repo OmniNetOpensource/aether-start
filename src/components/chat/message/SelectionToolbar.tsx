@@ -147,18 +147,16 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
   }
 
   const floatingRef = useRef<HTMLDivElement | null>(null)
-  const [floatingStyles, setFloatingStyles] = useState<React.CSSProperties>({
+  const hiddenStyles: React.CSSProperties = {
     position: 'fixed',
     top: 0,
     left: 0,
     visibility: 'hidden',
-  })
+  }
+  const [positionedStyles, setPositionedStyles] = useState<React.CSSProperties>(hiddenStyles)
 
   useEffect(() => {
-    if (!rect || !hasSelection) {
-      setFloatingStyles(s => ({ ...s, visibility: 'hidden' }))
-      return
-    }
+    if (!rect || !hasSelection) return
 
     // Wait a frame so the floating element is rendered and measurable
     const raf = requestAnimationFrame(() => {
@@ -185,7 +183,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
       if (left < pad) left = pad
       if (left + elRect.width > vw - pad) left = vw - pad - elRect.width
 
-      setFloatingStyles({
+      setPositionedStyles({
         position: 'fixed',
         top,
         left,
@@ -196,6 +194,8 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
 
     return () => cancelAnimationFrame(raf)
   }, [rect, hasSelection])
+
+  const floatingStyles = !rect || !hasSelection ? hiddenStyles : positionedStyles
 
   const [ttsState, setTtsState] = useState<TtsState>('idle')
   const audioRef = useRef<HTMLAudioElement | null>(null)
