@@ -1,6 +1,7 @@
 
 import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
 import Markdown from "@/components/Markdown";
+import { splitMarkdownParagraphs } from "@/lib/markdown";
 import { ImagePreview } from "@/components/ImagePreview";
 import { Message } from "@/types/message";
 import { getBranchInfo as getBranchInfoFn } from "@/lib/conversation/tree/message-tree";
@@ -232,12 +233,20 @@ export const MessageItem = memo(function MessageItem({
                       );
                     }
 
+                    const paragraphs = splitMarkdownParagraphs(block.content);
                     return (
-                      <div key={blockKey}>
-                        <Markdown
-                          content={block.content}
-                          isAnimating={isStreaming && blockIndex === contentBlocks.length - 1}
-                        />
+                      <div key={blockKey} className="space-y-3">
+                        {paragraphs.map((paragraph, i) => (
+                          <Markdown
+                            key={i}
+                            content={paragraph}
+                            isAnimating={
+                              isStreaming &&
+                              blockIndex === contentBlocks.length - 1 &&
+                              i === paragraphs.length - 1
+                            }
+                          />
+                        ))}
                       </div>
                     );
                   })}
