@@ -46,3 +46,5 @@ Single full-stack app (TanStack Start + Cloudflare Workers). No Docker or extern
 - **Email verification is required for login.** The auth system (`better-auth`) requires email verification. Without `RESEND_API_KEY`, verification emails are silently skipped. For local testing, manually set `emailVerified=1` in the D1 `user` table using `wrangler d1 execute`.
 - The Vite dev server uses TanStack devtools on port 42069 in addition to port 3000.
 - Standard commands for lint/test/build are in `package.json` `scripts` section — see "Build, Test, and Development Commands" above.
+- **Arena feature requires DMX keys.** The Arena model pool (`ARENA_ROLE_POOL` in `src/server/agents/services/chat-config.ts`) uses the `dmx` backend exclusively. Without `DMX_APIKEY` + `DMX_BASEURL` in `.dev.vars`, Arena submissions fail with "Missing DMX_APIKEY". Regular chat uses the `rightcode` backend and is unaffected.
+- **New users get 100 prompt quota.** Arena consumes 1 quota per round. Quota is auto-created on first access (`getOrCreateUserQuota` in `src/server/db/prompt-quota-db.ts`).
