@@ -94,7 +94,9 @@ export function NoteCard({
             {previewText}
           </p>
         ) : (
-          <p className='text-sm text-(--text-tertiary)'>（空白笔记）</p>
+          <p className='text-sm italic text-(--text-tertiary)'>
+            点击编辑添加内容
+          </p>
         )}
         <span className='text-xs text-(--text-tertiary)'>
           {formatRelativeTime(note.updated_at)}
@@ -119,7 +121,7 @@ export function NoteCard({
           type='button'
           variant='ghost'
           size='icon'
-          className='h-8 w-8 text-(--text-tertiary) hover:text-destructive'
+          className='h-8 w-8 text-(--text-tertiary) opacity-70 transition-opacity hover:text-destructive focus:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100'
           aria-label='删除笔记'
           onClick={(event) => {
             event.stopPropagation()

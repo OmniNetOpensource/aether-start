@@ -24,7 +24,7 @@ function AppLayout() {
   return (
     <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>
       <Sidebar />
-      <div className='relative flex-1 min-w-0 flex'>
+      <div className='relative z-0 flex-1 min-w-0 flex'>
         {isNotesRoute ? (
           <Outlet />
         ) : (

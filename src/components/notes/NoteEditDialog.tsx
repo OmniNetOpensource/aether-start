@@ -19,6 +19,7 @@ import type { NoteItem } from '@/stores/useNotesStore'
 type NoteEditDialogProps = {
   open: boolean
   note: NoteItem | null
+  isNew?: boolean
   onOpenChange: (open: boolean) => void
   onSave: (note: NoteItem) => Promise<void> | void
 }
@@ -54,6 +55,7 @@ const collectClipboardFiles = (clipboardData: DataTransfer | null) => {
 export function NoteEditDialog({
   open,
   note,
+  isNew = false,
   onOpenChange,
   onSave,
 }: NoteEditDialogProps) {
@@ -129,8 +131,12 @@ export function NoteEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className='max-h-[90vh] overflow-y-auto px-6 py-6 sm:max-w-2xl'>
         <DialogHeader>
-          <DialogTitle>编辑灵感笔记</DialogTitle>
-          <DialogDescription>支持文本与图片，粘贴图片可直接上传。</DialogDescription>
+          <DialogTitle>
+            {isNew ? '新建灵感笔记' : '编辑灵感笔记'}
+          </DialogTitle>
+          <DialogDescription>
+            支持文本与图片，粘贴图片可直接上传。
+          </DialogDescription>
         </DialogHeader>
 
         <div className='space-y-4'>
@@ -151,7 +157,7 @@ export function NoteEditDialog({
                     onClick={() => {
                       setAttachments((prev) => prev.filter((item) => item.id !== attachment.id))
                     }}
-                    className='absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary)/50 text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary)/70 hover:text-destructive'
+                    className='absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white opacity-80 transition-opacity hover:opacity-100 hover:bg-destructive'
                   >
                     <X className='h-3.5 w-3.5' />
                   </Button>
@@ -160,14 +166,34 @@ export function NoteEditDialog({
             </div>
           ) : null}
 
-          <Textarea
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            onPaste={handlePaste}
-            placeholder='记录你的灵感...'
-            rows={8}
-            className='min-h-40 resize-y'
-          />
+          <div className='flex flex-col gap-2'>
+            <div className='flex items-center justify-between gap-2'>
+              <span className='text-sm text-(--text-secondary)'>内容</span>
+              <Button
+                type='button'
+                variant='ghost'
+                size='sm'
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className='h-8 gap-1.5 text-xs'
+              >
+                {uploading ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                ) : (
+                  <ImagePlus className='h-4 w-4' />
+                )}
+                添加图片
+              </Button>
+            </div>
+            <Textarea
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              onPaste={handlePaste}
+              placeholder='记录你的灵感...'
+              rows={8}
+              className='min-h-40 resize-y'
+            />
+          </div>
 
           <input
             ref={fileInputRef}
@@ -183,23 +209,9 @@ export function NoteEditDialog({
           />
         </div>
 
-        <DialogFooter className='gap-2 sm:gap-2'>
+        <DialogFooter className='flex-row justify-end gap-2'>
           <Button type='button' variant='ghost' onClick={() => onOpenChange(false)}>
             取消
-          </Button>
-          <Button
-            type='button'
-            variant='outline'
-            onClick={() => fileInputRef.current?.click()}
-            disabled={uploading}
-            className='gap-1.5'
-          >
-            {uploading ? (
-              <Loader2 className='h-4 w-4 animate-spin' />
-            ) : (
-              <ImagePlus className='h-4 w-4' />
-            )}
-            添加图片
           </Button>
           <Button type='button' onClick={handleSave} disabled={uploading || !note}>
             保存
