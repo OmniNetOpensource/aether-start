@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import type { Attachment } from "@/features/chat/types/chat";
+import type { Attachment } from "@/types/message";
 import { buildAttachmentsFromFiles } from "@/lib/chat/attachments";
 
 type ComposerState = {
@@ -11,6 +11,7 @@ type ComposerState = {
 
 type ComposerActions = {
   setInput: (value: string) => void;
+  setPendingAttachments: (attachments: Attachment[]) => void;
   addAttachments: (files: File[]) => Promise<void>;
   removeAttachment: (id: string) => void;
   clearInput: () => void;
@@ -25,6 +26,7 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
       pendingAttachments: [],
       uploading: false,
       setInput: (value) => set({ input: value }),
+      setPendingAttachments: (attachments) => set({ pendingAttachments: attachments }),
       addAttachments: async (files) => {
         if (files.length === 0) {
           return;

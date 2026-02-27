@@ -1,21 +1,21 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { toast } from "@/hooks/useToast";
-import type { ChatClient } from "@/features/chat/api/client/websocket-client";
+import type { ChatClient } from "@/lib/chat/api/websocket-client";
 import {
   resumeRunningConversation,
   startChatRequest,
-} from "@/features/chat/api/client/chat-orchestrator";
+} from "@/lib/chat/api/chat-orchestrator";
 import { DEFAULT_ROLE_ID } from "@/lib/chat/roles";
 import {
   computeMessagesFromPath,
-} from "@/features/conversation/model/tree/message-tree";
+} from "@/lib/conversation/tree/message-tree";
 import {
   buildUserBlocks,
-} from "@/features/conversation/model/tree/block-operations";
+} from "@/lib/conversation/tree/block-operations";
 import { useComposerStore } from "@/stores/useComposerStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
-import { getAvailableRolesFn } from "@/features/chat/api/server/functions/roles";
+import { getAvailableRolesFn } from "@/server/functions/chat/roles";
 
 type RoleInfo = { id: string; name: string };
 

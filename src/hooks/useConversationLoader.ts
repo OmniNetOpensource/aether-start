@@ -4,14 +4,14 @@ import { useComposerStore } from "@/stores/useComposerStore";
 import { useEditingStore } from "@/stores/useEditingStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
-import { resetConversationEventCursor } from '@/features/chat/api/client/websocket-client'
-import { getConversationFn } from "@/features/conversation/persistence/server/functions/conversations";
+import { resetConversationEventCursor } from '@/lib/chat/api/websocket-client'
+import { getConversationFn } from "@/server/functions/conversations";
 import { DEFAULT_ROLE_ID } from "@/lib/chat/roles";
-import { buildCurrentPath } from "@/features/conversation/model/tree/message-tree";
+import { buildCurrentPath } from "@/lib/conversation/tree/message-tree";
 import type {
   Attachment,
   Message,
-} from "@/features/chat/types/chat";
+} from "@/types/message";
 
 const restoreAttachments = (
   attachments: Array<Attachment & { displayUrl?: string }>

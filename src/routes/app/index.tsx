@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Composer } from "@/components/chat/Composer";
-import { MessageList } from "@/components/chat/MessageList";
+import { Composer } from "@/components/chat/composer/Composer";
+import { MessageList } from "@/components/chat/message/MessageList";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { useEditingStore } from "@/stores/useEditingStore";
@@ -18,7 +18,13 @@ function HomePage() {
   useEffect(() => {
     useChatRequestStore.getState().clear();
     useEditingStore.getState().clear();
-    useComposerStore.getState().clear();
+    const composer = useComposerStore.getState();
+    const hasPrefill =
+      composer.input.trim().length > 0 ||
+      composer.pendingAttachments.length > 0;
+    if (!hasPrefill) {
+      composer.clear();
+    }
     useMessageTreeStore.getState().clear();
   }, []);
 

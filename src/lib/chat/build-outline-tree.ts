@@ -1,9 +1,10 @@
-import type { Message } from '@/features/chat/types/chat'
+import type { Message } from '@/types/message'
 
 export type OutlineNode = {
   messageId: number
   role: Message['role']
   preview: string
+  fullPreview: string
   children: OutlineNode[]
   siblingIndex: number
   siblingCount: number
@@ -136,6 +137,21 @@ export const getPreview = (message: Message): string => {
   return '空消息'
 }
 
+const getFullPreview = (message: Message): string => {
+  for (const block of message.blocks) {
+    if (block.type !== 'content') {
+      continue
+    }
+
+    const content = normalizeText(block.content)
+    if (content) {
+      return content
+    }
+  }
+
+  return getPreview(message)
+}
+
 const buildNodes = (
   messages: Message[],
   parentById: ParentById,
@@ -166,6 +182,7 @@ const buildNodes = (
         messageId,
         role: message.role,
         preview: getPreview(message),
+        fullPreview: getFullPreview(message),
         children: buildNodes(messages, parentById, childIds, nextVisited),
         siblingIndex: index + 1,
         siblingCount,

@@ -5,11 +5,16 @@ import viteReact from '@vitejs/plugin-react'
 import { cloudflare } from '@cloudflare/vite-plugin'
 import tailwindcss from '@tailwindcss/vite'
 import viteTsConfigPaths from 'vite-tsconfig-paths'
+import { sentryVitePlugin } from '@sentry/vite-plugin'
 import { fileURLToPath, URL } from 'url'
 
 const config = defineConfig({
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+  build: {
+    sourcemap: true,
+  },
   resolve: {
+    dedupe: ['react', 'react-dom'],
     alias: {
       '@': fileURLToPath(new URL('./src/', import.meta.url)),
     },
@@ -36,7 +41,14 @@ const config = defineConfig({
         ],
       },
     }),
-  ],
+    process.env.SENTRY_AUTH_TOKEN
+      ? sentryVitePlugin({
+          org: process.env.SENTRY_ORG,
+          project: process.env.SENTRY_PROJECT,
+          authToken: process.env.SENTRY_AUTH_TOKEN,
+        })
+      : null,
+  ].filter(Boolean),
 })
 
 export default config

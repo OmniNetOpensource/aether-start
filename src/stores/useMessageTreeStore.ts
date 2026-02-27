@@ -5,7 +5,7 @@ import type {
   BranchInfo,
   ContentBlock,
   Message,
-} from "@/features/chat/types/chat";
+} from "@/types/message";
 import {
   addMessage,
   buildCurrentPath,
@@ -15,11 +15,11 @@ import {
   editMessage,
   getBranchInfo,
   switchBranch,
-} from "@/features/conversation/model/tree/message-tree";
+} from "@/lib/conversation/tree/message-tree";
 import {
   applyAssistantAddition,
   type AssistantAddition,
-} from "@/features/conversation/model/tree/block-operations";
+} from "@/lib/conversation/tree/block-operations";
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 

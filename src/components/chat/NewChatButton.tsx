@@ -53,10 +53,10 @@ export function NewChatButton({
       variant="ghost"
       size={isTopbar ? "icon-lg" : "default"}
       className={cn(
-        "group relative h-10 overflow-hidden transition-all duration-300 hover:bg-(--surface-hover) hover:text-(--text-primary)",
+        "group relative h-10 overflow-hidden transition-all duration-300",
         isTopbar
-          ? "w-10 rounded-lg"
-          : "justify-start px-3 rounded-md border ink-border bg-transparent text-(--text-secondary)",
+          ? "w-10 rounded-lg hover:bg-(--surface-hover) hover:text-(--text-primary)"
+          : "justify-start px-3 rounded-md border border-border/40 bg-foreground/[0.02] dark:bg-foreground/[0.04] text-foreground shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:shadow-[0_2px_6px_rgba(0,0,0,0.04)] hover:bg-foreground/[0.04] dark:hover:bg-foreground/[0.06]",
         className
       )}
       style={isTopbar ? undefined : { width: isCollapsed ? 40 : "100%" }}

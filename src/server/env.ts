@@ -3,6 +3,7 @@ import { env as workerEnv } from 'cloudflare:workers'
 type ServerEnv = {
   BETTER_AUTH_SECRET?: string
   BETTER_AUTH_URL?: string
+  ADMIN_EMAIL_ALLOWLIST?: string
   ANTHROPIC_API_KEY_RIGHTCODE?: string
   ANTHROPIC_BASE_URL_RIGHTCODE?: string
   ANTHROPIC_API_KEY_IKUNCODE?: string
@@ -13,6 +14,7 @@ type ServerEnv = {
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
   RESEND_API_KEY?: string
+  MINIMAX_API_KEY?: string
   DB?: D1Database
   CHAT_ASSETS?: R2Bucket
   NODE_ENV?: string
@@ -51,6 +53,9 @@ export const getServerEnv = (): ServerEnv => {
     BETTER_AUTH_URL:
       readString(bindings.BETTER_AUTH_URL) ??
       readStringFromProcess('BETTER_AUTH_URL'),
+    ADMIN_EMAIL_ALLOWLIST:
+      readString((bindings as Record<string, unknown>).ADMIN_EMAIL_ALLOWLIST) ??
+      readStringFromProcess('ADMIN_EMAIL_ALLOWLIST'),
     ANTHROPIC_API_KEY_RIGHTCODE:
       readString(bindings.ANTHROPIC_API_KEY_RIGHTCODE) ??
       readStringFromProcess('ANTHROPIC_API_KEY_RIGHTCODE'),
@@ -79,6 +84,9 @@ export const getServerEnv = (): ServerEnv => {
     RESEND_API_KEY:
       readString(bindings.RESEND_API_KEY) ??
       readStringFromProcess('RESEND_API_KEY'),
+    MINIMAX_API_KEY:
+      readString(bindings.MINIMAX_API_KEY) ??
+      readStringFromProcess('MINIMAX_API_KEY'),
     NODE_ENV:
       readString(bindings.NODE_ENV) ??
       readStringFromProcess('NODE_ENV') ??

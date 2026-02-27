@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
-import { Composer } from '@/components/chat/Composer'
-import { MessageList } from '@/components/chat/MessageList'
+import { Composer } from '@/components/chat/composer/Composer'
+import { MessageList } from '@/components/chat/message/MessageList'
 import { useConversationLoader } from '@/hooks/useConversationLoader'
 import { useConversationsStore } from '@/stores/useConversationsStore'
 

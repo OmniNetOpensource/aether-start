@@ -1,6 +1,7 @@
 import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { Sentry } from "@/lib/sentry";
 
 import { setNavigate } from "@/lib/navigation";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -66,7 +67,29 @@ function RootComponent() {
     void import("react-grab");
   }, []);
 
-  return <Outlet />;
+  return (
+    <Sentry.ErrorBoundary
+      fallback={({ error, resetError }) => (
+        <div className="flex h-screen items-center justify-center">
+          <div className="text-center space-y-4">
+            <h1 className="text-2xl font-semibold">出了点问题</h1>
+            <p className="text-muted-foreground text-sm">
+              {error instanceof Error ? error.message : '发生了未知错误'}
+            </p>
+            <button
+              type="button"
+              className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm"
+              onClick={resetError}
+            >
+              重试
+            </button>
+          </div>
+        </div>
+      )}
+    >
+      <Outlet />
+    </Sentry.ErrorBoundary>
+  );
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {

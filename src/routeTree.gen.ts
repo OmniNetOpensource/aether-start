@@ -14,11 +14,16 @@ import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
+import { Route as ShareTokenRouteImport } from './routes/share/$token'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
+import { Route as AppNotesRouteImport } from './routes/app/notes'
+import { Route as AppLeaderboardRouteImport } from './routes/app/leaderboard'
+import { Route as AppArenaRouteImport } from './routes/app/arena'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
+import { Route as ApiShareAssetsTokenAttachmentIdRouteImport } from './routes/api/share-assets/$token/$attachmentId'
 
 const R404Route = R404RouteImport.update({
   id: '/404',
@@ -45,6 +50,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const ShareTokenRoute = ShareTokenRouteImport.update({
+  id: '/share/$token',
+  path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/auth/reset-password',
   path: '/auth/reset-password',
@@ -54,6 +64,21 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   id: '/auth/forgot-password',
   path: '/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppNotesRoute = AppNotesRouteImport.update({
+  id: '/notes',
+  path: '/notes',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppLeaderboardRoute = AppLeaderboardRouteImport.update({
+  id: '/leaderboard',
+  path: '/leaderboard',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppArenaRoute = AppArenaRouteImport.update({
+  id: '/arena',
+  path: '/arena',
+  getParentRoute: () => AppRouteRoute,
 } as any)
 const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
   id: '/c/$conversationId',
@@ -70,42 +95,63 @@ const ApiAssetsKeyRoute = ApiAssetsKeyRouteImport.update({
   path: '/api/assets/$key',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiShareAssetsTokenAttachmentIdRoute =
+  ApiShareAssetsTokenAttachmentIdRouteImport.update({
+    id: '/api/share-assets/$token/$attachmentId',
+    path: '/api/share-assets/$token/$attachmentId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/app/arena': typeof AppArenaRoute
+  '/app/leaderboard': typeof AppLeaderboardRoute
+  '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
+  '/api/share-assets/$token/$attachmentId': typeof ApiShareAssetsTokenAttachmentIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
+  '/app/arena': typeof AppArenaRoute
+  '/app/leaderboard': typeof AppLeaderboardRoute
+  '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/share/$token': typeof ShareTokenRoute
   '/app': typeof AppIndexRoute
   '/auth': typeof AuthIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
+  '/api/share-assets/$token/$attachmentId': typeof ApiShareAssetsTokenAttachmentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/app/arena': typeof AppArenaRoute
+  '/app/leaderboard': typeof AppLeaderboardRoute
+  '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
+  '/api/share-assets/$token/$attachmentId': typeof ApiShareAssetsTokenAttachmentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -113,36 +159,51 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/404'
+    | '/app/arena'
+    | '/app/leaderboard'
+    | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/share/$token'
     | '/app/'
     | '/auth/'
     | '/api/assets/$key'
     | '/api/auth/$'
     | '/app/c/$conversationId'
+    | '/api/share-assets/$token/$attachmentId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/404'
+    | '/app/arena'
+    | '/app/leaderboard'
+    | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/share/$token'
     | '/app'
     | '/auth'
     | '/api/assets/$key'
     | '/api/auth/$'
     | '/app/c/$conversationId'
+    | '/api/share-assets/$token/$attachmentId'
   id:
     | '__root__'
     | '/'
     | '/app'
     | '/404'
+    | '/app/arena'
+    | '/app/leaderboard'
+    | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/reset-password'
+    | '/share/$token'
     | '/app/'
     | '/auth/'
     | '/api/assets/$key'
     | '/api/auth/$'
     | '/app/c/$conversationId'
+    | '/api/share-assets/$token/$attachmentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -151,9 +212,11 @@ export interface RootRouteChildren {
   R404Route: typeof R404Route
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  ShareTokenRoute: typeof ShareTokenRoute
   AuthIndexRoute: typeof AuthIndexRoute
   ApiAssetsKeyRoute: typeof ApiAssetsKeyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
+  ApiShareAssetsTokenAttachmentIdRoute: typeof ApiShareAssetsTokenAttachmentIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -193,6 +256,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/share/$token': {
+      id: '/share/$token'
+      path: '/share/$token'
+      fullPath: '/share/$token'
+      preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/reset-password': {
       id: '/auth/reset-password'
       path: '/auth/reset-password'
@@ -206,6 +276,27 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/forgot-password'
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/app/notes': {
+      id: '/app/notes'
+      path: '/notes'
+      fullPath: '/app/notes'
+      preLoaderRoute: typeof AppNotesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/leaderboard': {
+      id: '/app/leaderboard'
+      path: '/leaderboard'
+      fullPath: '/app/leaderboard'
+      preLoaderRoute: typeof AppLeaderboardRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/app/arena': {
+      id: '/app/arena'
+      path: '/arena'
+      fullPath: '/app/arena'
+      preLoaderRoute: typeof AppArenaRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/app/c/$conversationId': {
       id: '/app/c/$conversationId'
@@ -228,15 +319,28 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAssetsKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/share-assets/$token/$attachmentId': {
+      id: '/api/share-assets/$token/$attachmentId'
+      path: '/api/share-assets/$token/$attachmentId'
+      fullPath: '/api/share-assets/$token/$attachmentId'
+      preLoaderRoute: typeof ApiShareAssetsTokenAttachmentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 interface AppRouteRouteChildren {
+  AppArenaRoute: typeof AppArenaRoute
+  AppLeaderboardRoute: typeof AppLeaderboardRoute
+  AppNotesRoute: typeof AppNotesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCConversationIdRoute: typeof AppCConversationIdRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppArenaRoute: AppArenaRoute,
+  AppLeaderboardRoute: AppLeaderboardRoute,
+  AppNotesRoute: AppNotesRoute,
   AppIndexRoute: AppIndexRoute,
   AppCConversationIdRoute: AppCConversationIdRoute,
 }
@@ -251,9 +355,11 @@ const rootRouteChildren: RootRouteChildren = {
   R404Route: R404Route,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
+  ShareTokenRoute: ShareTokenRoute,
   AuthIndexRoute: AuthIndexRoute,
   ApiAssetsKeyRoute: ApiAssetsKeyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
+  ApiShareAssetsTokenAttachmentIdRoute: ApiShareAssetsTokenAttachmentIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

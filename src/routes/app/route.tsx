@@ -1,6 +1,6 @@
-import { Outlet, createFileRoute, redirect } from '@tanstack/react-router'
+import { Outlet, createFileRoute, redirect, useMatch } from '@tanstack/react-router'
 import Sidebar from '@/components/sidebar/Sidebar'
-import { getSessionStateFn } from '@/features/auth/server/session-state'
+import { getSessionStateFn } from '@/server/functions/auth/session-state'
 import { ChatRoom } from '@/routes/app/components/-ChatRoom'
 
 export const Route = createFileRoute('/app')({
@@ -19,13 +19,21 @@ export const Route = createFileRoute('/app')({
 })
 
 function AppLayout() {
+  const isNotesRoute = !!useMatch({ from: '/app/notes', shouldThrow: false })
+  const isLeaderboardRoute = !!useMatch({ from: '/app/leaderboard', shouldThrow: false })
+  const useStandaloneLayout = isNotesRoute || isLeaderboardRoute
+
   return (
     <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>
       <Sidebar />
-      <div className='relative flex-1 min-w-0 flex'>
-        <ChatRoom>
+      <div className='relative z-0 flex-1 min-w-0 flex'>
+        {useStandaloneLayout ? (
           <Outlet />
-        </ChatRoom>
+        ) : (
+          <ChatRoom>
+            <Outlet />
+          </ChatRoom>
+        )}
       </div>
     </div>
   )
