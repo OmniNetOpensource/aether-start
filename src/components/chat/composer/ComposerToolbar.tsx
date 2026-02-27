@@ -4,7 +4,7 @@ import { ArrowUp, Loader2, Paperclip, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useComposerStore } from "@/stores/useComposerStore";
-import { RoleSelector } from "./RoleSelector";
+import { ModelSelector } from "./ModelSelector";
 
 type ComposerToolbarProps = {
   pending: boolean
@@ -105,7 +105,7 @@ export function ComposerToolbar({
 
       {/* Right group: Role selector */}
       <div className="flex items-center gap-1">
-        <RoleSelector />
+        <ModelSelector />
         <Button
           type={pending || sendDisabled ? "button" : "submit"}
           aria-disabled={sendDisabled}

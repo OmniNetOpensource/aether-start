@@ -62,7 +62,10 @@ export const generateTitleFromConversation = async (
   } catch (error) {
     const message =
       error instanceof Error ? error.message : String(error)
+    const stack = error instanceof Error ? error.stack : undefined
     console.error('Title generation from conversation failed:', message)
+    if (stack) console.error(stack)
+    console.error('Full error:', error)
     return FALLBACK_TITLE
   }
 }
