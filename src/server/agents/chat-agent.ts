@@ -3,6 +3,7 @@ import { getAvailableTools, executeToolsGen } from '@/server/agents/tools/execut
 import {
   getDefaultRoleConfig,
   getRoleConfig,
+  getBackendConfig,
 } from '@/server/agents/services/chat-config'
 import { log } from '@/server/agents/services/logger'
 import {
@@ -16,6 +17,11 @@ import {
   convertToOpenAIMessages,
   formatOpenAIToolContinuation,
 } from '@/server/agents/services/openai'
+import {
+  GeminiChatProvider,
+  convertToGeminiMessages,
+  formatGeminiToolContinuation,
+} from '@/server/agents/services/gemini'
 import { generateTitleFromConversation } from '@/server/functions/chat/chat-title'
 import { processEventToTree, cloneTreeSnapshot } from '@/server/agents/services/event-processor'
 import {
@@ -501,9 +507,13 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
       let iteration = 0
 
-      if (roleConfig.backend === 'dmx') {
+      const backendConfig = getBackendConfig(roleConfig.backend)
+
+      switch (roleConfig.format) {
+        case 'openai': {
         const provider = new OpenAIChatProvider({
           model: roleConfig.model,
+          backendConfig,
           tools: getAvailableTools(),
           systemPrompt: roleConfig.systemPrompt,
         })
@@ -579,10 +589,13 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
             )
             workingMessages = [...workingMessages, ...continuationMessages]
         }
-      } else {
+        break
+      }
+
+        case 'anthropic': {
         const provider = new AnthropicChatProvider({
           model: roleConfig.model,
-          backend: roleConfig.backend,
+          backendConfig,
           tools: getAvailableTools(),
           systemPrompt: roleConfig.systemPrompt,
         })
@@ -660,6 +673,96 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
               toolResults,
             )
             workingMessages = [...workingMessages, ...continuationMessages]
+        }
+        break
+      }
+
+        case 'gemini': {
+        const provider = new GeminiChatProvider({
+          model: roleConfig.model,
+          backendConfig,
+          tools: getAvailableTools(),
+          systemPrompt: roleConfig.systemPrompt,
+        })
+
+        let workingMessages = await convertToGeminiMessages(normalizedHistory)
+
+        while (iteration < MAX_ITERATIONS) {
+          if (signal.aborted) {
+            finalStatus = 'aborted'
+            break
+          }
+
+          iteration += 1
+          const generator = provider.run(workingMessages, signal)
+
+            let pendingToolCalls: PendingToolInvocation[] = []
+            let assistantText = ''
+
+            while (true) {
+              const { done, value } = await generator.next()
+              if (done) {
+                pendingToolCalls = value.pendingToolCalls
+                break
+              }
+
+              if (value.type === 'content') {
+                assistantText += value.content
+              }
+
+              await emitEvent(value)
+
+              if (signal.aborted) {
+                finalStatus = 'aborted'
+                break
+              }
+            }
+
+            if (signal.aborted) {
+              finalStatus = 'aborted'
+              break
+            }
+
+            if (pendingToolCalls.length === 0) {
+              break
+            }
+
+            const toolGen = executeToolsGen(pendingToolCalls, signal)
+            let toolResults: ToolInvocationResult[] = []
+
+            while (true) {
+              const toolGenResult = await toolGen.next()
+              if (toolGenResult.done) {
+                toolResults = toolGenResult.value
+                break
+              }
+              await emitEvent(toolGenResult.value)
+
+              if (signal.aborted) {
+                finalStatus = 'aborted'
+                break
+              }
+            }
+
+            if (signal.aborted) {
+              finalStatus = 'aborted'
+              break
+            }
+
+            const continuationMessages = formatGeminiToolContinuation(
+              assistantText,
+              pendingToolCalls,
+              toolResults,
+            )
+            workingMessages = [...workingMessages, ...continuationMessages]
+        }
+        break
+      }
+
+        default: {
+          await emitEvent(toEventError(`Unsupported format: "${(roleConfig as { format: string }).format}"`))
+          finalStatus = 'error'
+          return
         }
       }
 

@@ -2,9 +2,10 @@ import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/
 import { routeAgentRequest } from 'agents'
 import { env as workerEnv } from 'cloudflare:workers'
 import { createServerEntry } from '@tanstack/react-start/server-entry'
+import { withSentry } from '@sentry/cloudflare'
 import type { RequestHandler } from '@tanstack/react-start/server'
 import type { Register } from '@tanstack/react-router'
-import { ChatAgent } from '@/server/agents/chat-agent'
+import { ChatAgent as _ChatAgent } from '@/server/agents/chat-agent'
 import { getSessionFromRequest } from '@/server/functions/auth/session'
 
 const startFetch = createStartHandler(defaultStreamHandler)
@@ -49,8 +50,18 @@ const fetch: RequestHandler<Register> = async (request, opts) => {
   return startFetch(request, opts)
 }
 
-export { ChatAgent }
+const sentryOptions = (env: Record<string, string>) => ({
+  dsn: env.SENTRY_DSN,
+  tracesSampleRate: 1.0,
+})
 
-export default createServerEntry({
+export const ChatAgent = _ChatAgent
+
+const serverEntry = createServerEntry({
   fetch,
 })
+
+export default withSentry(
+  sentryOptions,
+  serverEntry as ExportedHandler,
+) as typeof serverEntry

@@ -44,7 +44,7 @@ export function PeekingAttachments({
     <div className="relative flex items-end justify-start pl-3 pb-0 -mb-1 h-0 z-0">
       <div
         className="flex items-end"
-        style={{ transform: 'translateY(50%)' }}
+        style={{ transform: 'translateY(80%)' }}
       >
       {items.map(({ attachment, rotate, offsetY }, index) => (
           <div

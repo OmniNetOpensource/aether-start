@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { buildSystemPrompt, getDmxOpenAIConfig } from '@/server/agents/services/chat-config'
+import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/chat-config'
 import { log } from './logger'
 import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
 import { getServerBindings } from '@/server/env'
@@ -44,6 +44,7 @@ type OpenAIProviderRunResult = {
 
 type OpenAIChatProviderConfig = {
   model: string
+  backendConfig: BackendConfig
   tools: ChatTool[]
   systemPrompt?: string
 }
@@ -91,8 +92,7 @@ const loggingFetch: typeof fetch = async (input, init) => {
   })
 }
 
-const getClient = () => {
-  const config = getDmxOpenAIConfig()
+const getClient = (config: BackendConfig) => {
   return new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseURL,
@@ -285,11 +285,13 @@ export function formatOpenAIToolContinuation(
 
 export class OpenAIChatProvider {
   private readonly model: string
+  private readonly backendConfig: BackendConfig
   private readonly openaiTools: OpenAITool[] | undefined
   private readonly systemPrompt?: string
 
   constructor(config: OpenAIChatProviderConfig) {
     this.model = config.model
+    this.backendConfig = config.backendConfig
     this.systemPrompt = config.systemPrompt
     this.openaiTools = config.tools.length > 0 ? convertToolsToOpenAI(config.tools) : undefined
   }
@@ -312,7 +314,7 @@ export class OpenAIChatProvider {
     const toolCallsByIndex = new Map<number, { id: string; name: string; argsJson: string }>()
 
     try {
-      const client = getClient()
+      const client = getClient(this.backendConfig)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const streamParams: any = {

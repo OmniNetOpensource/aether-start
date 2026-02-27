@@ -52,6 +52,8 @@ export const startChatRequest = async (
     useConversationsStore.getState().addConversation({
       id: currentConversationId,
       title: fallbackTitle,
+      is_pinned: false,
+      pinned_at: null,
       created_at: now,
       updated_at: now,
     })

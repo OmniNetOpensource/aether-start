@@ -1,8 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import {
   buildSystemPrompt,
-  getAnthropicConfig,
-  type ChatBackend,
+  type BackendConfig,
 } from "@/server/agents/services/chat-config";
 import { log } from "./logger";
 import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
@@ -56,7 +55,13 @@ const THINKING_BUDGET_RATIO = 0.8;
 const THINKING_MIN_BUDGET_TOKENS = 1024;
 const ADAPTIVE_THINKING_MODEL = "claude-opus-4-6";
 
-type AnthropicBackend = Extract<ChatBackend, 'rightcode'>
+const getClient = (config: BackendConfig) => {
+  return new Anthropic({
+    apiKey: config.apiKey,
+    baseURL: config.baseURL,
+    defaultHeaders: config.defaultHeaders,
+  });
+};
 
 type AnthropicThinkingParams =
   | {
@@ -108,14 +113,6 @@ const buildThinkingParams = (model: string, maxTokens: number): AnthropicThinkin
   };
 };
 
-const getClient = (backend: AnthropicBackend) => {
-  const anthropicConfig = getAnthropicConfig(backend);
-  return new Anthropic({
-    apiKey: anthropicConfig.apiKey,
-    baseURL: anthropicConfig.baseURL,
-    defaultHeaders: anthropicConfig.defaultHeaders,
-  });
-};
 
 const resolveAttachmentToBase64 = async (attachment: {
   name: string
@@ -228,13 +225,13 @@ function convertToolsToAnthropic(tools: ChatTool[]): AnthropicTool[] {
 
 async function* streamAnthropicCompletion(requestParams: {
   model: string;
-  backend: AnthropicBackend;
+  backendConfig: BackendConfig;
   messages: AnthropicMessage[];
   system?: Array<{ type: 'text'; text: string }>;
   tools?: AnthropicTool[];
   signal?: AbortSignal;
 }): AsyncGenerator<AnthropicStreamChunk> {
-  const client = getClient(requestParams.backend);
+  const client = getClient(requestParams.backendConfig);
   const thinkingParams = buildThinkingParams(requestParams.model, ANTHROPIC_MAX_TOKENS);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -371,7 +368,7 @@ export function formatToolContinuation(
 
 type AnthropicChatProviderConfig = {
   model: string
-  backend: AnthropicBackend
+  backendConfig: BackendConfig
   tools: ChatTool[]
   systemPrompt?: string
 }
@@ -383,13 +380,13 @@ export type ProviderRunResult = {
 
 export class AnthropicChatProvider {
   private readonly model: string
-  private readonly backend: AnthropicBackend
+  private readonly backendConfig: BackendConfig
   private readonly anthropicTools: AnthropicTool[] | undefined
   private readonly systemPrompt?: string
 
   constructor(config: AnthropicChatProviderConfig) {
     this.model = config.model
-    this.backend = config.backend
+    this.backendConfig = config.backendConfig
     this.systemPrompt = config.systemPrompt
     this.anthropicTools = config.tools.length > 0
       ? convertToolsToAnthropic(config.tools)
@@ -419,7 +416,7 @@ export class AnthropicChatProvider {
     try {
       for await (const chunk of streamAnthropicCompletion({
         model: this.model,
-        backend: this.backend,
+        backendConfig: this.backendConfig,
         messages,
         system: systemBlocks,
         tools: this.anthropicTools,

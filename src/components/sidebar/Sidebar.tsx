@@ -6,6 +6,7 @@ import { ProfileMenu } from "./settings/ProfileMenu";
 import { NewChatButton } from "@/components/chat/NewChatButton";
 import { AetherLogo } from "@/components/AetherLogo";
 import { NotesButton } from "./NotesButton";
+import { LeaderboardButton } from "./LeaderboardButton";
 
 export default function Sidebar() {
   const RIGHT_LEAVE_TOLERANCE_PX = 1;
@@ -116,6 +117,7 @@ export default function Sidebar() {
           <NewChatButton isCollapsed={false} />
           <ConversationSearchTrigger variant="sidebar" />
           <NotesButton />
+          <LeaderboardButton />
         </div>
 
         {/* Content: 24px rhythm, less visual noise */}

@@ -193,7 +193,7 @@ export function OutlineGraphDialog({
                   }
                 }}
               >
-                <title>{`#${node.messageId} ${roleLabel} ${node.preview}`}</title>
+                <title>{`#${node.messageId} ${roleLabel} ${node.fullPreview}`}</title>
                 <rect
                   x={0}
                   y={0}

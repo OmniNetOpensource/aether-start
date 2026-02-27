@@ -63,6 +63,8 @@ export const applyChatEventToTree = (
       useConversationsStore.getState().addConversation({
         id: event.conversationId,
         title: event.title,
+        is_pinned: false,
+        pinned_at: null,
         created_at: now,
         updated_at: now,
       })

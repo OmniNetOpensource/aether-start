@@ -126,12 +126,14 @@ export function Composer() {
         className="flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
         {hasAttachments && (
-          <PeekingAttachments
-            attachments={pendingAttachments}
-            onRemove={removeAttachment}
-          />
+          <div className="w-full flex justify-start">
+            <PeekingAttachments
+              attachments={pendingAttachments}
+              onRemove={removeAttachment}
+            />
+          </div>
         )}
-        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl border ink-border bg-background p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
+        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-background p-2 transition-all">
           <div className="flex w-full items-end gap-2">
             <Textarea
               ref={textareaCallbackRef}
@@ -182,12 +184,14 @@ export function Composer() {
         className="relative flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
         {hasAttachments && (
-          <PeekingAttachments
-            attachments={pendingAttachments}
-            onRemove={removeAttachment}
-          />
+          <div className="w-full flex justify-start">
+            <PeekingAttachments
+              attachments={pendingAttachments}
+              onRemove={removeAttachment}
+            />
+          </div>
         )}
-        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl border ink-border bg-background p-2 shadow-lg transition-all focus-within:border-(--interactive-secondary) focus-within:shadow-xl">
+        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-background p-2 transition-all">
 
         <div className="flex w-full items-end gap-2">
           <Textarea

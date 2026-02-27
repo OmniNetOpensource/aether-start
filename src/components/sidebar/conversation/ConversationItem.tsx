@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { MoreHorizontal, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
 import type { ConversationMeta } from "@/types/conversation";
 import {
   DropdownMenu,
@@ -33,6 +33,9 @@ export function ConversationItem({
   const deleteConversation = useConversationsStore(
     (state) => state.deleteConversation
   );
+  const setConversationPinned = useConversationsStore(
+    (state) => state.setConversationPinned
+  );
 
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // 如果是修饰键点击（Ctrl/Cmd/Shift/Alt），用户意图是新标签/新窗口/下载等
@@ -60,6 +63,10 @@ export function ConversationItem({
     }
   };
 
+  const handleSetPinned = async (pinned: boolean) => {
+    await setConversationPinned(conversation.id, pinned);
+  };
+
   return (
     <div
       className={`group relative flex w-full items-start gap-3 rounded-lg bg-transparent p-3 text-left transition-all hover:bg-(--surface-hover) ${
@@ -78,6 +85,9 @@ export function ConversationItem({
       />
       <div className="min-w-0 flex-1 pointer-events-none relative z-10">
         <div className="flex min-w-0 items-center gap-2">
+          {conversation.is_pinned ? (
+            <Pin className="size-3.5 shrink-0 text-(--text-tertiary)" />
+          ) : null}
           {useShimmer ? (
             <Shimmer
               as="span"
@@ -110,6 +120,18 @@ export function ConversationItem({
             className="min-w-34"
             onClick={(e) => e.stopPropagation()}
           >
+            <DropdownMenuItem
+              onSelect={() => {
+                void handleSetPinned(!conversation.is_pinned);
+              }}
+            >
+              {conversation.is_pinned ? (
+                <PinOff className="size-4" />
+              ) : (
+                <Pin className="size-4" />
+              )}
+              {conversation.is_pinned ? "取消置顶" : "置顶会话"}
+            </DropdownMenuItem>
             <DropdownMenuItem
               onSelect={() => {
                 void handleDelete();

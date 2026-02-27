@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
-import { getAnthropicConfig } from '@/server/agents/services/chat-config'
+import { getBackendConfig } from '@/server/agents/services/chat-config'
 
 const FALLBACK_TITLE = 'New Chat'
 
@@ -20,9 +20,9 @@ export const generateTitleFromConversation = async (
     return FALLBACK_TITLE
   }
 
-  let anthropicConfig: ReturnType<typeof getAnthropicConfig>
+  let anthropicConfig: ReturnType<typeof getBackendConfig>
   try {
-    anthropicConfig = getAnthropicConfig()
+    anthropicConfig = getBackendConfig('rightcode')
   } catch {
     return FALLBACK_TITLE
   }

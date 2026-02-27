@@ -1,4 +1,11 @@
-export type ConversationCursor = {
+export type ConversationListCursor = {
+  is_pinned: 0 | 1
+  sort_at: string
+  updated_at: string
+  id: string
+} | null
+
+export type ConversationSearchCursor = {
   updated_at: string
   id: string
 } | null
@@ -8,6 +15,8 @@ export type ConversationRecord = {
   id: string
   title: string | null
   role: string | null
+  is_pinned: boolean
+  pinned_at: string | null
   currentPath: number[]
   messages: object[]
   created_at: string
@@ -32,6 +41,8 @@ export type ConversationSearchItem = {
   id: string
   title: string | null
   role: string | null
+  is_pinned: boolean
+  pinned_at: string | null
   created_at: string
   updated_at: string
   matchedIn: 'title' | 'content'
@@ -66,6 +77,10 @@ const safeParseMessages = (value: string): object[] => {
     return []
   }
 }
+
+const toPinnedBoolean = (value: unknown) => value === 1 || value === '1'
+
+const toPinnedAt = (value: unknown) => (typeof value === 'string' ? value : null)
 
 export const normalizeSearchQuery = (query: string) =>
   query.trim().replace(/\s+/g, ' ')
@@ -205,6 +220,9 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
   const role = typeof row.role === 'string' ? row.role : null
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString()
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt
+  const isPinned = toPinnedBoolean(row.is_pinned)
+  const pinnedAtRaw = toPinnedAt(row.pinned_at)
+  const pinnedAt = isPinned ? pinnedAtRaw ?? updatedAt : null
   const currentPathJson = typeof row.current_path_json === 'string' ? row.current_path_json : '[]'
   const messagesJson = typeof row.messages_json === 'string' ? row.messages_json : '[]'
 
@@ -213,6 +231,8 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
     id: row.id,
     title,
     role,
+    is_pinned: isPinned,
+    pinned_at: pinnedAt,
     currentPath: safeParsePath(currentPathJson),
     messages: safeParseMessages(messagesJson),
     created_at: createdAt,
@@ -233,12 +253,17 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
   const role = typeof row.role === 'string' ? row.role : null
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString()
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt
+  const isPinned = toPinnedBoolean(row.is_pinned)
+  const pinnedAtRaw = toPinnedAt(row.pinned_at)
+  const pinnedAt = isPinned ? pinnedAtRaw ?? updatedAt : null
 
   return {
     user_id: row.user_id,
     id: row.id,
     title,
     role,
+    is_pinned: isPinned,
+    pinned_at: pinnedAt,
     currentPath: [],
     messages: [],
     created_at: createdAt,
@@ -262,6 +287,9 @@ const toConversationSearchItem = (
   const role = typeof row.role === 'string' ? row.role : null
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString()
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt
+  const isPinned = toPinnedBoolean(row.is_pinned)
+  const pinnedAtRaw = toPinnedAt(row.pinned_at)
+  const pinnedAt = isPinned ? pinnedAtRaw ?? updatedAt : null
   const bodyText = typeof row.body_text === 'string' ? row.body_text : ''
 
   const explicitMatch = row.matched_in === 'title' || row.matched_in === 'content'
@@ -276,6 +304,8 @@ const toConversationSearchItem = (
     id: row.id,
     title,
     role,
+    is_pinned: isPinned,
+    pinned_at: pinnedAt,
     created_at: createdAt,
     updated_at: updatedAt,
     matchedIn,
@@ -285,29 +315,71 @@ const toConversationSearchItem = (
 
 export const listConversationsPage = async (
   db: D1Database,
-  input: { userId: string; limit: number; cursor: ConversationCursor },
+  input: { userId: string; limit: number; cursor: ConversationListCursor },
 ) => {
   const rows = input.cursor
     ? await db
         .prepare(
           `
-          SELECT m.user_id, m.id, m.title, m.role, m.created_at, m.updated_at
+          SELECT m.user_id, m.id, m.title, m.role, m.is_pinned, m.pinned_at, m.created_at, m.updated_at
           FROM conversation_metas m
           WHERE m.user_id = ?1
-            AND ((m.updated_at < ?2) OR (m.updated_at = ?2 AND m.id < ?3))
-          ORDER BY m.updated_at DESC, m.id DESC
-          LIMIT ?4
+            AND (
+              m.is_pinned < ?2
+              OR (
+                m.is_pinned = ?2
+                AND (
+                  (CASE
+                    WHEN m.is_pinned = 1 THEN COALESCE(m.pinned_at, m.updated_at)
+                    ELSE m.updated_at
+                  END) < ?3
+                  OR (
+                    (CASE
+                      WHEN m.is_pinned = 1 THEN COALESCE(m.pinned_at, m.updated_at)
+                      ELSE m.updated_at
+                    END) = ?3
+                    AND (
+                      m.updated_at < ?4
+                      OR (m.updated_at = ?4 AND m.id < ?5)
+                    )
+                  )
+                )
+              )
+            )
+          ORDER BY
+            m.is_pinned DESC,
+            CASE
+              WHEN m.is_pinned = 1 THEN COALESCE(m.pinned_at, m.updated_at)
+              ELSE m.updated_at
+            END DESC,
+            m.updated_at DESC,
+            m.id DESC
+          LIMIT ?6
           `,
         )
-        .bind(input.userId, input.cursor.updated_at, input.cursor.id, input.limit)
+        .bind(
+          input.userId,
+          input.cursor.is_pinned,
+          input.cursor.sort_at,
+          input.cursor.updated_at,
+          input.cursor.id,
+          input.limit,
+        )
         .all()
     : await db
         .prepare(
           `
-          SELECT m.user_id, m.id, m.title, m.role, m.created_at, m.updated_at
+          SELECT m.user_id, m.id, m.title, m.role, m.is_pinned, m.pinned_at, m.created_at, m.updated_at
           FROM conversation_metas m
           WHERE m.user_id = ?1
-          ORDER BY m.updated_at DESC, m.id DESC
+          ORDER BY
+            m.is_pinned DESC,
+            CASE
+              WHEN m.is_pinned = 1 THEN COALESCE(m.pinned_at, m.updated_at)
+              ELSE m.updated_at
+            END DESC,
+            m.updated_at DESC,
+            m.id DESC
           LIMIT ?2
           `,
         )
@@ -321,14 +393,41 @@ export const listConversationsPage = async (
     : []
 
   const last = mapped.at(-1)
-  const nextCursor: ConversationCursor =
+  const nextCursor: ConversationListCursor =
     mapped.length === input.limit && last
-      ? { updated_at: last.updated_at, id: last.id }
+      ? {
+          is_pinned: last.is_pinned ? 1 : 0,
+          sort_at: last.is_pinned ? last.pinned_at ?? last.updated_at : last.updated_at,
+          updated_at: last.updated_at,
+          id: last.id,
+        }
       : null
+
+  let latestUpdatedRole: string | null = null
+  if (!input.cursor) {
+    const latestRow = await db
+      .prepare(
+        `
+        SELECT role
+        FROM conversation_metas
+        WHERE user_id = ?1
+        ORDER BY updated_at DESC, id DESC
+        LIMIT 1
+        `,
+      )
+      .bind(input.userId)
+      .first()
+
+    latestUpdatedRole =
+      isRecord(latestRow) && typeof latestRow.role === 'string'
+        ? latestRow.role
+        : null
+  }
 
   return {
     items: mapped,
     nextCursor,
+    latestUpdatedRole,
   }
 }
 
@@ -338,7 +437,7 @@ export const searchConversations = async (
     userId: string
     query: string
     limit: number
-    cursor: ConversationCursor
+    cursor: ConversationSearchCursor
   },
 ) => {
   const normalizedQuery = normalizeSearchQuery(input.query)
@@ -375,6 +474,8 @@ export const searchConversations = async (
               m.id,
               m.title,
               m.role,
+              m.is_pinned,
+              m.pinned_at,
               m.created_at,
               m.updated_at,
               COALESCE(conversation_search_fts.body, '') AS body_text
@@ -405,6 +506,8 @@ export const searchConversations = async (
               m.id,
               m.title,
               m.role,
+              m.is_pinned,
+              m.pinned_at,
               m.created_at,
               m.updated_at,
               COALESCE(conversation_search_fts.body, '') AS body_text
@@ -432,6 +535,8 @@ export const searchConversations = async (
               m.id,
               m.title,
               m.role,
+              m.is_pinned,
+              m.pinned_at,
               m.created_at,
               m.updated_at,
               COALESCE(s.body, '') AS body_text,
@@ -469,6 +574,8 @@ export const searchConversations = async (
               m.id,
               m.title,
               m.role,
+              m.is_pinned,
+              m.pinned_at,
               m.created_at,
               m.updated_at,
               COALESCE(s.body, '') AS body_text,
@@ -500,7 +607,7 @@ export const searchConversations = async (
     : []
 
   const last = mapped.at(-1)
-  const nextCursor: ConversationCursor =
+  const nextCursor: ConversationSearchCursor =
     mapped.length === input.limit && last
       ? { updated_at: last.updated_at, id: last.id }
       : null
@@ -520,7 +627,7 @@ export const getConversationById = async (
   const row = await db
     .prepare(
       `
-      SELECT m.user_id, m.id, m.title, m.role, m.created_at, m.updated_at, b.current_path_json, b.messages_json
+      SELECT m.user_id, m.id, m.title, m.role, m.is_pinned, m.pinned_at, m.created_at, m.updated_at, b.current_path_json, b.messages_json
       FROM conversation_metas m
       JOIN conversation_bodies b ON b.user_id = m.user_id AND b.id = m.id
       WHERE m.id = ?1 AND m.user_id = ?2
@@ -606,6 +713,26 @@ export const clearConversations = async (db: D1Database, userId: string) => {
   ])
 
   return { ok: true }
+}
+
+export const setConversationPinned = async (
+  db: D1Database,
+  input: { userId: string; id: string; pinned: boolean },
+) => {
+  const pinnedAt = input.pinned ? new Date().toISOString() : null
+
+  await db
+    .prepare(
+      `
+      UPDATE conversation_metas
+      SET is_pinned = ?1, pinned_at = ?2
+      WHERE user_id = ?3 AND id = ?4
+      `,
+    )
+    .bind(input.pinned ? 1 : 0, pinnedAt, input.userId, input.id)
+    .run()
+
+  return { ok: true, pinned_at: pinnedAt }
 }
 
 export const updateConversationTitle = async (

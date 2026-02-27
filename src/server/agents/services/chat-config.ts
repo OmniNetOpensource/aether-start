@@ -1,14 +1,22 @@
 import { getServerEnv } from '@/server/env'
 
+export type ChatFormat = 'anthropic' | 'openai' | 'gemini'
 export type ChatBackend = 'rightcode' | 'dmx'
 
+export type BackendConfig = {
+  apiKey: string
+  baseURL: string
+  defaultHeaders: Record<string, string>
+}
+
 export type RoleConfig = {
-  id: string;
-  name: string;
-  model: string;
-  backend: ChatBackend;
-  systemPrompt: string;
-};
+  id: string
+  name: string
+  model: string
+  format: ChatFormat
+  backend: ChatBackend
+  systemPrompt: string
+}
 
 const englishTeacherSystemPrompt = `你是一位英语教学专家。我会给你发送一段英文内容（可能较长）。你需要逐句分析，不得省略任何句子。
 
@@ -121,6 +129,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     id: "aether",
     name: "aether",
     model: "claude-opus-4-6",
+    format: "anthropic",
     backend: "rightcode",
     systemPrompt: aetherSystemPrompt,
   },
@@ -128,6 +137,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     id: "test1",
     name: "claude-opus-4-6+dmx",
     model: "claude-opus-4-6",
+    format: "openai",
     backend: "dmx",
     systemPrompt: aetherSystemPrompt,
   },
@@ -135,6 +145,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     id: "test2",
     name: "gemini-3.1-pro-preview+dmx",
     model: "gemini-3.1-pro-preview",
+    format: "openai",
     backend: "dmx",
     systemPrompt: aetherSystemPrompt,
   },
@@ -142,6 +153,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     id: "test3",
     name: "qwen3.5-plus+dmx",
     model: "qwen3.5-plus",
+    format: "openai",
     backend: "dmx",
     systemPrompt: aetherSystemPrompt,
   },
@@ -149,6 +161,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   //   id: "test4",
   //   name: "glm-5+dmx",
   //   model: "glm-5",
+  //   format: "openai",
   //   backend: "dmx",
   //   systemPrompt: aetherSystemPrompt,
   // },
@@ -156,6 +169,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   //   id: "test5",
   //   name: "doubao-seed-2-0-pro-260215+dmx",
   //   model: "doubao-seed-2-0-pro-260215",
+  //   format: "openai",
   //   backend: "dmx",
   //   systemPrompt: aetherSystemPrompt,
   // },
@@ -163,11 +177,13 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     id: "英语教学专家",
     name: "英语教学专家",
     model: "claude-opus-4-5",
+    format: "anthropic",
     backend: "rightcode",
     systemPrompt: englishTeacherSystemPrompt,
   },
 };
 export const DEFAULT_ROLE_ID = "aether";
+export const ARENA_ROLE_POOL = ['test1', 'test2', 'test3'] as const
 
 export const getAvailableRoles = (): { id: string; name: string }[] =>
   Object.values(ROLE_CONFIGS).map(({ id, name }) => ({ id, name }));
@@ -185,6 +201,16 @@ export const getRoleConfig = (roleId: string): RoleConfig | null => {
 
 export const getDefaultRoleConfig = (): RoleConfig | null =>
   ROLE_CONFIGS[DEFAULT_ROLE_ID] ?? null;
+
+export const getArenaRolePoolConfigs = (): RoleConfig[] => {
+  return ARENA_ROLE_POOL.map((roleId) => {
+    const role = getRoleConfig(roleId)
+    if (!role) {
+      throw new Error(`Arena role is not configured: ${roleId}`)
+    }
+    return role
+  })
+}
 
 export const buildSystemPrompt = () => {
   const now = new Date()
@@ -208,51 +234,35 @@ export const buildSystemPrompt = () => {
 `
 }
 
-export const getAnthropicConfig = (backend: ChatBackend = 'rightcode') => {
-  if (backend !== 'rightcode') {
-    throw new Error(`Anthropic config does not support backend: ${backend}`)
-  }
-
+export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
   const env = getServerEnv()
-  const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE
-  const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE
 
-  if (!apiKey) {
-    throw new Error('Missing ANTHROPIC_API_KEY_RIGHTCODE')
+  if (backend === 'rightcode') {
+    const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE
+    const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE
+    if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_RIGHTCODE')
+    if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_RIGHTCODE')
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: {
+        'User-Agent': 'aether',
+        'anthropic-beta': 'interleaved-thinking-2025-05-14',
+      },
+    }
   }
 
-  if (!baseURL) {
-    throw new Error('Missing ANTHROPIC_BASE_URL_RIGHTCODE')
+  if (backend === 'dmx') {
+    const apiKey = env.DMX_APIKEY
+    const baseURL = env.DMX_BASEURL
+    if (!apiKey) throw new Error('Missing DMX_APIKEY')
+    if (!baseURL) throw new Error('Missing DMX_BASEURL')
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: { 'User-Agent': 'aether' },
+    }
   }
 
-  return {
-    apiKey,
-    baseURL,
-    defaultHeaders: {
-      "User-Agent": "aether",
-      "anthropic-beta": "interleaved-thinking-2025-05-14",
-    },
-  };
-};
-
-export const getDmxOpenAIConfig = () => {
-  const env = getServerEnv()
-  const apiKey = env.DMX_APIKEY
-  const baseURL = env.DMX_BASEURL
-
-  if (!apiKey) {
-    throw new Error('Missing DMX_APIKEY')
-  }
-
-  if (!baseURL) {
-    throw new Error('Missing DMX_BASEURL')
-  }
-
-  return {
-    apiKey,
-    baseURL,
-    defaultHeaders: {
-      'User-Agent': 'aether',
-    },
-  }
+  throw new Error(`Unknown backend: ${backend}`)
 }

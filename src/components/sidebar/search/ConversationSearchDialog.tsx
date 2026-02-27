@@ -4,7 +4,7 @@ import { Loader2, Search } from 'lucide-react'
 import type { ConversationSearchItem } from '@/types/conversation'
 import {
   searchConversationsFn,
-  type ConversationCursor,
+  type ConversationSearchCursor,
 } from '@/server/functions/conversations'
 import {
   Dialog,
@@ -67,7 +67,7 @@ export function ConversationSearchDialog({
   const [query, setQuery] = useState('')
   const [debouncedQuery, setDebouncedQuery] = useState('')
   const [items, setItems] = useState<ConversationSearchItem[]>([])
-  const [cursor, setCursor] = useState<ConversationCursor>(null)
+  const [cursor, setCursor] = useState<ConversationSearchCursor>(null)
   const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasSearched, setHasSearched] = useState(false)

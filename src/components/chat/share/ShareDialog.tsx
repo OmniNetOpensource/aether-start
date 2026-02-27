@@ -1,18 +1,21 @@
-
 import { toPng } from 'html-to-image'
 import {
   AlertCircle,
   ArrowLeft,
+  Check,
+  Copy,
   Download,
+  Link2,
   Loader2,
+  XCircle,
 } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Message } from '@/types/message'
+import type { ConversationShareStatus } from '@/types/share'
 import { useChatRequestStore } from '@/stores/useChatRequestStore'
 import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
-import { ResearchBlock } from '../research/ResearchBlock'
 import { useConversationsStore } from '@/stores/useConversationsStore'
-import Markdown from '@/components/Markdown'
+import { toast } from '@/hooks/useToast'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
@@ -31,6 +34,12 @@ import {
   sanitizeFilename,
   waitForImages,
 } from '@/lib/chat/export-utils'
+import {
+  createConversationShareFn,
+  getConversationShareFn,
+  revokeConversationShareFn,
+} from '@/server/functions/shares'
+import { SharedConversationView, type ShareRenderableMessage } from './SharedConversationView'
 
 type ShareStep = 'select' | 'preview'
 
@@ -59,6 +68,14 @@ const waitForFrames = async () => {
   )
 }
 
+const buildShareUrl = (token: string) => {
+  const path = `/share/${encodeURIComponent(token)}`
+  if (typeof window === 'undefined') {
+    return path
+  }
+  return `${window.location.origin}${path}`
+}
+
 export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const messages = useMessageTreeStore((state) => state.messages)
   const currentPath = useMessageTreeStore((state) => state.currentPath)
@@ -72,6 +89,12 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const captureRef = useRef<HTMLDivElement | null>(null)
+
+  const [shareStatus, setShareStatus] = useState<ConversationShareStatus>('not_shared')
+  const [shareToken, setShareToken] = useState<string | null>(null)
+  const [shareLoading, setShareLoading] = useState(false)
+  const [shareActionLoading, setShareActionLoading] = useState<'create' | 'revoke' | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const pathMessages = useMemo(() => {
     return currentPath
@@ -90,6 +113,16 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
   const selectedCount = selectedMessages.length
 
+  const selectedRenderableMessages = useMemo(
+    () =>
+      selectedMessages.map(({ message }) => ({
+        id: message.id,
+        role: message.role,
+        blocks: message.blocks,
+      })) as ShareRenderableMessage[],
+    [selectedMessages]
+  )
+
   const conversationTitle = useMemo(() => {
     if (!conversationId) {
       return 'Aether'
@@ -99,12 +132,46 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     return conversation?.title?.trim() || 'Aether'
   }, [conversationId, conversations])
 
+  const shareUrl = shareToken ? buildShareUrl(shareToken) : null
+
+  const loadShareStatus = useCallback(async () => {
+    if (!conversationId) {
+      setShareStatus('not_shared')
+      setShareToken(null)
+      return
+    }
+
+    setShareLoading(true)
+    try {
+      const result = await getConversationShareFn({
+        data: {
+          conversationId,
+        },
+      })
+
+      setShareStatus(result.status)
+      setShareToken(result.token ?? null)
+    } catch (loadError) {
+      console.error('Failed to load share status', loadError)
+      toast.error('读取分享状态失败')
+      setShareStatus('not_shared')
+      setShareToken(null)
+    } finally {
+      setShareLoading(false)
+    }
+  }, [conversationId])
+
   const resetState = useCallback(() => {
     setStep('select')
     setSelectedIds(new Set())
     setPreviewDataUrl(null)
     setIsGenerating(false)
     setError(null)
+    setShareStatus('not_shared')
+    setShareToken(null)
+    setShareLoading(false)
+    setShareActionLoading(null)
+    setCopied(false)
   }, [])
 
   const handleDialogOpenChange = useCallback(
@@ -116,6 +183,13 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     },
     [onOpenChange, resetState]
   )
+
+  useEffect(() => {
+    if (!open) {
+      return
+    }
+    void loadShareStatus()
+  }, [open, loadShareStatus])
 
   const toggleMessageSelection = useCallback((id: number) => {
     setSelectedIds((prev) => {
@@ -136,6 +210,74 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const handleClearAll = useCallback(() => {
     setSelectedIds(new Set())
   }, [])
+
+  const handleCreateOrReactivateShare = useCallback(async () => {
+    if (!conversationId) {
+      toast.error('当前会话不可分享')
+      return
+    }
+    if (pathMessages.length === 0) {
+      toast.warning('当前没有可分享的消息')
+      return
+    }
+
+    setShareActionLoading('create')
+    try {
+      const result = await createConversationShareFn({
+        data: {
+          conversationId,
+          title: conversationTitle,
+        },
+      })
+
+      setShareStatus('active')
+      setShareToken(result.token)
+      toast.success('URL 分享已开启')
+    } catch (createError) {
+      console.error('Failed to create share', createError)
+      toast.error('开启分享失败，请重试')
+    } finally {
+      setShareActionLoading(null)
+    }
+  }, [conversationId, conversationTitle, pathMessages])
+
+  const handleRevokeShare = useCallback(async () => {
+    if (!conversationId) {
+      return
+    }
+
+    setShareActionLoading('revoke')
+    try {
+      await revokeConversationShareFn({
+        data: {
+          conversationId,
+        },
+      })
+      setShareStatus('revoked')
+      toast.success('已取消 URL 分享')
+    } catch (revokeError) {
+      console.error('Failed to revoke share', revokeError)
+      toast.error('取消分享失败，请重试')
+    } finally {
+      setShareActionLoading(null)
+    }
+  }, [conversationId])
+
+  const handleCopyShareUrl = useCallback(async () => {
+    if (!shareUrl) {
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareUrl)
+      setCopied(true)
+      toast.success('分享链接已复制')
+      setTimeout(() => setCopied(false), 1200)
+    } catch (copyError) {
+      console.error('Failed to copy share url', copyError)
+      toast.error('复制失败，请手动复制')
+    }
+  }, [shareUrl])
 
   const generatePreview = useCallback(async () => {
     if (selectedCount === 0) {
@@ -170,8 +312,8 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         fontEmbedCSS,
       })
       setPreviewDataUrl(dataUrl)
-    } catch (err) {
-      console.error('Failed to generate share preview', err)
+    } catch (previewError) {
+      console.error('Failed to generate share preview', previewError)
       setError('导出失败，请重试')
     } finally {
       restoreCrossOriginImages?.()
@@ -191,118 +333,197 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent className="max-h-[90vh] sm:max-w-4xl px-8 py-8">
-        <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl font-medium tracking-tight">
+      <DialogContent className='max-h-[90vh] sm:max-w-4xl px-8 py-8'>
+        <DialogHeader className='space-y-1'>
+          <DialogTitle className='text-xl font-medium tracking-tight'>
             {step === 'select' ? '分享' : '预览'}
           </DialogTitle>
-          <DialogDescription className="text-(--text-tertiary)">
+          <DialogDescription className='text-(--text-tertiary)'>
             {step === 'select'
-              ? '选择要导出的消息'
+              ? '开启 URL 分享或导出 PNG 图片'
               : '确认后下载 PNG 图片'}
           </DialogDescription>
         </DialogHeader>
 
         {step === 'select' ? (
-          <div className="space-y-5">
-            <div className="flex items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleSelectAll}
-                  disabled={pathMessages.length === 0}
-                  className="text-(--text-secondary) hover:text-(--text-primary)"
-                >
-                  全选
-                </Button>
-                {selectedCount > 0 && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleClearAll}
-                    className="text-(--text-tertiary) hover:text-(--text-primary)"
-                  >
-                    清除
-                  </Button>
-                )}
+          <div className='space-y-6'>
+            <section className='rounded-xl border border-border bg-(--surface-muted)/20 p-4 space-y-3'>
+              <div className='flex items-center gap-2 text-sm font-medium text-(--text-primary)'>
+                <Link2 className='h-4 w-4' />
+                URL 分享
               </div>
-              <span className="text-xs text-(--text-tertiary)">
-                已选 {selectedCount} 则
-              </span>
-            </div>
 
-            <div className="max-h-[52vh] overflow-y-auto -mx-1 px-1">
-              {pathMessages.length === 0 ? (
-                <div className="py-12 text-center text-sm text-(--text-tertiary)">
-                  当前没有可分享的消息
+              {shareLoading ? (
+                <div className='flex items-center gap-2 text-sm text-(--text-tertiary)'>
+                  <Loader2 className='h-4 w-4 animate-spin' />
+                  读取分享状态...
+                </div>
+              ) : shareStatus === 'active' && shareUrl ? (
+                <div className='space-y-3'>
+                  <div className='rounded-lg border border-border bg-background px-3 py-2 text-sm text-(--text-secondary) break-all'>
+                    {shareUrl}
+                  </div>
+                  <div className='flex items-center gap-2'>
+                    <Button
+                      type='button'
+                      size='sm'
+                      variant='outline'
+                      onClick={handleCopyShareUrl}
+                      disabled={shareActionLoading !== null}
+                    >
+                      {copied ? <Check className='h-4 w-4' /> : <Copy className='h-4 w-4' />}
+                      {copied ? '已复制' : '复制链接'}
+                    </Button>
+                    <Button
+                      type='button'
+                      size='sm'
+                      variant='ghost'
+                      onClick={handleRevokeShare}
+                      disabled={shareActionLoading !== null}
+                      className='text-destructive'
+                    >
+                      {shareActionLoading === 'revoke' ? (
+                        <>
+                          <Loader2 className='h-4 w-4 animate-spin' />
+                          取消中
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className='h-4 w-4' />
+                          取消分享
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <div className="space-y-px">
-                  {pathMessages.map(({ id, message, pathIndex }) => {
-                    const isSelected = selectedIds.has(id)
-                    const snippet = buildMessageSnippet(message)
-
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => toggleMessageSelection(id)}
-                        className={cn(
-                          'flex w-full cursor-pointer items-start gap-3 rounded-lg border-l-2 px-4 py-3.5 text-left transition-colors',
-                          isSelected
-                            ? 'border-l-(--interactive-primary) bg-(--surface-muted)/50'
-                            : 'border-l-transparent hover:bg-(--surface-hover)'
-                        )}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
-                            <span
-                              className={cn(
-                                message.role === 'user'
-                                  ? 'font-medium text-(--text-secondary)'
-                                  : ''
-                              )}
-                            >
-                              {ROLE_LABEL[message.role]}
-                            </span>
-                            <span>·</span>
-                            <span>#{pathIndex + 1}</span>
-                          </div>
-                          <p className="mt-1 line-clamp-2 text-sm text-(--text-secondary)">
-                            {snippet}
-                          </p>
-                        </div>
-                      </button>
-                    )
-                  })}
+                <div className='flex flex-wrap items-center gap-2'>
+                  {shareStatus === 'revoked' ? (
+                    <span className='text-sm text-(--text-tertiary)'>该链接已取消，可重新开启</span>
+                  ) : (
+                    <span className='text-sm text-(--text-tertiary)'>开启后可通过 URL 公开访问</span>
+                  )}
+                  <Button
+                    type='button'
+                    size='sm'
+                    onClick={handleCreateOrReactivateShare}
+                    disabled={shareActionLoading !== null || pending || pathMessages.length === 0}
+                  >
+                    {shareActionLoading === 'create' ? (
+                      <>
+                        <Loader2 className='h-4 w-4 animate-spin' />
+                        处理中
+                      </>
+                    ) : shareStatus === 'revoked' ? (
+                      '重新开启分享'
+                    ) : (
+                      '开启 URL 分享'
+                    )}
+                  </Button>
                 </div>
               )}
-            </div>
+            </section>
+
+            <section className='space-y-5'>
+              <div className='flex items-center justify-between gap-4'>
+                <div className='flex items-center gap-2'>
+                  <Button
+                    type='button'
+                    variant='ghost'
+                    size='sm'
+                    onClick={handleSelectAll}
+                    disabled={pathMessages.length === 0}
+                    className='text-(--text-secondary) hover:text-(--text-primary)'
+                  >
+                    全选
+                  </Button>
+                  {selectedCount > 0 && (
+                    <Button
+                      type='button'
+                      variant='ghost'
+                      size='sm'
+                      onClick={handleClearAll}
+                      className='text-(--text-tertiary) hover:text-(--text-primary)'
+                    >
+                      清除
+                    </Button>
+                  )}
+                </div>
+                <span className='text-xs text-(--text-tertiary)'>
+                  已选 {selectedCount} 则
+                </span>
+              </div>
+
+              <div className='max-h-[44vh] overflow-y-auto -mx-1 px-1'>
+                {pathMessages.length === 0 ? (
+                  <div className='py-12 text-center text-sm text-(--text-tertiary)'>
+                    当前没有可分享的消息
+                  </div>
+                ) : (
+                  <div className='space-y-px'>
+                    {pathMessages.map(({ id, message, pathIndex }) => {
+                      const isSelected = selectedIds.has(id)
+                      const snippet = buildMessageSnippet(message)
+
+                      return (
+                        <button
+                          key={id}
+                          type='button'
+                          onClick={() => toggleMessageSelection(id)}
+                          className={cn(
+                            'flex w-full cursor-pointer items-start gap-3 rounded-lg border-l-2 px-4 py-3.5 text-left transition-colors',
+                            isSelected
+                              ? 'border-l-(--interactive-primary) bg-(--surface-muted)/50'
+                              : 'border-l-transparent hover:bg-(--surface-hover)'
+                          )}
+                        >
+                          <div className='min-w-0 flex-1'>
+                            <div className='flex items-center gap-2 text-xs text-(--text-tertiary)'>
+                              <span
+                                className={cn(
+                                  message.role === 'user'
+                                    ? 'font-medium text-(--text-secondary)'
+                                    : ''
+                                )}
+                              >
+                                {ROLE_LABEL[message.role]}
+                              </span>
+                              <span>·</span>
+                              <span>#{pathIndex + 1}</span>
+                            </div>
+                            <p className='mt-1 line-clamp-2 text-sm text-(--text-secondary)'>
+                              {snippet}
+                            </p>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         ) : (
-          <div className="space-y-5">
-            <div className="max-h-[58vh] overflow-auto rounded-xl bg-(--surface-muted)/20 py-6 px-6">
+          <div className='space-y-5'>
+            <div className='max-h-[58vh] overflow-auto rounded-xl bg-(--surface-muted)/20 py-6 px-6'>
               {isGenerating ? (
-                <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-(--text-tertiary)">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                  <span className="text-sm">正在生成</span>
+                <div className='flex min-h-64 flex-col items-center justify-center gap-3 text-(--text-tertiary)'>
+                  <Loader2 className='h-6 w-6 animate-spin' />
+                  <span className='text-sm'>正在生成</span>
                 </div>
               ) : error ? (
-                <div className="flex min-h-64 flex-col items-center justify-center gap-3 text-sm">
-                  <AlertCircle className="h-5 w-5 text-destructive" />
-                  <p className="text-destructive">{error}</p>
+                <div className='flex min-h-64 flex-col items-center justify-center gap-3 text-sm'>
+                  <AlertCircle className='h-5 w-5 text-destructive' />
+                  <p className='text-destructive'>{error}</p>
                 </div>
               ) : previewDataUrl ? (
                 <img
                   src={previewDataUrl}
-                  alt="分享图片预览"
-                  className="mx-auto h-auto w-full max-w-2xl rounded-lg shadow-sm"
+                  alt='分享图片预览'
+                  className='mx-auto h-auto w-full max-w-2xl rounded-lg shadow-sm'
                 />
               ) : (
-                <div className="flex min-h-64 items-center justify-center text-sm text-(--text-tertiary)">
+                <div className='flex min-h-64 items-center justify-center text-sm text-(--text-tertiary)'>
                   暂无预览
                 </div>
               )}
@@ -310,26 +531,26 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className='gap-2 sm:gap-2'>
           {step === 'select' ? (
             <>
               <Button
-                type="button"
-                variant="ghost"
+                type='button'
+                variant='ghost'
                 onClick={() => handleDialogOpenChange(false)}
-                className="text-(--text-secondary)"
+                className='text-(--text-secondary)'
               >
                 取消
               </Button>
               <Button
-                type="button"
+                type='button'
                 onClick={generatePreview}
                 disabled={selectedCount === 0 || isGenerating || pending}
-                className="min-w-24"
+                className='min-w-24'
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className='h-4 w-4 animate-spin' />
                     生成中
                   </>
                 ) : (
@@ -340,26 +561,26 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
           ) : (
             <>
               <Button
-                type="button"
-                variant="ghost"
-                size="icon"
+                type='button'
+                variant='ghost'
+                size='icon'
                 onClick={() => setStep('select')}
                 disabled={isGenerating}
-                className="shrink-0"
-                title="返回选择"
+                className='shrink-0'
+                title='返回选择'
               >
-                <ArrowLeft className="h-4 w-4" />
+                <ArrowLeft className='h-4 w-4' />
               </Button>
               <Button
-                type="button"
-                variant="ghost"
+                type='button'
+                variant='ghost'
                 onClick={generatePreview}
                 disabled={isGenerating || pending}
-                className="text-(--text-secondary)"
+                className='text-(--text-secondary)'
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader2 className='h-4 w-4 animate-spin' />
                     生成中
                   </>
                 ) : (
@@ -367,12 +588,12 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                 )}
               </Button>
               <Button
-                type="button"
+                type='button'
                 onClick={handleDownload}
                 disabled={!previewDataUrl || isGenerating}
-                className="min-w-28"
+                className='min-w-28'
               >
-                <Download className="h-4 w-4" />
+                <Download className='h-4 w-4' />
                 下载
               </Button>
             </>
@@ -381,106 +602,16 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
         <div
           aria-hidden
-          className="pointer-events-none fixed -left-3000 top-0 opacity-100"
+          className='pointer-events-none fixed -left-3000 top-0 opacity-100'
         >
           <div
             ref={captureRef}
-            className="w-250 rounded-2xl border border-border bg-background p-10 text-foreground"
+            className='w-250 rounded-2xl border border-border bg-background p-10 text-foreground'
             style={{ fontFamily: 'var(--font-body)' }}
           >
+            <SharedConversationView messages={selectedRenderableMessages} />
 
-            <section className="space-y-5">
-              {selectedMessages.map(({ id, message, pathIndex }) => (
-                <article
-                  key={id}
-                  className={cn(
-                    'rounded-xl p-4',
-                    message.role === 'user'
-                      ? 'border border-border bg-(--surface-secondary) ml-auto max-w-[60%] w-full text-left'
-                      : ''
-                  )}
-                >
-
-                  <div className="space-y-3">
-                    {message.blocks.map((block, blockIndex) => {
-                      if (block.type === 'content') {
-                        return (
-                          <div
-                            key={`${id}-content-${blockIndex}`}
-                            className={cn(
-                              'text-lg leading-relaxed wrap-anywhere [&_pre]:wrap-normal',
-                              message.role === 'user'
-                                ? 'text-foreground'
-                                : 'text-(--text-secondary)'
-                            )}
-                          >
-                            <Markdown content={block.content} />
-                          </div>
-                        )
-                      }
-
-                      if (block.type === 'research') {
-                        return (
-                          <ResearchBlock
-                            key={`${id}-research-${blockIndex}`}
-                            items={block.items}
-                            blockIndex={blockIndex}
-                            messageIndex={pathIndex}
-                          />
-                        )
-                      }
-
-                      if (block.type === 'error') {
-                        return (
-                          <div
-                            key={`${id}-error-${blockIndex}`}
-                            className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-base text-destructive"
-                          >
-                            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                            <div className="whitespace-pre-wrap">
-                              {block.message}
-                            </div>
-                          </div>
-                        )
-                      }
-
-                      if (block.type === 'attachments') {
-                        if (block.attachments.length === 0) {
-                          return null
-                        }
-
-                        return (
-                          <div
-                            key={`${id}-attachments-${blockIndex}`}
-                            className="grid grid-cols-3 gap-3"
-                          >
-                            {block.attachments.map((attachment) => (
-                              <div
-                                key={attachment.id}
-                                className="overflow-hidden rounded-lg border border-border bg-background"
-                              >
-                                <img
-                                  src={attachment.url}
-                                  alt={attachment.name}
-                                  className="h-28 w-full object-cover"
-                                />
-                                <div className="px-2 py-1.5 text-xs text-muted-foreground truncate">
-                                  {attachment.name}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )
-                      }
-
-                      return null
-                    })}
-                  </div>
-                </article>
-              ))}
-            </section>
-
-            <footer className="mt-6 border-t border-border pt-4 text-sm text-muted-foreground">
+            <footer className='mt-6 border-t border-border pt-4 text-sm text-muted-foreground'>
               Exported from Aether
             </footer>
           </div>
