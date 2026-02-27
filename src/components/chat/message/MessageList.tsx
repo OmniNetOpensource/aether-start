@@ -3,41 +3,19 @@ import { useEffect, useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
-import { insertQuoteAtCursor } from "@/lib/chat/composer-focus";
-import { useTextSelection } from "@/hooks/useTextSelection";
-import { SelectionQuoteButton } from "./SelectionQuoteButton";
+import { SelectionToolbar } from "./SelectionToolbar";
 
 export function MessageList() {
   const currentPath = useMessageTreeStore((state) => state.currentPath);
   const pending = useChatRequestStore((state) => state.pending);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const { selection, updateSelection, clearSelection } =
-    useTextSelection(scrollRef);
-  const clearSelectionRef = useRef(clearSelection);
-
-  const handleQuote = () => {
-    if (selection.text) {
-      insertQuoteAtCursor(selection.text);
-      clearSelection();
-    }
-  };
-
-  useEffect(() => {
-    clearSelectionRef.current = clearSelection;
-  }, [clearSelection]);
-
-  useEffect(() => {
-    clearSelectionRef.current();
-  }, [currentPath.length]);
 
   return (
     <div className="relative h-full w-full">
       <div
         ref={scrollRef}
         className="h-full w-full overflow-y-auto"
-        onMouseUp={updateSelection}
-        onTouchEnd={updateSelection}
       >
         <div
           role="log"
@@ -63,13 +41,7 @@ export function MessageList() {
         </div>
       </div>
 
-      {selection.text && (
-        <SelectionQuoteButton
-          text={selection.text}
-          rect={selection.rect}
-          onQuote={handleQuote}
-        />
-      )}
+      <SelectionToolbar containerRef={scrollRef} />
     </div>
   );
 }

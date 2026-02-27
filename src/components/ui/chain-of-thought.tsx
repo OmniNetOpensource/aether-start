@@ -46,7 +46,7 @@ function ChainOfThoughtHeader({
       data-slot="chain-of-thought-header"
       title="点击展开或收起"
       className={cn(
-        'group sticky top-0 z-10 flex w-full cursor-pointer items-center gap-1.5 py-0 text-xs font-medium text-(--text-tertiary)',
+        'group sticky top-0 z-0 flex w-full cursor-pointer items-center gap-1.5 py-0 text-xs font-medium text-(--text-tertiary)',
         'bg-background -mx-1 px-1',
         'hover:text-(--text-primary)',
         'transition-colors duration-150',

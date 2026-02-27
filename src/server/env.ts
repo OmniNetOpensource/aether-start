@@ -14,6 +14,7 @@ type ServerEnv = {
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
   RESEND_API_KEY?: string
+  MINIMAX_API_KEY?: string
   DB?: D1Database
   CHAT_ASSETS?: R2Bucket
   NODE_ENV?: string
@@ -83,6 +84,9 @@ export const getServerEnv = (): ServerEnv => {
     RESEND_API_KEY:
       readString(bindings.RESEND_API_KEY) ??
       readStringFromProcess('RESEND_API_KEY'),
+    MINIMAX_API_KEY:
+      readString(bindings.MINIMAX_API_KEY) ??
+      readStringFromProcess('MINIMAX_API_KEY'),
     NODE_ENV:
       readString(bindings.NODE_ENV) ??
       readStringFromProcess('NODE_ENV') ??
