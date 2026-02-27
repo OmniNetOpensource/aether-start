@@ -22,7 +22,7 @@ function ChainOfThought({ defaultOpen = true, ...props }: ChainOfThoughtProps) {
       <CollapsiblePrimitive.Root
         data-slot="chain-of-thought"
         defaultOpen={defaultOpen}
-        className="my-4 bg-transparent px-1 py-2"
+        className="my-4 bg-transparent px-1 pt-0 pb-2"
         {...props}
       />
     </ChainOfThoughtContext.Provider>
@@ -46,7 +46,8 @@ function ChainOfThoughtHeader({
       data-slot="chain-of-thought-header"
       title="点击展开或收起"
       className={cn(
-        'group flex w-fit cursor-pointer items-center gap-1.5 py-1 text-xs font-medium text-(--text-tertiary)',
+        'group sticky top-0 z-10 flex w-full cursor-pointer items-center gap-1.5 py-0 text-xs font-medium text-(--text-tertiary)',
+        'bg-background -mx-1 px-1',
         'hover:text-(--text-primary)',
         'transition-colors duration-150',
         className

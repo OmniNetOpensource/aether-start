@@ -86,7 +86,7 @@ export default function Sidebar() {
   }, []);
 
   return (
-    <div className="relative h-full w-0 shrink-0 group/sidebar-trigger">
+    <div className="relative z-(--z-sidebar) h-full w-0 shrink-0 group/sidebar-trigger">
       {/* Invisible wider catch area to make it easier to trigger */}
       <div
         className="absolute left-0 top-0 z-(--z-sidebar) h-full w-4"
