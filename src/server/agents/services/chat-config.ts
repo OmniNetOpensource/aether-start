@@ -125,30 +125,30 @@ const aetherSystemPrompt = `
 
 `;
 const ROLE_CONFIGS: Record<string, RoleConfig> = {
-  aether: {
-    id: "aether",
-    name: "aether",
-    model: "claude-opus-4-6",
-    format: "anthropic",
-    backend: "rightcode",
-    systemPrompt: aetherSystemPrompt,
-  },
-  test1: {
-    id: "test1",
-    name: "claude-opus-4-6+dmx",
-    model: "claude-opus-4-6",
-    format: "openai",
-    backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
-  },
-  test2: {
-    id: "test2",
-    name: "gemini-3.1-pro-preview+dmx",
-    model: "gemini-3.1-pro-preview",
-    format: "openai",
-    backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
-  },
+  // aether: {
+  //   id: "aether",
+  //   name: "aether",
+  //   model: "claude-opus-4-6",
+  //   format: "anthropic",
+  //   backend: "rightcode",
+  //   systemPrompt: aetherSystemPrompt,
+  // },
+  // test1: {
+  //   id: "test1",
+  //   name: "claude-opus-4-6+dmx",
+  //   model: "claude-opus-4-6",
+  //   format: "openai",
+  //   backend: "dmx",
+  //   systemPrompt: aetherSystemPrompt,
+  // },
+  // test2: {
+  //   id: "test2",
+  //   name: "gemini-3.1-pro-preview+dmx",
+  //   model: "gemini-3.1-pro-preview",
+  //   format: "openai",
+  //   backend: "dmx",
+  //   systemPrompt: aetherSystemPrompt,
+  // },
   test3: {
     id: "test3",
     name: "qwen3.5-plus+dmx",
@@ -157,33 +157,64 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     backend: "dmx",
     systemPrompt: aetherSystemPrompt,
   },
-  // test4: {
-  //   id: "test4",
-  //   name: "glm-5+dmx",
-  //   model: "glm-5",
-  //   format: "openai",
-  //   backend: "dmx",
-  //   systemPrompt: aetherSystemPrompt,
-  // },
-  // test5: {
-  //   id: "test5",
-  //   name: "doubao-seed-2-0-pro-260215+dmx",
-  //   model: "doubao-seed-2-0-pro-260215",
-  //   format: "openai",
-  //   backend: "dmx",
-  //   systemPrompt: aetherSystemPrompt,
-  // },
-  英语教学专家: {
-    id: "英语教学专家",
-    name: "英语教学专家",
-    model: "claude-opus-4-5",
-    format: "anthropic",
-    backend: "rightcode",
-    systemPrompt: englishTeacherSystemPrompt,
+  minimaxM25: {
+    id: "minimaxM25",
+    name: "MiniMax-M2.5+dmx",
+    model: "MiniMax-M2.5",
+    format: "openai",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
   },
+  glm5: {
+    id: "glm5",
+    name: "glm-5+dmx",
+    model: "glm-5",
+    format: "openai",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
+  doubao: {
+    id: "doubao",
+    name: "doubao-seed-2-0-pro-260215+dmx",
+    model: "doubao-seed-2-0-pro-260215",
+    format: "openai",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
+  kimiK25: {
+    id: "kimiK25",
+    name: "kimi-k2.5+dmx",
+    model: "kimi-k2.5",
+    format: "openai",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
+  deepseekV32: {
+    id: "deepseekV32",
+    name: "DeepSeek-V3.2-Thinking+dmx",
+    model: "DeepSeek-V3.2-Thinking",
+    format: "openai",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
+  // 英语教学专家: {
+  //   id: "英语教学专家",
+  //   name: "英语教学专家",
+  //   model: "claude-opus-4-5",
+  //   format: "anthropic",
+  //   backend: "rightcode",
+  //   systemPrompt: englishTeacherSystemPrompt,
+  // },
 };
-export const DEFAULT_ROLE_ID = "aether";
-export const ARENA_ROLE_POOL = ['test1', 'test2', 'test3'] as const
+export const DEFAULT_ROLE_ID = "test3";
+export const ARENA_ROLE_POOL = [
+  'test3',
+  'minimaxM25',
+  'glm5',
+  'doubao',
+  'kimiK25',
+  'deepseekV32',
+] as const
 
 export const getAvailableRoles = (): { id: string; name: string }[] =>
   Object.values(ROLE_CONFIGS).map(({ id, name }) => ({ id, name }));

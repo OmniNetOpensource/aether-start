@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { getBackendConfig } from '@/server/agents/services/chat-config'
 
 const FALLBACK_TITLE = 'New Chat'
@@ -10,7 +10,7 @@ const sanitizeTitle = (value: string) => {
     .trim()
 }
 const CONVERSATION_TITLE_TIMEOUT_MS = 30_000
-const TITLE_MODEL = 'claude-haiku-4-5'
+const TITLE_MODEL = 'GLM-4.7-Flash'
 
 export const generateTitleFromConversation = async (
   userText: string,
@@ -20,9 +20,9 @@ export const generateTitleFromConversation = async (
     return FALLBACK_TITLE
   }
 
-  let anthropicConfig: ReturnType<typeof getBackendConfig>
+  let dmxConfig: ReturnType<typeof getBackendConfig>
   try {
-    anthropicConfig = getBackendConfig('rightcode')
+    dmxConfig = getBackendConfig('dmx')
   } catch {
     return FALLBACK_TITLE
   }
@@ -35,14 +35,14 @@ export const generateTitleFromConversation = async (
 
   const prompt = promptLines.join('\n')
 
-  const client = new Anthropic({
-    apiKey: anthropicConfig.apiKey,
-    baseURL: anthropicConfig.baseURL,
-    defaultHeaders: anthropicConfig.defaultHeaders,
+  const client = new OpenAI({
+    apiKey: dmxConfig.apiKey,
+    baseURL: dmxConfig.baseURL,
+    defaultHeaders: dmxConfig.defaultHeaders,
   })
 
   try {
-    const response = await client.messages.create(
+    const response = await client.chat.completions.create(
       {
         model: TITLE_MODEL,
         max_tokens: 64,
@@ -52,11 +52,8 @@ export const generateTitleFromConversation = async (
       { signal: AbortSignal.timeout(CONVERSATION_TITLE_TIMEOUT_MS) },
     )
 
-    const rawTitle = Array.isArray(response.content)
-      ? response.content
-          .map((block) => (block.type === 'text' ? block.text : ''))
-          .join('')
-      : ''
+    const rawTitle =
+      response.choices[0]?.message?.content?.trim() ?? ''
 
     const title =
       typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : ''
