@@ -9,8 +9,8 @@ const sanitizeTitle = (value: string) => {
     .replace(/\s+/g, ' ')
     .trim()
 }
-const CONVERSATION_TITLE_TIMEOUT_MS = 30_000
-const TITLE_MODEL = 'GLM-4.7-Flash'
+const CONVERSATION_TITLE_TIMEOUT_MS = 60_000
+const TITLE_MODEL = 'qwen3.5-plus'
 
 export const generateTitleFromConversation = async (
   userText: string,

@@ -6,7 +6,7 @@ import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { resetConversationEventCursor } from '@/lib/chat/api/websocket-client'
 import { getConversationFn } from "@/server/functions/conversations";
-import { DEFAULT_ROLE_ID } from "@/lib/chat/roles";
+import { getDefaultRoleIdFn } from "@/server/functions/chat/roles";
 import { buildCurrentPath } from "@/lib/conversation/tree/message-tree";
 import type {
   Attachment,
@@ -118,7 +118,9 @@ export function useConversationLoader(conversationId: string | undefined) {
         useEditingStore.getState().clear();
         setConversationId(conversationId);
         initializeTree(mappedMessages, currentPath);
-        useChatRequestStore.getState().setCurrentRole(conversation.role ?? DEFAULT_ROLE_ID);
+        const roleId =
+          conversation.role ?? (await getDefaultRoleIdFn()) ?? "";
+        useChatRequestStore.getState().setCurrentRole(roleId);
         resetConversationEventCursor(conversationId)
         await resumeIfRunning(conversationId)
       } catch (error) {

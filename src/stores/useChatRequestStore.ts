@@ -6,7 +6,6 @@ import {
   resumeRunningConversation,
   startChatRequest,
 } from "@/lib/chat/api/chat-orchestrator";
-import { DEFAULT_ROLE_ID } from "@/lib/chat/roles";
 import {
   computeMessagesFromPath,
 } from "@/lib/conversation/tree/message-tree";
@@ -40,9 +39,7 @@ type ChatRequestActions = {
   _setActiveRequestId: (id: string | null) => void;
 };
 
-const getInitialRole = (): string => {
-  return DEFAULT_ROLE_ID;
-};
+const getInitialRole = (): string => "";
 
 export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>()(
   devtools(
@@ -119,7 +116,15 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
         set({ rolesLoading: true });
         try {
           const roles = await getAvailableRolesFn();
-          set({ availableRoles: roles, rolesLoading: false });
+          const { currentRole } = get();
+          const firstId = roles[0]?.id ?? "";
+          const shouldSetDefault =
+            !currentRole || !roles.some((r) => r.id === currentRole);
+          set({
+            availableRoles: roles,
+            rolesLoading: false,
+            ...(shouldSetDefault && firstId ? { currentRole: firstId } : {}),
+          });
         } catch {
           set({ rolesLoading: false });
         }

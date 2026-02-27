@@ -125,6 +125,14 @@ const aetherSystemPrompt = `
 
 `;
 const ROLE_CONFIGS: Record<string, RoleConfig> = {
+  claudeSonnet46Thinking: {
+    id: "claudeSonnet46Thinking",
+    name: "claude-sonnet-4-6-thinking+dmx",
+    model: "claude-sonnet-4-6-thinking",
+    format: "openai",
+    backend: "dmx",
+    systemPrompt: aetherSystemPrompt,
+  },
   // aether: {
   //   id: "aether",
   //   name: "aether",
@@ -206,8 +214,8 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   //   systemPrompt: englishTeacherSystemPrompt,
   // },
 };
-export const DEFAULT_ROLE_ID = "test3";
 export const ARENA_ROLE_POOL = [
+  'claudeSonnet46Thinking',
   'test3',
   'minimaxM25',
   'glm5',
@@ -230,8 +238,13 @@ export const getRoleConfig = (roleId: string): RoleConfig | null => {
   );
 };
 
-export const getDefaultRoleConfig = (): RoleConfig | null =>
-  ROLE_CONFIGS[DEFAULT_ROLE_ID] ?? null;
+export const getDefaultRoleId = (): string | null =>
+  getAvailableRoles()[0]?.id ?? null;
+
+export const getDefaultRoleConfig = (): RoleConfig | null => {
+  const id = getDefaultRoleId();
+  return id ? getRoleConfig(id) : null;
+};
 
 export const getArenaRolePoolConfigs = (): RoleConfig[] => {
   return ARENA_ROLE_POOL.map((roleId) => {
