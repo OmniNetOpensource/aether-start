@@ -10,8 +10,6 @@ import {
   setConversationPinnedFn,
   updateConversationTitleFn,
 } from "@/server/functions/conversations";
-import { useChatRequestStore } from "@/stores/useChatRequestStore";
-import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 
 type ConversationsState = {
   conversations: ConversationMeta[];
@@ -126,11 +124,6 @@ export const useConversationsStore = create<
             data: { limit: PAGE_SIZE, cursor: null },
           });
           const mapped = (page.items as ConversationDetail[]).map(mapDetailToMeta);
-
-          const latestRole = page.latestUpdatedRole;
-          if (latestRole && !useMessageTreeStore.getState().conversationId) {
-            useChatRequestStore.getState().setCurrentRole(latestRole);
-          }
 
           set((state) => ({
             ...state,

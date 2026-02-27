@@ -146,7 +146,6 @@ describe('useConversationsStore', () => {
         updated_at: '2024-01-02T00:00:00.000Z',
         id: 'c-1',
       },
-      latestUpdatedRole: 'role-latest',
     })
 
     await useConversationsStore.getState().loadInitialConversations()
@@ -169,7 +168,6 @@ describe('useConversationsStore', () => {
       'c-2',
       'c-1',
     ])
-    expect(useChatRequestStore.getState().currentRole).toBe('role-latest')
   })
 
   it('loadMoreConversations merges next page and updates cursor', async () => {
@@ -190,7 +188,6 @@ describe('useConversationsStore', () => {
     listConversationsPageFnMock.mockResolvedValueOnce({
       items: [createDetail('c-3', '2024-01-04T00:00:00.000Z', 'role-new')],
       nextCursor: null,
-      latestUpdatedRole: null,
     })
 
     await useConversationsStore.getState().loadMoreConversations()

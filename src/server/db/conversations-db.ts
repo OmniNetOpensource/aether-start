@@ -403,31 +403,9 @@ export const listConversationsPage = async (
         }
       : null
 
-  let latestUpdatedRole: string | null = null
-  if (!input.cursor) {
-    const latestRow = await db
-      .prepare(
-        `
-        SELECT role
-        FROM conversation_metas
-        WHERE user_id = ?1
-        ORDER BY updated_at DESC, id DESC
-        LIMIT 1
-        `,
-      )
-      .bind(input.userId)
-      .first()
-
-    latestUpdatedRole =
-      isRecord(latestRow) && typeof latestRow.role === 'string'
-        ? latestRow.role
-        : null
-  }
-
   return {
     items: mapped,
     nextCursor,
-    latestUpdatedRole,
   }
 }
 

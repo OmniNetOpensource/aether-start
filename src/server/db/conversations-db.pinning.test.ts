@@ -28,7 +28,7 @@ const createMockD1 = () => {
 }
 
 describe('conversations-db pinning', () => {
-  it('listConversationsPage returns pin-aware cursor and latestUpdatedRole on first page', async () => {
+  it('listConversationsPage returns pin-aware cursor on first page', async () => {
     const db = createMockD1()
 
     db.mockAll.mockResolvedValueOnce({
@@ -55,7 +55,6 @@ describe('conversations-db pinning', () => {
         },
       ],
     })
-    db.mockFirst.mockResolvedValueOnce({ role: 'role-latest-updated' })
 
     const result = await listConversationsPage(db, {
       userId: 'u1',
@@ -70,10 +69,9 @@ describe('conversations-db pinning', () => {
       updated_at: '2024-01-03T00:00:00.000Z',
       id: 'c-history',
     })
-    expect(result.latestUpdatedRole).toBe('role-latest-updated')
   })
 
-  it('listConversationsPage skips latestUpdatedRole lookup when loading more', async () => {
+  it('listConversationsPage returns items and cursor when loading more', async () => {
     const db = createMockD1()
 
     db.mockAll.mockResolvedValueOnce({
@@ -102,8 +100,7 @@ describe('conversations-db pinning', () => {
       },
     })
 
-    expect(result.latestUpdatedRole).toBeNull()
-    expect(db.mockFirst).not.toHaveBeenCalled()
+    expect(result.items.map((item) => item.id)).toEqual(['c-1'])
   })
 
   it('setConversationPinned updates only pin fields and keeps updated_at untouched', async () => {
