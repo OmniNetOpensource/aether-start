@@ -32,7 +32,7 @@ export const insertQuoteAtCursor = (text: string) => {
   const insert =
     (needsLeadingNewline ? '\n' : '') +
     quoted +
-    '\n' +
+    '\n\n' +
     (needsTrailingNewline ? '\n' : '')
 
   const newValue = before + insert + after

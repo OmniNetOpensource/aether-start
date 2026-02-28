@@ -62,6 +62,9 @@ export default function Sidebar() {
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (isSidebarOpen() && sidebarRef.current && !sidebarRef.current.contains(e.target as Node)) {
+        if ((e.target as Element).closest?.('[data-radix-popper-content-wrapper]')) {
+          return;
+        }
         closeSidebar();
       }
     };
