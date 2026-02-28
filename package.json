@@ -12,6 +12,7 @@
     "cf:migrate:local": "wrangler d1 migrations apply DB --local",
     "cf:migrate:remote": "wrangler d1 migrations apply DB --remote",
     "cf:deploy": "vite build && node scripts/patch-wrangler-config.mjs && wrangler deploy",
+    "cf:sync-secrets": "node scripts/sync-env-to-cloudflare.mjs",
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "check": "pnpm type-check && pnpm lint && pnpm build",
