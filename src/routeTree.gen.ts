@@ -20,6 +20,7 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-pas
 import { Route as AppNotesRouteImport } from './routes/app/notes'
 import { Route as AppLeaderboardRouteImport } from './routes/app/leaderboard'
 import { Route as AppArenaRouteImport } from './routes/app/arena'
+import { Route as ApiSentryRouteImport } from './routes/api/sentry'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
@@ -80,6 +81,11 @@ const AppArenaRoute = AppArenaRouteImport.update({
   path: '/arena',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const ApiSentryRoute = ApiSentryRouteImport.update({
+  id: '/api/sentry',
+  path: '/api/sentry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
   id: '/c/$conversationId',
   path: '/c/$conversationId',
@@ -106,6 +112,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/api/sentry': typeof ApiSentryRoute
   '/app/arena': typeof AppArenaRoute
   '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
+  '/api/sentry': typeof ApiSentryRoute
   '/app/arena': typeof AppArenaRoute
   '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/api/sentry': typeof ApiSentryRoute
   '/app/arena': typeof AppArenaRoute
   '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/404'
+    | '/api/sentry'
     | '/app/arena'
     | '/app/leaderboard'
     | '/app/notes'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/404'
+    | '/api/sentry'
     | '/app/arena'
     | '/app/leaderboard'
     | '/app/notes'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/404'
+    | '/api/sentry'
     | '/app/arena'
     | '/app/leaderboard'
     | '/app/notes'
@@ -210,6 +222,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   R404Route: typeof R404Route
+  ApiSentryRoute: typeof ApiSentryRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   ShareTokenRoute: typeof ShareTokenRoute
@@ -298,6 +311,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppArenaRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/api/sentry': {
+      id: '/api/sentry'
+      path: '/api/sentry'
+      fullPath: '/api/sentry'
+      preLoaderRoute: typeof ApiSentryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/app/c/$conversationId': {
       id: '/app/c/$conversationId'
       path: '/c/$conversationId'
@@ -353,6 +373,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   R404Route: R404Route,
+  ApiSentryRoute: ApiSentryRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
   ShareTokenRoute: ShareTokenRoute,

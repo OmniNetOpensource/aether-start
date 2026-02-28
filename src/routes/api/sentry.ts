@@ -1,7 +1,10 @@
-import { createAPIFileRoute } from '@tanstack/react-start/api'
+import { createFileRoute } from '@tanstack/react-router'
 
-export const APIRoute = createAPIFileRoute('/api/sentry')({
-  POST: async ({ request }) => {
+export const Route = createFileRoute('/api/sentry')({
+  server: {
+    handlers: ({ createHandlers }) =>
+      createHandlers({
+        POST: async ({ request }: { request: Request }) => {
     try {
       const envelope = await request.text()
       const piece = envelope.split('\n')[0]
@@ -37,5 +40,7 @@ export const APIRoute = createAPIFileRoute('/api/sentry')({
         headers: { 'Content-Type': 'application/json' },
       })
     }
+        },
+      }),
   },
 })

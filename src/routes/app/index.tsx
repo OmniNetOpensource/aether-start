@@ -6,8 +6,6 @@ import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { useEditingStore } from "@/stores/useEditingStore";
 import { useComposerStore } from "@/stores/useComposerStore";
-import { Sentry } from "@/lib/sentry";
-
 export const Route = createFileRoute("/app/")({
   component: HomePage,
 });

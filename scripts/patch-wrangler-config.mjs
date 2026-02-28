@@ -1,4 +1,3 @@
-/* global console, process */
 import { readFileSync, writeFileSync } from 'fs'
 
 const wranglerSrc = readFileSync('wrangler.jsonc', 'utf8')

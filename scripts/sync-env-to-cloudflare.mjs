@@ -67,7 +67,7 @@ async function main() {
   let content
   try {
     content = readFileSync(envPath, 'utf8')
-  } catch (e) {
+  } catch {
     console.error('.env.local 不存在或无法读取')
     process.exit(1)
   }

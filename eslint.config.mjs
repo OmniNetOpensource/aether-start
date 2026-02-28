@@ -23,5 +23,17 @@ export default tseslint.config(
       ...reactHooks.configs["recommended-latest"].rules,
       "no-empty": ["error", { allowEmptyCatch: true }],
     },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
+    languageOptions: {
+      globals: {
+        console: "readonly",
+        process: "readonly",
+      },
+    },
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
   }
 );
