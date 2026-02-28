@@ -18,6 +18,26 @@ import { getAvailableRolesFn } from "@/server/functions/chat/roles";
 
 type RoleInfo = { id: string; name: string };
 
+const ROLE_STORAGE_KEY = "aether_current_role";
+
+function getStoredRole(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(ROLE_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredRole(role: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(ROLE_STORAGE_KEY, role);
+  } catch {
+    // ignore
+  }
+}
+
 type ChatRequestState = {
   pending: boolean;
   chatClient: ChatClient | null;
@@ -106,6 +126,7 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       },
       setCurrentRole: (role) => {
         set({ currentRole: role });
+        if (role) setStoredRole(role);
       },
       loadRoles: async () => {
         const { availableRoles, rolesLoading } = get();
@@ -116,14 +137,18 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
         set({ rolesLoading: true });
         try {
           const roles = await getAvailableRolesFn();
-          const { currentRole } = get();
           const firstId = roles[0]?.id ?? "";
-          const shouldSetDefault =
-            !currentRole || !roles.some((r) => r.id === currentRole);
+          const stored = getStoredRole();
+          const storedValid =
+            stored && roles.some((r) => r.id === stored);
+          const roleToUse = storedValid ? stored : firstId;
+          if (roleToUse) {
+            set({ currentRole: roleToUse });
+            setStoredRole(roleToUse);
+          }
           set({
             availableRoles: roles,
             rolesLoading: false,
-            ...(shouldSetDefault && firstId ? { currentRole: firstId } : {}),
           });
         } catch {
           set({ rolesLoading: false });
