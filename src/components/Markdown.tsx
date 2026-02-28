@@ -13,7 +13,7 @@ function Markdown({ content, isAnimating = false }: Props) {
   if (!MarkdownLazy) return null
 
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<div className="whitespace-pre-wrap">{content}</div>}>
       <MarkdownLazy content={content} isAnimating={isAnimating} />
     </Suspense>
   )

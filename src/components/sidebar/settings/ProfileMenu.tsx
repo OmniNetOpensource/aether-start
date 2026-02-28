@@ -1,20 +1,13 @@
-
 import { useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { LogOut, Settings, User2 } from "lucide-react";
+import { Moon, Settings, Sun, User2 } from "lucide-react";
 import { authClient } from "@/lib/auth/auth-client";
-import { useChatRequestStore } from "@/stores/useChatRequestStore";
-import { clearConversationEventCursors } from "@/lib/chat/api/websocket-client";
-import { useComposerStore } from "@/stores/useComposerStore";
-import { useEditingStore } from "@/stores/useEditingStore";
-import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
-import { useConversationsStore } from "@/stores/useConversationsStore";
-import { useNotesStore } from "@/stores/useNotesStore";
+import { useTheme } from "@/hooks/useTheme";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { SettingsModal } from "./SettingsModal";
 
@@ -22,41 +15,16 @@ type ProfileMenuProps = {
   isCollapsed?: boolean;
 };
 
-const menuItemClass =
-  "flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-(--surface-hover) hover:text-foreground [&_svg]:size-4";
-
 export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
-  const navigate = useNavigate();
   const { data: session } = authClient.useSession();
+  const { theme, toggleTheme } = useTheme();
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [isSigningOut, setIsSigningOut] = useState(false);
 
   const displayName =
     session?.user.name ||
     session?.user.email?.split("@")[0] ||
     "User";
   const subtitle = session?.user.email || "";
-
-  const handleSignOut = async () => {
-    if (isSigningOut) {
-      return;
-    }
-
-    setIsSigningOut(true);
-    try {
-      await authClient.signOut();
-    } finally {
-      useChatRequestStore.getState().clear();
-      useComposerStore.getState().clear();
-      useEditingStore.getState().clear();
-      useMessageTreeStore.getState().clear();
-      useConversationsStore.getState().reset();
-      useNotesStore.getState().reset();
-      clearConversationEventCursors();
-      await navigate({ href: "/auth/login", replace: true });
-      setIsSigningOut(false);
-    }
-  };
 
   return (
     <div
@@ -71,8 +39,8 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
           className="relative transition-all duration-500 mx-auto"
           style={{ width: isCollapsed ? "auto" : "100%" }}
         >
-          <Popover>
-            <PopoverTrigger asChild>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <button
                 type="button"
                 className="flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-(--surface-hover) hover:text-foreground"
@@ -107,8 +75,8 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
                   </span>
                 </span>
               </button>
-            </PopoverTrigger>
-            <PopoverContent
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
               side="top"
               align="start"
               className="min-w-55 p-1"
@@ -133,26 +101,21 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
 
               <div className="bg-border -mx-1 my-1 h-px" />
 
-              <button
-                type="button"
-                onClick={() => setSettingsOpen(true)}
-                className={menuItemClass}
-              >
+              <DropdownMenuItem onSelect={toggleTheme}>
+                {theme === "dark" ? (
+                  <Sun className="h-4 w-4" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+                {theme === "dark" ? "浅色模式" : "深色模式"}
+              </DropdownMenuItem>
+
+              <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
                 <Settings className="h-4 w-4" />
                 设置
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSignOut}
-                className={menuItemClass}
-                disabled={isSigningOut}
-              >
-                <LogOut className="h-4 w-4" />
-                {isSigningOut ? "退出中..." : "退出登录"}
-              </button>
-            </PopoverContent>
-          </Popover>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
         </div>

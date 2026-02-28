@@ -1,7 +1,7 @@
 import { Outlet, createFileRoute, redirect, useMatch } from '@tanstack/react-router'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { getSessionStateFn } from '@/server/functions/auth/session-state'
-import { ChatRoom } from '@/routes/app/components/-ChatRoom'
+import { ChatRoom } from '@/components/ChatRoom'
 
 export const Route = createFileRoute('/app')({
   beforeLoad: async ({ location }) => {

@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
-import { Moon, Sun, Gift, Loader2, Plus, Ban } from "lucide-react";
-import { useTheme } from "@/hooks/useTheme";
+import { useNavigate } from "@tanstack/react-router";
+import { Gift, Loader2, Plus, Ban, LogOut } from "lucide-react";
+import { authClient } from "@/lib/auth/auth-client";
+import { useChatRequestStore } from "@/stores/useChatRequestStore";
+import { clearConversationEventCursors } from "@/lib/chat/api/websocket-client";
+import { useComposerStore } from "@/stores/useComposerStore";
+import { useEditingStore } from "@/stores/useEditingStore";
+import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
+import { useConversationsStore } from "@/stores/useConversationsStore";
+import { useNotesStore } from "@/stores/useNotesStore";
 import { toast } from "@/hooks/useToast";
 import {
   Dialog,
@@ -8,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getQuotaFn, redeemCodeFn } from "@/server/functions/quota";
@@ -25,8 +32,9 @@ type SettingsModalProps = {
 };
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const { theme, toggleTheme } = useTheme();
+  const navigate = useNavigate();
   const [balance, setBalance] = useState<number | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const [quotaLoading, setQuotaLoading] = useState(false);
   const [redeemCode, setRedeemCode] = useState("");
   const [redeemLoading, setRedeemLoading] = useState(false);
@@ -83,8 +91,22 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     void loadCodes();
   }, [open, isAdmin]);
 
-  const handleThemeToggle = () => {
-    toggleTheme();
+  const handleSignOut = async () => {
+    if (isSigningOut) return;
+    setIsSigningOut(true);
+    try {
+      await authClient.signOut();
+    } finally {
+      useChatRequestStore.getState().clear();
+      useComposerStore.getState().clear();
+      useEditingStore.getState().clear();
+      useMessageTreeStore.getState().clear();
+      useConversationsStore.getState().reset();
+      useNotesStore.getState().reset();
+      clearConversationEventCursors();
+      await navigate({ href: "/auth/login", replace: true });
+      setIsSigningOut(false);
+    }
   };
 
   const handleRedeem = async () => {
@@ -189,33 +211,25 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             </div>
           </div>
 
-          {/* Appearance Section */}
+          {/* Sign Out Section */}
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground">
-              外观
+              账户
             </h3>
-            <div className="flex items-center justify-between rounded-lg border bg-(--surface-muted)/30 p-3">
-              <div className="flex items-center gap-3">
-                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-background text-foreground shadow-sm ring-1 ring-border">
-                  {theme === "dark" ? (
-                    <Sun className="h-4 w-4" />
-                  ) : (
-                    <Moon className="h-4 w-4" />
-                  )}
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-foreground">
-                    深色模式
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {theme === "dark" ? "已开启" : "已关闭"}
-                  </span>
-                </div>
-              </div>
-              <Switch
-                checked={theme === "dark"}
-                onClick={handleThemeToggle}
-              />
+            <div className="rounded-lg border bg-(--surface-muted)/30 p-3">
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                onClick={handleSignOut}
+                disabled={isSigningOut}
+              >
+                {isSigningOut ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LogOut className="h-4 w-4" />
+                )}
+                {isSigningOut ? "退出中..." : "退出登录"}
+              </Button>
             </div>
           </div>
 
