@@ -1,5 +1,5 @@
 export function splitMarkdownParagraphs(text: string): string[] {
-  const lines = text.trim().split('\n')
+  const lines = text.split('\n')
   const paragraphs: string[] = []
   let current: string[] = []
   let inCodeBlock = false

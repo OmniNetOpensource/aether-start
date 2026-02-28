@@ -58,15 +58,6 @@ function RootComponent() {
     setNavigate((path) => navigate({ to: path }));
   }, [navigate]);
 
-  useEffect(() => {
-    if (!import.meta.env.DEV) return;
-
-    void import("react-scan").then(({ scan }) => {
-      scan({ enabled: true });
-    });
-    void import("react-grab");
-  }, []);
-
   return (
     <Sentry.ErrorBoundary
       fallback={({ error, resetError }) => (
@@ -98,6 +89,9 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        {import.meta.env.DEV && (
+          <script src="https://unpkg.com/react-scan/dist/auto.global.js" />
+        )}
       </head>
       <body className="antialiased">
         <ResponsiveProvider initialDeviceType="desktop">
