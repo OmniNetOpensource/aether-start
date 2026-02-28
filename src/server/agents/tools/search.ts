@@ -202,6 +202,7 @@ const searchSpec: ChatTool = {
     description: "Search the web using Google Search",
     parameters: {
       type: "object",
+      additionalProperties: false,
       properties: {
         query: {
           type: "string",

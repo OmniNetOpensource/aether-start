@@ -575,11 +575,11 @@ const fetchUrlSpec: ChatTool = {
       "Fetch content from a URL with three response modes: 'markdown' converts webpage content to readable text (useful for reading articles, documentation, or API responses); 'image' returns visual content as base64 - either fetches direct image URLs (jpg, png, gif, etc.) or captures a full-page screenshot of webpages; 'youtube' extracts transcript/subtitles from a YouTube video URL.",
     parameters: {
       type: "object",
+      additionalProperties: false,
       properties: {
         url: {
           type: "string",
           description: "The URL to fetch",
-          format: "uri",
         },
         response_type: {
           type: "string",

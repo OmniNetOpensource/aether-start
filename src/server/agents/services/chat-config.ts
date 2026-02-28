@@ -1,7 +1,12 @@
 import { getServerEnv } from '@/server/env'
 
-export type ChatFormat = 'anthropic' | 'openai' | 'gemini'
-export type ChatBackend = 'rightcode' | 'dmx' | 'ikun'
+export type ChatFormat = 'anthropic' | 'openai' | 'gemini' | 'openai-responses'
+export type ChatBackend =
+  | 'rightcode-claude'
+  | 'rightcode-gemini'
+  | 'rightcode-openai'
+  | 'dmx'
+  | 'ikun'
 
 export type BackendConfig = {
   apiKey: string
@@ -210,7 +215,15 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     name: "gemini-3.1-pro-preview+rightcode",
     model: "gemini-3.1-pro-preview",
     format: "gemini",
-    backend: "rightcode",
+    backend: "rightcode-gemini",
+    systemPrompt: aetherSystemPrompt,
+  },
+  gpt53CodexRightcode: {
+    id: "gpt53CodexRightcode",
+    name: "gpt-5.3-codex+rightcode",
+    model: "gpt-5.3-codex-high",
+    format: "openai-responses",
+    backend: "rightcode-openai",
     systemPrompt: aetherSystemPrompt,
   },
   // claudeOpus46Ikun: {
@@ -294,24 +307,10 @@ export const buildSystemPrompt = () => {
 `
 }
 
-export const getBackendConfig = (
-  backend: ChatBackend,
-  format?: ChatFormat,
-): BackendConfig => {
+export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
   const env = getServerEnv()
 
-  if (backend === 'rightcode') {
-    if (format === 'gemini') {
-      const apiKey = env.GEMINI_API_KEY_RIGHTCODE
-      const baseURL = env.GEMINI_BASE_URL_RIGHTCODE
-      if (!apiKey) throw new Error('Missing GEMINI_API_KEY_RIGHTCODE')
-      if (!baseURL) throw new Error('Missing GEMINI_BASE_URL_RIGHTCODE')
-      return {
-        apiKey,
-        baseURL,
-        defaultHeaders: { 'User-Agent': 'aether' },
-      }
-    }
+  if (backend === 'rightcode-claude') {
     const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE
     const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE
     if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_RIGHTCODE')
@@ -323,6 +322,30 @@ export const getBackendConfig = (
         'User-Agent': 'aether',
         'anthropic-beta': 'interleaved-thinking-2025-05-14',
       },
+    }
+  }
+
+  if (backend === 'rightcode-gemini') {
+    const apiKey = env.GEMINI_API_KEY_RIGHTCODE
+    const baseURL = env.GEMINI_BASE_URL_RIGHTCODE
+    if (!apiKey) throw new Error('Missing GEMINI_API_KEY_RIGHTCODE')
+    if (!baseURL) throw new Error('Missing GEMINI_BASE_URL_RIGHTCODE')
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: { 'User-Agent': 'aether' },
+    }
+  }
+
+  if (backend === 'rightcode-openai') {
+    const apiKey = env.OPENAI_API_KEY_RIGHTCODE
+    const baseURL = env.OPENAI_BASE_URL_RIGHTCODE
+    if (!apiKey) throw new Error('Missing OPENAI_API_KEY_RIGHTCODE')
+    if (!baseURL) throw new Error('Missing OPENAI_BASE_URL_RIGHTCODE')
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: { 'User-Agent': 'aether' },
     }
   }
 

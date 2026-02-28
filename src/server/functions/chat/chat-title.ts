@@ -23,7 +23,7 @@ export const generateTitleFromConversation = async (
 
   let backendConfig: ReturnType<typeof getBackendConfig>
   try {
-    backendConfig = getBackendConfig('rightcode', 'gemini')
+    backendConfig = getBackendConfig('rightcode-gemini')
   } catch {
     return FALLBACK_TITLE
   }
