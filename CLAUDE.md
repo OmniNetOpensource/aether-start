@@ -132,6 +132,7 @@ Server-side chat logic is implemented via Cloudflare Durable Objects + WebSocket
 
 - TypeScript + React
 - Follow existing file-local style (the repository currently has mixed quote/semicolon style across files)
+- Do not use `useMemo`, `useCallback`, or `React.memo`
 - Keep naming consistent:
   - Components: PascalCase
   - Hooks: `useX`
@@ -156,4 +157,3 @@ Server-side chat logic is implemented via Cloudflare Durable Objects + WebSocket
 - Persist and fetch via server functions in `conversation/persistence/server/functions/conversations` (e.g. `listConversationsPageFn`, `getConversationFn`)
 - Preserve message tree fields (`id`, sibling/child links, `createdAt`) when transforming
 - Use existing helpers in `conversation/model/tree/` for path/tree operations
-

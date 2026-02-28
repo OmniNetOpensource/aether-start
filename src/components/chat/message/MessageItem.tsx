@@ -1,5 +1,5 @@
 
-import { memo, useCallback, useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import Markdown from "@/components/Markdown";
 import { splitMarkdownParagraphs } from "@/lib/markdown";
 import { ImagePreview } from "@/components/ImagePreview";
@@ -96,7 +96,7 @@ type MessageItemProps = {
   isStreaming: boolean;
 };
 
-export const MessageItem = memo(function MessageItem({
+export function MessageItem({
   messageId,
   index,
   depth,
@@ -113,30 +113,17 @@ export const MessageItem = memo(function MessageItem({
   const retryFromMessage = useEditingStore((state) => state.retryFromMessage);
   const navigateBranch = useMessageTreeStore((state) => state.navigateBranch);
 
-  const branchInfo = useMemo(
-    () => getBranchInfoFn(useMessageTreeStore.getState().messages, messageId),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [message?.prevSibling, message?.nextSibling, messageId]
-  );
+  const branchInfo = getBranchInfoFn(useMessageTreeStore.getState().messages, messageId);
 
-  const handleStartEditing = useCallback(
-    () => startEditing(messageId),
-    [startEditing, messageId]
-  );
+  const handleStartEditing = () => startEditing(messageId);
 
-  const handleRetry = useCallback(
-    () => retryFromMessage(messageId, depth),
-    [retryFromMessage, messageId, depth]
-  );
+  const handleRetry = () => retryFromMessage(messageId, depth);
 
-  const handleNavigate = useCallback(
-    (direction: "prev" | "next") => {
-      if (!useChatRequestStore.getState().pending) {
-        navigateBranch(messageId, depth, direction);
-      }
-    },
-    [navigateBranch, messageId, depth]
-  );
+  const handleNavigate = (direction: "prev" | "next") => {
+    if (!useChatRequestStore.getState().pending) {
+      navigateBranch(messageId, depth, direction);
+    }
+  };
 
   if (!message) return null;
   const isUser = message.role === "user";
@@ -301,4 +288,4 @@ export const MessageItem = memo(function MessageItem({
       </div>
     </div>
   );
-});
+}

@@ -1,5 +1,5 @@
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { useToastStore } from "@/stores/toast";
 import { Toast } from "@/components/ui/toast";
 
@@ -8,21 +8,18 @@ export function ToastContainer() {
   const removeToast = useToastStore((state) => state.removeToast);
   const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
 
-  const handleClose = useCallback((id: string) => {
+  const handleClose = (id: string) => {
     setExitingIds((prev) => new Set(prev).add(id));
-  }, []);
+  };
 
-  const handleExited = useCallback(
-    (id: string) => {
-      setExitingIds((prev) => {
-        const next = new Set(prev);
-        next.delete(id);
-        return next;
-      });
-      removeToast(id);
-    },
-    [removeToast]
-  );
+  const handleExited = (id: string) => {
+    setExitingIds((prev) => {
+      const next = new Set(prev);
+      next.delete(id);
+      return next;
+    });
+    removeToast(id);
+  };
 
   return (
     <div

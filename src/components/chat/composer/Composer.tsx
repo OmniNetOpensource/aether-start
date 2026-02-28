@@ -3,7 +3,7 @@ import {
   ClipboardEvent,
   KeyboardEvent,
   MouseEvent,
-  useCallback,
+  useEffect,
   useRef,
 } from "react";
 import { useComposerStore } from "@/stores/useComposerStore";
@@ -48,10 +48,25 @@ export function Composer() {
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const textareaCallbackRef = useCallback((el: HTMLTextAreaElement | null) => {
+  const textareaCallbackRef = (el: HTMLTextAreaElement | null) => {
     textareaRef.current = el;
     setComposerTextarea(el);
-  }, []);
+  };
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.key.length !== 1) return
+
+      const tag = (e.target as HTMLElement)?.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
+      if ((e.target as HTMLElement)?.isContentEditable) return
+
+      textareaRef.current?.focus()
+    }
+    document.addEventListener('keydown', handleGlobalKeyDown)
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
+  }, [])
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     const isEnter = event.key === "Enter";

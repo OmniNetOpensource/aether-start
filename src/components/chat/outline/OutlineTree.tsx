@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import type { OutlineNode } from '@/lib/chat/build-outline-tree'
 import { cn } from '@/lib/utils'
 import {
@@ -103,7 +102,7 @@ export function OutlineTree({
   onSelect,
   disabled = false,
 }: OutlineTreeProps) {
-  const currentPathSet = useMemo(() => new Set(currentPath), [currentPath])
+  const currentPathSet = new Set(currentPath)
 
   if (nodes.length === 0) {
     return (

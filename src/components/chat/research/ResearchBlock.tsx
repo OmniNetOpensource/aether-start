@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import { Search, Link, Wrench } from 'lucide-react'
 import Markdown from '@/components/Markdown'
 import type { ResearchItem, Tool } from '@/types/message'
@@ -296,7 +295,7 @@ type ResearchBlockProps = {
   isActive?: boolean
 }
 
-export const ResearchBlock = memo(function ResearchBlock({
+export function ResearchBlock({
   items,
   blockIndex,
   messageIndex,
@@ -360,4 +359,4 @@ export const ResearchBlock = memo(function ResearchBlock({
       </ChainOfThoughtContent>
     </ChainOfThought>
   )
-})
+}

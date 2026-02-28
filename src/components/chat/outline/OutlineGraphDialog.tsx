@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import type { Message } from '@/types/message'
 import type { TreeLayout } from '@/lib/chat/tree-layout'
 import { NODE_H, NODE_W } from '@/lib/chat/tree-layout'
@@ -53,31 +53,23 @@ export function OutlineGraphDialog({
 }: OutlineGraphDialogProps) {
   const containerRef = useRef<HTMLDivElement | null>(null)
 
-  const currentPathSet = useMemo(() => new Set(currentPath), [currentPath])
-  const currentEdgeSet = useMemo(() => {
+  const currentPathSet = new Set(currentPath)
+  const currentEdgeSet = (() => {
     const next = new Set<string>()
     for (let index = 1; index < currentPath.length; index += 1) {
       next.add(edgeKey(currentPath[index - 1], currentPath[index]))
     }
     return next
-  }, [currentPath])
-
-  const nodeById = useMemo(() => {
-    const map = new Map<number, TreeLayout['nodes'][number]>()
-    if (!layout) {
-      return map
-    }
-
-    for (const node of layout.nodes) {
-      map.set(node.messageId, node)
-    }
-
-    return map
-  }, [layout])
+  })()
 
   useEffect(() => {
     if (!open || !layout || currentPath.length === 0) {
       return
+    }
+
+    const nodeById = new Map<number, TreeLayout['nodes'][number]>()
+    for (const node of layout.nodes) {
+      nodeById.set(node.messageId, node)
     }
 
     const lastId = currentPath[currentPath.length - 1]
@@ -113,7 +105,7 @@ export function OutlineGraphDialog({
       cancelAnimationFrame(frame1)
       cancelAnimationFrame(frame2)
     }
-  }, [open, layout, nodeById, currentPath])
+  }, [open, layout, currentPath])
 
   if (!layout || layout.nodes.length === 0) {
     return (

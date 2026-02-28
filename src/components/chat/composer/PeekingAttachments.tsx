@@ -1,5 +1,4 @@
 
-import { useMemo } from 'react'
 import { X } from 'lucide-react'
 import { ImagePreview } from '@/components/ImagePreview'
 import { Button } from '@/components/ui/button'
@@ -30,15 +29,11 @@ export function PeekingAttachments({
   attachments,
   onRemove,
 }: PeekingAttachmentsProps) {
-  const items = useMemo(
-    () =>
-      attachments.map((a) => ({
-        attachment: a,
-        rotate: seededAngle(a.id),
-        offsetY: seededOffset(a.id),
-      })),
-    [attachments],
-  )
+  const items = attachments.map((a) => ({
+    attachment: a,
+    rotate: seededAngle(a.id),
+    offsetY: seededOffset(a.id),
+  }))
 
   return (
     <div className="relative flex items-end justify-start pl-3 pb-0 -mb-1 h-0 z-0">

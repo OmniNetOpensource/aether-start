@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { FormEvent, useEffect, useRef, useState } from 'react'
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router'
 import { z } from 'zod'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -95,10 +95,7 @@ function AuthPage() {
   const navigate = useNavigate()
   const { redirect: redirectTarget, reset, email: initialEmail } = Route.useSearch()
 
-  const target = useMemo(
-    () => getSafeRedirectTarget(redirectTarget),
-    [redirectTarget],
-  )
+  const target = getSafeRedirectTarget(redirectTarget)
 
   const [mode, setMode] = useState<'login' | 'register'>('login')
   const [email, setEmail] = useState(initialEmail ?? '')

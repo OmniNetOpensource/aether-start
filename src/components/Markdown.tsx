@@ -1,4 +1,4 @@
-import { lazy, Suspense, memo } from 'react'
+import { lazy, Suspense } from 'react'
 
 type Props = {
   content: string
@@ -9,7 +9,7 @@ const MarkdownLazy = import.meta.env.SSR
   ? null
   : lazy(() => import('./MarkdownImpl'))
 
-const Markdown = memo(function Markdown({ content, isAnimating = false }: Props) {
+function Markdown({ content, isAnimating = false }: Props) {
   if (!MarkdownLazy) return null
 
   return (
@@ -17,6 +17,6 @@ const Markdown = memo(function Markdown({ content, isAnimating = false }: Props)
       <MarkdownLazy content={content} isAnimating={isAnimating} />
     </Suspense>
   )
-})
+}
 
 export default Markdown

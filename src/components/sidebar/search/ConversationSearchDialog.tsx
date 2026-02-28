@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { Loader2, Search } from 'lucide-react'
 import type { ConversationSearchItem } from '@/types/conversation'
@@ -78,7 +78,7 @@ export function ConversationSearchDialog({
 
   const hasMore = cursor !== null
 
-  const resetSearchState = useCallback(() => {
+  const resetSearchState = () => {
     requestIdRef.current += 1
     setDebouncedQuery('')
     setItems([])
@@ -86,30 +86,33 @@ export function ConversationSearchDialog({
     setLoading(false)
     setLoadingMore(false)
     setHasSearched(false)
-  }, [])
+  }
 
-  const closeAndClear = useCallback(() => {
+  const closeAndClear = () => {
     onOpenChange(false)
     setQuery('')
     resetSearchState()
-  }, [onOpenChange, resetSearchState])
+  }
 
-  const handleDialogOpenChange = useCallback(
-    (next: boolean) => {
-      if (next) {
-        onOpenChange(true)
-        return
-      }
+  const handleDialogOpenChange = (next: boolean) => {
+    if (next) {
+      onOpenChange(true)
+      return
+    }
 
-      closeAndClear()
-    },
-    [onOpenChange, closeAndClear],
-  )
+    closeAndClear()
+  }
 
   useEffect(() => {
     if (!open) {
       setQuery('')
-      resetSearchState()
+      requestIdRef.current += 1
+      setDebouncedQuery('')
+      setItems([])
+      setCursor(null)
+      setLoading(false)
+      setLoadingMore(false)
+      setHasSearched(false)
       return
     }
 
@@ -118,7 +121,7 @@ export function ConversationSearchDialog({
     }, 250)
 
     return () => window.clearTimeout(timer)
-  }, [open, query, resetSearchState])
+  }, [open, query])
 
   useEffect(() => {
     if (!open) {
@@ -178,47 +181,47 @@ export function ConversationSearchDialog({
       })
   }, [open, debouncedQuery])
 
-  const loadMore = useCallback(async () => {
-    if (!open || !debouncedQuery || loading || loadingMore || !cursor) {
-      return
-    }
-
-    const currentRequestId = requestIdRef.current + 1
-    requestIdRef.current = currentRequestId
-    setLoadingMore(true)
-
-    try {
-      const page = await searchConversationsFn({
-        data: {
-          query: debouncedQuery,
-          limit: PAGE_SIZE,
-          cursor,
-        },
-      })
-
-      if (requestIdRef.current !== currentRequestId) {
-        return
-      }
-
-      setItems((prev) => mergeSearchItems(prev, page.items))
-      setCursor(page.nextCursor)
-      setHasSearched(true)
-    } catch (error) {
-      if (requestIdRef.current !== currentRequestId) {
-        return
-      }
-
-      console.error('Failed to load more search results:', error)
-    } finally {
-      if (requestIdRef.current === currentRequestId) {
-        setLoadingMore(false)
-      }
-    }
-  }, [open, debouncedQuery, loading, loadingMore, cursor])
-
   useEffect(() => {
     if (!open || !hasMore || loading || loadingMore) {
       return
+    }
+
+    const loadMore = async () => {
+      if (!open || !debouncedQuery || loading || loadingMore || !cursor) {
+        return
+      }
+
+      const currentRequestId = requestIdRef.current + 1
+      requestIdRef.current = currentRequestId
+      setLoadingMore(true)
+
+      try {
+        const page = await searchConversationsFn({
+          data: {
+            query: debouncedQuery,
+            limit: PAGE_SIZE,
+            cursor,
+          },
+        })
+
+        if (requestIdRef.current !== currentRequestId) {
+          return
+        }
+
+        setItems((prev) => mergeSearchItems(prev, page.items))
+        setCursor(page.nextCursor)
+        setHasSearched(true)
+      } catch (error) {
+        if (requestIdRef.current !== currentRequestId) {
+          return
+        }
+
+        console.error('Failed to load more search results:', error)
+      } finally {
+        if (requestIdRef.current === currentRequestId) {
+          setLoadingMore(false)
+        }
+      }
     }
 
     const target = sentinelRef.current
@@ -243,18 +246,15 @@ export function ConversationSearchDialog({
     observer.observe(target)
 
     return () => observer.disconnect()
-  }, [open, hasMore, loading, loadingMore, loadMore])
+  }, [open, hasMore, loading, loadingMore, debouncedQuery, cursor])
 
-  const handleSelect = useCallback(
-    (item: ConversationSearchItem) => {
-      closeAndClear()
-      navigate({
-        to: '/app/c/$conversationId',
-        params: { conversationId: item.id },
-      })
-    },
-    [navigate, closeAndClear],
-  )
+  const handleSelect = (item: ConversationSearchItem) => {
+    closeAndClear()
+    navigate({
+      to: '/app/c/$conversationId',
+      params: { conversationId: item.id },
+    })
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>

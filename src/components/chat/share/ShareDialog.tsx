@@ -9,7 +9,7 @@ import {
   Loader2,
   XCircle,
 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Message } from '@/types/message'
 import type { ConversationShareStatus } from '@/types/share'
 import { useChatRequestStore } from '@/stores/useChatRequestStore'
@@ -96,72 +96,36 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const [shareActionLoading, setShareActionLoading] = useState<'create' | 'revoke' | null>(null)
   const [copied, setCopied] = useState(false)
 
-  const pathMessages = useMemo(() => {
-    return currentPath
-      .map((id, pathIndex) => {
-        const message = messages[id - 1]
-        if (!message) return null
-        return { id, pathIndex, message } satisfies ShareablePathMessage
-      })
-      .filter((item): item is ShareablePathMessage => item !== null)
-  }, [currentPath, messages])
+  const pathMessages = currentPath
+    .map((id, pathIndex) => {
+      const message = messages[id - 1]
+      if (!message) return null
+      return { id, pathIndex, message } satisfies ShareablePathMessage
+    })
+    .filter((item): item is ShareablePathMessage => item !== null)
 
-  const selectedMessages = useMemo(
-    () => pathMessages.filter(({ id }) => selectedIds.has(id)),
-    [pathMessages, selectedIds]
-  )
+  const selectedMessages = pathMessages.filter(({ id }) => selectedIds.has(id))
 
   const selectedCount = selectedMessages.length
 
-  const selectedRenderableMessages = useMemo(
-    () =>
-      selectedMessages.map(({ message }) => ({
-        id: message.id,
-        role: message.role,
-        blocks: message.blocks,
-      })) as ShareRenderableMessage[],
-    [selectedMessages]
-  )
+  const selectedRenderableMessages = selectedMessages.map(({ message }) => ({
+    id: message.id,
+    role: message.role,
+    blocks: message.blocks,
+  })) as ShareRenderableMessage[]
 
-  const conversationTitle = useMemo(() => {
+  const conversationTitle = (() => {
     if (!conversationId) {
       return 'Aether'
     }
 
     const conversation = conversations.find((item) => item.id === conversationId)
     return conversation?.title?.trim() || 'Aether'
-  }, [conversationId, conversations])
+  })()
 
   const shareUrl = shareToken ? buildShareUrl(shareToken) : null
 
-  const loadShareStatus = useCallback(async () => {
-    if (!conversationId) {
-      setShareStatus('not_shared')
-      setShareToken(null)
-      return
-    }
-
-    setShareLoading(true)
-    try {
-      const result = await getConversationShareFn({
-        data: {
-          conversationId,
-        },
-      })
-
-      setShareStatus(result.status)
-      setShareToken(result.token ?? null)
-    } catch (loadError) {
-      console.error('Failed to load share status', loadError)
-      toast.error('读取分享状态失败')
-      setShareStatus('not_shared')
-      setShareToken(null)
-    } finally {
-      setShareLoading(false)
-    }
-  }, [conversationId])
-
-  const resetState = useCallback(() => {
+  const resetState = () => {
     setStep('select')
     setSelectedIds(new Set())
     setPreviewDataUrl(null)
@@ -172,26 +136,48 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     setShareLoading(false)
     setShareActionLoading(null)
     setCopied(false)
-  }, [])
+  }
 
-  const handleDialogOpenChange = useCallback(
-    (nextOpen: boolean) => {
-      if (!nextOpen) {
-        resetState()
-      }
-      onOpenChange(nextOpen)
-    },
-    [onOpenChange, resetState]
-  )
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetState()
+    }
+    onOpenChange(nextOpen)
+  }
 
   useEffect(() => {
     if (!open) {
       return
     }
-    void loadShareStatus()
-  }, [open, loadShareStatus])
+    if (!conversationId) {
+      setShareStatus('not_shared')
+      setShareToken(null)
+      return
+    }
 
-  const toggleMessageSelection = useCallback((id: number) => {
+    void (async () => {
+      setShareLoading(true)
+      try {
+        const result = await getConversationShareFn({
+          data: {
+            conversationId,
+          },
+        })
+
+        setShareStatus(result.status)
+        setShareToken(result.token ?? null)
+      } catch (loadError) {
+        console.error('Failed to load share status', loadError)
+        toast.error('读取分享状态失败')
+        setShareStatus('not_shared')
+        setShareToken(null)
+      } finally {
+        setShareLoading(false)
+      }
+    })()
+  }, [open, conversationId])
+
+  const toggleMessageSelection = (id: number) => {
     setSelectedIds((prev) => {
       const next = new Set(prev)
       if (next.has(id)) {
@@ -201,17 +187,17 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
       }
       return next
     })
-  }, [])
+  }
 
-  const handleSelectAll = useCallback(() => {
+  const handleSelectAll = () => {
     setSelectedIds(new Set(pathMessages.map((item) => item.id)))
-  }, [pathMessages])
+  }
 
-  const handleClearAll = useCallback(() => {
+  const handleClearAll = () => {
     setSelectedIds(new Set())
-  }, [])
+  }
 
-  const handleCreateOrReactivateShare = useCallback(async () => {
+  const handleCreateOrReactivateShare = async () => {
     if (!conversationId) {
       toast.error('当前会话不可分享')
       return
@@ -239,9 +225,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     } finally {
       setShareActionLoading(null)
     }
-  }, [conversationId, conversationTitle, pathMessages])
+  }
 
-  const handleRevokeShare = useCallback(async () => {
+  const handleRevokeShare = async () => {
     if (!conversationId) {
       return
     }
@@ -261,9 +247,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     } finally {
       setShareActionLoading(null)
     }
-  }, [conversationId])
+  }
 
-  const handleCopyShareUrl = useCallback(async () => {
+  const handleCopyShareUrl = async () => {
     if (!shareUrl) {
       return
     }
@@ -277,9 +263,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
       console.error('Failed to copy share url', copyError)
       toast.error('复制失败，请手动复制')
     }
-  }, [shareUrl])
+  }
 
-  const generatePreview = useCallback(async () => {
+  const generatePreview = async () => {
     if (selectedCount === 0) {
       return
     }
@@ -319,9 +305,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
       restoreCrossOriginImages?.()
       setIsGenerating(false)
     }
-  }, [selectedCount])
+  }
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = () => {
     if (!previewDataUrl) {
       return
     }
@@ -329,7 +315,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     const titlePart = sanitizeFilename(conversationTitle)
     const filename = `Aether-${titlePart}.png`
     downloadDataUrl(previewDataUrl, filename)
-  }, [conversationTitle, previewDataUrl])
+  }
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>

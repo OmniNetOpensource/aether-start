@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { GitBranch } from 'lucide-react'
 import { useChatRequestStore } from '@/stores/useChatRequestStore'
 import { OutlineGraphDialog } from './OutlineGraphDialog'
@@ -52,7 +52,7 @@ export function OutlineButton() {
   const latestRootId = useMessageTreeStore((state) => state.latestRootId)
   const pending = useChatRequestStore((state) => state.pending)
 
-  const outline = useMemo(() => {
+  const outline = (() => {
     if (!open) {
       return null
     }
@@ -63,46 +63,43 @@ export function OutlineButton() {
       ...nextOutline,
       layout: computeTreeLayout(nextOutline.roots),
     }
-  }, [open, messages, latestRootId])
+  })()
 
-  const handleSelect = useCallback(
-    (targetMessageId: number) => {
-      if (currentPath.includes(targetMessageId)) {
-        setOpen(false)
-        scrollToMessage(targetMessageId)
-        return
-      }
-
-      if (!outline) {
-        return
-      }
-
-      const targetPath = findPathToMessage(outline.parentById, targetMessageId)
-      if (targetPath.length === 0) {
-        return
-      }
-
-      const treeStore = useMessageTreeStore.getState()
-      let nextState = treeStore._getTreeState()
-
-      for (let index = 0; index < targetPath.length; index += 1) {
-        const depth = index + 1
-        const nodeId = targetPath[index]
-        nextState = switchBranch(nextState, depth, nodeId)
-      }
-
-      treeStore._setTreeState({
-        messages: nextState.messages,
-        currentPath: nextState.currentPath,
-        latestRootId: nextState.latestRootId,
-        nextId: nextState.nextId,
-      })
-
+  const handleSelect = (targetMessageId: number) => {
+    if (currentPath.includes(targetMessageId)) {
       setOpen(false)
       scrollToMessage(targetMessageId)
-    },
-    [currentPath, outline]
-  )
+      return
+    }
+
+    if (!outline) {
+      return
+    }
+
+    const targetPath = findPathToMessage(outline.parentById, targetMessageId)
+    if (targetPath.length === 0) {
+      return
+    }
+
+    const treeStore = useMessageTreeStore.getState()
+    let nextState = treeStore._getTreeState()
+
+    for (let index = 0; index < targetPath.length; index += 1) {
+      const depth = index + 1
+      const nodeId = targetPath[index]
+      nextState = switchBranch(nextState, depth, nodeId)
+    }
+
+    treeStore._setTreeState({
+      messages: nextState.messages,
+      currentPath: nextState.currentPath,
+      latestRootId: nextState.latestRootId,
+      nextId: nextState.nextId,
+    })
+
+    setOpen(false)
+    scrollToMessage(targetMessageId)
+  }
 
   if (currentPath.length === 0) {
     return null

@@ -1,4 +1,3 @@
-import { memo } from 'react'
 import { Streamdown } from 'streamdown'
 import { createCodePlugin } from '@streamdown/code'
 import { math } from '@streamdown/math'
@@ -16,7 +15,7 @@ const codePlugin = createCodePlugin({
 
 const plugins = { code: codePlugin, math, cjk }
 
-const MarkdownImpl = memo(function MarkdownImpl({
+function MarkdownImpl({
   content,
   isAnimating = false,
 }: Props) {
@@ -35,6 +34,6 @@ const MarkdownImpl = memo(function MarkdownImpl({
       ))}
     </div>
   )
-})
+}
 
 export default MarkdownImpl

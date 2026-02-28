@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Lightbulb, Loader2, Plus } from 'lucide-react'
 import { NoteCard } from '@/components/notes/NoteCard'
@@ -57,6 +57,17 @@ const collectClipboardFiles = (clipboardData: DataTransfer | null) => {
   }
 
   return pastedFiles
+}
+
+const createEmptyNote = (): NoteItem => {
+  const now = new Date().toISOString()
+  return {
+    id: generateNoteId(),
+    content: '',
+    attachments: [],
+    created_at: now,
+    updated_at: now,
+  }
 }
 
 function NotesPage() {
@@ -159,14 +170,9 @@ function NotesPage() {
     return () => window.removeEventListener('paste', handlePaste)
   }, [creatingByPaste, isDialogOpen, upsertNote])
 
-  const selectedNote = useMemo(() => {
-    if (!editingNote) {
-      return null
-    }
-
-    const latest = notes.find((item) => item.id === editingNote.id)
-    return latest ?? editingNote
-  }, [editingNote, notes])
+  const selectedNote = editingNote
+    ? notes.find((item) => item.id === editingNote.id) ?? editingNote
+    : null
 
   const handleStartConversation = (note: NoteItem) => {
     useChatRequestStore.getState().clear()
@@ -180,16 +186,9 @@ function NotesPage() {
     void navigate({ to: '/app' })
   }
 
-  const handleCreateNote = useCallback(() => {
-    const now = new Date().toISOString()
-    setEditingNote({
-      id: generateNoteId(),
-      content: '',
-      attachments: [],
-      created_at: now,
-      updated_at: now,
-    })
-  }, [])
+  const handleCreateNote = () => {
+    setEditingNote(createEmptyNote())
+  }
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -200,13 +199,13 @@ function NotesPage() {
       if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
         event.preventDefault()
         if (!isDialogOpen) {
-          handleCreateNote()
+          setEditingNote(createEmptyNote())
         }
       }
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isDialogOpen, handleCreateNote])
+  }, [isDialogOpen])
 
   return (
     <div className='flex h-full min-h-0 w-full flex-col'>

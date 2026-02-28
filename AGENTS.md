@@ -24,10 +24,10 @@ Use `pnpm` for all tasks.
 - TypeScript + React; follow existing patterns (2-space indent, single quotes, no semicolons).
 - Components use PascalCase (`MessageList.tsx`), hooks use `useX` naming, and stores use `*Store`.
 - Route file names mirror paths (e.g., `index.tsx`, `__root.tsx`, `$param.tsx`).
+- Do not use `useMemo`, `useCallback`, or `React.memo` in this repository.
 - Keep changes ESLint-clean; lint rules live in `eslint.config.mjs`.
 
 ## Configuration & Secrets
 - Local secrets live in `.env.local` (for example: `ANTHROPIC_API_KEY`, `ANTHROPIC_BASE_URL`, `SERP_API_KEY`, `JINA_API_KEY`, `SUPADATA_API_KEY`).
 - Cloudflare bindings are configured in `wrangler.jsonc` (`DB` for D1, `CHAT_ASSETS` for R2).
 - Never commit real secrets; `NEXT_PUBLIC_*` values are exposed to the client.
-

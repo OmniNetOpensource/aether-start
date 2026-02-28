@@ -44,7 +44,7 @@ export function ModelSelector() {
     roles.find((role) => role.id === currentRole)?.name ?? "选择模型"
 
   // 按 provider 分组
-  const grouped = React.useMemo(() => {
+  const grouped = (() => {
     const map = new Map<string, { id: string; name: string }[]>()
     for (const role of roles) {
       const provider = getProviderFromRole(role.id, role.name)
@@ -55,7 +55,7 @@ export function ModelSelector() {
     return Array.from(map.entries()).sort(([a], [b]) =>
       a === "其他" ? 1 : b === "其他" ? -1 : a.localeCompare(b)
     )
-  }, [roles])
+  })()
 
   const toolButtonBaseClass =
     "h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground"

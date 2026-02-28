@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { RefObject } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Quote, Volume2, Loader2, Square } from 'lucide-react'
@@ -34,7 +34,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
 
   const hasSelection = Boolean(text && rect)
 
-  const clearSelection = useCallback(() => {
+  const clearSelection = () => {
     if (typeof window !== 'undefined') {
       const current = window.getSelection()
       if (current) current.removeAllRanges()
@@ -42,58 +42,58 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
     setText('')
     setRect(null)
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
-  }, [])
-
-  const updateSelection = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    if (typeof window === 'undefined') return
-
-    timeoutRef.current = setTimeout(() => {
-      const current = window.getSelection()
-      if (!current || current.isCollapsed || current.rangeCount === 0) {
-        setText('')
-        setRect(null)
-        return
-      }
-
-      const selectedText = current.toString().trim()
-      if (!selectedText) {
-        setText('')
-        setRect(null)
-        return
-      }
-
-      const range = current.getRangeAt(0)
-      const container = getSelectionContainer(range)
-      const root = containerRef.current
-
-      if (!root || !container || !root.contains(container)) {
-        setText('')
-        setRect(null)
-        return
-      }
-
-      const messageElement = container.closest("[data-role='assistant']")
-      if (!messageElement) {
-        setText('')
-        setRect(null)
-        return
-      }
-
-      const selRect = getSelectionRect(range)
-      if (!selRect) {
-        setText('')
-        setRect(null)
-        return
-      }
-
-      setText(selectedText)
-      setRect(selRect)
-    }, 250)
-  }, [containerRef])
+  }
 
   // Listen for mouseup/touchend on the container to detect selections
   useEffect(() => {
+    const updateSelection = () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+      if (typeof window === 'undefined') return
+
+      timeoutRef.current = setTimeout(() => {
+        const current = window.getSelection()
+        if (!current || current.isCollapsed || current.rangeCount === 0) {
+          setText('')
+          setRect(null)
+          return
+        }
+
+        const selectedText = current.toString().trim()
+        if (!selectedText) {
+          setText('')
+          setRect(null)
+          return
+        }
+
+        const range = current.getRangeAt(0)
+        const container = getSelectionContainer(range)
+        const root = containerRef.current
+
+        if (!root || !container || !root.contains(container)) {
+          setText('')
+          setRect(null)
+          return
+        }
+
+        const messageElement = container.closest("[data-role='assistant']")
+        if (!messageElement) {
+          setText('')
+          setRect(null)
+          return
+        }
+
+        const selRect = getSelectionRect(range)
+        if (!selRect) {
+          setText('')
+          setRect(null)
+          return
+        }
+
+        setText(selectedText)
+        setRect(selRect)
+      }, 250)
+    }
+
     const el = containerRef.current
     if (!el) return
     el.addEventListener('mouseup', updateSelection)
@@ -102,23 +102,33 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
       el.removeEventListener('mouseup', updateSelection)
       el.removeEventListener('touchend', updateSelection)
     }
-  }, [containerRef, updateSelection])
+  }, [containerRef])
 
   // Clear selection when clicking outside toolbar
   useEffect(() => {
     if (!text) return
 
+    const clearSelectionFromEffect = () => {
+      if (typeof window !== 'undefined') {
+        const current = window.getSelection()
+        if (current) current.removeAllRanges()
+      }
+      setText('')
+      setRect(null)
+      if (timeoutRef.current) clearTimeout(timeoutRef.current)
+    }
+
     const handleMouseDown = (event: MouseEvent) => {
       if (event.target instanceof Element && event.target.closest('[data-selection-toolbar]')) return
       const root = containerRef.current
-      if (!root) { clearSelection(); return }
+      if (!root) { clearSelectionFromEffect(); return }
       if (event.target instanceof Node && root.contains(event.target)) return
-      clearSelection()
+      clearSelectionFromEffect()
     }
 
     document.addEventListener('mousedown', handleMouseDown)
     return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [text, containerRef, clearSelection])
+  }, [text, containerRef])
 
   // Clear when browser selection collapses
   useEffect(() => {
@@ -201,7 +211,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const objectUrlRef = useRef<string | null>(null)
 
-  const cleanup = useCallback(() => {
+  const cleanup = () => {
     if (audioRef.current) {
       audioRef.current.pause()
       audioRef.current = null
@@ -210,7 +220,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
       URL.revokeObjectURL(objectUrlRef.current)
       objectUrlRef.current = null
     }
-  }, [])
+  }
 
   const handleTts = async () => {
     if (ttsState === 'playing') {
