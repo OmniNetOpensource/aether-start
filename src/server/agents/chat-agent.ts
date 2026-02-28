@@ -507,7 +507,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
       let iteration = 0
 
-      const backendConfig = getBackendConfig(roleConfig.backend)
+      const backendConfig = getBackendConfig(roleConfig.backend, roleConfig.format)
 
       switch (roleConfig.format) {
         case 'openai': {

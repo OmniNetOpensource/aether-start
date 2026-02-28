@@ -147,7 +147,7 @@ export const runArenaRoundForRole = async (input: {
     return [{ type: 'error', message: 'Missing user prompt' }]
   }
 
-  const backendConfig = getBackendConfig(roleConfig.backend)
+  const backendConfig = getBackendConfig(roleConfig.backend, roleConfig.format)
   const tools = getAvailableTools()
 
   let blocks: AssistantContentBlock[] = []

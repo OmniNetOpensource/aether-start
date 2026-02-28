@@ -19,7 +19,9 @@ import { useChatRequestStore } from "@/stores/useChatRequestStore"
 function getProviderFromRole(roleId: string, roleName: string): string {
   const lower = (roleId + roleName).toLowerCase()
   if (lower.includes("claude")) return "Anthropic"
-  if (lower.includes("qwen") || lower.includes("glm")) return "国产模型"
+  if (lower.includes("gemini")) return "Gemini"
+  if (lower.includes("qwen")) return "千问"
+  if (lower.includes("glm")) return "智谱"
   if (lower.includes("minimax")) return "MiniMax"
   if (lower.includes("doubao")) return "豆包"
   if (lower.includes("kimi")) return "Kimi"

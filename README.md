@@ -81,13 +81,17 @@ src/
 ```env
 ANTHROPIC_API_KEY_RIGHTCODE=必填 basic线路key
 ANTHROPIC_BASE_URL_RIGHTCODE=必填 basic线路baseURL
+ANTHROPIC_API_KEY_IKUNCODE=可选 ikun 线路 key
+ANTHROPIC_BASE_URL_IKUNCODE=可选 ikun 线路 baseURL
+GEMINI_API_KEY_RIGHTCODE=可选 Gemini+rightcode 线路 key
+GEMINI_BASE_URL_RIGHTCODE=可选 Gemini+rightcode 线路 baseURL
 DMX_APIKEY=推荐 pro线路key（优先）
 DMX_BASEURL=推荐 pro线路baseURL（优先）
 SERP_API_KEY=可选 搜索功能要用
 JINA_API_KEY=可选 URL 抓取要用
 ```
 
-说明：`backend=dmx` 的聊天请求使用 OpenAI `chat.completions` 协议，且仅读取 `DMX_APIKEY` / `DMX_BASEURL`。
+说明：`backend=dmx` 的聊天请求使用 OpenAI `chat.completions` 协议，且仅读取 `DMX_APIKEY` / `DMX_BASEURL`。`format=gemini` 且 `backend=rightcode` 时使用 `GEMINI_API_KEY_RIGHTCODE` / `GEMINI_BASE_URL_RIGHTCODE`。`backend=ikun` 时使用 `ANTHROPIC_API_KEY_IKUNCODE` / `ANTHROPIC_BASE_URL_IKUNCODE`。
 
 ---
 

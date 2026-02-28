@@ -1,5 +1,6 @@
-import OpenAI from 'openai'
 import { getBackendConfig } from '@/server/agents/services/chat-config'
+import { getGeminiClient } from '@/server/agents/services/gemini'
+import { log } from '@/server/agents/services/logger'
 
 const FALLBACK_TITLE = 'New Chat'
 
@@ -10,7 +11,7 @@ const sanitizeTitle = (value: string) => {
     .trim()
 }
 const CONVERSATION_TITLE_TIMEOUT_MS = 60_000
-const TITLE_MODEL = 'qwen3.5-plus'
+const TITLE_MODEL = 'gemini-3-flash-preview'
 
 export const generateTitleFromConversation = async (
   userText: string,
@@ -20,9 +21,9 @@ export const generateTitleFromConversation = async (
     return FALLBACK_TITLE
   }
 
-  let dmxConfig: ReturnType<typeof getBackendConfig>
+  let backendConfig: ReturnType<typeof getBackendConfig>
   try {
-    dmxConfig = getBackendConfig('dmx')
+    backendConfig = getBackendConfig('rightcode', 'gemini')
   } catch {
     return FALLBACK_TITLE
   }
@@ -34,26 +35,20 @@ export const generateTitleFromConversation = async (
   ].filter((line) => line.length > 0)
 
   const prompt = promptLines.join('\n')
-
-  const client = new OpenAI({
-    apiKey: dmxConfig.apiKey,
-    baseURL: dmxConfig.baseURL,
-    defaultHeaders: dmxConfig.defaultHeaders,
-  })
+  const client = getGeminiClient(backendConfig)
 
   try {
-    const response = await client.chat.completions.create(
-      {
-        model: TITLE_MODEL,
-        max_tokens: 64,
+    const response = await client.models.generateContent({
+      model: TITLE_MODEL,
+      contents: prompt,
+      config: {
+        maxOutputTokens: 64,
         temperature: 0.2,
-        messages: [{ role: 'user', content: prompt }],
+        abortSignal: AbortSignal.timeout(CONVERSATION_TITLE_TIMEOUT_MS),
       },
-      { signal: AbortSignal.timeout(CONVERSATION_TITLE_TIMEOUT_MS) },
-    )
+    })
 
-    const rawTitle =
-      response.choices[0]?.message?.content?.trim() ?? ''
+    const rawTitle = response.text?.trim() ?? ''
 
     const title =
       typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : ''
@@ -62,10 +57,10 @@ export const generateTitleFromConversation = async (
   } catch (error) {
     const message =
       error instanceof Error ? error.message : String(error)
-    const stack = error instanceof Error ? error.stack : undefined
-    console.error('Title generation from conversation failed:', message)
-    if (stack) console.error(stack)
-    console.error('Full error:', error)
+    log('TITLE', 'Title generation from conversation failed', {
+      error: message,
+      fullError: error,
+    })
     return FALLBACK_TITLE
   }
 }

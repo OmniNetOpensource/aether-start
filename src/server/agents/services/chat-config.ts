@@ -1,7 +1,7 @@
 import { getServerEnv } from '@/server/env'
 
 export type ChatFormat = 'anthropic' | 'openai' | 'gemini'
-export type ChatBackend = 'rightcode' | 'dmx'
+export type ChatBackend = 'rightcode' | 'dmx' | 'ikun'
 
 export type BackendConfig = {
   apiKey: string
@@ -125,14 +125,14 @@ const aetherSystemPrompt = `
 
 `;
 const ROLE_CONFIGS: Record<string, RoleConfig> = {
-  claudeSonnet46Thinking: {
-    id: "claudeSonnet46Thinking",
-    name: "claude-sonnet-4-6-thinking+dmx",
-    model: "claude-sonnet-4-6-thinking",
-    format: "openai",
-    backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
-  },
+  // claudeSonnet46Thinking: {
+  //   id: "claudeSonnet46Thinking",
+  //   name: "claude-sonnet-4-6-thinking+dmx",
+  //   model: "claude-sonnet-4-6-thinking",
+  //   format: "openai",
+  //   backend: "dmx",
+  //   systemPrompt: aetherSystemPrompt,
+  // },
   // aether: {
   //   id: "aether",
   //   name: "aether",
@@ -205,6 +205,22 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     backend: "dmx",
     systemPrompt: aetherSystemPrompt,
   },
+  gemini31ProRightcode: {
+    id: "gemini31ProRightcode",
+    name: "gemini-3.1-pro-preview+rightcode",
+    model: "gemini-3.1-pro-preview",
+    format: "gemini",
+    backend: "rightcode",
+    systemPrompt: aetherSystemPrompt,
+  },
+  claudeOpus46Ikun: {
+    id: "claudeOpus46Ikun",
+    name: "claude-opus-4-6+ikun",
+    model: "claude-opus-4-6",
+    format: "anthropic",
+    backend: "ikun",
+    systemPrompt: aetherSystemPrompt,
+  },
   // 英语教学专家: {
   //   id: "英语教学专家",
   //   name: "英语教学专家",
@@ -215,7 +231,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   // },
 };
 export const ARENA_ROLE_POOL = [
-  'claudeSonnet46Thinking',
+  // 'claudeSonnet46Thinking',
   'test3',
   'minimaxM25',
   'glm5',
@@ -278,14 +294,43 @@ export const buildSystemPrompt = () => {
 `
 }
 
-export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
+export const getBackendConfig = (
+  backend: ChatBackend,
+  format?: ChatFormat,
+): BackendConfig => {
   const env = getServerEnv()
 
   if (backend === 'rightcode') {
+    if (format === 'gemini') {
+      const apiKey = env.GEMINI_API_KEY_RIGHTCODE
+      const baseURL = env.GEMINI_BASE_URL_RIGHTCODE
+      if (!apiKey) throw new Error('Missing GEMINI_API_KEY_RIGHTCODE')
+      if (!baseURL) throw new Error('Missing GEMINI_BASE_URL_RIGHTCODE')
+      return {
+        apiKey,
+        baseURL,
+        defaultHeaders: { 'User-Agent': 'aether' },
+      }
+    }
     const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE
     const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE
     if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_RIGHTCODE')
     if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_RIGHTCODE')
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: {
+        'User-Agent': 'aether',
+        'anthropic-beta': 'interleaved-thinking-2025-05-14',
+      },
+    }
+  }
+
+  if (backend === 'ikun') {
+    const apiKey = env.ANTHROPIC_API_KEY_IKUNCODE
+    const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE
+    if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_IKUNCODE')
+    if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_IKUNCODE')
     return {
       apiKey,
       baseURL,

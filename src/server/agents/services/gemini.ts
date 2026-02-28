@@ -25,7 +25,7 @@ type GeminiChatProviderConfig = {
   systemPrompt?: string
 }
 
-const getClient = (config: BackendConfig) => {
+export const getGeminiClient = (config: BackendConfig) => {
   return new GoogleGenAI({
     apiKey: config.apiKey,
     httpOptions: {
@@ -34,6 +34,8 @@ const getClient = (config: BackendConfig) => {
     },
   })
 }
+
+const getClient = getGeminiClient
 
 const convertToolsToGemini = (tools: ChatTool[]): genai.FunctionDeclaration[] => {
   return tools

@@ -92,7 +92,7 @@ const loggingFetch: typeof fetch = async (input, init) => {
   })
 }
 
-const getClient = (config: BackendConfig) => {
+export const getOpenAIClient = (config: BackendConfig) => {
   return new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseURL,
@@ -314,7 +314,7 @@ export class OpenAIChatProvider {
     const toolCallsByIndex = new Map<number, { id: string; name: string; argsJson: string }>()
 
     try {
-      const client = getClient(this.backendConfig)
+      const client = getOpenAIClient(this.backendConfig)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const streamParams: any = {
