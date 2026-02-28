@@ -12,7 +12,7 @@ export const Route = createFileRoute('/app')({
 
     const target = `${location.pathname}${location.search}${location.hash}`
     throw redirect({
-      href: `/auth?redirect=${encodeURIComponent(target)}`,
+      href: `/auth/login?redirect=${encodeURIComponent(target)}`,
     })
   },
   component: AppLayout,

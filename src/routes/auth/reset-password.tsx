@@ -106,7 +106,7 @@ function ResetPasswordPage() {
       }
 
       await navigate({
-        href: '/auth?reset=success',
+        href: '/auth/login?reset=success',
         replace: true,
       })
     } catch (resetError) {
@@ -163,7 +163,7 @@ function ResetPasswordPage() {
                 <Link to="/auth/forgot-password">重新发起重置</Link>
               </Button>
               <Button asChild className="w-full" variant="ghost">
-                <Link to="/auth">返回登录</Link>
+                <Link to="/auth/login">返回登录</Link>
               </Button>
             </motion.div>
           ) : (
@@ -253,7 +253,7 @@ function ResetPasswordPage() {
                 </Button>
 
                 <Button className="w-full" variant="ghost" asChild>
-                  <Link to="/auth">返回登录</Link>
+                  <Link to="/auth/login">返回登录</Link>
                 </Button>
               </div>
             </motion.form>

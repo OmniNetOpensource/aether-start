@@ -8,6 +8,6 @@ export const Route = createFileRoute('/')({
       throw redirect({ to: '/app' })
     }
 
-    throw redirect({ to: '/auth' })
+    throw redirect({ to: '/auth/login' })
   },
 })

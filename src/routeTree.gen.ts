@@ -15,7 +15,10 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ShareTokenRouteImport } from './routes/share/$token'
+import { Route as AuthVerifyEmailRouteImport } from './routes/auth/verify-email'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
+import { Route as AuthRegisterRouteImport } from './routes/auth/register'
+import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AppNotesRouteImport } from './routes/app/notes'
 import { Route as AppLeaderboardRouteImport } from './routes/app/leaderboard'
@@ -56,9 +59,24 @@ const ShareTokenRoute = ShareTokenRouteImport.update({
   path: '/share/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthVerifyEmailRoute = AuthVerifyEmailRouteImport.update({
+  id: '/auth/verify-email',
+  path: '/auth/verify-email',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/auth/reset-password',
   path: '/auth/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRegisterRoute = AuthRegisterRouteImport.update({
+  id: '/auth/register',
+  path: '/auth/register',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/auth/login',
+  path: '/auth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
@@ -117,7 +135,10 @@ export interface FileRoutesByFullPath {
   '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
@@ -134,7 +155,10 @@ export interface FileRoutesByTo {
   '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/share/$token': typeof ShareTokenRoute
   '/app': typeof AppIndexRoute
   '/auth': typeof AuthIndexRoute
@@ -153,7 +177,10 @@ export interface FileRoutesById {
   '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/verify-email': typeof AuthVerifyEmailRoute
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
@@ -173,7 +200,10 @@ export interface FileRouteTypes {
     | '/app/leaderboard'
     | '/app/notes'
     | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/register'
     | '/auth/reset-password'
+    | '/auth/verify-email'
     | '/share/$token'
     | '/app/'
     | '/auth/'
@@ -190,7 +220,10 @@ export interface FileRouteTypes {
     | '/app/leaderboard'
     | '/app/notes'
     | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/register'
     | '/auth/reset-password'
+    | '/auth/verify-email'
     | '/share/$token'
     | '/app'
     | '/auth'
@@ -208,7 +241,10 @@ export interface FileRouteTypes {
     | '/app/leaderboard'
     | '/app/notes'
     | '/auth/forgot-password'
+    | '/auth/login'
+    | '/auth/register'
     | '/auth/reset-password'
+    | '/auth/verify-email'
     | '/share/$token'
     | '/app/'
     | '/auth/'
@@ -224,7 +260,10 @@ export interface RootRouteChildren {
   R404Route: typeof R404Route
   ApiSentryRoute: typeof ApiSentryRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthRegisterRoute: typeof AuthRegisterRoute
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthVerifyEmailRoute: typeof AuthVerifyEmailRoute
   ShareTokenRoute: typeof ShareTokenRoute
   AuthIndexRoute: typeof AuthIndexRoute
   ApiAssetsKeyRoute: typeof ApiAssetsKeyRoute
@@ -276,11 +315,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShareTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/verify-email': {
+      id: '/auth/verify-email'
+      path: '/auth/verify-email'
+      fullPath: '/auth/verify-email'
+      preLoaderRoute: typeof AuthVerifyEmailRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/reset-password': {
       id: '/auth/reset-password'
       path: '/auth/reset-password'
       fullPath: '/auth/reset-password'
       preLoaderRoute: typeof AuthResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/register': {
+      id: '/auth/register'
+      path: '/auth/register'
+      fullPath: '/auth/register'
+      preLoaderRoute: typeof AuthRegisterRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/auth/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/forgot-password': {
@@ -375,7 +435,10 @@ const rootRouteChildren: RootRouteChildren = {
   R404Route: R404Route,
   ApiSentryRoute: ApiSentryRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthRegisterRoute: AuthRegisterRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
+  AuthVerifyEmailRoute: AuthVerifyEmailRoute,
   ShareTokenRoute: ShareTokenRoute,
   AuthIndexRoute: AuthIndexRoute,
   ApiAssetsKeyRoute: ApiAssetsKeyRoute,

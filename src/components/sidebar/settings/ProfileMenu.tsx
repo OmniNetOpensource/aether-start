@@ -53,7 +53,7 @@ export function ProfileMenu({ isCollapsed = false }: ProfileMenuProps) {
       useConversationsStore.getState().reset();
       useNotesStore.getState().reset();
       clearConversationEventCursors();
-      await navigate({ href: "/auth", replace: true });
+      await navigate({ href: "/auth/login", replace: true });
       setIsSigningOut(false);
     }
   };

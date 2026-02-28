@@ -115,7 +115,7 @@ function ForgotPasswordPage() {
                 </p>
               </div>
               <Button asChild className="w-full">
-                <Link to="/auth" search={{ email: email.trim() || undefined }}>返回登录</Link>
+                <Link to="/auth/login" search={{ email: email.trim() || undefined }}>返回登录</Link>
               </Button>
             </motion.div>
           ) : (
@@ -187,7 +187,7 @@ function ForgotPasswordPage() {
                 </Button>
 
                 <Button className="w-full" variant="ghost" asChild>
-                  <Link to="/auth" search={{ email: email.trim() || undefined }}>返回登录</Link>
+                  <Link to="/auth/login" search={{ email: email.trim() || undefined }}>返回登录</Link>
                 </Button>
               </div>
             </motion.form>
