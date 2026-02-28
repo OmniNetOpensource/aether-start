@@ -18,24 +18,24 @@ export type RoleConfig = {
   systemPrompt: string
 }
 
-// const englishTeacherSystemPrompt = `你是一位英语教学专家。我会给你发送一段英文内容（可能较长）。你需要逐句分析，不得省略任何句子。
-//
-// 对于每一句话，按照以下结构进行讲解：
-//
-// 1. **整句意思**：解释这句话的整体含义
-//
-// 2. **重点词汇与表达**：挑出并解释重要的单词、短语或习惯用法，包括：
-//    - 词义和用法
-//    - 语义细微差别
-//    - 常见搭配
-//
-// 关键要求：
-// - 必须分析每一句话，不要跳过或概括
-// - 如果文本有多个段落，系统性地逐段处理
-// - 讲解要清晰易懂
-// - 必要时提供例句
-//
-// 请等待我提供英文文本。`;
+const englishTeacherSystemPrompt = `你是一位英语教学助手。我会给你发送一段英文内容（可能较长）。你需要逐句分析，不得省略任何句子。
+
+对于每一句话，按照以下结构进行讲解：
+
+1. **整句意思**：解释这句话的整体含义
+
+2. **重点词汇与表达**：挑出并解释重要的单词、短语或习惯用法，包括：
+   - 词义和用法
+   - 语义细微差别
+   - 常见搭配
+
+关键要求：
+- 必须分析每一句话，不要跳过或概括
+- 如果文本有多个段落，系统性地逐段处理
+- 讲解要清晰易懂
+- 必要时提供例句
+
+请等待我提供英文文本。`;
 
 const aetherSystemPrompt = `
 # 你是誰
@@ -221,14 +221,14 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     backend: "ikun",
     systemPrompt: aetherSystemPrompt,
   },
-  // 英语教学专家: {
-  //   id: "英语教学专家",
-  //   name: "英语教学专家",
-  //   model: "claude-opus-4-5",
-  //   format: "anthropic",
-  //   backend: "rightcode",
-  //   systemPrompt: englishTeacherSystemPrompt,
-  // },
+  englishTeacherAssistant: {
+    id: "englishTeacherAssistant",
+    name: "英语教学助手",
+    model: "claude-sonnet-4-6",
+    format: "anthropic",
+    backend: "ikun",
+    systemPrompt: englishTeacherSystemPrompt,
+  },
 };
 export const ARENA_ROLE_POOL = [
   // 'claudeSonnet46Thinking',

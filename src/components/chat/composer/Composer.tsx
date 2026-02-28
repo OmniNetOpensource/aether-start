@@ -133,7 +133,7 @@ export function Composer() {
             />
           </div>
         )}
-        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-background p-2 transition-all">
+        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-(--surface-secondary) p-2 transition-all">
           <div className="flex w-full items-end gap-2">
             <Textarea
               ref={textareaCallbackRef}
@@ -191,7 +191,7 @@ export function Composer() {
             />
           </div>
         )}
-        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-background p-2 transition-all">
+        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-(--surface-secondary) p-2 transition-all">
 
         <div className="flex w-full items-end gap-2">
           <Textarea
