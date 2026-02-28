@@ -9,14 +9,14 @@ import type { SerializedMessage } from '@/types/message'
 
 export type ProviderRunResult = {
   pendingToolCalls: PendingToolInvocation[]
-  thinkingBlocks?: unknown[]
+  thinkingBlocks: unknown[]
 }
 
 export type ChatProviderConfig = {
   model: string
   backendConfig: BackendConfig
   tools: ChatTool[]
-  systemPrompt?: string
+  systemPrompt: string
 }
 
 export type ChatProvider<M = unknown> = {

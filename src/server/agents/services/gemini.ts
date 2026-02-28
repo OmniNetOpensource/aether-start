@@ -16,13 +16,14 @@ export type GeminiMessage = genai.Content
 
 type GeminiProviderRunResult = {
   pendingToolCalls: PendingToolInvocation[]
+  thinkingBlocks: unknown[]
 }
 
 type GeminiChatProviderConfig = {
   model: string
   backendConfig: BackendConfig
   tools: ChatTool[]
-  systemPrompt?: string
+  systemPrompt: string
 }
 
 export const getGeminiClient = (config: BackendConfig) => {
@@ -132,7 +133,7 @@ export class GeminiChatProvider {
   private readonly model: string
   private readonly backendConfig: BackendConfig
   private readonly geminiTools: genai.FunctionDeclaration[] | undefined
-  private readonly systemPrompt?: string
+  private readonly systemPrompt: string
 
   constructor(config: GeminiChatProviderConfig) {
     this.model = config.model
@@ -148,11 +149,11 @@ export class GeminiChatProvider {
     signal?: AbortSignal,
   ): AsyncGenerator<ChatServerToClientEvent, GeminiProviderRunResult> {
     const systemParts = [buildSystemPrompt()]
-    if (this.systemPrompt?.trim()) {
+    if (this.systemPrompt.trim()) {
       systemParts.push(this.systemPrompt.trim())
     }
 
-    const emptyResult: GeminiProviderRunResult = { pendingToolCalls: [] }
+    const emptyResult: GeminiProviderRunResult = { pendingToolCalls: [], thinkingBlocks: [] }
     const pendingToolCalls: PendingToolInvocation[] = []
 
     try {
@@ -226,7 +227,7 @@ export class GeminiChatProvider {
       return emptyResult
     }
 
-    return { pendingToolCalls }
+    return { pendingToolCalls, thinkingBlocks: [] }
   }
 }
 

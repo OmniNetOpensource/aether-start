@@ -40,13 +40,14 @@ type OpenAITool = {
 
 type OpenAIProviderRunResult = {
   pendingToolCalls: PendingToolInvocation[]
+  thinkingBlocks: unknown[]
 }
 
 type OpenAIChatProviderConfig = {
   model: string
   backendConfig: BackendConfig
   tools: ChatTool[]
-  systemPrompt?: string
+  systemPrompt: string
 }
 
 const loggingFetch: typeof fetch = async (input, init) => {
@@ -230,7 +231,7 @@ export class OpenAIChatProvider {
   private readonly model: string
   private readonly backendConfig: BackendConfig
   private readonly openaiTools: OpenAITool[] | undefined
-  private readonly systemPrompt?: string
+  private readonly systemPrompt: string
 
   constructor(config: OpenAIChatProviderConfig) {
     this.model = config.model
@@ -244,7 +245,7 @@ export class OpenAIChatProvider {
     signal?: AbortSignal,
   ): AsyncGenerator<ChatServerToClientEvent, OpenAIProviderRunResult> {
     const systemParts = [buildSystemPrompt()]
-    if (this.systemPrompt?.trim()) {
+    if (this.systemPrompt.trim()) {
       systemParts.push(this.systemPrompt.trim())
     }
 
@@ -253,7 +254,7 @@ export class OpenAIChatProvider {
       ...messages,
     ]
 
-    const emptyResult: OpenAIProviderRunResult = { pendingToolCalls: [] }
+    const emptyResult: OpenAIProviderRunResult = { pendingToolCalls: [], thinkingBlocks: [] }
     const toolCallsByIndex = new Map<number, { id: string; name: string; argsJson: string }>()
 
     try {
@@ -370,7 +371,7 @@ export class OpenAIChatProvider {
         }
       })
 
-    return { pendingToolCalls }
+    return { pendingToolCalls, thinkingBlocks: [] }
   }
 }
 

@@ -313,7 +313,7 @@ type AnthropicChatProviderConfig = {
   model: string
   backendConfig: BackendConfig
   tools: ChatTool[]
-  systemPrompt?: string
+  systemPrompt: string
 }
 
 export type ProviderRunResult = {
@@ -325,7 +325,7 @@ export class AnthropicChatProvider {
   private readonly model: string
   private readonly backendConfig: BackendConfig
   private readonly anthropicTools: AnthropicTool[] | undefined
-  private readonly systemPrompt?: string
+  private readonly systemPrompt: string
 
   constructor(config: AnthropicChatProviderConfig) {
     this.model = config.model
@@ -343,7 +343,7 @@ export class AnthropicChatProvider {
     const systemBlocks: Array<{ type: 'text'; text: string }> = [
       { type: 'text', text: buildSystemPrompt() },
     ]
-    if (this.systemPrompt?.trim()) {
+    if (this.systemPrompt.trim()) {
       systemBlocks.push({ type: 'text', text: this.systemPrompt.trim() })
     }
 
@@ -439,6 +439,6 @@ export function createAnthropicAdapter(config: ChatProviderConfig): ChatProvider
     convertMessages: (history) => convertToAnthropicMessages(history),
     run: (messages, signal) => provider.run(messages, signal),
     formatToolContinuation: (assistantText, runResult, pendingToolCalls, toolResults) =>
-      formatToolContinuation(assistantText, (runResult.thinkingBlocks ?? []) as ThinkingBlockData[], pendingToolCalls, toolResults),
+      formatToolContinuation(assistantText, runResult.thinkingBlocks as ThinkingBlockData[], pendingToolCalls, toolResults),
   }
 }

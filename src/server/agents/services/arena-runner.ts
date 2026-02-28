@@ -1,5 +1,6 @@
 import { applyAssistantAddition } from '@/lib/conversation/tree/block-operations'
 import { createChatProvider } from '@/server/agents/services/provider-factory'
+import type { ProviderRunResult } from '@/server/agents/services/provider-types'
 import {
   getBackendConfig,
   getRoleConfig,
@@ -162,7 +163,7 @@ export const runArenaRoundForRole = async (input: {
 
       let pendingToolCalls: PendingToolInvocation[] = []
       let assistantText = ''
-      let runResult = { pendingToolCalls }
+      let runResult: ProviderRunResult = { pendingToolCalls, thinkingBlocks: [] }
 
       while (true) {
         const { done, value } = await generator.next()

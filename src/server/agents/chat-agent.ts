@@ -7,6 +7,7 @@ import {
 } from '@/server/agents/services/chat-config'
 import { log } from '@/server/agents/services/logger'
 import { createChatProvider } from '@/server/agents/services/provider-factory'
+import type { ProviderRunResult } from '@/server/agents/services/provider-types'
 import { generateTitleFromConversation } from '@/server/functions/chat/chat-title'
 import { processEventToTree, cloneTreeSnapshot } from '@/server/agents/services/event-processor'
 import {
@@ -514,7 +515,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
         let pendingToolCalls: PendingToolInvocation[] = []
         let assistantText = ''
-        let runResult = { pendingToolCalls }
+        let runResult: ProviderRunResult = { pendingToolCalls, thinkingBlocks: [] }
 
         while (true) {
           const { done, value } = await generator.next()
