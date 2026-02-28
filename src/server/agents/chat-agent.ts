@@ -6,22 +6,7 @@ import {
   getBackendConfig,
 } from '@/server/agents/services/chat-config'
 import { log } from '@/server/agents/services/logger'
-import {
-  AnthropicChatProvider,
-  convertToAnthropicMessages,
-  formatToolContinuation,
-  type ThinkingBlockData,
-} from '@/server/agents/services/anthropic'
-import {
-  OpenAIChatProvider,
-  convertToOpenAIMessages,
-  formatOpenAIToolContinuation,
-} from '@/server/agents/services/openai'
-import {
-  GeminiChatProvider,
-  convertToGeminiMessages,
-  formatGeminiToolContinuation,
-} from '@/server/agents/services/gemini'
+import { createChatProvider } from '@/server/agents/services/provider-factory'
 import { generateTitleFromConversation } from '@/server/functions/chat/chat-title'
 import { processEventToTree, cloneTreeSnapshot } from '@/server/agents/services/event-processor'
 import {
@@ -509,261 +494,86 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
 
       const backendConfig = getBackendConfig(roleConfig.backend, roleConfig.format)
 
-      switch (roleConfig.format) {
-        case 'openai': {
-        const provider = new OpenAIChatProvider({
-          model: roleConfig.model,
-          backendConfig,
-          tools: getAvailableTools(),
-          systemPrompt: roleConfig.systemPrompt,
-        })
+      const provider = createChatProvider(roleConfig.format, {
+        model: roleConfig.model,
+        backendConfig,
+        tools: getAvailableTools(),
+        systemPrompt: roleConfig.systemPrompt,
+      })
 
-        let workingMessages = await convertToOpenAIMessages(normalizedHistory)
+      let workingMessages = await provider.convertMessages(normalizedHistory)
 
-        while (iteration < MAX_ITERATIONS) {
+      while (iteration < MAX_ITERATIONS) {
+        if (signal.aborted) {
+          finalStatus = 'aborted'
+          break
+        }
+
+        iteration += 1
+        const generator = provider.run(workingMessages, signal)
+
+        let pendingToolCalls: PendingToolInvocation[] = []
+        let assistantText = ''
+        let runResult = { pendingToolCalls }
+
+        while (true) {
+          const { done, value } = await generator.next()
+          if (done) {
+            runResult = value
+            pendingToolCalls = value.pendingToolCalls
+            break
+          }
+
+          if (value.type === 'content') {
+            assistantText += value.content
+          }
+
+          await emitEvent(value)
+
           if (signal.aborted) {
             finalStatus = 'aborted'
             break
           }
-
-          iteration += 1
-          const generator = provider.run(workingMessages, signal)
-
-            let pendingToolCalls: PendingToolInvocation[] = []
-            let assistantText = ''
-
-            while (true) {
-              const { done, value } = await generator.next()
-              if (done) {
-                pendingToolCalls = value.pendingToolCalls
-                break
-              }
-
-              if (value.type === 'content') {
-                assistantText += value.content
-              }
-
-              await emitEvent(value)
-
-              if (signal.aborted) {
-                finalStatus = 'aborted'
-                break
-              }
-            }
-
-            if (signal.aborted) {
-              finalStatus = 'aborted'
-              break
-            }
-
-            if (pendingToolCalls.length === 0) {
-              break
-            }
-
-            const toolGen = executeToolsGen(pendingToolCalls, signal)
-            let toolResults: ToolInvocationResult[] = []
-
-            while (true) {
-              const toolGenResult = await toolGen.next()
-              if (toolGenResult.done) {
-                toolResults = toolGenResult.value
-                break
-              }
-              await emitEvent(toolGenResult.value)
-
-              if (signal.aborted) {
-                finalStatus = 'aborted'
-                break
-              }
-            }
-
-            if (signal.aborted) {
-              finalStatus = 'aborted'
-              break
-            }
-
-            const continuationMessages = formatOpenAIToolContinuation(
-              assistantText,
-              pendingToolCalls,
-              toolResults,
-            )
-            workingMessages = [...workingMessages, ...continuationMessages]
         }
-        break
-      }
 
-        case 'anthropic': {
-        const provider = new AnthropicChatProvider({
-          model: roleConfig.model,
-          backendConfig,
-          tools: getAvailableTools(),
-          systemPrompt: roleConfig.systemPrompt,
-        })
+        if (signal.aborted) {
+          finalStatus = 'aborted'
+          break
+        }
 
-        let workingMessages = await convertToAnthropicMessages(normalizedHistory)
+        if (pendingToolCalls.length === 0) {
+          break
+        }
 
-        while (iteration < MAX_ITERATIONS) {
+        const toolGen = executeToolsGen(pendingToolCalls, signal)
+        let toolResults: ToolInvocationResult[] = []
+
+        while (true) {
+          const toolGenResult = await toolGen.next()
+          if (toolGenResult.done) {
+            toolResults = toolGenResult.value
+            break
+          }
+          await emitEvent(toolGenResult.value)
+
           if (signal.aborted) {
             finalStatus = 'aborted'
             break
           }
-
-          iteration += 1
-          const generator = provider.run(workingMessages, signal)
-
-            let pendingToolCalls: PendingToolInvocation[] = []
-            let thinkingBlocks: ThinkingBlockData[] = []
-            let assistantText = ''
-
-            while (true) {
-              const { done, value } = await generator.next()
-              if (done) {
-                pendingToolCalls = value.pendingToolCalls
-                thinkingBlocks = value.thinkingBlocks
-                break
-              }
-
-              if (value.type === 'content') {
-                assistantText += value.content
-              }
-
-              await emitEvent(value)
-
-              if (signal.aborted) {
-                finalStatus = 'aborted'
-                break
-              }
-            }
-
-            if (signal.aborted) {
-              finalStatus = 'aborted'
-              break
-            }
-
-            if (pendingToolCalls.length === 0) {
-              break
-            }
-
-            const toolGen = executeToolsGen(pendingToolCalls, signal)
-            let toolResults: ToolInvocationResult[] = []
-
-            while (true) {
-              const toolGenResult = await toolGen.next()
-              if (toolGenResult.done) {
-                toolResults = toolGenResult.value
-                break
-              }
-              await emitEvent(toolGenResult.value)
-
-              if (signal.aborted) {
-                finalStatus = 'aborted'
-                break
-              }
-            }
-
-            if (signal.aborted) {
-              finalStatus = 'aborted'
-              break
-            }
-
-            const continuationMessages = formatToolContinuation(
-              assistantText,
-              thinkingBlocks,
-              pendingToolCalls,
-              toolResults,
-            )
-            workingMessages = [...workingMessages, ...continuationMessages]
         }
-        break
-      }
 
-        case 'gemini': {
-        const provider = new GeminiChatProvider({
-          model: roleConfig.model,
-          backendConfig,
-          tools: getAvailableTools(),
-          systemPrompt: roleConfig.systemPrompt,
-        })
-
-        let workingMessages = await convertToGeminiMessages(normalizedHistory)
-
-        while (iteration < MAX_ITERATIONS) {
-          if (signal.aborted) {
-            finalStatus = 'aborted'
-            break
-          }
-
-          iteration += 1
-          const generator = provider.run(workingMessages, signal)
-
-            let pendingToolCalls: PendingToolInvocation[] = []
-            let assistantText = ''
-
-            while (true) {
-              const { done, value } = await generator.next()
-              if (done) {
-                pendingToolCalls = value.pendingToolCalls
-                break
-              }
-
-              if (value.type === 'content') {
-                assistantText += value.content
-              }
-
-              await emitEvent(value)
-
-              if (signal.aborted) {
-                finalStatus = 'aborted'
-                break
-              }
-            }
-
-            if (signal.aborted) {
-              finalStatus = 'aborted'
-              break
-            }
-
-            if (pendingToolCalls.length === 0) {
-              break
-            }
-
-            const toolGen = executeToolsGen(pendingToolCalls, signal)
-            let toolResults: ToolInvocationResult[] = []
-
-            while (true) {
-              const toolGenResult = await toolGen.next()
-              if (toolGenResult.done) {
-                toolResults = toolGenResult.value
-                break
-              }
-              await emitEvent(toolGenResult.value)
-
-              if (signal.aborted) {
-                finalStatus = 'aborted'
-                break
-              }
-            }
-
-            if (signal.aborted) {
-              finalStatus = 'aborted'
-              break
-            }
-
-            const continuationMessages = formatGeminiToolContinuation(
-              assistantText,
-              pendingToolCalls,
-              toolResults,
-            )
-            workingMessages = [...workingMessages, ...continuationMessages]
+        if (signal.aborted) {
+          finalStatus = 'aborted'
+          break
         }
-        break
-      }
 
-        default: {
-          await emitEvent(toEventError(`Unsupported format: "${(roleConfig as { format: string }).format}"`))
-          finalStatus = 'error'
-          return
-        }
+        const continuationMessages = provider.formatToolContinuation(
+          assistantText,
+          runResult,
+          pendingToolCalls,
+          toolResults,
+        )
+        workingMessages = [...workingMessages, ...continuationMessages]
       }
 
       if (iteration >= MAX_ITERATIONS && finalStatus === 'completed') {

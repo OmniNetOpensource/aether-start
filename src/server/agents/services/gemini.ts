@@ -2,8 +2,7 @@ import { GoogleGenAI, createPartFromFunctionResponse } from '@google/genai'
 import type * as genai from '@google/genai'
 import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/chat-config'
 import { log } from './logger'
-import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
-import { getServerBindings } from '@/server/env'
+import { resolveAttachmentToBase64 } from './attachment-utils'
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
@@ -11,6 +10,7 @@ import type {
 } from '@/types/chat-api'
 import type { ChatTool } from '@/server/agents/tools/types'
 import type { SerializedMessage } from '@/types/message'
+import type { ChatProvider, ChatProviderConfig } from './provider-types'
 
 export type GeminiMessage = genai.Content
 
@@ -47,59 +47,6 @@ const convertToolsToGemini = (tools: ChatTool[]): genai.FunctionDeclaration[] =>
     }))
 }
 
-const resolveAttachmentToBase64 = async (attachment: {
-  name: string
-  mimeType: string
-  url?: string
-  storageKey?: string
-}): Promise<{ media_type: string; data: string } | null> => {
-  if (attachment.url) {
-    const parsed = parseDataUrl(attachment.url)
-    if (parsed) {
-      return { media_type: parsed.mimeType, data: parsed.base64 }
-    }
-  }
-
-  if (attachment.storageKey) {
-    try {
-      const { CHAT_ASSETS } = getServerBindings()
-      const object = await CHAT_ASSETS.get(attachment.storageKey)
-      if (!object) {
-        log('GEMINI', `R2 object not found for ${attachment.storageKey}`)
-      } else {
-        const buffer = await object.arrayBuffer()
-        return {
-          media_type: object.httpMetadata?.contentType || attachment.mimeType,
-          data: arrayBufferToBase64(buffer),
-        }
-      }
-    } catch (error) {
-      log('GEMINI', `Failed to read storageKey ${attachment.storageKey}`, error)
-    }
-  }
-
-  if (attachment.url && /^https?:\/\//.test(attachment.url)) {
-    try {
-      const response = await fetch(attachment.url)
-      if (!response.ok) {
-        log('GEMINI', 'Failed to fetch attachment url', {
-          url: attachment.url,
-          status: response.status,
-        })
-        return null
-      }
-      const arrayBuffer = await response.arrayBuffer()
-      return {
-        media_type: response.headers.get('content-type') || attachment.mimeType,
-        data: arrayBufferToBase64(arrayBuffer),
-      }
-    } catch (error) {
-      log('GEMINI', 'Failed to fetch http attachment', error)
-    }
-  }
-
-  return null
-}
 
 export async function convertToGeminiMessages(history: SerializedMessage[]): Promise<GeminiMessage[]> {
   return Promise.all(history.map(async (message, msgIdx) => {
@@ -112,7 +59,7 @@ export async function convertToGeminiMessages(history: SerializedMessage[]): Pro
         for (const attachment of block.attachments) {
           if (attachment.kind !== 'image') continue
 
-          const resolved = await resolveAttachmentToBase64({
+          const resolved = await resolveAttachmentToBase64('GEMINI', {
             name: attachment.name,
             mimeType: attachment.mimeType,
             url: attachment.url,
@@ -280,5 +227,15 @@ export class GeminiChatProvider {
     }
 
     return { pendingToolCalls }
+  }
+}
+
+export function createGeminiAdapter(config: ChatProviderConfig): ChatProvider<GeminiMessage> {
+  const provider = new GeminiChatProvider(config)
+  return {
+    convertMessages: (history) => convertToGeminiMessages(history),
+    run: (messages, signal) => provider.run(messages, signal),
+    formatToolContinuation: (assistantText, _runResult, pendingToolCalls, toolResults) =>
+      formatGeminiToolContinuation(assistantText, pendingToolCalls, toolResults),
   }
 }

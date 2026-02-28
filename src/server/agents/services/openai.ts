@@ -1,8 +1,7 @@
 import OpenAI from 'openai'
 import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/chat-config'
 import { log } from './logger'
-import { arrayBufferToBase64, parseDataUrl } from '@/server/base64'
-import { getServerBindings } from '@/server/env'
+import { resolveAttachmentToBase64 } from './attachment-utils'
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
@@ -10,6 +9,7 @@ import type {
 } from '@/types/chat-api'
 import type { ChatTool } from '@/server/agents/tools/types'
 import type { SerializedMessage } from '@/types/message'
+import type { ChatProvider, ChatProviderConfig } from './provider-types'
 
 type OpenAIContentPart =
   | { type: 'text'; text: string }
@@ -101,63 +101,6 @@ export const getOpenAIClient = (config: BackendConfig) => {
   })
 }
 
-const resolveAttachmentToBase64 = async (attachment: {
-  name: string
-  mimeType: string
-  url?: string
-  storageKey?: string
-}): Promise<{ media_type: string; data: string } | null> => {
-  if (attachment.url) {
-    const parsed = parseDataUrl(attachment.url)
-    if (parsed) {
-      return {
-        media_type: parsed.mimeType,
-        data: parsed.base64,
-      }
-    }
-  }
-
-  if (attachment.storageKey) {
-    try {
-      const { CHAT_ASSETS } = getServerBindings()
-      const object = await CHAT_ASSETS.get(attachment.storageKey)
-      if (!object) {
-        log('OPENAI', `R2 object not found for ${attachment.storageKey}`)
-      } else {
-        const buffer = await object.arrayBuffer()
-        return {
-          media_type: object.httpMetadata?.contentType || attachment.mimeType,
-          data: arrayBufferToBase64(buffer),
-        }
-      }
-    } catch (error) {
-      log('OPENAI', `Failed to read storageKey ${attachment.storageKey}`, error)
-    }
-  }
-
-  if (attachment.url && /^https?:\/\//.test(attachment.url)) {
-    try {
-      const response = await fetch(attachment.url)
-      if (!response.ok) {
-        log('OPENAI', 'Failed to fetch attachment url', {
-          url: attachment.url,
-          status: response.status,
-        })
-        return null
-      }
-
-      const arrayBuffer = await response.arrayBuffer()
-      return {
-        media_type: response.headers.get('content-type') || attachment.mimeType,
-        data: arrayBufferToBase64(arrayBuffer),
-      }
-    } catch (error) {
-      log('OPENAI', 'Failed to fetch http attachment', error)
-    }
-  }
-
-  return null
-}
 
 const convertToolsToOpenAI = (tools: ChatTool[]): OpenAITool[] => {
   return tools
@@ -226,7 +169,7 @@ export async function convertToOpenAIMessages(history: SerializedMessage[]): Pro
             continue
           }
 
-          const resolved = await resolveAttachmentToBase64({
+          const resolved = await resolveAttachmentToBase64('OPENAI', {
             name: attachment.name,
             mimeType: attachment.mimeType,
             url: attachment.url,
@@ -428,5 +371,15 @@ export class OpenAIChatProvider {
       })
 
     return { pendingToolCalls }
+  }
+}
+
+export function createOpenAIAdapter(config: ChatProviderConfig): ChatProvider<OpenAIMessage> {
+  const provider = new OpenAIChatProvider(config)
+  return {
+    convertMessages: (history) => convertToOpenAIMessages(history),
+    run: (messages, signal) => provider.run(messages, signal),
+    formatToolContinuation: (assistantText, _runResult, pendingToolCalls, toolResults) =>
+      formatOpenAIToolContinuation(assistantText, pendingToolCalls, toolResults),
   }
 }

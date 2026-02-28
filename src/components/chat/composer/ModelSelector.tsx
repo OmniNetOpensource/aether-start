@@ -41,7 +41,7 @@ export function ModelSelector() {
   }, [loadRoles])
 
   const currentRoleName =
-    roles.find((role) => role.id === currentRole)?.name ?? "选择模型"
+    roles.find((role) => role.id === currentRole)?.name ?? ""
 
   // 按 provider 分组
   const grouped = (() => {
@@ -63,6 +63,7 @@ export function ModelSelector() {
   return (
     <>
       <Button
+        type="button"
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}

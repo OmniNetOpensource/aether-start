@@ -86,6 +86,22 @@ const createAuth = () => {
     basePath: '/api/auth',
     secret,
     trustedOrigins: [toOrigin(baseURL)],
+    advanced: {
+      ipAddress: {
+        ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for'],
+      },
+    },
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 100,
+      customRules: {
+        '/email-otp/send-verification-otp': {
+          window: 30,
+          max: 1,
+        },
+      },
+    },
     database: drizzleAdapter(db, {
       provider: 'sqlite',
       schema: authSchema,

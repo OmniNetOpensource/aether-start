@@ -104,6 +104,7 @@ function AuthPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [pendingVerification, setPendingVerification] = useState(false)
   const [isResending, setIsResending] = useState(false)
+  const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0)
   const [showResetSuccess] = useState(reset === 'success')
   const [otpValues, setOtpValues] = useState(['', '', '', '', '', ''])
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false)
@@ -183,6 +184,14 @@ function AuthPage() {
     })
   }, [navigate, redirectTarget, reset])
 
+  useEffect(() => {
+    if (resendCooldownSeconds <= 0) return
+    const id = setInterval(() => {
+      setResendCooldownSeconds((s) => (s <= 1 ? 0 : s - 1))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [resendCooldownSeconds])
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
 
@@ -209,6 +218,7 @@ function AuthPage() {
 
       if (isEmailNotVerifiedError(signInError)) {
         setPendingVerification(true)
+        setResendCooldownSeconds(30)
         setIsSubmitting(false)
         return
       }
@@ -224,6 +234,7 @@ function AuthPage() {
 
       if (!signUpError) {
         setPendingVerification(true)
+        setResendCooldownSeconds(30)
         setIsSubmitting(false)
         return
       }
@@ -235,7 +246,7 @@ function AuthPage() {
 
   const resendVerification = async () => {
     const normalizedEmail = email.trim().toLowerCase()
-    if (!normalizedEmail) return
+    if (!normalizedEmail || resendCooldownSeconds > 0) return
 
     setIsResending(true)
     setErrorMessage(null)
@@ -244,6 +255,7 @@ function AuthPage() {
       email: normalizedEmail,
       type: 'email-verification',
     })
+    setResendCooldownSeconds(30)
     setIsResending(false)
     otpInputRefs.current[0]?.focus()
   }
@@ -316,10 +328,14 @@ function AuthPage() {
               className="w-full"
               variant="outline"
               onClick={resendVerification}
-              disabled={isResending}
+              disabled={isResending || resendCooldownSeconds > 0}
             >
               {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isResending ? '发送中...' : '重新发送验证码'}
+              {isResending
+                ? '发送中...'
+                : resendCooldownSeconds > 0
+                  ? `${resendCooldownSeconds} 秒后重试`
+                  : '重新发送验证码'}
             </Button>
             <Button
               className="w-full"
@@ -328,6 +344,7 @@ function AuthPage() {
                 setPendingVerification(false)
                 setOtpValues(['', '', '', '', '', ''])
                 setErrorMessage(null)
+                setResendCooldownSeconds(0)
               }}
             >
               返回登录

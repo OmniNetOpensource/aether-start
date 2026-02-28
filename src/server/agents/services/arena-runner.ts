@@ -1,20 +1,5 @@
 import { applyAssistantAddition } from '@/lib/conversation/tree/block-operations'
-import {
-  AnthropicChatProvider,
-  convertToAnthropicMessages,
-  formatToolContinuation,
-  type ThinkingBlockData,
-} from '@/server/agents/services/anthropic'
-import {
-  OpenAIChatProvider,
-  convertToOpenAIMessages,
-  formatOpenAIToolContinuation,
-} from '@/server/agents/services/openai'
-import {
-  GeminiChatProvider,
-  convertToGeminiMessages,
-  formatGeminiToolContinuation,
-} from '@/server/agents/services/gemini'
+import { createChatProvider } from '@/server/agents/services/provider-factory'
 import {
   getBackendConfig,
   getRoleConfig,
@@ -158,174 +143,58 @@ export const runArenaRoundForRole = async (input: {
   }
 
   try {
-    switch (roleConfig.format) {
-      case 'openai': {
-        const provider = new OpenAIChatProvider({
-          model: roleConfig.model,
-          backendConfig,
-          tools,
-          systemPrompt: roleConfig.systemPrompt,
-        })
+    const provider = createChatProvider(roleConfig.format, {
+      model: roleConfig.model,
+      backendConfig,
+      tools,
+      systemPrompt: roleConfig.systemPrompt,
+    })
 
-        let workingMessages = await convertToOpenAIMessages(normalizedHistory)
+    let workingMessages = await provider.convertMessages(normalizedHistory)
 
-        while (iteration < MAX_ITERATIONS) {
-          if (input.signal?.aborted) {
-            throw new DOMException('Aborted', 'AbortError')
-          }
+    while (iteration < MAX_ITERATIONS) {
+      if (input.signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
 
-          iteration += 1
-          const generator = provider.run(workingMessages, input.signal)
+      iteration += 1
+      const generator = provider.run(workingMessages, input.signal)
 
-          let pendingToolCalls: PendingToolInvocation[] = []
-          let assistantText = ''
+      let pendingToolCalls: PendingToolInvocation[] = []
+      let assistantText = ''
+      let runResult = { pendingToolCalls }
 
-          while (true) {
-            const { done, value } = await generator.next()
-            if (done) {
-              pendingToolCalls = value.pendingToolCalls
-              break
-            }
-
-            if (value.type === 'content') {
-              assistantText += value.content
-            }
-
-            onEvent(value)
-
-            if (input.signal?.aborted) {
-              throw new DOMException('Aborted', 'AbortError')
-            }
-          }
-
-          if (pendingToolCalls.length === 0) {
-            break
-          }
-
-          const toolResults = await executeToolsAndCollect(pendingToolCalls, input.signal, onEvent)
-          const continuationMessages = formatOpenAIToolContinuation(
-            assistantText,
-            pendingToolCalls,
-            toolResults,
-          )
-          workingMessages = [...workingMessages, ...continuationMessages]
+      while (true) {
+        const { done, value } = await generator.next()
+        if (done) {
+          runResult = value
+          pendingToolCalls = value.pendingToolCalls
+          break
         }
+
+        if (value.type === 'content') {
+          assistantText += value.content
+        }
+
+        onEvent(value)
+
+        if (input.signal?.aborted) {
+          throw new DOMException('Aborted', 'AbortError')
+        }
+      }
+
+      if (pendingToolCalls.length === 0) {
         break
       }
 
-      case 'anthropic': {
-        const provider = new AnthropicChatProvider({
-          model: roleConfig.model,
-          backendConfig,
-          tools,
-          systemPrompt: roleConfig.systemPrompt,
-        })
-
-        let workingMessages = await convertToAnthropicMessages(normalizedHistory)
-
-        while (iteration < MAX_ITERATIONS) {
-          if (input.signal?.aborted) {
-            throw new DOMException('Aborted', 'AbortError')
-          }
-
-          iteration += 1
-          const generator = provider.run(workingMessages, input.signal)
-
-          let pendingToolCalls: PendingToolInvocation[] = []
-          let thinkingBlocks: ThinkingBlockData[] = []
-          let assistantText = ''
-
-          while (true) {
-            const { done, value } = await generator.next()
-            if (done) {
-              pendingToolCalls = value.pendingToolCalls
-              thinkingBlocks = value.thinkingBlocks
-              break
-            }
-
-            if (value.type === 'content') {
-              assistantText += value.content
-            }
-
-            onEvent(value)
-
-            if (input.signal?.aborted) {
-              throw new DOMException('Aborted', 'AbortError')
-            }
-          }
-
-          if (pendingToolCalls.length === 0) {
-            break
-          }
-
-          const toolResults = await executeToolsAndCollect(pendingToolCalls, input.signal, onEvent)
-          const continuationMessages = formatToolContinuation(
-            assistantText,
-            thinkingBlocks,
-            pendingToolCalls,
-            toolResults,
-          )
-          workingMessages = [...workingMessages, ...continuationMessages]
-        }
-        break
-      }
-
-      case 'gemini': {
-        const provider = new GeminiChatProvider({
-          model: roleConfig.model,
-          backendConfig,
-          tools,
-          systemPrompt: roleConfig.systemPrompt,
-        })
-
-        let workingMessages = await convertToGeminiMessages(normalizedHistory)
-
-        while (iteration < MAX_ITERATIONS) {
-          if (input.signal?.aborted) {
-            throw new DOMException('Aborted', 'AbortError')
-          }
-
-          iteration += 1
-          const generator = provider.run(workingMessages, input.signal)
-
-          let pendingToolCalls: PendingToolInvocation[] = []
-          let assistantText = ''
-
-          while (true) {
-            const { done, value } = await generator.next()
-            if (done) {
-              pendingToolCalls = value.pendingToolCalls
-              break
-            }
-
-            if (value.type === 'content') {
-              assistantText += value.content
-            }
-
-            onEvent(value)
-
-            if (input.signal?.aborted) {
-              throw new DOMException('Aborted', 'AbortError')
-            }
-          }
-
-          if (pendingToolCalls.length === 0) {
-            break
-          }
-
-          const toolResults = await executeToolsAndCollect(pendingToolCalls, input.signal, onEvent)
-          const continuationMessages = formatGeminiToolContinuation(
-            assistantText,
-            pendingToolCalls,
-            toolResults,
-          )
-          workingMessages = [...workingMessages, ...continuationMessages]
-        }
-        break
-      }
-
-      default:
-        onEvent({ type: 'error', message: `Unsupported format: ${roleConfig.format}` })
+      const toolResults = await executeToolsAndCollect(pendingToolCalls, input.signal, onEvent)
+      const continuationMessages = provider.formatToolContinuation(
+        assistantText,
+        runResult,
+        pendingToolCalls,
+        toolResults,
+      )
+      workingMessages = [...workingMessages, ...continuationMessages]
     }
 
     if (iteration >= MAX_ITERATIONS) {
