@@ -130,6 +130,14 @@ const aetherSystemPrompt = `
 
 `;
 const ROLE_CONFIGS: Record<string, RoleConfig> = {
+  claudeOpus46Ikun: {
+    id: "claudeOpus46Ikun",
+    name: "claude-opus-4-6+ikun",
+    model: "claude-opus-4-6",
+    format: "anthropic",
+    backend: "ikun",
+    systemPrompt: aetherSystemPrompt,
+  },
   // claudeSonnet46Thinking: {
   //   id: "claudeSonnet46Thinking",
   //   name: "claude-sonnet-4-6-thinking+dmx",
@@ -138,14 +146,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   //   backend: "dmx",
   //   systemPrompt: aetherSystemPrompt,
   // },
-  aether: {
-    id: "aether",
-    name: "aether",
-    model: "claude-opus-4-6",
-    format: "anthropic",
-    backend: "ikun",
-    systemPrompt: aetherSystemPrompt,
-  },
   // test1: {
   //   id: "test1",
   //   name: "claude-opus-4-6+dmx",
@@ -226,14 +226,14 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     backend: "rightcode-openai",
     systemPrompt: aetherSystemPrompt,
   },
-  // claudeOpus46Ikun: {
-  //   id: "claudeOpus46Ikun",
-  //   name: "claude-opus-4-6+ikun",
-  //   model: "claude-opus-4-6",
-  //   format: "anthropic",
-  //   backend: "ikun",
-  //   systemPrompt: aetherSystemPrompt,
-  // },
+  claudeOpus46Rightcode: {
+    id: "claudeOpus46Rightcode",
+    name: "claude-opus-4-6+rightcode",
+    model: "claude-opus-4-6",
+    format: "anthropic",
+    backend: "rightcode-claude",
+    systemPrompt: aetherSystemPrompt,
+  },
   englishTeacherAssistant: {
     id: "englishTeacherAssistant",
     name: "英语教学助手",
