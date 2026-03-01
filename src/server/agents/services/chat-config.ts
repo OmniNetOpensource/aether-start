@@ -239,7 +239,15 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     name: "英语教学助手",
     model: "claude-sonnet-4-6",
     format: "anthropic",
-    backend: "ikun",
+    backend: "rightcode-claude",
+    systemPrompt: englishTeacherSystemPrompt,
+  },
+  englishTeacherAssistantGemini: {
+    id: "englishTeacherAssistantGemini",
+    name: "英语教学助手 (Gemini)",
+    model: "gemini-3.1-pro-preview",
+    format: "gemini",
+    backend: "rightcode-gemini",
     systemPrompt: englishTeacherSystemPrompt,
   },
 };
