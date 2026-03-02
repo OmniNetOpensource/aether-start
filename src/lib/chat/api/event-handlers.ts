@@ -125,7 +125,7 @@ export const applyChatEventToTree = (
   }
 
   if (event.type === 'tool_result') {
-    let resultText = ''
+    let resultText: string
     if (typeof event.result === 'string') {
       resultText = event.result
     } else {

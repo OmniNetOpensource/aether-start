@@ -40,7 +40,6 @@ const CommandDialog = ({
   children,
   label = "Command menu",
   contentClassName,
-  overlayClassName,
   ...props
 }: React.ComponentProps<typeof CmdkCommandDialog>) => (
   <Dialog open={props.open} onOpenChange={props.onOpenChange}>

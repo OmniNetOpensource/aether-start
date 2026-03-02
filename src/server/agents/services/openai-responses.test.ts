@@ -238,7 +238,7 @@ describe('openai-responses provider', () => {
 
     const emitted: Array<{ type: string; content?: string; message?: string }> = []
     const generator = provider.run([])
-    let runResult = { pendingToolCalls: [], thinkingBlocks: [] } as {
+    let runResult: {
       pendingToolCalls: Array<{ id: string; name: string; args: Record<string, unknown> }>
       thinkingBlocks: unknown[]
     }
