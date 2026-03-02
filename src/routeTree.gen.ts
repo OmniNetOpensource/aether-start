@@ -21,8 +21,6 @@ import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AppNotesRouteImport } from './routes/app/notes'
-import { Route as AppLeaderboardRouteImport } from './routes/app/leaderboard'
-import { Route as AppArenaRouteImport } from './routes/app/arena'
 import { Route as ApiSentryRouteImport } from './routes/api/sentry'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -89,16 +87,6 @@ const AppNotesRoute = AppNotesRouteImport.update({
   path: '/notes',
   getParentRoute: () => AppRouteRoute,
 } as any)
-const AppLeaderboardRoute = AppLeaderboardRouteImport.update({
-  id: '/leaderboard',
-  path: '/leaderboard',
-  getParentRoute: () => AppRouteRoute,
-} as any)
-const AppArenaRoute = AppArenaRouteImport.update({
-  id: '/arena',
-  path: '/arena',
-  getParentRoute: () => AppRouteRoute,
-} as any)
 const ApiSentryRoute = ApiSentryRouteImport.update({
   id: '/api/sentry',
   path: '/api/sentry',
@@ -131,8 +119,6 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/api/sentry': typeof ApiSentryRoute
-  '/app/arena': typeof AppArenaRoute
-  '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -151,8 +137,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
   '/api/sentry': typeof ApiSentryRoute
-  '/app/arena': typeof AppArenaRoute
-  '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -173,8 +157,6 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/api/sentry': typeof ApiSentryRoute
-  '/app/arena': typeof AppArenaRoute
-  '/app/leaderboard': typeof AppLeaderboardRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -196,8 +178,6 @@ export interface FileRouteTypes {
     | '/app'
     | '/404'
     | '/api/sentry'
-    | '/app/arena'
-    | '/app/leaderboard'
     | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -216,8 +196,6 @@ export interface FileRouteTypes {
     | '/'
     | '/404'
     | '/api/sentry'
-    | '/app/arena'
-    | '/app/leaderboard'
     | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -237,8 +215,6 @@ export interface FileRouteTypes {
     | '/app'
     | '/404'
     | '/api/sentry'
-    | '/app/arena'
-    | '/app/leaderboard'
     | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -357,20 +333,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotesRouteImport
       parentRoute: typeof AppRouteRoute
     }
-    '/app/leaderboard': {
-      id: '/app/leaderboard'
-      path: '/leaderboard'
-      fullPath: '/app/leaderboard'
-      preLoaderRoute: typeof AppLeaderboardRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
-    '/app/arena': {
-      id: '/app/arena'
-      path: '/arena'
-      fullPath: '/app/arena'
-      preLoaderRoute: typeof AppArenaRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
     '/api/sentry': {
       id: '/api/sentry'
       path: '/api/sentry'
@@ -410,16 +372,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteRouteChildren {
-  AppArenaRoute: typeof AppArenaRoute
-  AppLeaderboardRoute: typeof AppLeaderboardRoute
   AppNotesRoute: typeof AppNotesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCConversationIdRoute: typeof AppCConversationIdRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppArenaRoute: AppArenaRoute,
-  AppLeaderboardRoute: AppLeaderboardRoute,
   AppNotesRoute: AppNotesRoute,
   AppIndexRoute: AppIndexRoute,
   AppCConversationIdRoute: AppCConversationIdRoute,

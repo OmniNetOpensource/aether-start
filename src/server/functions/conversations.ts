@@ -43,7 +43,7 @@ const conversationPayloadSchema = z.object({
   title: z.string().nullable(),
   role: z.string().nullable().optional(),
   currentPath: z.array(z.number().int()),
-  messages: z.array(z.record(z.any())),
+  messages: z.array(z.record(z.string(), z.any())),
   created_at: z.string(),
   updated_at: z.string(),
 })

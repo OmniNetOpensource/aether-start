@@ -20,8 +20,7 @@ export const Route = createFileRoute('/app')({
 
 function AppLayout() {
   const isNotesRoute = !!useMatch({ from: '/app/notes', shouldThrow: false })
-  const isLeaderboardRoute = !!useMatch({ from: '/app/leaderboard', shouldThrow: false })
-  const useStandaloneLayout = isNotesRoute || isLeaderboardRoute
+  const useStandaloneLayout = isNotesRoute
 
   return (
     <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>

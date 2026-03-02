@@ -234,6 +234,22 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     backend: "rightcode-claude",
     systemPrompt: aetherSystemPrompt,
   },
+  claudeSonnet46Ikun: {
+    id: "claudeSonnet46Ikun",
+    name: "claude-sonnet-4-6+ikun",
+    model: "claude-sonnet-4-6",
+    format: "anthropic",
+    backend: "ikun",
+    systemPrompt: aetherSystemPrompt,
+  },
+  claudeSonnet46Rightcode: {
+    id: "claudeSonnet46Rightcode",
+    name: "claude-sonnet-4-6+rightcode",
+    model: "claude-sonnet-4-6",
+    format: "anthropic",
+    backend: "rightcode-claude",
+    systemPrompt: aetherSystemPrompt,
+  },
   englishTeacherAssistant: {
     id: "englishTeacherAssistant",
     name: "英语教学助手",
@@ -251,15 +267,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     systemPrompt: englishTeacherSystemPrompt,
   },
 };
-export const ARENA_ROLE_POOL = [
-  // 'claudeSonnet46Thinking',
-  'test3',
-  'minimaxM25',
-  'glm5',
-  'doubao',
-  'kimiK25',
-  'deepseekV32',
-] as const
 
 export const getAvailableRoles = (): { id: string; name: string }[] =>
   Object.values(ROLE_CONFIGS).map(({ id, name }) => ({ id, name }));
@@ -282,16 +289,6 @@ export const getDefaultRoleConfig = (): RoleConfig | null => {
   const id = getDefaultRoleId();
   return id ? getRoleConfig(id) : null;
 };
-
-export const getArenaRolePoolConfigs = (): RoleConfig[] => {
-  return ARENA_ROLE_POOL.map((roleId) => {
-    const role = getRoleConfig(roleId)
-    if (!role) {
-      throw new Error(`Arena role is not configured: ${roleId}`)
-    }
-    return role
-  })
-}
 
 export const buildSystemPrompt = () => {
   const now = new Date()

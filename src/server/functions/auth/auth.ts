@@ -154,6 +154,7 @@ const createAuth = () => {
             'email-verification': 'Aether 邮箱验证',
             'sign-in': 'Aether 登录验证',
             'forget-password': 'Aether 重置密码',
+            'change-email': 'Aether 更换邮箱',
           } as const
 
           await resend.emails.send({
