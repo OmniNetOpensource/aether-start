@@ -1,42 +1,46 @@
-import { HeadContent, Outlet, Scripts, createRootRoute } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRoute,
+} from "@tanstack/react-router";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { Sentry } from "@/lib/sentry";
 
 import { setNavigate } from "@/lib/navigation";
+import { useViewportHeight } from "@/hooks/useViewportHeight";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastContainer } from "@/components/ui/toast-container";
 import { ResponsiveProvider } from "@/components/ResponsiveContext";
 import { NotFound } from "@/routes/-not-found";
+import { getTheme } from "@/server/functions/theme";
 
 import appCss from "@/routes/globals.css?url";
 import katexCss from "katex/dist/katex.min.css?url";
 
-const THEME_INIT_SCRIPT = `(function () {
-  try {
-    var cookieMatch = document.cookie.match(/(?:^|; )theme=([^;]+)/);
-    var cookieTheme = cookieMatch ? decodeURIComponent(cookieMatch[1]) : null;
-    var ls = window.localStorage.getItem('theme');
-    var stored = cookieTheme || ls;
-    var m = window.matchMedia('(prefers-color-scheme: dark)');
-    var dark = stored ? stored === 'dark' : m.matches;
-    var c = document.documentElement.classList;
-    dark ? c.add('dark') : c.remove('dark');
-  } catch (e) {}
-})();`;
-
 export const Route = createRootRoute({
+  loader: () => getTheme(),
   component: RootComponent,
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       {
         name: "viewport",
-        content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
+        content:
+          "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
       },
       { name: "description", content: "The invisible medium of knowledge." },
-      { name: "theme-color", content: "#ffffff", media: "(prefers-color-scheme: light)" },
-      { name: "theme-color", content: "#000000", media: "(prefers-color-scheme: dark)" },
+      {
+        name: "theme-color",
+        content: "#ffffff",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        name: "theme-color",
+        content: "#000000",
+        media: "(prefers-color-scheme: dark)",
+      },
       { title: "Aether" },
     ],
     links: [
@@ -53,6 +57,7 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const navigate = useNavigate();
+  useViewportHeight();
 
   useEffect(() => {
     setNavigate((path) => navigate({ to: path }));
@@ -65,7 +70,7 @@ function RootComponent() {
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-semibold">出了点问题</h1>
             <p className="text-muted-foreground text-sm">
-              {error instanceof Error ? error.message : '发生了未知错误'}
+              {error instanceof Error ? error.message : "发生了未知错误"}
             </p>
             <button
               type="button"
@@ -84,13 +89,13 @@ function RootComponent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  const theme = Route.useLoaderData()
   return (
-    <html lang="en" suppressHydrationWarning={true}>
+    <html lang="en" className={theme === 'dark' ? 'dark' : ''}>
       <head>
         <HeadContent />
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
       </head>
-      <body className="antialiased">
+      <body>
         <ResponsiveProvider initialDeviceType="desktop">
           <TooltipProvider>
             {children}
