@@ -100,7 +100,17 @@ const safeJsonParse = (value: string): unknown => {
   }
 }
 
+export type ChatConnectionState =
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'disconnected'
+
 export type ChatStatusEvent =
+  | {
+      type: 'connection'
+      state: ChatConnectionState
+    }
   | {
       type: 'sync'
       status: ChatAgentStatus
@@ -153,6 +163,10 @@ export class ChatClient {
 
     this.suppressCloseError = false
     this.conversationId = conversationId
+    this.options.onStatus?.({
+      type: 'connection',
+      state: 'connecting',
+    })
 
     const client = new AgentClient({
       agent: AGENT_NAME,
@@ -168,8 +182,21 @@ export class ChatClient {
 
     this.client = client
 
-    await client.ready
-    this.connected = true
+    try {
+      await client.ready
+      this.connected = true
+      this.options.onStatus?.({
+        type: 'connection',
+        state: 'connected',
+      })
+    } catch (error) {
+      this.connected = false
+      this.options.onStatus?.({
+        type: 'connection',
+        state: 'disconnected',
+      })
+      throw error
+    }
   }
 
   public async sync(conversationId: string) {
@@ -254,6 +281,10 @@ export class ChatClient {
 
     this.reconnecting = false
     this.clearReconnectTimer()
+    this.options.onStatus?.({
+      type: 'connection',
+      state: 'connected',
+    })
 
     if (this.conversationId) {
       this.send({
@@ -275,12 +306,20 @@ export class ChatClient {
 
     this.reconnecting = true
     this.clearReconnectTimer()
+    this.options.onStatus?.({
+      type: 'connection',
+      state: 'reconnecting',
+    })
 
     this.reconnectTimer = setTimeout(() => {
       if (!this.reconnecting) {
         return
       }
       this.reconnectTimer = null
+      this.options.onStatus?.({
+        type: 'connection',
+        state: 'disconnected',
+      })
       this.options.onError(new Error('聊天连接已断开'))
     }, RECONNECT_TIMEOUT_MS)
   }

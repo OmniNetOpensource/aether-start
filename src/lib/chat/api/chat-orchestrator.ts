@@ -24,6 +24,10 @@ type StartRequestOptions = {
   preferLocalTitle?: boolean
 }
 
+const setConnectionState = (state: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected') => {
+  useChatRequestStore.getState()._setConnectionState(state)
+}
+
 export const startChatRequest = async (
   options: StartRequestOptions,
 ) => {
@@ -85,6 +89,11 @@ export const startChatRequest = async (
       applyChatEventToTree(event)
     },
     onStatus: (statusEvent) => {
+      if (statusEvent.type === 'connection') {
+        setConnectionState(statusEvent.state)
+        return
+      }
+
       if (statusEvent.type === 'busy') {
         toast.warning('当前会话正在生成中')
         useChatRequestStore.setState({
@@ -127,6 +136,7 @@ export const startChatRequest = async (
           chatClient: null,
           activeRequestId: null,
         })
+        setConnectionState('idle')
       }
     },
     onError: () => {
@@ -135,13 +145,13 @@ export const startChatRequest = async (
       }
 
       disconnectedHandled = true
-      toast.info('连接已断开，请刷新页面查看最新内容', 10000)
       chatClient.disconnect()
       useChatRequestStore.setState({
         pending: false,
         chatClient: null,
         activeRequestId: null,
       })
+      setConnectionState('disconnected')
     },
   })
 
@@ -166,13 +176,13 @@ export const startChatRequest = async (
       }
 
       disconnectedHandled = true
-      toast.info('连接已断开，请刷新页面查看最新内容', 10000)
       chatClient.disconnect()
       useChatRequestStore.setState({
         pending: false,
         chatClient: null,
         activeRequestId: null,
       })
+      setConnectionState('disconnected')
     })
 }
 
@@ -201,6 +211,7 @@ export const resumeRunningConversation = async (conversationId: string) => {
 
   // Step 2: If not running, nothing to do — D1 data is already loaded
   if (!probeFailed && agentStatus && agentStatus.status !== 'running') {
+    setConnectionState('idle')
     return
   }
 
@@ -221,6 +232,11 @@ export const resumeRunningConversation = async (conversationId: string) => {
       applyChatEventToTree(event)
     },
     onStatus: (statusEvent) => {
+      if (statusEvent.type === 'connection') {
+        setConnectionState(statusEvent.state)
+        return
+      }
+
       if (statusEvent.type === 'sync') {
         if (statusEvent.status === 'running') {
           useChatRequestStore.setState({
@@ -237,6 +253,7 @@ export const resumeRunningConversation = async (conversationId: string) => {
           chatClient: null,
           activeRequestId: null,
         })
+        setConnectionState('idle')
         return
       }
 
@@ -265,6 +282,7 @@ export const resumeRunningConversation = async (conversationId: string) => {
           chatClient: null,
           activeRequestId: null,
         })
+        setConnectionState('idle')
       }
     },
     onError: () => {
@@ -273,13 +291,13 @@ export const resumeRunningConversation = async (conversationId: string) => {
       }
 
       disconnectedHandled = true
-      toast.info('连接已断开，请刷新页面查看最新内容', 10000)
       chatClient.disconnect()
       useChatRequestStore.setState({
         pending: false,
         chatClient: null,
         activeRequestId: null,
       })
+      setConnectionState('disconnected')
     },
   })
 
@@ -302,12 +320,12 @@ export const resumeRunningConversation = async (conversationId: string) => {
     }
 
     disconnectedHandled = true
-    toast.info('连接已断开，请刷新页面查看最新内容', 10000)
     chatClient.disconnect()
     useChatRequestStore.setState({
       pending: false,
       chatClient: null,
       activeRequestId: null,
     })
+    setConnectionState('disconnected')
   }
 }

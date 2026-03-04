@@ -4,6 +4,7 @@ import { MessageItem } from "./MessageItem";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { SelectionToolbar } from "./SelectionToolbar";
+import { ConnectionStatusInline } from "./ConnectionStatusInline";
 
 export function MessageList() {
   const currentPath = useMessageTreeStore((state) => state.currentPath);
@@ -37,6 +38,7 @@ export function MessageList() {
               />
             );
           })}
+          <ConnectionStatusInline />
 
         </div>
       </div>

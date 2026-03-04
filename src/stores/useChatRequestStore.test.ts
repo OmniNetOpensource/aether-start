@@ -66,9 +66,18 @@ describe('useChatRequestStore', () => {
       pending: false,
       chatClient: null,
       activeRequestId: null,
+      connectionState: 'idle',
+      connectionStateUpdatedAt: 0,
       currentRole: 'aether',
       availableRoles: [],
       rolesLoading: false,
+    })
+  })
+
+  it('starts with idle connection state', () => {
+    expect(useChatRequestStore.getState()).toMatchObject({
+      connectionState: 'idle',
+      connectionStateUpdatedAt: 0,
     })
   })
 
@@ -84,6 +93,16 @@ describe('useChatRequestStore', () => {
     })
   })
 
+  it('updates connection state and timestamp', () => {
+    const before = useChatRequestStore.getState().connectionStateUpdatedAt
+
+    useChatRequestStore.getState()._setConnectionState('connecting')
+
+    const afterState = useChatRequestStore.getState()
+    expect(afterState.connectionState).toBe('connecting')
+    expect(afterState.connectionStateUpdatedAt).toBeGreaterThanOrEqual(before)
+  })
+
   it('stop aborts and disconnects active chat client', () => {
     const abort = vi.fn()
     const disconnect = vi.fn()
@@ -92,6 +111,7 @@ describe('useChatRequestStore', () => {
     useChatRequestStore.getState()._setChatClient(client)
     useChatRequestStore.getState()._setActiveRequestId('req-9')
     useChatRequestStore.getState()._setPending(true)
+    useChatRequestStore.getState()._setConnectionState('disconnected')
 
     useChatRequestStore.getState().stop()
 
@@ -101,7 +121,9 @@ describe('useChatRequestStore', () => {
       pending: false,
       chatClient: null,
       activeRequestId: null,
+      connectionState: 'idle',
     })
+    expect(useChatRequestStore.getState().connectionStateUpdatedAt).toBeGreaterThan(0)
   })
 
   it('clear disconnects client and resets runtime state', () => {
@@ -111,6 +133,7 @@ describe('useChatRequestStore', () => {
     useChatRequestStore.getState()._setChatClient(client)
     useChatRequestStore.getState()._setPending(true)
     useChatRequestStore.getState()._setActiveRequestId('req-2')
+    useChatRequestStore.getState()._setConnectionState('reconnecting')
 
     useChatRequestStore.getState().clear()
 
@@ -119,7 +142,9 @@ describe('useChatRequestStore', () => {
       pending: false,
       chatClient: null,
       activeRequestId: null,
+      connectionState: 'idle',
     })
+    expect(useChatRequestStore.getState().connectionStateUpdatedAt).toBeGreaterThan(0)
   })
 
   it('loads roles once and skips repeated requests', async () => {

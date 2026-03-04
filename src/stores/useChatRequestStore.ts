@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
 import { toast } from "@/hooks/useToast";
-import type { ChatClient } from "@/lib/chat/api/websocket-client";
+import type {
+  ChatClient,
+  ChatConnectionState,
+} from "@/lib/chat/api/websocket-client";
 import {
   resumeRunningConversation,
   startChatRequest,
@@ -42,6 +45,8 @@ type ChatRequestState = {
   pending: boolean;
   chatClient: ChatClient | null;
   activeRequestId: string | null;
+  connectionState: "idle" | ChatConnectionState;
+  connectionStateUpdatedAt: number;
   currentRole: string;
   availableRoles: RoleInfo[];
   rolesLoading: boolean;
@@ -57,6 +62,7 @@ type ChatRequestActions = {
   _setPending: (pending: boolean) => void;
   _setChatClient: (client: ChatClient | null) => void;
   _setActiveRequestId: (id: string | null) => void;
+  _setConnectionState: (state: "idle" | ChatConnectionState) => void;
 };
 
 const getInitialRole = (): string => "";
@@ -67,6 +73,8 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       pending: false,
       chatClient: null,
       activeRequestId: null,
+      connectionState: "idle",
+      connectionStateUpdatedAt: 0,
       currentRole: getInitialRole(),
       availableRoles: [],
       rolesLoading: false,
@@ -109,13 +117,26 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       },
       stop: () => {
         const { chatClient } = get();
+        const connectionStateUpdatedAt = Date.now();
         if (!chatClient) {
-          set({ pending: false, chatClient: null, activeRequestId: null });
+          set({
+            pending: false,
+            chatClient: null,
+            activeRequestId: null,
+            connectionState: "idle",
+            connectionStateUpdatedAt,
+          });
           return;
         }
         chatClient.abort(get().activeRequestId ?? undefined);
         chatClient.disconnect();
-        set({ pending: false, chatClient: null, activeRequestId: null });
+        set({
+          pending: false,
+          chatClient: null,
+          activeRequestId: null,
+          connectionState: "idle",
+          connectionStateUpdatedAt,
+        });
       },
       resumeIfRunning: async (conversationId) => {
         if (!conversationId) {
@@ -156,6 +177,7 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       },
       clear: () => {
         const client = get().chatClient;
+        const connectionStateUpdatedAt = Date.now();
         if (client) {
           client.disconnect();
         }
@@ -163,11 +185,15 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
           pending: false,
           chatClient: null,
           activeRequestId: null,
+          connectionState: "idle",
+          connectionStateUpdatedAt,
         });
       },
       _setPending: (pending) => set({ pending }),
       _setChatClient: (chatClient) => set({ chatClient }),
       _setActiveRequestId: (activeRequestId) => set({ activeRequestId }),
+      _setConnectionState: (connectionState) =>
+        set({ connectionState, connectionStateUpdatedAt: Date.now() }),
     }),
     { name: "ChatRequestStore" }
   )
