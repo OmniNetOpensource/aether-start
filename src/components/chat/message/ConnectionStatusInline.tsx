@@ -3,7 +3,7 @@ import { Loader2, Wifi, WifiOff } from "lucide-react";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
 import { cn } from "@/lib/utils";
 
-const CONNECTED_VISIBLE_MS = 1000;
+const CONNECTED_VISIBLE_MS = 2000;
 const FADE_OUT_MS = 220;
 
 export function ConnectionStatusInline() {

@@ -88,11 +88,14 @@ function RootComponent() {
   );
 }
 
+const themeInitScript = `(function(){var t=localStorage.getItem('theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}if(t==='dark'){document.documentElement.classList.add('dark');}})();`
+
 function RootDocument({ children }: { children: React.ReactNode }) {
   const theme = Route.useLoaderData()
   return (
     <html lang="en" className={theme === 'dark' ? 'dark' : ''}>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
       <body>

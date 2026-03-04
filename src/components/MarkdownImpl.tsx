@@ -1,25 +1,22 @@
-import { Streamdown } from 'streamdown'
-import { createCodePlugin } from '@streamdown/code'
-import { math } from '@streamdown/math'
-import { cjk } from '@streamdown/cjk'
-import { splitMarkdownParagraphs } from '@/lib/markdown'
+import { Streamdown, defaultRehypePlugins } from "streamdown";
+import { createCodePlugin } from "@streamdown/code";
+import { math } from "@streamdown/math";
+import { cjk } from "@streamdown/cjk";
+import { splitMarkdownParagraphs } from "@/lib/markdown";
 
 type Props = {
-  content: string
-  isAnimating?: boolean
-}
+  content: string;
+  isAnimating?: boolean;
+};
 
 const codePlugin = createCodePlugin({
-  themes: ['github-light', 'github-dark'],
-})
+  themes: ["github-light", "github-dark"],
+});
 
-const plugins = { code: codePlugin, math, cjk }
+const plugins = { code: codePlugin, math, cjk };
 
-function MarkdownImpl({
-  content,
-  isAnimating = false,
-}: Props) {
-  const paragraphs = splitMarkdownParagraphs(content)
+function MarkdownImpl({ content, isAnimating = false }: Props) {
+  const paragraphs = splitMarkdownParagraphs(content);
 
   return (
     <div className="space-y-3">
@@ -27,13 +24,17 @@ function MarkdownImpl({
         <Streamdown
           key={i}
           plugins={plugins}
+          rehypePlugins={[
+            defaultRehypePlugins.sanitize,
+            defaultRehypePlugins.harden,
+          ]}
           isAnimating={isAnimating && i === paragraphs.length - 1}
         >
           {paragraph}
         </Streamdown>
       ))}
     </div>
-  )
+  );
 }
 
-export default MarkdownImpl
+export default MarkdownImpl;
