@@ -23,12 +23,6 @@ export const Route = createRootRoute({
   component: RootComponent,
   head: () => ({
     meta: [
-      { charSet: "utf-8" },
-      {
-        name: "viewport",
-        content:
-          "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
-      },
       { name: "description", content: "The invisible medium of knowledge." },
       {
         name: "theme-color",
@@ -42,12 +36,7 @@ export const Route = createRootRoute({
       },
       { title: "Aether" },
     ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "icon", href: "/aether-logo.svg" },
-      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
-    ],
+    links: [{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" }],
   }),
   notFoundComponent: NotFound,
   shellComponent: RootDocument,
@@ -72,7 +61,7 @@ function RootComponent() {
             </p>
             <button
               type="button"
-              className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm"
+              className="px-4 py-2 rounded-md bg-primary text-primary text-sm"
               onClick={resetError}
             >
               重试
@@ -86,13 +75,21 @@ function RootComponent() {
   );
 }
 
-const themeInitScript = `(function(){var t=localStorage.getItem('theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}if(t==='dark'){document.documentElement.classList.add('dark');}})();`
+const themeInitScript = `(function(){var t=localStorage.getItem('theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}if(t==='dark'){document.documentElement.classList.add('dark');}})();`;
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const theme = Route.useLoaderData()
+  const theme = Route.useLoaderData();
   return (
-    <html lang="en" className={theme === 'dark' ? 'dark' : ''}>
+    <html lang="en" className={theme === "dark" ? "dark" : ""}>
       <head>
+        <meta charSet="utf-8" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+        />
+        <link rel="stylesheet" href={appCss} />
+        <link rel="manifest" href="/manifest.webmanifest" />
+        <link rel="icon" href="/aether-logo.svg" />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <HeadContent />
       </head>
