@@ -9,12 +9,8 @@ import {
   resumeRunningConversation,
   startChatRequest,
 } from "@/lib/chat/api/chat-orchestrator";
-import {
-  computeMessagesFromPath,
-} from "@/lib/conversation/tree/message-tree";
-import {
-  buildUserBlocks,
-} from "@/lib/conversation/tree/block-operations";
+import { computeMessagesFromPath } from "@/lib/conversation/tree/message-tree";
+import { buildUserBlocks } from "@/lib/conversation/tree/block-operations";
 import { useComposerStore } from "@/stores/useComposerStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
 import { getAvailableRolesFn } from "@/server/functions/chat/roles";
@@ -59,6 +55,7 @@ type ChatRequestActions = {
   setCurrentRole: (role: string) => void;
   loadRoles: () => Promise<void>;
   clear: () => void;
+  disposeConnection: () => void;
   _setPending: (pending: boolean) => void;
   _setChatClient: (client: ChatClient | null) => void;
   _setActiveRequestId: (id: string | null) => void;
@@ -67,7 +64,9 @@ type ChatRequestActions = {
 
 const getInitialRole = (): string => "";
 
-export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>()(
+export const useChatRequestStore = create<
+  ChatRequestState & ChatRequestActions
+>()(
   devtools(
     (set, get) => ({
       pending: false,
@@ -79,8 +78,7 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       availableRoles: [],
       rolesLoading: false,
       sendMessage: async () => {
-        const { input, pendingAttachments } =
-          useComposerStore.getState();
+        const { input, pendingAttachments } = useComposerStore.getState();
         const trimmed = input.trim();
         const selectedRole = get().currentRole;
 
@@ -100,12 +98,12 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
         const treeStore = useMessageTreeStore.getState();
         const result = treeStore._addMessage(
           "user",
-          buildUserBlocks(finalInput, pendingAttachments)
+          buildUserBlocks(finalInput, pendingAttachments),
         );
 
         const pathMessages = computeMessagesFromPath(
           result.messages,
-          result.currentPath
+          result.currentPath,
         );
 
         useComposerStore.getState().clear();
@@ -128,13 +126,11 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
           });
           return;
         }
+        // Abort current request but keep connection alive
         chatClient.abort(get().activeRequestId ?? undefined);
-        chatClient.disconnect();
         set({
           pending: false,
-          chatClient: null,
           activeRequestId: null,
-          connectionState: "idle",
           connectionStateUpdatedAt,
         });
       },
@@ -160,8 +156,7 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
           const roles = await getAvailableRolesFn();
           const firstId = roles[0]?.id ?? "";
           const stored = getStoredRole();
-          const storedValid =
-            stored && roles.some((r) => r.id === stored);
+          const storedValid = stored && roles.some((r) => r.id === stored);
           const roleToUse = storedValid ? stored : firstId;
           if (roleToUse) {
             set({ currentRole: roleToUse });
@@ -176,6 +171,16 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
         }
       },
       clear: () => {
+        // Clear request state only, don't disconnect connection
+        const connectionStateUpdatedAt = Date.now();
+        set({
+          pending: false,
+          activeRequestId: null,
+          connectionStateUpdatedAt,
+        });
+      },
+      disposeConnection: () => {
+        // Explicitly disconnect and dispose connection when leaving page
         const client = get().chatClient;
         const connectionStateUpdatedAt = Date.now();
         if (client) {
@@ -195,6 +200,6 @@ export const useChatRequestStore = create<ChatRequestState & ChatRequestActions>
       _setConnectionState: (connectionState) =>
         set({ connectionState, connectionStateUpdatedAt: Date.now() }),
     }),
-    { name: "ChatRequestStore" }
-  )
+    { name: "ChatRequestStore" },
+  ),
 );

@@ -4,6 +4,7 @@ import { Composer } from '@/components/chat/composer/Composer'
 import { MessageList } from '@/components/chat/message/MessageList'
 import { useConversationLoader } from '@/hooks/useConversationLoader'
 import { useConversationsStore } from '@/stores/useConversationsStore'
+import { useChatRequestStore } from '@/stores/useChatRequestStore'
 
 export const Route = createFileRoute('/app/c/$conversationId')({
   component: ConversationPage,
@@ -31,6 +32,27 @@ function ConversationPage() {
       document.title = defaultTitle
     }
   }, [title])
+
+  // Dispose connection when leaving this conversation page
+  useEffect(() => {
+    const handlePageHide = () => {
+      useChatRequestStore.getState().disposeConnection()
+    }
+
+    const handleBeforeUnload = () => {
+      useChatRequestStore.getState().disposeConnection()
+    }
+
+    window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      // Also dispose on component unmount (route change)
+      useChatRequestStore.getState().disposeConnection()
+    }
+  }, [])
 
   if (isLoading) {
     return null
