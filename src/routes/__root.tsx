@@ -17,7 +17,6 @@ import { NotFound } from "@/routes/-not-found";
 import { getTheme } from "@/server/functions/theme";
 
 import appCss from "@/routes/globals.css?url";
-import katexCss from "katex/dist/katex.min.css?url";
 
 export const Route = createRootRoute({
   loader: () => getTheme(),
@@ -45,7 +44,6 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      { rel: "stylesheet", href: katexCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "icon", href: "/aether-logo.svg" },
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },

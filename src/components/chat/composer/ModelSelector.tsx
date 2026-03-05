@@ -14,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useChatRequestStore } from "@/stores/useChatRequestStore"
+import { useResponsive } from "@/components/ResponsiveContext"
 
 /** 从 role id/name 推断 provider，用于分组 */
 function getProviderFromRole(roleId: string, roleName: string): string {
@@ -31,6 +32,8 @@ function getProviderFromRole(roleId: string, roleName: string): string {
 
 export function ModelSelector() {
   const [open, setOpen] = React.useState(false)
+  const deviceType = useResponsive()
+  const isMobile = deviceType === "mobile"
   const currentRole = useChatRequestStore((state) => state.currentRole)
   const setCurrentRole = useChatRequestStore((state) => state.setCurrentRole)
   const roles = useChatRequestStore((state) => state.availableRoles)
@@ -77,7 +80,7 @@ export function ModelSelector() {
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen} label="选择模型">
         <Command className="rounded-lg border-0" loop>
-          <CommandInput placeholder="搜索模型..." />
+          <CommandInput placeholder="搜索模型..." autoFocus={!isMobile} />
           <CommandList>
             <CommandEmpty>未找到匹配的模型</CommandEmpty>
             {grouped.map(([provider, items]) => (

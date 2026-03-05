@@ -14,13 +14,82 @@ type SearchResult = {
 };
 
 type SearchPayload = {
-  query: string;
-  results: Array<{
-    title: string;
-    url: string;
-    description: string;
-  }>;
-  rawResults: SearchResult[];
+  client: {
+    results: Array<{
+      title: string;
+      url: string;
+    }>;
+  };
+  ai: string;
+};
+
+type NormalizedSearchResult = {
+  title: string;
+  url: string;
+  description: string;
+};
+
+const normalizeSearchResult = (
+  result: SearchResult,
+): NormalizedSearchResult | null => {
+  if (!result || typeof result !== "object") {
+    return null;
+  }
+
+  const url =
+    typeof result.link === "string" && result.link.trim().length > 0
+      ? result.link.trim()
+      : "";
+
+  if (!url) {
+    return null;
+  }
+
+  const title =
+    typeof result.title === "string" && result.title.trim().length > 0
+      ? result.title.trim()
+      : url;
+  const description = typeof result.snippet === "string" ? result.snippet : "";
+
+  return {
+    title,
+    url,
+    description,
+  };
+};
+
+const buildAiMarkdown = (results: NormalizedSearchResult[]): string => {
+  if (results.length === 0) {
+    return "No valid search results.";
+  }
+
+  return results
+    .map(
+      (result, index) =>
+        `[${index + 1}]title: ${result.title}\n` +
+        `[${index + 1}]description: ${result.description}\n` +
+        `[${index + 1}]url: ${result.url}`,
+    )
+    .join("\n\n");
+};
+
+export const formatSearchResponse = (data: { organic?: SearchResult[] }): string => {
+  const rawResults = Array.isArray(data.organic) ? data.organic : [];
+  const normalizedResults = rawResults
+    .map((result) => normalizeSearchResult(result))
+    .filter((result): result is NormalizedSearchResult => Boolean(result));
+
+  const payload: SearchPayload = {
+    client: {
+      results: normalizedResults.map((result) => ({
+        title: result.title,
+        url: result.url,
+      })),
+    },
+    ai: buildAiMarkdown(normalizedResults),
+  };
+
+  return JSON.stringify(payload);
 };
 
 const parseSearchArgs = (args: unknown): SearchArgs => {
@@ -66,58 +135,6 @@ const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
   return queuedTask;
 };
 
-const formatSearchResponse = (
-  query: string,
-  data: { organic?: SearchResult[] },
-): string => {
-  const rawResults = Array.isArray(data.organic) ? data.organic : [];
-
-  const results: SearchPayload["results"] = rawResults
-    .map((result) => {
-      if (!result || typeof result !== "object") {
-        return null;
-      }
-
-      const title =
-        typeof result.title === "string" && result.title.trim().length > 0
-          ? result.title
-          : "";
-      const url =
-        typeof result.link === "string" && result.link.trim().length > 0
-          ? result.link
-          : "";
-      const description =
-        typeof result.snippet === "string" ? result.snippet : "";
-
-      if (!title && !url) {
-        return null;
-      }
-
-      return {
-        title: title || url,
-        url,
-        description,
-      };
-    })
-    .filter(
-      (
-        result,
-      ): result is {
-        title: string;
-        url: string;
-        description: string;
-      } => Boolean(result && result.url),
-    );
-
-  const payload: SearchPayload = {
-    query,
-    results,
-    rawResults,
-  };
-
-  return JSON.stringify(payload);
-};
-
 const performSearch = async (
   query: string,
   apiKey: string,
@@ -159,7 +176,7 @@ const performSearch = async (
     }
 
     const data = (await response.json()) as { organic?: SearchResult[] };
-    return formatSearchResponse(query, data);
+    return formatSearchResponse(data);
   } catch (error) {
     const isAbortError =
       typeof error === "object" &&

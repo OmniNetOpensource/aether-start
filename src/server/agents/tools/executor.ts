@@ -115,6 +115,70 @@ const formatToolResultForClient = (toolName: string, result: string) => {
   return 'Success'
 }
 
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const parseSearchResultChannels = (result: string) => {
+  try {
+    const parsed = JSON.parse(result)
+    if (!isObject(parsed)) {
+      return null
+    }
+
+    const client = parsed.client
+    const ai = parsed.ai
+
+    if (!isObject(client) || typeof ai !== 'string') {
+      return null
+    }
+
+    const { results } = client
+    if (!Array.isArray(results)) {
+      return null
+    }
+
+    const normalizedResults = results
+      .map((item) => {
+        if (!isObject(item)) {
+          return null
+        }
+        const title = typeof item.title === 'string' ? item.title : ''
+        const url = typeof item.url === 'string' ? item.url : ''
+        if (!title || !url) {
+          return null
+        }
+        return { title, url }
+      })
+      .filter((item): item is { title: string; url: string } => Boolean(item))
+
+    if (normalizedResults.length !== results.length) {
+      return null
+    }
+
+    return {
+      client: JSON.stringify({ results: normalizedResults }),
+      ai,
+    }
+  } catch {
+    return null
+  }
+}
+
+export const splitSearchResultForChannels = (result: string) => {
+  const parsed = parseSearchResultChannels(result)
+  if (!parsed) {
+    return {
+      clientResult: result,
+      modelResult: result,
+    }
+  }
+
+  return {
+    clientResult: parsed.client,
+    modelResult: parsed.ai,
+  }
+}
+
 // Execute tools with generator (used by chat-agent.ts)
 export async function* executeToolsGen(
   toolCalls: PendingToolInvocation[],
@@ -152,16 +216,22 @@ export async function* executeToolsGen(
     }
 
     const normalizedResult = typeof result === 'string' ? result : JSON.stringify(result)
-    const clientResult = formatToolResultForClient(tc.name, normalizedResult)
+    const resultForChannels =
+      tc.name === 'search'
+        ? splitSearchResultForChannels(normalizedResult)
+        : {
+            clientResult: formatToolResultForClient(tc.name, normalizedResult),
+            modelResult: normalizedResult,
+          }
 
     yield {
       type: 'tool_result',
       tool: tc.name,
-      result: clientResult,
+      result: resultForChannels.clientResult,
       callId: tc.id,
     }
 
-    results.push({ id: tc.id, name: tc.name, result: normalizedResult })
+    results.push({ id: tc.id, name: tc.name, result: resultForChannels.modelResult })
   }
 
   return results

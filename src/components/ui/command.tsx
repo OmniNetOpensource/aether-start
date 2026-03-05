@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 import {
   Command as CommandRoot,
   CommandDialog as CmdkCommandDialog,
@@ -10,16 +10,12 @@ import {
   CommandItem as CmdkCommandItem,
   CommandList as CmdkCommandList,
   CommandSeparator as CmdkCommandSeparator,
-} from "cmdk"
-import { VisuallyHidden } from "@radix-ui/react-visually-hidden"
-import { Search } from "lucide-react"
+} from "cmdk";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { Search } from "lucide-react";
 
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-} from "@/components/ui/dialog"
-import { cn } from "@/lib/utils"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandRoot>,
@@ -29,12 +25,12 @@ const Command = React.forwardRef<
     ref={ref}
     className={cn(
       "flex h-full w-full flex-col overflow-hidden rounded-md bg-(--surface-primary) text-(--text-primary)",
-      className
+      className,
     )}
     {...props}
   />
-))
-Command.displayName = "Command"
+));
+Command.displayName = "Command";
 
 const CommandDialog = ({
   children,
@@ -50,7 +46,7 @@ const CommandDialog = ({
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
         "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:max-w-md",
-        contentClassName
+        contentClassName,
       )}
       showCloseButton={false}
     >
@@ -60,25 +56,28 @@ const CommandDialog = ({
       {children}
     </DialogContent>
   </Dialog>
-)
+);
 
 const CommandInput = React.forwardRef<
   React.ElementRef<typeof CmdkCommandInput>,
   React.ComponentPropsWithoutRef<typeof CmdkCommandInput>
 >(({ className, ...props }, ref) => (
-  <div className="flex items-center border-b border-(--border-primary) px-3" cmdk-input-wrapper="">
+  <div
+    className="flex items-center border-b border-(--border-primary) px-3"
+    cmdk-input-wrapper=""
+  >
     <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
     <CmdkCommandInput
       ref={ref}
       className={cn(
         "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-(--text-tertiary) disabled:cursor-not-allowed disabled:opacity-50",
-        className
+        className,
       )}
       {...props}
     />
   </div>
-))
-CommandInput.displayName = "CommandInput"
+));
+CommandInput.displayName = "CommandInput";
 
 const CommandList = React.forwardRef<
   React.ElementRef<typeof CmdkCommandList>,
@@ -89,8 +88,8 @@ const CommandList = React.forwardRef<
     className={cn("max-h-72 overflow-y-auto overflow-x-hidden", className)}
     {...props}
   />
-))
-CommandList.displayName = "CommandList"
+));
+CommandList.displayName = "CommandList";
 
 const CommandEmpty = React.forwardRef<
   React.ElementRef<typeof CmdkCommandEmpty>,
@@ -101,8 +100,8 @@ const CommandEmpty = React.forwardRef<
     className="py-6 text-center text-sm text-(--text-tertiary)"
     {...props}
   />
-))
-CommandEmpty.displayName = "CommandEmpty"
+));
+CommandEmpty.displayName = "CommandEmpty";
 
 const CommandGroup = React.forwardRef<
   React.ElementRef<typeof CmdkCommandGroup>,
@@ -112,12 +111,12 @@ const CommandGroup = React.forwardRef<
     ref={ref}
     className={cn(
       "overflow-hidden p-1 text-(--text-primary) [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-(--text-tertiary)",
-      className
+      className,
     )}
     {...props}
   />
-))
-CommandGroup.displayName = "CommandGroup"
+));
+CommandGroup.displayName = "CommandGroup";
 
 const CommandSeparator = React.forwardRef<
   React.ElementRef<typeof CmdkCommandSeparator>,
@@ -128,8 +127,8 @@ const CommandSeparator = React.forwardRef<
     className={cn("-mx-1 h-px bg-(--border-primary)", className)}
     {...props}
   />
-))
-CommandSeparator.displayName = "CommandSeparator"
+));
+CommandSeparator.displayName = "CommandSeparator";
 
 const CommandItem = React.forwardRef<
   React.ElementRef<typeof CmdkCommandItem>,
@@ -139,12 +138,12 @@ const CommandItem = React.forwardRef<
     ref={ref}
     className={cn(
       "relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-(--surface-hover) data-[selected=true]:text-(--text-primary) [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-      className
+      className,
     )}
     {...props}
   />
-))
-CommandItem.displayName = "CommandItem"
+));
+CommandItem.displayName = "CommandItem";
 
 const CommandShortcut = ({
   className,
@@ -153,12 +152,12 @@ const CommandShortcut = ({
   <span
     className={cn(
       "ml-auto text-xs tracking-widest text-(--text-tertiary)",
-      className
+      className,
     )}
     {...props}
   />
-)
-CommandShortcut.displayName = "CommandShortcut"
+);
+CommandShortcut.displayName = "CommandShortcut";
 
 export {
   Command,
@@ -170,4 +169,4 @@ export {
   CommandItem,
   CommandShortcut,
   CommandSeparator,
-}
+};
