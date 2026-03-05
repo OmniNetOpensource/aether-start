@@ -54,7 +54,7 @@ export function useTheme() {
     // 确保 HTML class 与客户端实际主题一致
     // （处理服务端因无 cookie 而默认渲染 light、但用户实际偏好 dark 的情况）
     applyHtmlClass(theme);
-  }, []);
+  }, [theme]);
 
   const setTheme = (next: Theme) => {
     setThemeState(next);
