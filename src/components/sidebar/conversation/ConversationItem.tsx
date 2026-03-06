@@ -69,7 +69,7 @@ export function ConversationItem({
 
   return (
     <div
-      className={`group relative flex w-full items-start gap-3 rounded-lg bg-transparent p-3 text-left transition-all hover:bg-(--surface-hover) ${
+      className={`group relative flex w-full items-start gap-3 rounded-lg bg-transparent p-0.5 text-left transition-all hover:bg-(--surface-hover) ${
         isActive ? "bg-(--surface-hover)" : "opacity-80 hover:opacity-100"
       }`}
     >
