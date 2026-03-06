@@ -1,27 +1,27 @@
-import { getServerEnv } from '@/server/env'
+import { getServerEnv } from "@/server/env";
 
-export type ChatFormat = 'anthropic' | 'openai' | 'gemini' | 'openai-responses'
+export type ChatFormat = "anthropic" | "openai" | "gemini" | "openai-responses";
 export type ChatBackend =
-  | 'rightcode-claude'
-  | 'rightcode-gemini'
-  | 'rightcode-openai'
-  | 'dmx'
-  | 'ikun'
+  | "rightcode-claude"
+  | "rightcode-gemini"
+  | "rightcode-openai"
+  | "dmx"
+  | "ikun";
 
 export type BackendConfig = {
-  apiKey: string
-  baseURL: string
-  defaultHeaders: Record<string, string>
-}
+  apiKey: string;
+  baseURL: string;
+  defaultHeaders: Record<string, string>;
+};
 
 export type RoleConfig = {
-  id: string
-  name: string
-  model: string
-  format: ChatFormat
-  backend: ChatBackend
-  systemPrompt: string
-}
+  id: string;
+  name: string;
+  model: string;
+  format: ChatFormat;
+  backend: ChatBackend;
+  systemPrompt: string;
+};
 
 const englishTeacherSystemPrompt = `你是一位英语教学助手。我会给你发送一段英文内容（可能较长）。你需要逐句分析，不得省略任何句子。
 
@@ -148,6 +148,14 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     backend: "ikun",
     systemPrompt: aetherSystemPrompt,
   },
+  claudeOpus45Ikun: {
+    id: "claudeOpus45Ikun",
+    name: "claude-opus-4-5+ikun",
+    model: "claude-opus-4-5",
+    format: "anthropic",
+    backend: "ikun",
+    systemPrompt: aetherSystemPrompt,
+  },
   // claudeSonnet46Thinking: {
   //   id: "claudeSonnet46Thinking",
   //   name: "claude-sonnet-4-6-thinking+dmx",
@@ -228,10 +236,10 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     backend: "rightcode-gemini",
     systemPrompt: aetherSystemPrompt,
   },
-  gpt53CodexRightcode: {
-    id: "gpt53CodexRightcode",
-    name: "gpt-5.3-codex+rightcode",
-    model: "gpt-5.3-codex-high",
+  gpt54Rightcode: {
+    id: "gpt54Rightcode",
+    name: "gpt-5.4+rightcode",
+    model: "gpt-5.4-high",
     format: "openai-responses",
     backend: "rightcode-openai",
     systemPrompt: aetherSystemPrompt,
@@ -282,7 +290,7 @@ export const getAvailableRoles = (): { id: string; name: string }[] =>
   Object.values(ROLE_CONFIGS).map(({ id, name }) => ({ id, name }));
 
 export const getRoleConfig = (roleId: string): RoleConfig | null => {
-  const id = roleId.trim()
+  const id = roleId.trim();
   return (
     ROLE_CONFIGS[id] ??
     Object.values(ROLE_CONFIGS).find(
@@ -301,17 +309,17 @@ export const getDefaultRoleConfig = (): RoleConfig | null => {
 };
 
 export const buildSystemPrompt = () => {
-  const now = new Date()
-  const localDate = now.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  const now = new Date();
+  const localDate = now.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 
   const prompt = `
 今天的日期是：${localDate}
 不需要在回答时引用出处。
-`
+`;
 
   return `${prompt}
 # 需要搜索的时候：非必要情况下不要用中文搜索；在没有足够上下文之前不要回答；如果没有搞清楚，就不断调研直到搞清楚，不要只是了解皮毛，要深入搜索资料去了解，要了解全方位的资料搜寻才能开始回答。
@@ -319,77 +327,77 @@ export const buildSystemPrompt = () => {
 # 什么时候不需要搜索：已知的知识
 
 - 学会利用google search高级技巧
-`
-}
+`;
+};
 
 export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
-  const env = getServerEnv()
+  const env = getServerEnv();
 
-  if (backend === 'rightcode-claude') {
-    const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE
-    const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE
-    if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_RIGHTCODE')
-    if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_RIGHTCODE')
+  if (backend === "rightcode-claude") {
+    const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE;
+    const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE;
+    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY_RIGHTCODE");
+    if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_RIGHTCODE");
     return {
       apiKey,
       baseURL,
       defaultHeaders: {
-        'User-Agent': 'aether',
-        'anthropic-beta': 'interleaved-thinking-2025-05-14',
+        "User-Agent": "aether",
+        "anthropic-beta": "interleaved-thinking-2025-05-14",
       },
-    }
+    };
   }
 
-  if (backend === 'rightcode-gemini') {
-    const apiKey = env.GEMINI_API_KEY_RIGHTCODE
-    const baseURL = env.GEMINI_BASE_URL_RIGHTCODE
-    if (!apiKey) throw new Error('Missing GEMINI_API_KEY_RIGHTCODE')
-    if (!baseURL) throw new Error('Missing GEMINI_BASE_URL_RIGHTCODE')
+  if (backend === "rightcode-gemini") {
+    const apiKey = env.GEMINI_API_KEY_RIGHTCODE;
+    const baseURL = env.GEMINI_BASE_URL_RIGHTCODE;
+    if (!apiKey) throw new Error("Missing GEMINI_API_KEY_RIGHTCODE");
+    if (!baseURL) throw new Error("Missing GEMINI_BASE_URL_RIGHTCODE");
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { 'User-Agent': 'aether' },
-    }
+      defaultHeaders: { "User-Agent": "aether" },
+    };
   }
 
-  if (backend === 'rightcode-openai') {
-    const apiKey = env.OPENAI_API_KEY_RIGHTCODE
-    const baseURL = env.OPENAI_BASE_URL_RIGHTCODE
-    if (!apiKey) throw new Error('Missing OPENAI_API_KEY_RIGHTCODE')
-    if (!baseURL) throw new Error('Missing OPENAI_BASE_URL_RIGHTCODE')
+  if (backend === "rightcode-openai") {
+    const apiKey = env.OPENAI_API_KEY_RIGHTCODE;
+    const baseURL = env.OPENAI_BASE_URL_RIGHTCODE;
+    if (!apiKey) throw new Error("Missing OPENAI_API_KEY_RIGHTCODE");
+    if (!baseURL) throw new Error("Missing OPENAI_BASE_URL_RIGHTCODE");
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { 'User-Agent': 'aether' },
-    }
+      defaultHeaders: { "User-Agent": "aether" },
+    };
   }
 
-  if (backend === 'ikun') {
-    const apiKey = env.ANTHROPIC_API_KEY_IKUNCODE
-    const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE
-    if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_IKUNCODE')
-    if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_IKUNCODE')
+  if (backend === "ikun") {
+    const apiKey = env.ANTHROPIC_API_KEY_IKUNCODE;
+    const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE;
+    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY_IKUNCODE");
+    if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_IKUNCODE");
     return {
       apiKey,
       baseURL,
       defaultHeaders: {
-        'User-Agent': 'aether',
-        'anthropic-beta': 'interleaved-thinking-2025-05-14',
+        "User-Agent": "aether",
+        "anthropic-beta": "interleaved-thinking-2025-05-14",
       },
-    }
+    };
   }
 
-  if (backend === 'dmx') {
-    const apiKey = env.DMX_APIKEY
-    const baseURL = env.DMX_BASEURL
-    if (!apiKey) throw new Error('Missing DMX_APIKEY')
-    if (!baseURL) throw new Error('Missing DMX_BASEURL')
+  if (backend === "dmx") {
+    const apiKey = env.DMX_APIKEY;
+    const baseURL = env.DMX_BASEURL;
+    if (!apiKey) throw new Error("Missing DMX_APIKEY");
+    if (!baseURL) throw new Error("Missing DMX_BASEURL");
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { 'User-Agent': 'aether' },
-    }
+      defaultHeaders: { "User-Agent": "aether" },
+    };
   }
 
-  throw new Error(`Unknown backend: ${backend}`)
-}
+  throw new Error(`Unknown backend: ${backend}`);
+};
