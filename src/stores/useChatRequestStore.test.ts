@@ -65,6 +65,7 @@ describe('useChatRequestStore', () => {
     useChatRequestStore.setState({
       pending: false,
       chatClient: null,
+      chatClientConversationId: null,
       activeRequestId: null,
       connectionState: 'idle',
       connectionStateUpdatedAt: 0,
@@ -78,6 +79,7 @@ describe('useChatRequestStore', () => {
     expect(useChatRequestStore.getState()).toMatchObject({
       connectionState: 'idle',
       connectionStateUpdatedAt: 0,
+      chatClientConversationId: null,
     })
   })
 
@@ -103,12 +105,23 @@ describe('useChatRequestStore', () => {
     expect(afterState.connectionStateUpdatedAt).toBeGreaterThanOrEqual(before)
   })
 
-  it('stop aborts and disconnects active chat client', () => {
+  it('tracks the chat client together with its conversation id', () => {
+    const client = {} as ChatClient
+
+    useChatRequestStore.getState()._setChatClient(client, 'conv-7')
+
+    expect(useChatRequestStore.getState()).toMatchObject({
+      chatClient: client,
+      chatClientConversationId: 'conv-7',
+    })
+  })
+
+  it('stop aborts active chat client and keeps the connection object', () => {
     const abort = vi.fn()
     const disconnect = vi.fn()
     const client = { abort, disconnect } as unknown as ChatClient
 
-    useChatRequestStore.getState()._setChatClient(client)
+    useChatRequestStore.getState()._setChatClient(client, 'conv-9')
     useChatRequestStore.getState()._setActiveRequestId('req-9')
     useChatRequestStore.getState()._setPending(true)
     useChatRequestStore.getState()._setConnectionState('disconnected')
@@ -116,31 +129,55 @@ describe('useChatRequestStore', () => {
     useChatRequestStore.getState().stop()
 
     expect(abort).toHaveBeenCalledWith('req-9')
-    expect(disconnect).toHaveBeenCalledTimes(1)
+    expect(disconnect).not.toHaveBeenCalled()
     expect(useChatRequestStore.getState()).toMatchObject({
       pending: false,
-      chatClient: null,
+      chatClient: client,
+      chatClientConversationId: 'conv-9',
       activeRequestId: null,
-      connectionState: 'idle',
+      connectionState: 'disconnected',
     })
     expect(useChatRequestStore.getState().connectionStateUpdatedAt).toBeGreaterThan(0)
   })
 
-  it('clear disconnects client and resets runtime state', () => {
+  it('clear resets request state and keeps the connection alive', () => {
     const disconnect = vi.fn()
     const client = { disconnect } as unknown as ChatClient
 
-    useChatRequestStore.getState()._setChatClient(client)
+    useChatRequestStore.getState()._setChatClient(client, 'conv-2')
     useChatRequestStore.getState()._setPending(true)
     useChatRequestStore.getState()._setActiveRequestId('req-2')
     useChatRequestStore.getState()._setConnectionState('reconnecting')
 
     useChatRequestStore.getState().clear()
 
+    expect(disconnect).not.toHaveBeenCalled()
+    expect(useChatRequestStore.getState()).toMatchObject({
+      pending: false,
+      chatClient: client,
+      chatClientConversationId: 'conv-2',
+      activeRequestId: null,
+      connectionState: 'reconnecting',
+    })
+    expect(useChatRequestStore.getState().connectionStateUpdatedAt).toBeGreaterThan(0)
+  })
+
+  it('disposeConnection disconnects client and resets runtime state', () => {
+    const disconnect = vi.fn()
+    const client = { disconnect } as unknown as ChatClient
+
+    useChatRequestStore.getState()._setChatClient(client, 'conv-3')
+    useChatRequestStore.getState()._setPending(true)
+    useChatRequestStore.getState()._setActiveRequestId('req-3')
+    useChatRequestStore.getState()._setConnectionState('connected')
+
+    useChatRequestStore.getState().disposeConnection()
+
     expect(disconnect).toHaveBeenCalledTimes(1)
     expect(useChatRequestStore.getState()).toMatchObject({
       pending: false,
       chatClient: null,
+      chatClientConversationId: null,
       activeRequestId: null,
       connectionState: 'idle',
     })

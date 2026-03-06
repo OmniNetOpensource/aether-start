@@ -1,61 +1,204 @@
-import { toast } from "@/hooks/useToast";
-import { useConversationsStore } from "@/stores/useConversationsStore";
-import { applyChatEventToTree } from "@/lib/chat/api/event-handlers";
+import { toast } from '@/hooks/useToast'
+import { useConversationsStore } from '@/stores/useConversationsStore'
+import { applyChatEventToTree } from '@/lib/chat/api/event-handlers'
 import {
   ChatClient,
   checkAgentStatus,
-  resetConversationEventCursor,
-} from "@/lib/chat/api/websocket-client";
-import type { Message, MessageLike, SerializedMessage } from "@/types/message";
-import type { MessageTreeSnapshot } from "@/types/chat-api";
-import { appNavigate } from "@/lib/navigation";
-import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
-import { useChatRequestStore } from "@/stores/useChatRequestStore";
+  resetLastEventId,
+} from '@/lib/chat/api/websocket-client'
+import type { Message, MessageLike, SerializedMessage } from '@/types/message'
+import type {
+  ChatEventMeta,
+  ChatStatusEvent,
+} from '@/lib/chat/api/websocket-client'
+import type { MessageTreeSnapshot } from '@/types/chat-api'
+import { appNavigate } from '@/lib/navigation'
+import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
+import { useChatRequestStore } from '@/stores/useChatRequestStore'
+import type { ChatServerToClientEvent } from '@/types/chat-event-types'
 
 const generateLocalMessageId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
+  typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
-    : `msg_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    : `msg_${Date.now()}_${Math.random().toString(16).slice(2)}`
 
 const generateConversationId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
+  typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
-    : `conv_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+    : `conv_${Date.now()}_${Math.random().toString(16).slice(2)}`
 
 type StartRequestOptions = {
-  messages: Message[];
-  titleSource?: MessageLike;
-  preferLocalTitle?: boolean;
-};
+  messages: Message[]
+  titleSource?: MessageLike
+  preferLocalTitle?: boolean
+}
 
 const setConnectionState = (
-  state: "idle" | "connecting" | "connected" | "reconnecting" | "disconnected",
+  state: 'idle' | 'connecting' | 'connected' | 'reconnecting' | 'disconnected',
 ) => {
-  useChatRequestStore.getState()._setConnectionState(state);
-};
+  useChatRequestStore.getState()._setConnectionState(state)
+}
+
+const isCurrentClient = (chatClient: ChatClient) =>
+  useChatRequestStore.getState().chatClient === chatClient
+
+const clearCurrentClient = () => {
+  useChatRequestStore.getState()._setChatClient(null, null)
+}
+
+const handleChatEvent = (
+  event: ChatServerToClientEvent,
+  meta: ChatEventMeta,
+) => {
+  const activeRequestId = useChatRequestStore.getState().activeRequestId
+  if (
+    event.type !== 'conversation_updated' &&
+    activeRequestId &&
+    activeRequestId !== meta.requestId
+  ) {
+    return
+  }
+
+  applyChatEventToTree(event)
+}
+
+const handleChatStatus = (chatClient: ChatClient, statusEvent: ChatStatusEvent) => {
+  if (!isCurrentClient(chatClient)) {
+    return
+  }
+
+  if (statusEvent.type === 'connection') {
+    setConnectionState(statusEvent.state)
+    return
+  }
+
+  if (statusEvent.type === 'busy') {
+    toast.warning('当前会话正在生成中')
+    useChatRequestStore.setState({
+      pending: true,
+      activeRequestId: statusEvent.currentRequestId,
+    })
+    return
+  }
+
+  if (statusEvent.type === 'started') {
+    useChatRequestStore.setState({
+      pending: true,
+      activeRequestId: statusEvent.requestId,
+    })
+    return
+  }
+
+  if (statusEvent.type === 'sync') {
+    if (statusEvent.status === 'running') {
+      useChatRequestStore.setState({
+        pending: true,
+        activeRequestId:
+          statusEvent.requestId ?? useChatRequestStore.getState().activeRequestId,
+      })
+      return
+    }
+
+    useChatRequestStore.setState({
+      pending: false,
+      activeRequestId: null,
+    })
+    return
+  }
+
+  if (statusEvent.type === 'finished') {
+    const activeRequestId = useChatRequestStore.getState().activeRequestId
+    if (activeRequestId && activeRequestId !== statusEvent.requestId) {
+      return
+    }
+
+    useChatRequestStore.setState({
+      pending: false,
+      activeRequestId: null,
+    })
+  }
+}
+
+const handleChatError = (chatClient: ChatClient) => {
+  if (!isCurrentClient(chatClient)) {
+    return
+  }
+
+  chatClient.disconnect()
+  clearCurrentClient()
+  useChatRequestStore.setState({
+    pending: false,
+    activeRequestId: null,
+  })
+  setConnectionState('disconnected')
+}
+
+const createChatClient = (conversationId: string) => {
+  const chatClient = new ChatClient({
+    onEvent: (event, meta) => {
+      if (!isCurrentClient(chatClient)) {
+        return
+      }
+
+      handleChatEvent(event, meta)
+    },
+    onStatus: (statusEvent) => {
+      handleChatStatus(chatClient, statusEvent)
+    },
+    onError: () => {
+      handleChatError(chatClient)
+    },
+  })
+
+  useChatRequestStore.getState()._setChatClient(chatClient, conversationId)
+
+  return chatClient
+}
+
+const ensureCurrentConversationClient = (conversationId: string) => {
+  const store = useChatRequestStore.getState()
+  if (
+    store.chatClient &&
+    store.chatClientConversationId === conversationId
+  ) {
+    return { chatClient: store.chatClient, reused: true }
+  }
+
+  if (store.chatClient) {
+    store.chatClient.disconnect()
+    clearCurrentClient()
+  }
+
+  resetLastEventId()
+
+  return {
+    chatClient: createChatClient(conversationId),
+    reused: false,
+  }
+}
 
 export const startChatRequest = async (options: StartRequestOptions) => {
-  const { messages } = options;
-  const selectedRole = useChatRequestStore.getState().currentRole;
+  const { messages } = options
+  const selectedRole = useChatRequestStore.getState().currentRole
 
   if (useChatRequestStore.getState().pending) {
-    return;
+    return
   }
   if (!selectedRole) {
-    toast.warning("请先选择角色");
-    return;
+    toast.warning('请先选择角色')
+    return
   }
 
-  let currentConversationId = useMessageTreeStore.getState().conversationId;
-  const requestId = generateLocalMessageId();
+  let currentConversationId = useMessageTreeStore.getState().conversationId
+  const requestId = generateLocalMessageId()
 
   if (!currentConversationId) {
-    currentConversationId = generateConversationId();
-    const now = new Date().toISOString();
+    currentConversationId = generateConversationId()
+    const now = new Date().toISOString()
 
-    useMessageTreeStore.getState().setConversationId(currentConversationId);
+    useMessageTreeStore.getState().setConversationId(currentConversationId)
 
-    const fallbackTitle = "New Chat";
+    const fallbackTitle = 'New Chat'
 
     useConversationsStore.getState().addConversation({
       id: currentConversationId,
@@ -64,9 +207,9 @@ export const startChatRequest = async (options: StartRequestOptions) => {
       pinned_at: null,
       created_at: now,
       updated_at: now,
-    });
+    })
 
-    appNavigate(`/app/c/${currentConversationId}`);
+    appNavigate(`/app/c/${currentConversationId}`)
   }
 
   const serializedMessages: SerializedMessage[] = messages.map(
@@ -75,98 +218,18 @@ export const startChatRequest = async (options: StartRequestOptions) => {
         role: msg.role,
         blocks: msg.blocks,
       }) as SerializedMessage,
-  );
+  )
 
   const treeSnapshot = useMessageTreeStore
     .getState()
-    ._getTreeState() as MessageTreeSnapshot;
+    ._getTreeState() as MessageTreeSnapshot
 
-  resetConversationEventCursor(currentConversationId);
-
-  let disconnectedHandled = false;
-  const chatClient = new ChatClient({
-    onEvent: (event, meta) => {
-      const activeRequestId = useChatRequestStore.getState().activeRequestId;
-      if (
-        event.type !== "conversation_updated" &&
-        activeRequestId &&
-        activeRequestId !== meta.requestId
-      ) {
-        return;
-      }
-
-      applyChatEventToTree(event);
-    },
-    onStatus: (statusEvent) => {
-      if (statusEvent.type === "connection") {
-        setConnectionState(statusEvent.state);
-        return;
-      }
-
-      if (statusEvent.type === "busy") {
-        toast.warning("当前会话正在生成中");
-        useChatRequestStore.setState({
-          pending: true,
-          chatClient,
-          activeRequestId: statusEvent.currentRequestId,
-        });
-        return;
-      }
-
-      if (statusEvent.type === "started") {
-        useChatRequestStore.setState({
-          pending: true,
-          chatClient,
-          activeRequestId: statusEvent.requestId,
-        });
-        return;
-      }
-
-      if (statusEvent.type === "sync") {
-        if (statusEvent.status === "running") {
-          useChatRequestStore.setState({
-            pending: true,
-            chatClient,
-            activeRequestId: statusEvent.requestId ?? requestId,
-          });
-        }
-        return;
-      }
-
-      if (statusEvent.type === "finished") {
-        const activeRequestId = useChatRequestStore.getState().activeRequestId;
-        if (activeRequestId && activeRequestId !== statusEvent.requestId) {
-          return;
-        }
-
-        // Keep connection alive for reuse within the same page
-        useChatRequestStore.setState({
-          pending: false,
-          activeRequestId: null,
-        });
-      }
-    },
-    onError: () => {
-      if (disconnectedHandled) {
-        return;
-      }
-
-      disconnectedHandled = true;
-      chatClient.disconnect();
-      useChatRequestStore.setState({
-        pending: false,
-        chatClient: null,
-        activeRequestId: null,
-      });
-      setConnectionState("disconnected");
-    },
-  });
+  const { chatClient } = ensureCurrentConversationClient(currentConversationId)
 
   useChatRequestStore.setState({
     pending: true,
-    chatClient,
     activeRequestId: requestId,
-  });
+  })
 
   void chatClient
     .sendMessage({
@@ -177,158 +240,51 @@ export const startChatRequest = async (options: StartRequestOptions) => {
       treeSnapshot,
     })
     .catch((error) => {
-      console.error("Failed to send chat message", error);
-      if (disconnectedHandled) {
-        return;
-      }
-
-      disconnectedHandled = true;
-      chatClient.disconnect();
-      useChatRequestStore.setState({
-        pending: false,
-        chatClient: null,
-        activeRequestId: null,
-      });
-      setConnectionState("disconnected");
-    });
-};
+      console.error('Failed to send chat message', error)
+      handleChatError(chatClient)
+    })
+}
 
 export const resumeRunningConversation = async (conversationId: string) => {
   if (!conversationId) {
-    return;
+    return
   }
 
-  const store = useChatRequestStore.getState();
-  if (store.pending && store.chatClient) {
-    return;
+  const store = useChatRequestStore.getState()
+  if (
+    store.pending &&
+    store.chatClient &&
+    store.chatClientConversationId === conversationId
+  ) {
+    return
   }
 
-  if (store.chatClient) {
-    store.chatClient.disconnect();
-  }
-
-  // Step 1: Check DO status via HTTP — no WebSocket needed
-  let agentStatus: Awaited<ReturnType<typeof checkAgentStatus>> | null = null;
-  let probeFailed = false;
+  let agentStatus: Awaited<ReturnType<typeof checkAgentStatus>> | null = null
+  let probeFailed = false
   try {
-    agentStatus = await checkAgentStatus(conversationId);
+    agentStatus = await checkAgentStatus(conversationId)
   } catch {
-    probeFailed = true;
+    probeFailed = true
   }
 
-  // Step 2: If not running, nothing to do — D1 data is already loaded
-  if (!probeFailed && agentStatus && agentStatus.status !== "running") {
-    setConnectionState("idle");
-    return;
+  if (!probeFailed && agentStatus && agentStatus.status !== 'running') {
+    setConnectionState('idle')
+    return
   }
 
-  // Step 3: Establish WebSocket to receive live events (probe failure falls back to sync)
-  let disconnectedHandled = false;
+  const { chatClient } = ensureCurrentConversationClient(conversationId)
 
-  const chatClient = new ChatClient({
-    onEvent: (event, meta) => {
-      const activeRequestId = useChatRequestStore.getState().activeRequestId;
-      if (
-        event.type !== "conversation_updated" &&
-        activeRequestId &&
-        activeRequestId !== meta.requestId
-      ) {
-        return;
-      }
-
-      applyChatEventToTree(event);
-    },
-    onStatus: (statusEvent) => {
-      if (statusEvent.type === "connection") {
-        setConnectionState(statusEvent.state);
-        return;
-      }
-
-      if (statusEvent.type === "sync") {
-        if (statusEvent.status === "running") {
-          useChatRequestStore.setState({
-            pending: true,
-            chatClient,
-            activeRequestId: statusEvent.requestId ?? null,
-          });
-          return;
-        }
-
-        // Sync completed but not running - keep connection alive
-        useChatRequestStore.setState({
-          pending: false,
-          activeRequestId: null,
-        });
-        return;
-      }
-
-      if (statusEvent.type === "started") {
-        useChatRequestStore.setState({
-          pending: true,
-          chatClient,
-          activeRequestId: statusEvent.requestId,
-        });
-        return;
-      }
-
-      if (statusEvent.type === "busy") {
-        useChatRequestStore.setState({
-          pending: true,
-          chatClient,
-          activeRequestId: statusEvent.currentRequestId,
-        });
-        return;
-      }
-
-      if (statusEvent.type === "finished") {
-        // Keep connection alive for reuse within the same page
-        useChatRequestStore.setState({
-          pending: false,
-          activeRequestId: null,
-        });
-      }
-    },
-    onError: () => {
-      if (disconnectedHandled) {
-        return;
-      }
-
-      disconnectedHandled = true;
-      chatClient.disconnect();
-      useChatRequestStore.setState({
-        pending: false,
-        chatClient: null,
-        activeRequestId: null,
-      });
-      setConnectionState("disconnected");
-    },
-  });
-
-  // If the HTTP probe confirmed running, show pending immediately.
-  if (!probeFailed && agentStatus?.status === "running") {
+  if (!probeFailed && agentStatus?.status === 'running') {
     useChatRequestStore.setState({
       pending: true,
-      chatClient,
       activeRequestId: agentStatus.requestId ?? null,
-    });
+    })
   }
 
-  // Step 4: Connect and sync — get missed events from eventCache, deduplicated
   try {
-    await chatClient.sync(conversationId);
+    await chatClient.sync(conversationId)
   } catch (error) {
-    console.error("Failed to resume conversation", error);
-    if (disconnectedHandled) {
-      return;
-    }
-
-    disconnectedHandled = true;
-    chatClient.disconnect();
-    useChatRequestStore.setState({
-      pending: false,
-      chatClient: null,
-      activeRequestId: null,
-    });
-    setConnectionState("disconnected");
+    console.error('Failed to resume conversation', error)
+    handleChatError(chatClient)
   }
-};
+}

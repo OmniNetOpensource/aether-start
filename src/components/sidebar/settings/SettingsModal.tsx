@@ -3,7 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { Gift, Loader2, Plus, Ban, LogOut } from "lucide-react";
 import { authClient } from "@/lib/auth/auth-client";
 import { useChatRequestStore } from "@/stores/useChatRequestStore";
-import { clearConversationEventCursors } from "@/lib/chat/api/websocket-client";
+import { resetLastEventId } from "@/lib/chat/api/websocket-client";
 import { useComposerStore } from "@/stores/useComposerStore";
 import { useEditingStore } from "@/stores/useEditingStore";
 import { useMessageTreeStore } from "@/stores/useMessageTreeStore";
@@ -103,7 +103,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       useMessageTreeStore.getState().clear();
       useConversationsStore.getState().reset();
       useNotesStore.getState().reset();
-      clearConversationEventCursors();
+      resetLastEventId();
       await navigate({ href: "/auth/login", replace: true });
       setIsSigningOut(false);
     }

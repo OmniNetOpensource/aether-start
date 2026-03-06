@@ -59,31 +59,20 @@ const resolveAgentSecure = () => {
 
 const resolveAgentProtocol = () => (resolveAgentSecure() ? "wss" : "ws");
 
-const eventCursorByConversation = new Map<string, number>();
+let lastEventId = 0;
 
-const getLastEventId = (conversationId: string) =>
-  eventCursorByConversation.get(conversationId) ?? 0;
+const getLastEventId = () => lastEventId;
 
-const markEventId = (conversationId: string, eventId: number) => {
-  const current = getLastEventId(conversationId);
-  if (eventId > current) {
-    eventCursorByConversation.set(conversationId, eventId);
+const markEventId = (eventId: number) => {
+  if (eventId > lastEventId) {
+    lastEventId = eventId;
   }
 };
 
-const shouldConsumeEvent = (conversationId: string, eventId: number) =>
-  eventId > getLastEventId(conversationId);
+const shouldConsumeEvent = (eventId: number) => eventId > lastEventId;
 
-export const resetConversationEventCursor = (conversationId: string) => {
-  if (!conversationId) {
-    return;
-  }
-
-  eventCursorByConversation.delete(conversationId);
-};
-
-export const clearConversationEventCursors = () => {
-  eventCursorByConversation.clear();
+export const resetLastEventId = () => {
+  lastEventId = 0;
 };
 
 const isChatAgentStatus = (value: unknown): value is ChatAgentStatus =>
@@ -209,7 +198,7 @@ export class ChatClient {
     this.send({
       type: "sync",
       conversationId,
-      lastEventId: getLastEventId(conversationId),
+      lastEventId: getLastEventId(),
     });
   }
 
@@ -294,7 +283,7 @@ export class ChatClient {
       this.send({
         type: "sync",
         conversationId: this.conversationId,
-        lastEventId: getLastEventId(this.conversationId),
+        lastEventId: getLastEventId(),
       });
     }
   };
@@ -375,11 +364,11 @@ export class ChatClient {
           continue;
         }
 
-        if (!shouldConsumeEvent(this.conversationId, eventId)) {
+        if (!shouldConsumeEvent(eventId)) {
           continue;
         }
 
-        markEventId(this.conversationId, eventId);
+        markEventId(eventId);
 
         this.options.onEvent(serverEvent, {
           requestId: eventRequestId,
@@ -403,11 +392,11 @@ export class ChatClient {
         return;
       }
 
-      if (!shouldConsumeEvent(this.conversationId, eventId)) {
+      if (!shouldConsumeEvent(eventId)) {
         return;
       }
 
-      markEventId(this.conversationId, eventId);
+      markEventId(eventId);
 
       this.options.onEvent(serverEvent, {
         requestId,

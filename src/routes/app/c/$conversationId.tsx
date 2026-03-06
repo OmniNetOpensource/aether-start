@@ -3,6 +3,7 @@ import { createFileRoute } from '@tanstack/react-router'
 import { Composer } from '@/components/chat/composer/Composer'
 import { MessageList } from '@/components/chat/message/MessageList'
 import { useConversationLoader } from '@/hooks/useConversationLoader'
+import { resetLastEventId } from '@/lib/chat/api/websocket-client'
 import { useConversationsStore } from '@/stores/useConversationsStore'
 import { useChatRequestStore } from '@/stores/useChatRequestStore'
 
@@ -10,12 +11,12 @@ export const Route = createFileRoute('/app/c/$conversationId')({
   component: ConversationPage,
 })
 
-function ConversationPage() {
+export function ConversationPage() {
   const { conversationId } = Route.useParams()
   const { isLoading } = useConversationLoader(conversationId)
 
   const title = useConversationsStore(
-    (state) => state.conversations.find((c) => c.id === conversationId)?.title
+    (state) => state.conversations.find((c) => c.id === conversationId)?.title,
   )
 
   useEffect(() => {
@@ -33,26 +34,43 @@ function ConversationPage() {
     }
   }, [title])
 
-  // Dispose connection when leaving this conversation page
   useEffect(() => {
-    const handlePageHide = () => {
+    const disposeConnection = () => {
+      resetLastEventId()
       useChatRequestStore.getState().disposeConnection()
     }
 
+    const handlePageHide = (event: PageTransitionEvent) => {
+      if (event.persisted) {
+        return
+      }
+
+      disposeConnection()
+    }
+
     const handleBeforeUnload = () => {
-      useChatRequestStore.getState().disposeConnection()
+      disposeConnection()
+    }
+
+    const handlePageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted || !conversationId) {
+        return
+      }
+
+      void useChatRequestStore.getState().resumeIfRunning(conversationId)
     }
 
     window.addEventListener('pagehide', handlePageHide)
     window.addEventListener('beforeunload', handleBeforeUnload)
+    window.addEventListener('pageshow', handlePageShow)
 
     return () => {
       window.removeEventListener('pagehide', handlePageHide)
       window.removeEventListener('beforeunload', handleBeforeUnload)
-      // Also dispose on component unmount (route change)
-      useChatRequestStore.getState().disposeConnection()
+      window.removeEventListener('pageshow', handlePageShow)
+      disposeConnection()
     }
-  }, [])
+  }, [conversationId])
 
   if (isLoading) {
     return null
