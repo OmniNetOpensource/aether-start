@@ -150,7 +150,7 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
   },
   claudeOpus45Ikun: {
     id: "claudeOpus45Ikun",
-    name: "claude-opus-4-5+ikun",
+    name: "claude-opus-4-5-20251101",
     model: "claude-opus-4-5",
     format: "anthropic",
     backend: "ikun",

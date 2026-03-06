@@ -1,5 +1,5 @@
 import { getBackendConfig } from '@/server/agents/services/chat-config'
-import { getGeminiClient } from '@/server/agents/services/gemini'
+import { getOpenAIClient } from '@/server/agents/services/openai'
 import { log } from '@/server/agents/services/logger'
 
 const FALLBACK_TITLE = 'New Chat'
@@ -11,7 +11,7 @@ const sanitizeTitle = (value: string) => {
     .trim()
 }
 const CONVERSATION_TITLE_TIMEOUT_MS = 60_000
-const TITLE_MODEL = 'gemini-3-flash-preview'
+const TITLE_MODEL = 'gpt-5.4'
 
 export const generateTitleFromConversation = async (
   userText: string,
@@ -23,7 +23,7 @@ export const generateTitleFromConversation = async (
 
   let backendConfig: ReturnType<typeof getBackendConfig>
   try {
-    backendConfig = getBackendConfig('rightcode-gemini')
+    backendConfig = getBackendConfig('rightcode-openai')
   } catch {
     return FALLBACK_TITLE
   }
@@ -35,20 +35,20 @@ export const generateTitleFromConversation = async (
   ].filter((line) => line.length > 0)
 
   const prompt = promptLines.join('\n')
-  const client = getGeminiClient(backendConfig)
+  const client = getOpenAIClient(backendConfig)
 
   try {
-    const response = await client.models.generateContent({
-      model: TITLE_MODEL,
-      contents: prompt,
-      config: {
-        maxOutputTokens: 64,
+    const response = await client.chat.completions.create(
+      {
+        model: TITLE_MODEL,
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 64,
         temperature: 0.2,
-        abortSignal: AbortSignal.timeout(CONVERSATION_TITLE_TIMEOUT_MS),
       },
-    })
+      { signal: AbortSignal.timeout(CONVERSATION_TITLE_TIMEOUT_MS) },
+    )
 
-    const rawTitle = response.text?.trim() ?? ''
+    const rawTitle = response.choices?.[0]?.message?.content?.trim() ?? ''
 
     const title =
       typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : ''
