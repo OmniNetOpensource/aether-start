@@ -46,10 +46,10 @@ const OutlineNodeItem = ({
             onClick={() => onSelect(node.messageId)}
             className={cn(
               'w-full min-w-0 rounded-md border px-2 py-1.5 text-left transition-colors overflow-hidden',
-              'focus-visible:ring-2 focus-visible:ring-(--interactive-primary)/50 focus-visible:outline-none',
+              'focus-visible:ring-2 focus-visible:ring-(--interactive-primary) focus-visible:outline-none',
               isCurrentPathNode
                 ? 'border-(--border-primary) bg-(--surface-muted) text-(--text-primary)'
-                : 'border-transparent text-(--text-secondary) opacity-70 hover:opacity-100 hover:bg-(--surface-hover) hover:text-(--text-primary)'
+                : 'border-transparent text-(--text-secondary) hover:bg-(--surface-hover) hover:text-(--text-primary)'
             )}
             style={{ paddingLeft: `${8 + depth * 14}px` }}
           >

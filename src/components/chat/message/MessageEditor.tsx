@@ -143,7 +143,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
         size="icon"
         aria-label="取消编辑"
         onClick={cancelEditing}
-        className="absolute right-2 top-2 h-7 w-7 opacity-60 transition-opacity hover:opacity-100"
+        className="absolute right-2 top-2 h-7 w-7 text-(--text-secondary) transition-colors hover:text-(--text-primary)"
       >
         <X className="h-4 w-4" />
       </Button>

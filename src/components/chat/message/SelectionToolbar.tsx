@@ -290,7 +290,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 4, scale: 0.95 }}
           transition={{ duration: 0.15 }}
-          className="flex gap-1 rounded-lg bg-background/80 p-1 shadow-lg backdrop-blur-md border border-border/50"
+          className="flex gap-1 rounded-lg bg-background/80 p-1 shadow-lg backdrop-blur-md border border-border"
           data-selection-toolbar
         >
           <Button

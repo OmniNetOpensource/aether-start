@@ -80,10 +80,10 @@ export function ConnectionStatusInline() {
     : "实时连接已断开";
 
   const toneClass = isConnecting || isConnected
-    ? "border-(--status-info)/30 bg-(--status-info)/10 text-(--status-info)"
+    ? "border-(--status-info) bg-(--status-info)/10 text-(--status-info)"
     : isReconnecting
-    ? "border-(--status-warning)/35 bg-(--status-warning)/10 text-(--status-warning)"
-    : "border-(--status-destructive)/30 bg-(--status-destructive)/10 text-(--status-destructive)";
+    ? "border-(--status-warning) bg-(--status-warning)/10 text-(--status-warning)"
+    : "border-(--status-destructive) bg-(--status-destructive)/10 text-(--status-destructive)";
 
   return (
     <div className="mt-3 flex w-full items-center">

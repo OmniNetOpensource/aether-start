@@ -119,7 +119,7 @@ function ResetPasswordPage() {
     <main className="min-h-screen w-full bg-background relative overflow-hidden flex items-center justify-center p-6">
       {/* Abstract background */}
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-(--interactive-primary)/10 via-background to-background" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-(--interactive-primary)/30 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-(--interactive-primary)" />
 
       <motion.div 
         initial={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -185,7 +185,7 @@ function ResetPasswordPage() {
                   onChange={(event) => setNewPassword(event.target.value)}
                   placeholder="至少 8 位密码"
                   disabled={isSubmitting}
-                  className={cn(errorMessage && "border-(--status-destructive) focus-visible:ring-(--status-destructive)/20")}
+                  className={cn(errorMessage && "border-(--status-destructive) focus-visible:ring-(--status-destructive)")}
                   required
                 />
               </div>
@@ -204,7 +204,7 @@ function ResetPasswordPage() {
                   onChange={(event) => setConfirmPassword(event.target.value)}
                   placeholder="请再次输入新密码"
                   disabled={isSubmitting}
-                  className={cn(errorMessage && "border-(--status-destructive) focus-visible:ring-(--status-destructive)/20")}
+                  className={cn(errorMessage && "border-(--status-destructive) focus-visible:ring-(--status-destructive)")}
                   required
                 />
               </div>

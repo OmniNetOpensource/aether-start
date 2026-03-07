@@ -91,7 +91,7 @@ export function ComposerToolbar({
             disabled={uploading}
             className={cn(
               toolButtonBaseClass,
-              "disabled:cursor-not-allowed disabled:opacity-60 disabled:text-(--text-primary)"
+              "disabled:cursor-not-allowed disabled:text-(--text-primary)"
             )}
           >
             {uploading ? (

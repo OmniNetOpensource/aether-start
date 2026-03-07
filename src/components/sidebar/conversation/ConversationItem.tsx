@@ -1,149 +1,173 @@
-import { Link, useNavigate } from "@tanstack/react-router";
-import { MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
-import type { ConversationMeta } from "@/types/conversation";
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Shimmer } from '@/components/ai-elements/shimmer'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Shimmer } from "@/components/ai-elements/shimmer";
-import { useConversationsStore } from "@/stores/useConversationsStore";
+} from '@/components/ui/dropdown-menu'
+import { useConversationsStore } from '@/stores/useConversationsStore'
+import type { ConversationMeta } from '@/types/conversation'
+import { useSidebarOverlay } from '../SidebarOverlayContext'
 
-const PLACEHOLDER_TITLES = ["New Chat", "未命名会话"];
+const PLACEHOLDER_TITLES = ['New Chat', '未命名会话']
 
 function isPlaceholderTitle(title: string | null): boolean {
-  if (!title || !title.trim()) return true;
-  return PLACEHOLDER_TITLES.includes(title.trim());
+  if (!title || !title.trim()) return true
+  return PLACEHOLDER_TITLES.includes(title.trim())
 }
 
 type ConversationItemProps = {
-  conversation: ConversationMeta;
-  isActive: boolean;
-};
+  conversation: ConversationMeta
+  isActive: boolean
+}
 
 export function ConversationItem({
   conversation,
   isActive,
 }: ConversationItemProps) {
-  const title = conversation.title || "未命名会话";
-  const useShimmer = isPlaceholderTitle(conversation.title);
+  const overlayId = `conversation-menu-${conversation.id}`
+  const title = conversation.title || '未命名会话'
+  const useShimmer = isPlaceholderTitle(conversation.title)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const { setOverlayOpen } = useSidebarOverlay()
 
-  const navigate = useNavigate();
+  const navigate = useNavigate()
   const deleteConversation = useConversationsStore(
     (state) => state.deleteConversation
-  );
+  )
   const setConversationPinned = useConversationsStore(
     (state) => state.setConversationPinned
-  );
+  )
 
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    // 如果是修饰键点击（Ctrl/Cmd/Shift/Alt），用户意图是新标签/新窗口/下载等
-    // 直接放行，不弹确认，不调用 stop()
-    if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) {
-      return;
+  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    // Allow modified clicks to keep their native browser behavior.
+    if (
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey ||
+      event.altKey ||
+      event.button !== 0
+    ) {
+      return
     }
-  };
+  }
 
-  const handleMenuClick = (e: React.MouseEvent<HTMLButtonElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
+  const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault()
+    event.stopPropagation()
+  }
 
   const handleDelete = async () => {
-    const confirmed = window.confirm("确定要删除这个会话吗？删除后无法恢复。");
+    const confirmed = window.confirm('确定要删除这个会话吗？删除后无法恢复。')
     if (!confirmed) {
-      return;
+      return
     }
 
-    await deleteConversation(conversation.id);
+    await deleteConversation(conversation.id)
 
     if (isActive) {
-      navigate({ to: "/app" });
+      navigate({ to: '/app' })
     }
-  };
+  }
 
   const handleSetPinned = async (pinned: boolean) => {
-    await setConversationPinned(conversation.id, pinned);
-  };
+    await setConversationPinned(conversation.id, pinned)
+  }
+
+  const handleMenuOpenChange = (open: boolean) => {
+    setMenuOpen(open)
+    setOverlayOpen(overlayId, open)
+  }
+
+  useEffect(() => {
+    return () => {
+      setOverlayOpen(overlayId, false)
+    }
+  }, [overlayId, setOverlayOpen])
 
   return (
     <div
-      className={`group relative flex w-full items-start gap-3 rounded-lg bg-transparent p-0.5 text-left transition-all hover:bg-(--surface-hover) ${
-        isActive ? "bg-(--surface-hover)" : "opacity-80 hover:opacity-100"
+      className={`group relative flex-col w-full items-start justify-center gap-3 rounded-sm p-0.5 text-left transition-all hover:bg-(--surface-hover) ${
+        isActive ? 'bg-(--surface-active)' : 'bg-transparent'
       }`}
     >
-      {isActive && (
-        <div className="absolute left-0 top-[30%] bottom-[30%] w-[3px] rounded-r-full bg-foreground shadow-[0_0_8px_rgba(0,0,0,0.1)] dark:shadow-[0_0_8px_rgba(255,255,255,0.1)]" />
-      )}
       <Link
-        to="/app/c/$conversationId"
+        to='/app/c/$conversationId'
         params={{ conversationId: conversation.id }}
         onClick={handleClick}
-        className="absolute inset-0 z-0"
+        className='absolute inset-0 z-0'
         aria-label={title}
       />
-      <div className="min-w-0 flex-1 pointer-events-none relative z-10">
-        <div className="flex min-w-0 items-center gap-2">
-          {conversation.is_pinned ? (
-            <Pin className="size-3.5 shrink-0 text-(--text-tertiary)" />
-          ) : null}
-          {useShimmer ? (
-            <Shimmer
-              as="span"
-              className="min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)"
+      <div className='flex w-full items-center justify-between gap-3 px-1'>
+        <div className='pointer-events-none relative z-10 min-w-0 flex-1'>
+          <div className='flex min-w-0 items-center gap-2'>
+            {conversation.is_pinned ? (
+              <Pin className='size-3.5 shrink-0 text-(--text-tertiary)' />
+            ) : null}
+            {useShimmer ? (
+              <Shimmer
+                as='span'
+                className='min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)'
+              >
+                {title}
+              </Shimmer>
+            ) : (
+              <span className='min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)'>
+                {title}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className='relative z-20'>
+          <DropdownMenu
+            modal={false}
+            open={menuOpen}
+            onOpenChange={handleMenuOpenChange}
+          >
+            <DropdownMenuTrigger asChild>
+              <button
+                type='button'
+                onClick={handleMenuClick}
+                aria-label='会话操作'
+                className='flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100'
+              >
+                <MoreHorizontal className='size-4' />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align='end'
+              side='right'
+              className='min-w-34'
+              onClick={(event) => event.stopPropagation()}
             >
-              {title}
-            </Shimmer>
-          ) : (
-            <span className="min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)">
-              {title}
-            </span>
-          )}
+              <DropdownMenuItem
+                onSelect={() => {
+                  void handleSetPinned(!conversation.is_pinned)
+                }}
+              >
+                {conversation.is_pinned ? (
+                  <PinOff className='size-4' />
+                ) : (
+                  <Pin className='size-4' />
+                )}
+                {conversation.is_pinned ? '取消置顶' : '置顶会话'}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => {
+                  void handleDelete()
+                }}
+                variant='destructive'
+              >
+                <Trash2 className='size-4' />
+                删除会话
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
-      <div className="relative z-20">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              onClick={handleMenuClick}
-              aria-label="会话操作"
-              className="flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
-            >
-              <MoreHorizontal className="size-4" />
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent
-            align="end"
-            side="right"
-            className="min-w-34"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <DropdownMenuItem
-              onSelect={() => {
-                void handleSetPinned(!conversation.is_pinned);
-              }}
-            >
-              {conversation.is_pinned ? (
-                <PinOff className="size-4" />
-              ) : (
-                <Pin className="size-4" />
-              )}
-              {conversation.is_pinned ? "取消置顶" : "置顶会话"}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onSelect={() => {
-                void handleDelete();
-              }}
-              className="text-destructive"
-            >
-              <Trash2 className="size-4" />
-              删除会话
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
     </div>
-  );
+  )
 }

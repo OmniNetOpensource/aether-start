@@ -56,7 +56,7 @@ function ChainOfThoughtHeader({
     >
       <ChevronRight
         aria-hidden
-        className="h-3.5 w-3.5 opacity-50 transition-transform duration-200 group-data-[state=open]:rotate-90 group-hover:opacity-100"
+        className="h-3.5 w-3.5 text-(--text-tertiary) transition-transform duration-200 group-data-[state=open]:rotate-90 group-hover:text-(--text-primary)"
       />
       <span>{children}</span>
     </CollapsiblePrimitive.CollapsibleTrigger>
@@ -146,7 +146,7 @@ function ChainOfThoughtStep({
         </div>
         {/* Connector line - lighter, hidden for last step */}
         {!hideConnector && (
-          <div className="w-px flex-1 min-h-4 mt-0.5 bg-(--border-primary) opacity-50" />
+          <div className="w-px flex-1 min-h-4 mt-0.5 bg-(--border-primary)" />
         )}
       </div>
 
@@ -196,7 +196,7 @@ function ChainOfThoughtSearchResult({
   children,
 }: ChainOfThoughtSearchResultProps) {
   const content = (
-    <Badge variant="outline" className={cn('gap-1.5 px-2 py-0.5 text-[11px] max-w-full font-normal border-(--border-primary) hover:bg-(--surface-hover) cursor-pointer transition-colors', className)}>
+    <Badge variant="outline" className={cn('gap-1.5 px-2 py-0.5 text-[11px] max-w-full font-normal border-0 hover:bg-(--surface-hover) cursor-pointer transition-colors', className)}>
       {icon && <span className="shrink-0">{icon}</span>}
       <span className="truncate min-w-0">{children}</span>
       {url && <span className="shrink-0 text-(--text-tertiary)">{(() => { try { return new URL(url).host } catch { return url } })()}</span>}
@@ -237,7 +237,7 @@ function ChainOfThoughtImage({
         src={src}
         alt={alt}
         className={cn(
-          'max-w-full rounded-lg border border-(--border-primary) opacity-90',
+          'max-w-full rounded-lg border border-(--border-primary)',
           className
         )}
         {...props}

@@ -66,11 +66,11 @@ const CommandInput = React.forwardRef<
     className="flex items-center border-b border-(--border-primary) px-3"
     cmdk-input-wrapper=""
   >
-    <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+    <Search className="mr-2 h-4 w-4 shrink-0 text-(--text-secondary)" />
     <CmdkCommandInput
       ref={ref}
       className={cn(
-        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-(--text-tertiary) disabled:cursor-not-allowed disabled:opacity-50",
+        "flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-(--text-tertiary) disabled:cursor-not-allowed",
         className,
       )}
       {...props}

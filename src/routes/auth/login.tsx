@@ -78,7 +78,7 @@ function LoginPage() {
   return (
     <main className="min-h-screen w-full bg-background relative overflow-hidden flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-(--interactive-primary)/10 via-background to-background" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-(--interactive-primary)/30 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-(--interactive-primary)" />
 
       <motion.div
         initial={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -105,7 +105,7 @@ function LoginPage() {
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mb-6 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 flex items-start gap-3"
+              className="mb-6 rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-3 flex items-start gap-3"
             >
               <svg className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
               <p className="text-sm text-emerald-600 dark:text-emerald-400">
@@ -128,7 +128,7 @@ function LoginPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="name@example.com"
               disabled={isSubmitting}
-              className={cn(errorMessage && errorMessage.includes('邮箱') && "border-(--status-destructive) focus-visible:ring-(--status-destructive)/20")}
+              className={cn(errorMessage && errorMessage.includes('邮箱') && "border-(--status-destructive) focus-visible:ring-(--status-destructive)")}
               required
             />
           </div>
@@ -153,7 +153,7 @@ function LoginPage() {
               onChange={(event) => setPassword(event.target.value)}
               placeholder="请输入密码"
               disabled={isSubmitting}
-              className={cn(errorMessage && errorMessage.includes('密码') && "border-(--status-destructive) focus-visible:ring-(--status-destructive)/20")}
+              className={cn(errorMessage && errorMessage.includes('密码') && "border-(--status-destructive) focus-visible:ring-(--status-destructive)")}
               required
             />
           </div>

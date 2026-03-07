@@ -74,7 +74,7 @@ export function NoteCard({
           onEdit()
         }
       }}
-      className='group flex h-full cursor-pointer flex-col gap-3 rounded-xl border bg-background p-3 text-left transition-colors hover:bg-(--surface-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--interactive-primary)/40'
+      className='group flex h-full cursor-pointer flex-col gap-3 rounded-xl border bg-background p-3 text-left transition-colors hover:bg-(--surface-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--interactive-primary)'
       aria-label='编辑笔记'
     >
       {image ? (

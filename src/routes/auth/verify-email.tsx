@@ -154,7 +154,7 @@ function VerifyEmailPage() {
               onKeyDown={(e) => handleOtpKeyDown(i, e)}
               className={cn(
                 'w-11 h-13 text-center text-xl font-semibold rounded-lg border bg-background outline-none transition-all',
-                'focus:ring-2 focus:ring-(--interactive-primary)/40 focus:border-(--interactive-primary)',
+                'focus:ring-2 focus:ring-(--interactive-primary) focus:border-(--interactive-primary)',
                 errorMessage ? 'border-(--status-destructive)' : 'ink-border',
               )}
               disabled={isVerifyingOtp}

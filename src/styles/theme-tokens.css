@@ -7,18 +7,19 @@
   --surface-secondary: #f7f1e6;
   --surface-muted: rgba(0, 0, 0, 0.03);
   --surface-hover: rgba(0, 0, 0, 0.05);
+  --surface-active: rgba(0, 0, 0, 0.08);
 
-  --border-primary: rgba(26, 26, 26, 0.08);
+  --border-primary: #1a1a1a;
 
   /* Text - Hierarchy of text colors */
   --text-primary: #1a1a1a;
-  --text-secondary: rgba(26, 26, 26, 0.7);
-  --text-tertiary: rgba(26, 26, 26, 0.4);
+  --text-secondary: #5c5a54;
+  --text-tertiary: #9c988e;
 
   /* Interactive - Buttons, links, toggles */
   --interactive-primary: #1a1a1a;
   --interactive-primary-hover: #000000;
-  --interactive-secondary: rgba(26, 26, 26, 0.7);
+  --interactive-secondary: #5c5a54;
   --interactive-secondary-hover: #1a1a1a;
 
   /* Content - Decorative accents */
@@ -75,18 +76,19 @@ html.dark {
   --surface-secondary: #1c1a18;
   --surface-muted: rgba(255, 255, 255, 0.03);
   --surface-hover: rgba(255, 255, 255, 0.06);
+  --surface-active: rgba(255, 255, 255, 0.04);
 
-  --border-primary: rgba(227, 222, 211, 0.08);
+  --border-primary: #e3ded3;
 
   /* Text - Hierarchy of text colors */
   --text-primary: #e3ded3;
-  --text-secondary: rgba(227, 222, 211, 0.7);
-  --text-tertiary: rgba(227, 222, 211, 0.4);
+  --text-secondary: #a7a296;
+  --text-tertiary: #6d695f;
 
   /* Interactive - Buttons, links, toggles */
   --interactive-primary: #e3ded3;
   --interactive-primary-hover: #ffffff;
-  --interactive-secondary: rgba(227, 222, 211, 0.7);
+  --interactive-secondary: #a7a296;
   --interactive-secondary-hover: #ffffff;
 
   /* Sidebar - Material differentiation */

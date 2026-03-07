@@ -52,7 +52,7 @@ export function PeekingAttachments({
             }}
           >                                          
             <div
-              className="relative rounded-lg overflow-hidden shadow-md ring-1 ring-black/5"
+              className="relative rounded-lg overflow-hidden shadow-md ring-1 ring-black"
               style={{
                 width: 72,
                 height: 72,

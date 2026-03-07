@@ -267,7 +267,7 @@ export function ConversationSearchDialog({
         </DialogHeader>
 
         <div className='flex items-center px-4 py-4'>
-          <Search className='size-6 text-(--text-tertiary) opacity-50' />
+          <Search className='size-6 text-(--text-secondary)' />
           <input
             autoFocus
             value={query}
@@ -275,7 +275,7 @@ export function ConversationSearchDialog({
             placeholder='你想找什么？'
             className='ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-(--text-tertiary)'
           />
-          {loading && <Loader2 className='size-5 animate-spin text-(--text-tertiary) opacity-50' />}
+          {loading && <Loader2 className='size-5 animate-spin text-(--text-secondary)' />}
         </div>
 
         <div className='h-[1px] w-full bg-black/5 dark:bg-white/10' />
@@ -325,7 +325,7 @@ export function ConversationSearchDialog({
           {items.length > 0 && (hasMore || loadingMore) ? (
             <div ref={sentinelRef} className='flex items-center justify-center py-2 text-(--text-tertiary)'>
               {loadingMore ? (
-                <Loader2 className='size-4 animate-spin opacity-50' />
+                <Loader2 className='size-4 animate-spin text-(--text-secondary)' />
               ) : null}
             </div>
           ) : null}

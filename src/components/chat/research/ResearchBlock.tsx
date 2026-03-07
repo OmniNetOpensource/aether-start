@@ -148,7 +148,7 @@ function Favicon({ url, fallback }: { url: string; fallback?: React.ReactNode })
 function ThinkingStep({ text, hideConnector }: { text: string; hideConnector: boolean }) {
   return (
     <ChainOfThoughtStep
-      icon={<div className="h-2 w-2 rounded-full bg-current opacity-40" />}
+      icon={<div className="h-2 w-2 rounded-full bg-current" />}
       hideConnector={hideConnector}
     >
       <div className="text-xs text-(--text-secondary) [&_p]:m-0">

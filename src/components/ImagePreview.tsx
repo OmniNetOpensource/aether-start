@@ -115,7 +115,7 @@ export function ImagePreview({
         onClick={handleOpen}
         className={cn(
           "relative h-20 w-20 overflow-hidden rounded-xl",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--interactive-primary)/60",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--interactive-primary)",
           className
         )}
         title={previewLabel}

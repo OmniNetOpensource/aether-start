@@ -69,7 +69,7 @@ function RegisterPage() {
   return (
     <main className="min-h-screen w-full bg-background relative overflow-hidden flex items-center justify-center p-6">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-(--interactive-primary)/10 via-background to-background" />
-      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-(--interactive-primary)/30 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-px bg-(--interactive-primary)" />
 
       <motion.div
         initial={{ opacity: 0, y: 10, scale: 0.98 }}
@@ -103,7 +103,7 @@ function RegisterPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder="name@example.com"
               disabled={isSubmitting}
-              className={cn(errorMessage && errorMessage.includes('邮箱') && "border-(--status-destructive) focus-visible:ring-(--status-destructive)/20")}
+              className={cn(errorMessage && errorMessage.includes('邮箱') && "border-(--status-destructive) focus-visible:ring-(--status-destructive)")}
               required
             />
           </div>
@@ -119,7 +119,7 @@ function RegisterPage() {
               onChange={(event) => setPassword(event.target.value)}
               placeholder="至少 8 个字符"
               disabled={isSubmitting}
-              className={cn(errorMessage && errorMessage.includes('密码') && "border-(--status-destructive) focus-visible:ring-(--status-destructive)/20")}
+              className={cn(errorMessage && errorMessage.includes('密码') && "border-(--status-destructive) focus-visible:ring-(--status-destructive)")}
               required
             />
           </div>

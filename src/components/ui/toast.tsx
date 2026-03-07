@@ -78,7 +78,7 @@ export function Toast({ toast, isExiting, onClose, onExited }: ToastProps) {
       <div className="flex-1 text-sm leading-relaxed">{toast.message}</div>
       <button
         onClick={onClose}
-        className="shrink-0 rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        className="shrink-0 rounded-sm text-(--text-secondary) transition-colors hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
         aria-label="Close"
       >
         <XIcon className="size-4" />

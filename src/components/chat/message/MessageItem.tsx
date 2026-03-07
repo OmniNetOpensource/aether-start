@@ -209,7 +209,7 @@ export function MessageItem({
                       return (
                         <div
                           key={blockKey}
-                          className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-(--status-destructive)/10 px-3 py-2 text-sm text-destructive not-italic"
+                          className="flex items-start gap-2 rounded-lg border border-destructive bg-(--status-destructive)/10 px-3 py-2 text-sm text-destructive not-italic"
                         >
                           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                           <div className="flex-1 whitespace-pre-wrap">

@@ -14,10 +14,9 @@ const CONVERSATION_TITLE_TIMEOUT_MS = 60_000
 const TITLE_MODEL = 'gpt-5.4'
 
 export const generateTitleFromConversation = async (
-  userText: string,
-  assistantText: string,
+  conversationTranscript: string,
 ): Promise<string> => {
-  if (!userText.trim() && !assistantText.trim()) {
+  if (!conversationTranscript.trim()) {
     return FALLBACK_TITLE
   }
 
@@ -30,8 +29,7 @@ export const generateTitleFromConversation = async (
 
   const promptLines = [
     'Based on this conversation, generate a short title (max 10 chars, no quotes). Use the same language as the conversation.',
-    userText ? `User: ${userText}` : '',
-    assistantText ? `Assistant: ${assistantText}` : '',
+    conversationTranscript,
   ].filter((line) => line.length > 0)
 
   const prompt = promptLines.join('\n')

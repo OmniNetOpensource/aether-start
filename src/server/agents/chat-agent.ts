@@ -151,50 +151,34 @@ const parseMessage = (message: unknown): ChatAgentClientMessage | null => {
 
 const stringify = (payload: unknown) => JSON.stringify(payload)
 
-const extractLatestUserText = (messages: Message[], currentPath: number[]) => {
-  const pathIds = [...currentPath].reverse()
-  for (const id of pathIds) {
-    const message = messages[id - 1]
-    if (!message || message.role !== 'user') {
-      continue
-    }
+const MAX_TITLE_TRANSCRIPT_CHARS = 4_000
 
-    const text = message.blocks
-      .filter((block) => block.type === 'content')
-      .map((block) => block.content)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim()
+const extractConversationTranscript = (messages: Message[], currentPath: number[]) => {
+  const lines = currentPath
+    .map((id) => messages[id - 1])
+    .filter((message): message is Message => Boolean(message))
+    .map((message) => {
+      const text = message.blocks
+        .filter((block): block is Extract<typeof block, { type: 'content' }> => block.type === 'content')
+        .map((block) => block.content)
+        .join(' ')
+        .replace(/\s+/g, ' ')
+        .trim()
 
-    if (text) {
-      return text
-    }
+      if (!text) {
+        return null
+      }
+
+      const speaker = message.role === 'user' ? 'User' : 'Assistant'
+      return `${speaker}: ${text}`
+    })
+    .filter((line): line is string => Boolean(line))
+
+  if (lines.length === 0) {
+    return ''
   }
 
-  return ''
-}
-
-const extractLatestAssistantText = (messages: Message[], currentPath: number[]) => {
-  const pathIds = [...currentPath].reverse()
-  for (const id of pathIds) {
-    const message = messages[id - 1]
-    if (!message || message.role !== 'assistant') {
-      continue
-    }
-
-    const text = message.blocks
-      .filter((block) => block.type === 'content')
-      .map((block) => block.content)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-
-    if (text) {
-      return text
-    }
-  }
-
-  return ''
+  return lines.join('\n').slice(-MAX_TITLE_TRANSCRIPT_CHARS)
 }
 
 const toEventError = (message: string): ChatServerToClientEvent => ({
@@ -609,6 +593,7 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
           userId,
           cloneTreeSnapshot(workingTree),
           message.role,
+          finalStatus === 'completed',
         )
       } catch (error) {
         finalStatus = 'error'
@@ -694,18 +679,21 @@ export class ChatAgent extends Agent<ChatAgentEnv, ChatAgentState> {
       nextId: number
     },
     role?: string,
+    regenerateTitle = false,
   ) {
     const existing = await getConversationById(this.env.DB, conversationId, userId)
     const now = new Date().toISOString()
 
     let resolvedTitle = existing?.title ?? 'New Chat'
 
-    if (!existing?.title || existing.title === 'New Chat') {
-      const userText = extractLatestUserText(snapshot.messages, snapshot.currentPath)
-      const assistantText = extractLatestAssistantText(snapshot.messages, snapshot.currentPath)
+    if (regenerateTitle) {
+      const conversationTranscript = extractConversationTranscript(
+        snapshot.messages,
+        snapshot.currentPath,
+      )
 
-      if (assistantText) {
-        resolvedTitle = await generateTitleFromConversation(userText, assistantText)
+      if (conversationTranscript) {
+        resolvedTitle = await generateTitleFromConversation(conversationTranscript)
       }
     }
 
