@@ -10,8 +10,6 @@ import {
   XCircle,
 } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
-import Markdown from '@/components/Markdown'
-import { ResearchBlock } from '@/components/chat/research/ResearchBlock'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -35,6 +33,7 @@ import {
   getConversationShareFn,
   revokeConversationShareFn,
 } from '@/server/functions/shares'
+import { MessageList } from '@/features/chat/components/message/MessageList'
 import {
   isChatRequestActive,
   selectChatRequestStatus,
@@ -50,25 +49,6 @@ import type { ConversationShareStatus } from '@/types/share'
 type ShareStep = 'select' | 'preview'
 
 type ShareablePathMessage = { id: number; pathIndex: number; message: Message }
-
-type ShareRenderableAttachment = {
-  id: string
-  name: string
-  url: string
-  thumbnailUrl?: string
-}
-
-type ShareRenderableBlock =
-  | { type: 'content'; content: string }
-  | { type: 'research'; items: Extract<Message['blocks'][number], { type: 'research' }>['items'] }
-  | { type: 'error'; message: string }
-  | { type: 'attachments'; attachments: ShareRenderableAttachment[] }
-
-export type ShareRenderableMessage = {
-  id: number
-  role: Message['role']
-  blocks: ShareRenderableBlock[]
-}
 
 export type ShareDialogProps = { open: boolean; onOpenChange: (open: boolean) => void }
 
@@ -92,87 +72,6 @@ const waitForFrames = () =>
 
 const buildShareUrl = (token: string) =>
   typeof window === 'undefined' ? `/share/${encodeURIComponent(token)}` : `${window.location.origin}/share/${encodeURIComponent(token)}`
-
-// --- SharedConversationView (inline, also used by share route) ---
-
-type SharedConversationViewProps = { messages: ShareRenderableMessage[]; className?: string }
-
-export function SharedConversationView({ messages, className }: SharedConversationViewProps) {
-  return (
-    <section className={cn('space-y-5', className)}>
-      {messages.map((message, messageIndex) => (
-        <article
-          key={message.id}
-          className={cn(
-            'rounded-xl p-4',
-            message.role === 'user' && 'border border-border bg-(--surface-secondary) ml-auto max-w-[60%] w-full text-left'
-          )}
-        >
-          <div className='space-y-3'>
-            {message.blocks.map((block, blockIndex) => {
-              if (block.type === 'content') {
-                return (
-                  <div
-                    key={`${message.id}-c-${blockIndex}`}
-                    className={cn(
-                      'text-lg leading-relaxed wrap-anywhere [&_pre]:wrap-normal',
-                      message.role === 'user' ? 'text-foreground' : 'text-(--text-secondary)'
-                    )}
-                  >
-                    <Markdown content={block.content} />
-                  </div>
-                )
-              }
-              if (block.type === 'research') {
-                return (
-                  <ResearchBlock
-                    key={`${message.id}-r-${blockIndex}`}
-                    items={block.items}
-                    blockIndex={blockIndex}
-                    messageIndex={messageIndex}
-                  />
-                )
-              }
-              if (block.type === 'error') {
-                return (
-                  <div
-                    key={`${message.id}-e-${blockIndex}`}
-                    className='flex items-start gap-2 rounded-lg border border-destructive bg-destructive/10 px-3 py-2 text-base text-destructive'
-                  >
-                    <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
-                    <div className='whitespace-pre-wrap'>{block.message}</div>
-                  </div>
-                )
-              }
-              if (block.type === 'attachments' && block.attachments.length > 0) {
-                return (
-                  <div key={`${message.id}-a-${blockIndex}`} className='grid grid-cols-3 gap-3'>
-                    {block.attachments.map((a) => (
-                      <div
-                        key={a.id}
-                        className='overflow-hidden rounded-lg border border-border bg-background'
-                      >
-                        <img
-                          src={a.thumbnailUrl ?? a.url}
-                          alt={a.name}
-                          className='h-28 w-full object-cover'
-                        />
-                        <div className='px-2 py-1.5 text-xs text-muted-foreground truncate'>
-                          {a.name}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )
-              }
-              return null
-            })}
-          </div>
-        </article>
-      ))}
-    </section>
-  )
-}
 
 // --- ShareDialog ---
 
@@ -205,11 +104,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
   const selectedMessages = pathMessages.filter(({ id }) => selectedIds.has(id))
   const selectedCount = selectedMessages.length
-  const selectedRenderableMessages = selectedMessages.map(({ message }) => ({
-    id: message.id,
-    role: message.role,
-    blocks: message.blocks,
-  })) as ShareRenderableMessage[]
+  const selectedPreviewMessages = selectedMessages.map(({ message }) => message)
 
   const conversationTitle = (() => {
     if (!conversationId) return 'Aether'
@@ -597,7 +492,14 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
             className='rounded-2xl border border-border bg-background p-10 text-foreground'
             style={{ width: 960, fontFamily: EXPORT_FONT }}
           >
-            <SharedConversationView messages={selectedRenderableMessages} />
+            <MessageList
+              messages={selectedPreviewMessages}
+              readonly
+              showConnectionStatus={false}
+              showSelectionToolbar={false}
+              usePageScroll
+              listClassName='pb-6'
+            />
             <footer className='mt-6 border-t border-border pt-4 text-sm text-muted-foreground'>
               Exported from Aether
             </footer>

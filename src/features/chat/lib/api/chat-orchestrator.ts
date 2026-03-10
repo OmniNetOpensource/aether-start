@@ -1,6 +1,7 @@
 import { toast } from "@/hooks/useToast";
 import { useConversationsStore } from "@/stores/zustand/useConversationsStore";
 import { applyChatEventToTree } from "@/lib/chat/api/event-handlers";
+import { stripTransientSearchDataFromMessages } from '@/lib/chat/search-result-payload'
 import type { Message, MessageLike, SerializedMessage } from "@/types/message";
 import type {
   ChatAgentStatus,
@@ -343,24 +344,29 @@ const buildPreparedRequest = (
   requestId: string,
   messages: Message[],
 ) => {
-  const conversationHistory: SerializedMessage[] = messages.map(
+  const sanitizedMessages = stripTransientSearchDataFromMessages(messages)
+  const rawTreeSnapshot = useMessageTreeStore
+    .getState()
+    ._getTreeState() as MessageTreeSnapshot;
+  const treeSnapshot: MessageTreeSnapshot = {
+    ...rawTreeSnapshot,
+    messages: stripTransientSearchDataFromMessages(rawTreeSnapshot.messages),
+  }
+
+  const sanitizedConversationHistory: SerializedMessage[] = sanitizedMessages.map(
     (msg) =>
       ({
         role: msg.role,
         blocks: msg.blocks,
       }) as SerializedMessage,
-  );
-
-  const treeSnapshot = useMessageTreeStore
-    .getState()
-    ._getTreeState() as MessageTreeSnapshot;
+  )
 
   return {
     requestId,
     role,
     promptId,
     conversationId,
-    conversationHistory,
+    conversationHistory: sanitizedConversationHistory,
     treeSnapshot,
   };
 };

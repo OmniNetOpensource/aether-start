@@ -2,6 +2,7 @@
 import { useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import type { Message } from "@/types/message";
 import {
   isChatRequestAnswering,
   selectChatRequestStatus,
@@ -10,44 +11,69 @@ import {
 import { SelectionToolbar } from "./SelectionToolbar";
 import { ConnectionStatusInline } from "./ConnectionStatusInline";
 
-export function MessageList() {
+type MessageListProps = {
+  messages?: Message[];
+  readonly?: boolean;
+  className?: string;
+  listClassName?: string;
+  showConnectionStatus?: boolean;
+  showSelectionToolbar?: boolean;
+  usePageScroll?: boolean;
+};
+
+export function MessageList({
+  messages,
+  readonly = false,
+  className,
+  listClassName,
+  showConnectionStatus = !readonly,
+  showSelectionToolbar = !readonly,
+  usePageScroll = false,
+}: MessageListProps = {}) {
   const currentPath = useMessageTreeStore((state) => state.currentPath);
   const status = useChatRequestStore(selectChatRequestStatus);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const renderedMessages =
+    messages ??
+    currentPath
+      .map((messageId) => useMessageTreeStore.getState().messages[messageId - 1])
+      .filter((message): message is Message => Boolean(message));
 
   return (
-    <div className="relative h-full w-full">
+    <div className={`relative w-full ${usePageScroll ? "" : "h-full"} ${className ?? ""}`.trim()}>
       <div
         ref={scrollRef}
-        className="h-full w-full overflow-y-auto"
+        className={`w-full ${usePageScroll ? "" : "h-full overflow-y-auto"}`.trim()}
       >
         <div
           role="log"
           aria-live="polite"
-          className="flex-1 min-h-0 flex flex-col mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-1 pb-40 md:pb-44 lg:pb-48"
+          className={`flex-1 min-h-0 flex flex-col mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-1 pb-40 md:pb-44 lg:pb-48 ${listClassName ?? ""}`.trim()}
         >
-          {currentPath.map((messageId, index) => {
-            const isLastMessage = index === currentPath.length - 1;
-            const isStreaming = isLastMessage && isChatRequestAnswering(status);
+          {renderedMessages.map((message, index) => {
+            const isLastMessage = index === renderedMessages.length - 1;
+            const isStreaming = !readonly && isLastMessage && isChatRequestAnswering(status);
             const depth = index + 1;
 
             return (
               <MessageItem
-                key={messageId}
-                messageId={messageId}
+                key={message.id}
+                messageId={message.id}
                 index={index}
                 depth={depth}
                 isStreaming={isStreaming}
+                message={message}
+                readonly={readonly}
               />
             );
           })}
-          <ConnectionStatusInline />
+          {showConnectionStatus && <ConnectionStatusInline />}
 
         </div>
       </div>
 
-      <SelectionToolbar containerRef={scrollRef} />
+      {showSelectionToolbar && <SelectionToolbar containerRef={scrollRef} />}
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { log } from '@/server/agents/services/logger'
 import { createChatProvider } from '@/server/agents/services/provider-factory'
 import type { ProviderRunResult } from '@/server/agents/services/provider-types'
 import { generateTitleFromConversation } from '@/server/functions/chat/chat-title'
+import { stripTransientSearchDataFromMessages } from '@/lib/chat/search-result-payload'
 import { processEventToTree, cloneTreeSnapshot } from '@/server/agents/services/event-processor'
 import {
   getConversationById,
@@ -476,10 +477,12 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         promptId ? getPromptById(promptId) : getPromptById(getDefaultPromptId())
       const systemPrompt = promptConfig?.content ?? ''
 
-      const normalizedHistory = conversationHistory.map((m) => ({
-        ...m,
-        blocks: Array.isArray(m.blocks) ? m.blocks : [],
-      } as SerializedMessage))
+      const normalizedHistory = stripTransientSearchDataFromMessages(
+        conversationHistory.map((m) => ({
+          ...m,
+          blocks: Array.isArray(m.blocks) ? m.blocks : [],
+        } as SerializedMessage)),
+      )
 
       let iteration = 0
 

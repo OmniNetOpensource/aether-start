@@ -1,5 +1,11 @@
 import { Search, Link, Wrench } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import Markdown from '@/components/Markdown'
+import {
+  parseSearchClientPayload,
+  SEARCH_TOOL_NAMES,
+  type SearchClientResult,
+} from '@/lib/chat/search-result-payload'
 import type { ResearchItem, Tool } from '@/types/message'
 import type { StepStatus } from '@/components/ui/chain-of-thought'
 import {
@@ -13,76 +19,11 @@ import {
 } from '@/components/ui/chain-of-thought'
 import { getToolLifecycle, getSearchResultCount } from './research-utils'
 
-const SEARCH_TOOL_NAMES = new Set([
-  'search',
-  'serper_search',
-  'tavily_search',
-  'serp_search',
-  'brave_search',
-])
-
-type SearchResultBadge = {
-  title: string
-  url: string
-}
-
-// Get favicon URL for a domain
-function getFaviconUrl(url: string): string {
-  try {
-    const domain = new URL(url).hostname
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`
-  } catch {
-    return ''
-  }
-}
+type SearchResultBadge = SearchClientResult
 
 // Parse search results to badge data
 function parseSearchResults(rawResult: string): SearchResultBadge[] {
-  try {
-    const data = JSON.parse(rawResult)
-    const rawResults =
-      (Array.isArray(data?.results) && data.results) ||
-      (Array.isArray(data?.rawResults) && data.rawResults) ||
-      (Array.isArray(data?.web?.results) && data.web.results) ||
-      []
-
-    if (!Array.isArray(rawResults)) {
-      return []
-    }
-
-    const normalized = rawResults
-      .map((item) => {
-        if (!item || typeof item !== 'object') {
-          return null
-        }
-
-        const title =
-          'title' in item && typeof item.title === 'string'
-            ? item.title.trim()
-            : ''
-        const url =
-          'url' in item && typeof item.url === 'string'
-            ? item.url
-            : 'link' in item && typeof item.link === 'string'
-              ? item.link
-              : ''
-
-        if (!title && !url) {
-          return null
-        }
-
-        return {
-          title: title || url,
-          url,
-        }
-      })
-      .filter((item): item is SearchResultBadge => Boolean(item?.url))
-      .slice(0, 10)
-
-    return normalized
-  } catch {
-    return []
-  }
+  return parseSearchClientPayload(rawResult)?.results.slice(0, 10) ?? []
 }
 
 // Get step status from tool lifecycle
@@ -129,17 +70,38 @@ function getStatusText(tool: Tool, isActive: boolean, toolName: string): string 
 }
 
 // Favicon image component with fallback
-function Favicon({ url, fallback }: { url: string; fallback?: React.ReactNode }) {
-  const faviconSrc = getFaviconUrl(url)
-  if (!faviconSrc) return <>{fallback}</>
+function getFaviconUrl(url: string): string {
+  try {
+    const domain = new URL(url).hostname
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`
+  } catch {
+    return ''
+  }
+}
+
+function Favicon({
+  url,
+  faviconDataUrl,
+  fallback,
+}: {
+  url: string
+  faviconDataUrl?: string
+  fallback?: React.ReactNode
+}) {
+  const [hasError, setHasError] = useState(false)
+  const faviconSrc = faviconDataUrl || getFaviconUrl(url)
+
+  useEffect(() => {
+    setHasError(false)
+  }, [faviconSrc])
+
+  if (!faviconSrc || hasError) return <>{fallback}</>
   return (
     <img
       src={faviconSrc}
       alt=""
       className="h-4 w-4 rounded-sm"
-      onError={(e) => {
-        e.currentTarget.style.display = 'none'
-      }}
+      onError={() => setHasError(true)}
     />
   )
 }
@@ -194,7 +156,7 @@ function SearchStep({
             <ChainOfThoughtSearchResult
               key={`${stepKey}-result-${i}`}
               href={r.url}
-              icon={<Favicon url={r.url} />}
+              icon={<Favicon url={r.url} faviconDataUrl={r.faviconDataUrl} fallback={<Link className="h-4 w-4" />} />}
               url={r.url}
             >
               {r.title}
@@ -249,7 +211,7 @@ function FetchStep({
 
   return (
     <ChainOfThoughtStep
-      icon={url ? <Favicon url={url} fallback={<Link className="h-full w-full" />} /> : <Link className="h-full w-full" />}
+      icon={<Link className="h-full w-full" />}
       description={description}
       status={stepStatus}
       hideConnector={hideConnector}

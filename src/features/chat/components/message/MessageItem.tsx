@@ -98,6 +98,8 @@ type MessageItemProps = {
   index: number;
   depth: number;
   isStreaming: boolean;
+  message?: Message | null;
+  readonly?: boolean;
 };
 
 export function MessageItem({
@@ -105,8 +107,10 @@ export function MessageItem({
   index,
   depth,
   isStreaming,
+  message: messageProp,
+  readonly = false,
 }: MessageItemProps) {
-  const message = useMessageTreeStore(
+  const messageFromStore = useMessageTreeStore(
     (state) => state.messages[messageId - 1]
   );
   const status = useChatRequestStore(selectChatRequestStatus);
@@ -116,8 +120,11 @@ export function MessageItem({
   const startEditing = useEditingStore((state) => state.startEditing);
   const retryFromMessage = useEditingStore((state) => state.retryFromMessage);
   const navigateBranch = useMessageTreeStore((state) => state.navigateBranch);
+  const message = messageProp ?? messageFromStore;
 
-  const branchInfo = getBranchInfoFn(useMessageTreeStore.getState().messages, messageId);
+  const branchInfo = readonly
+    ? null
+    : getBranchInfoFn(useMessageTreeStore.getState().messages, messageId);
   const isBusy = isChatRequestActive(status);
 
   const handleStartEditing = () => startEditing(messageId);
@@ -142,13 +149,13 @@ export function MessageItem({
     (block) => block.type !== "attachments",
   );
   const shouldRenderBody =
-    isEditing ||
+    (isEditing && !readonly) ||
     !isUser ||
     contentBlocks.length > 0 ||
     attachmentBlocks.length > 0;
   const contentWidthClass = isUser ? "w-full max-w-[90%]" : "w-full";
 
-  const shouldShowToolbar = !isEditing && (isUser || !isStreaming);
+  const shouldShowToolbar = !readonly && !isEditing && (isUser || !isStreaming);
 
   return (
     <div

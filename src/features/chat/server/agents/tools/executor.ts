@@ -1,4 +1,8 @@
 import { fetchUrlTool } from './fetch'
+import {
+  parseSearchClientPayload,
+  stringifySearchClientPayload,
+} from '@/lib/chat/search-result-payload'
 import { searchTool } from './search'
 import { getServerEnv } from '@/server/env'
 import { log } from '@/server/agents/services/logger'
@@ -115,48 +119,24 @@ const formatToolResultForClient = (toolName: string, result: string) => {
   return 'Success'
 }
 
-const isObject = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
-
 const parseSearchResultChannels = (result: string) => {
   try {
     const parsed = JSON.parse(result)
-    if (!isObject(parsed)) {
+    if (typeof parsed !== 'object' || parsed === null) {
       return null
     }
 
-    const client = parsed.client
-    const ai = parsed.ai
+    const clientPayload = parseSearchClientPayload(
+      JSON.stringify((parsed as { client?: unknown }).client ?? {}),
+    )
+    const ai = (parsed as { ai?: unknown }).ai
 
-    if (!isObject(client) || typeof ai !== 'string') {
-      return null
-    }
-
-    const { results } = client
-    if (!Array.isArray(results)) {
-      return null
-    }
-
-    const normalizedResults = results
-      .map((item) => {
-        if (!isObject(item)) {
-          return null
-        }
-        const title = typeof item.title === 'string' ? item.title : ''
-        const url = typeof item.url === 'string' ? item.url : ''
-        if (!title || !url) {
-          return null
-        }
-        return { title, url }
-      })
-      .filter((item): item is { title: string; url: string } => Boolean(item))
-
-    if (normalizedResults.length !== results.length) {
+    if (!clientPayload || typeof ai !== 'string') {
       return null
     }
 
     return {
-      client: JSON.stringify({ results: normalizedResults }),
+      client: stringifySearchClientPayload(clientPayload),
       ai,
     }
   } catch {

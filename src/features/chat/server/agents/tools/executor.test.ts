@@ -76,7 +76,11 @@ describe('executeToolsGen for search dual-channel result routing', () => {
   it('sends client JSON to tool_result and markdown to model continuation', async () => {
     const rawToolOutput = JSON.stringify({
       client: {
-        results: [{ title: 'Result A', url: 'https://example.com/a' }],
+        results: [{
+          title: 'Result A',
+          url: 'https://example.com/a',
+          faviconDataUrl: 'data:image/png;base64,abc123',
+        }],
       },
       ai:
         '[1]title: Result A\n' +
@@ -106,7 +110,7 @@ describe('executeToolsGen for search dual-channel result routing', () => {
     expect(events[1]).toEqual({
       type: 'tool_result',
       tool: 'search',
-      result: '{"results":[{"title":"Result A","url":"https://example.com/a"}]}',
+      result: '{"results":[{"title":"Result A","url":"https://example.com/a","faviconDataUrl":"data:image/png;base64,abc123"}]}',
       callId: 'call_1',
     })
     expect(results).toEqual([

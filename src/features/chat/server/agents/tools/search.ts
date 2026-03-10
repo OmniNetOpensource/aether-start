@@ -1,4 +1,6 @@
 import { ChatTool, ToolDefinition, ToolHandler } from "./types";
+import { stringifySearchClientPayload, type SearchClientResult } from '@/lib/chat/search-result-payload'
+import { arrayBufferToBase64 } from '@/server/base64'
 import { log } from "@/server/agents/services/logger";
 import { getServerEnv } from '@/server/env'
 
@@ -15,10 +17,7 @@ type SearchResult = {
 
 type SearchPayload = {
   client: {
-    results: Array<{
-      title: string;
-      url: string;
-    }>;
+    results: SearchClientResult[];
   };
   ai: string;
 };
@@ -73,23 +72,114 @@ const buildAiMarkdown = (results: NormalizedSearchResult[]): string => {
     .join("\n\n");
 };
 
-export const formatSearchResponse = (data: { organic?: SearchResult[] }): string => {
+const MAX_FAVICON_RESULTS = 10
+const FAVICON_TIMEOUT_MS = 5_000
+
+const buildFaviconServiceUrl = (url: string): string | null => {
+  try {
+    const hostname = new URL(url).hostname
+    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`
+  } catch {
+    return null
+  }
+}
+
+const fetchFaviconDataUrl = async (
+  url: string,
+  signal?: AbortSignal,
+): Promise<string | undefined> => {
+  const faviconUrl = buildFaviconServiceUrl(url)
+  if (!faviconUrl) {
+    return undefined
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), FAVICON_TIMEOUT_MS)
+  const linkedAbort = () => controller.abort()
+  signal?.addEventListener('abort', linkedAbort)
+
+  try {
+    const response = await fetch(faviconUrl, {
+      headers: {
+        Accept: 'image/*',
+      },
+      signal: controller.signal,
+    })
+
+    if (!response.ok) {
+      return undefined
+    }
+
+    const contentType = response.headers.get('content-type') || 'image/png'
+    if (!contentType.startsWith('image/')) {
+      return undefined
+    }
+
+    const arrayBuffer = await response.arrayBuffer()
+    if (arrayBuffer.byteLength === 0) {
+      return undefined
+    }
+
+    return `data:${contentType.split(';')[0].trim()};base64,${arrayBufferToBase64(arrayBuffer)}`
+  } catch {
+    return undefined
+  } finally {
+    signal?.removeEventListener('abort', linkedAbort)
+    clearTimeout(timeoutId)
+  }
+}
+
+const enrichClientResultsWithFavicons = async (
+  results: SearchClientResult[],
+  signal?: AbortSignal,
+): Promise<SearchClientResult[]> => {
+  const faviconByUrl = new Map<string, Promise<string | undefined>>()
+
+  return Promise.all(
+    results.map(async (result, index) => {
+      if (index >= MAX_FAVICON_RESULTS) {
+        return result
+      }
+
+      let faviconPromise = faviconByUrl.get(result.url)
+      if (!faviconPromise) {
+        faviconPromise = fetchFaviconDataUrl(result.url, signal)
+        faviconByUrl.set(result.url, faviconPromise)
+      }
+
+      const faviconDataUrl = await faviconPromise
+      return faviconDataUrl ? { ...result, faviconDataUrl } : result
+    }),
+  )
+}
+
+export const formatSearchResponse = async (
+  data: { organic?: SearchResult[] },
+  signal?: AbortSignal,
+): Promise<string> => {
   const rawResults = Array.isArray(data.organic) ? data.organic : [];
   const normalizedResults = rawResults
     .map((result) => normalizeSearchResult(result))
     .filter((result): result is NormalizedSearchResult => Boolean(result));
+  const clientResults = await enrichClientResultsWithFavicons(
+    normalizedResults.map((result) => ({
+      title: result.title,
+      url: result.url,
+    })),
+    signal,
+  )
 
   const payload: SearchPayload = {
     client: {
-      results: normalizedResults.map((result) => ({
-        title: result.title,
-        url: result.url,
-      })),
+      results: clientResults,
     },
     ai: buildAiMarkdown(normalizedResults),
   };
 
-  return JSON.stringify(payload);
+  return JSON.stringify({
+    client: JSON.parse(stringifySearchClientPayload(payload.client)),
+    ai: payload.ai,
+  });
 };
 
 const parseSearchArgs = (args: unknown): SearchArgs => {
@@ -176,7 +266,7 @@ const performSearch = async (
     }
 
     const data = (await response.json()) as { organic?: SearchResult[] };
-    return formatSearchResponse(data);
+    return await formatSearchResponse(data, signal);
   } catch (error) {
     const isAbortError =
       typeof error === "object" &&

@@ -1,3 +1,6 @@
+import { stripTransientSearchDataFromMessages } from '@/lib/chat/search-result-payload'
+import type { MessageLike } from '@/types/message'
+
 export type ConversationListCursor = {
   is_pinned: 0 | 1
   sort_at: string
@@ -622,7 +625,10 @@ export const upsertConversation = async (
   db: D1Database,
   payload: ConversationPayload,
 ) => {
-  const searchBody = extractSearchText(payload.messages ?? [])
+  const sanitizedMessages = stripTransientSearchDataFromMessages(
+    (payload.messages ?? []) as MessageLike[],
+  ) as object[]
+  const searchBody = extractSearchText(sanitizedMessages)
 
   await db.batch([
     db.prepare(
@@ -647,7 +653,7 @@ export const upsertConversation = async (
       payload.user_id,
       payload.id,
       JSON.stringify(payload.currentPath ?? []),
-      JSON.stringify(payload.messages ?? []),
+      JSON.stringify(sanitizedMessages),
     ),
     db.prepare(
       'DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2',
