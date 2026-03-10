@@ -1,11 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { getAvailableRolesFnMock } = vi.hoisted(() => ({
-  getAvailableRolesFnMock: vi.fn(),
+const { getAvailableModelsFnMock, getAvailablePromptsFnMock } = vi.hoisted(() => ({
+  getAvailableModelsFnMock: vi.fn(),
+  getAvailablePromptsFnMock: vi.fn(),
 }))
 
-vi.mock('@/server/functions/chat/roles', () => ({
-  getAvailableRolesFn: getAvailableRolesFnMock,
+vi.mock('@/server/functions/chat/models', () => ({
+  getAvailableModelsFn: getAvailableModelsFnMock,
+  getAvailablePromptsFn: getAvailablePromptsFnMock,
 }))
 
 import {
@@ -15,7 +17,8 @@ import {
 
 describe('useChatRequestStore', () => {
   beforeEach(() => {
-    getAvailableRolesFnMock.mockReset()
+    getAvailableModelsFnMock.mockReset()
+    getAvailablePromptsFnMock.mockReset()
     localStorage.clear()
     useChatRequestStore.setState(initialChatRequestState)
   })
@@ -28,6 +31,9 @@ describe('useChatRequestStore', () => {
       currentRole: '',
       availableRoles: [],
       rolesLoading: false,
+      currentPrompt: '',
+      availablePrompts: [],
+      promptsLoading: false,
     })
   })
 
@@ -68,7 +74,7 @@ describe('useChatRequestStore', () => {
 
   it('loads roles once and restores the stored role when possible', async () => {
     localStorage.setItem('aether_current_role', 'coder')
-    getAvailableRolesFnMock.mockResolvedValueOnce([
+    getAvailableModelsFnMock.mockResolvedValueOnce([
       { id: 'aether', name: 'Aether' },
       { id: 'coder', name: 'Coder' },
     ])
@@ -76,7 +82,7 @@ describe('useChatRequestStore', () => {
     await useChatRequestStore.getState().loadAvailableRoles()
     await useChatRequestStore.getState().loadAvailableRoles()
 
-    expect(getAvailableRolesFnMock).toHaveBeenCalledTimes(1)
+    expect(getAvailableModelsFnMock).toHaveBeenCalledTimes(1)
     expect(useChatRequestStore.getState()).toMatchObject({
       rolesLoading: false,
       currentRole: 'coder',

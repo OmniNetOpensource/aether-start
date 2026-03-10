@@ -6,8 +6,8 @@ import { resetLastEventId } from "@/features/chat/lib/api/chat-orchestrator";
 import { useComposerStore } from '@/features/chat/store/useComposerStore'
 import { useChatRequestStore } from '@/features/chat/store/useChatRequestStore'
 import { useEditingStore } from '@/features/chat/store/useEditingStore'
-import { useConversationsStore } from '@/features/conversations/store/useConversationsStore'
-import { useMessageTreeStore } from '@/features/conversations/store/useMessageTreeStore'
+import { useConversationsStore } from '@/features/sidebar/store/useConversationsStore'
+import { useMessageTreeStore } from '@/features/sidebar/store/useMessageTreeStore'
 import { useNotesStore } from '@/features/notes/store/useNotesStore'
 import { toast } from "@/hooks/useToast";
 import {

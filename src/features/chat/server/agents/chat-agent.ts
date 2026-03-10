@@ -1,9 +1,11 @@
 import { DurableObject } from 'cloudflare:workers'
 import { getAvailableTools, executeToolsGen } from '@/server/agents/tools/executor'
 import {
-  getDefaultRoleConfig,
-  getRoleConfig,
+  getDefaultModelConfig,
+  getModelConfig,
   getBackendConfig,
+  getPromptById,
+  getDefaultPromptId,
 } from '@/server/agents/services/chat-config'
 import { log } from '@/server/agents/services/logger'
 import { createChatProvider } from '@/server/agents/services/provider-factory'
@@ -94,6 +96,7 @@ type ChatRequestBody = {
   requestId: string
   conversationId: string
   role: string
+  promptId?: string
   conversationHistory: SerializedMessage[]
   treeSnapshot: MessageTreeSnapshot
 }
@@ -104,6 +107,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   const requestId = asString(body.requestId)
   const conversationId = asString(body.conversationId)
   const role = asString(body.role)
+  const promptId = asString(body.promptId) ?? undefined
   const conversationHistory = Array.isArray(body.conversationHistory)
     ? (body.conversationHistory as SerializedMessage[])
     : null
@@ -141,6 +145,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
     requestId,
     conversationId,
     role,
+    promptId,
     conversationHistory,
     treeSnapshot: {
       messages: snapshotMessages,
@@ -443,7 +448,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     }
 
     try {
-      const { conversationHistory, role } = message
+      const { conversationHistory, role, promptId } = message
 
       if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) {
         await emitEvent(toEventError('Invalid conversation history: expected non-empty array.'))
@@ -460,12 +465,16 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         return
       }
 
-      const roleConfig = role ? getRoleConfig(role) : getDefaultRoleConfig()
-      if (!roleConfig) {
+      const modelConfig = role ? getModelConfig(role) : getDefaultModelConfig()
+      if (!modelConfig) {
         await emitEvent(toEventError(`Invalid or missing role: "${String(role ?? '')}".`))
         finalStatus = 'error'
         return
       }
+
+      const promptConfig =
+        promptId ? getPromptById(promptId) : getPromptById(getDefaultPromptId())
+      const systemPrompt = promptConfig?.content ?? ''
 
       const normalizedHistory = conversationHistory.map((m) => ({
         ...m,
@@ -474,13 +483,13 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
       let iteration = 0
 
-      const backendConfig = getBackendConfig(roleConfig.backend)
+      const backendConfig = getBackendConfig(modelConfig.backend)
 
-      const provider = createChatProvider(roleConfig.format, {
-        model: roleConfig.model,
+      const provider = createChatProvider(modelConfig.format, {
+        model: modelConfig.model,
         backendConfig,
         tools: getAvailableTools(),
-        systemPrompt: roleConfig.systemPrompt,
+        systemPrompt,
       })
 
       let workingMessages = await provider.convertMessages(normalizedHistory)
@@ -561,7 +570,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       if (iteration >= MAX_ITERATIONS && finalStatus === 'completed') {
         await emitEvent(
           toEventError(
-            `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${MAX_ITERATIONS} model=${roleConfig.model}`,
+            `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${MAX_ITERATIONS} model=${modelConfig.model}`,
           ),
         )
         finalStatus = 'error'

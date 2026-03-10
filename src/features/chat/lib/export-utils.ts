@@ -214,51 +214,40 @@ export const buildMessageSnippet = (message: Message) => {
   return `${text.slice(0, 139)}…`
 }
 
-export const buildFontEmbedCSS = async (): Promise<string> => {
-  const fontFaceRules: CSSFontFaceRule[] = []
-
-  for (const sheet of Array.from(document.styleSheets)) {
-    let rules: CSSRuleList
-    try {
-      rules = sheet.cssRules
-    } catch {
-      continue
-    }
-    for (const rule of Array.from(rules)) {
-      if (rule instanceof CSSFontFaceRule) {
-        fontFaceRules.push(rule)
-      }
-    }
+const dataUrlToBlob = async (dataUrl: string) => {
+  const response = await fetch(dataUrl)
+  if (!response.ok) {
+    throw new Error(`Failed to read export data: ${response.status}`)
   }
 
-  const cssTexts = await Promise.all(
-    fontFaceRules.map(async (rule) => {
-      const src = rule.style.getPropertyValue('src')
-      const urlMatch = src.match(/url\(["']?([^"')]+)["']?\)/)
-      if (!urlMatch) return rule.cssText
-
-      try {
-        const res = await fetch(urlMatch[1])
-        const blob = await res.blob()
-        const dataUri = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.readAsDataURL(blob)
-        })
-        return rule.cssText.replace(urlMatch[0], `url(${dataUri})`)
-      } catch {
-        return rule.cssText
-      }
-    })
-  )
-
-  return cssTexts.join('\n')
+  return response.blob()
 }
 
-export const downloadDataUrl = (dataUrl: string, filename: string) => {
+export const downloadDataUrl = async (dataUrl: string, filename: string) => {
+  const blob = await dataUrlToBlob(dataUrl)
+  const file = new File([blob], filename, { type: blob.type || 'image/png' })
+
+  if (
+    typeof navigator !== 'undefined' &&
+    typeof navigator.share === 'function' &&
+    typeof navigator.canShare === 'function' &&
+    navigator.canShare({ files: [file] })
+  ) {
+    await navigator.share({
+      files: [file],
+      title: filename,
+    })
+    return
+  }
+
+  const objectUrl = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
-  anchor.href = dataUrl
+  anchor.href = objectUrl
   anchor.download = filename
   anchor.rel = 'noopener'
   anchor.click()
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(objectUrl)
+  }, 1000)
 }

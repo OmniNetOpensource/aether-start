@@ -32,8 +32,10 @@ vi.mock('@/server/agents/tools/executor', () => ({
 }))
 
 vi.mock('@/server/agents/services/chat-config', () => ({
-  getDefaultRoleConfig: vi.fn(),
-  getRoleConfig: vi.fn(),
+  getDefaultModelConfig: vi.fn(),
+  getModelConfig: vi.fn(),
+  getPromptById: vi.fn(),
+  getDefaultPromptId: vi.fn(() => 'aether'),
   getBackendConfig: vi.fn(),
 }))
 

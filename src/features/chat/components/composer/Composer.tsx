@@ -91,6 +91,12 @@ export function Composer() {
   }, [])
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === "Tab" && event.shiftKey && !event.ctrlKey && !event.metaKey) {
+      event.preventDefault();
+      useChatRequestStore.getState().cyclePrompt();
+      return;
+    }
+
     const isEnter = event.key === "Enter";
     if (isEnter && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();

@@ -14,13 +14,18 @@ export type BackendConfig = {
   defaultHeaders: Record<string, string>;
 };
 
-export type RoleConfig = {
+export type ModelConfig = {
   id: string;
   name: string;
   model: string;
   format: ChatFormat;
   backend: ChatBackend;
-  systemPrompt: string;
+};
+
+export type PromptConfig = {
+  id: string;
+  name: string;
+  content: string;
 };
 
 const englishTeacherSystemPrompt = `你是一位英语教学助手。我会给你发送一段英文内容（可能较长）。你需要逐句分析，不得省略任何句子。
@@ -139,14 +144,27 @@ On word choice:
 - Don't use inflated words like "shocking," "mind-blowing," "legendary," "best-in-class." Use plain language and let the content speak for itself.
 
 `;
-const ROLE_CONFIGS: Record<string, RoleConfig> = {
+
+const PROMPT_CONFIGS: Record<string, PromptConfig> = {
+  aether: {
+    id: "aether",
+    name: "aether",
+    content: aetherSystemPrompt,
+  },
+  englishTeacher: {
+    id: "englishTeacher",
+    name: "英语教学助手",
+    content: englishTeacherSystemPrompt,
+  },
+};
+
+const MODEL_CONFIGS: Record<string, ModelConfig> = {
   claudeOpus46Ikun: {
     id: "claudeOpus46Ikun",
     name: "claude-opus-4-6+ikun",
     model: "claude-opus-4-6",
     format: "anthropic",
     backend: "ikun",
-    systemPrompt: aetherSystemPrompt,
   },
   claudeOpus45Ikun: {
     id: "claudeOpus45Ikun",
@@ -154,39 +172,13 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "claude-opus-4-5-20251101",
     format: "anthropic",
     backend: "ikun",
-    systemPrompt: aetherSystemPrompt,
   },
-  // claudeSonnet46Thinking: {
-  //   id: "claudeSonnet46Thinking",
-  //   name: "claude-sonnet-4-6-thinking+dmx",
-  //   model: "claude-sonnet-4-6-thinking",
-  //   format: "openai",
-  //   backend: "dmx",
-  //   systemPrompt: aetherSystemPrompt,
-  // },
-  // test1: {
-  //   id: "test1",
-  //   name: "claude-opus-4-6+dmx",
-  //   model: "claude-opus-4-6",
-  //   format: "openai",
-  //   backend: "dmx",
-  //   systemPrompt: aetherSystemPrompt,
-  // },
-  // test2: {
-  //   id: "test2",
-  //   name: "gemini-3.1-pro-preview+dmx",
-  //   model: "gemini-3.1-pro-preview",
-  //   format: "openai",
-  //   backend: "dmx",
-  //   systemPrompt: aetherSystemPrompt,
-  // },
   test3: {
     id: "test3",
     name: "qwen3.5-plus+dmx",
     model: "qwen3.5-plus",
     format: "openai",
     backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
   },
   minimaxM25: {
     id: "minimaxM25",
@@ -194,7 +186,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "MiniMax-M2.5",
     format: "openai",
     backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
   },
   glm5: {
     id: "glm5",
@@ -202,7 +193,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "glm-5",
     format: "openai",
     backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
   },
   doubao: {
     id: "doubao",
@@ -210,7 +200,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "doubao-seed-2-0-pro-260215",
     format: "openai",
     backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
   },
   kimiK25: {
     id: "kimiK25",
@@ -218,7 +207,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "kimi-k2.5",
     format: "openai",
     backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
   },
   deepseekV32: {
     id: "deepseekV32",
@@ -226,7 +214,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "DeepSeek-V3.2-Thinking",
     format: "openai",
     backend: "dmx",
-    systemPrompt: aetherSystemPrompt,
   },
   gemini31ProRightcode: {
     id: "gemini31ProRightcode",
@@ -234,7 +221,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "gemini-3.1-pro-preview",
     format: "gemini",
     backend: "rightcode-gemini",
-    systemPrompt: aetherSystemPrompt,
   },
   gpt54Rightcode: {
     id: "gpt54Rightcode",
@@ -242,7 +228,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "gpt-5.4-high",
     format: "openai-responses",
     backend: "rightcode-openai",
-    systemPrompt: aetherSystemPrompt,
   },
   claudeOpus46Rightcode: {
     id: "claudeOpus46Rightcode",
@@ -250,7 +235,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "claude-opus-4-6",
     format: "anthropic",
     backend: "rightcode-claude",
-    systemPrompt: aetherSystemPrompt,
   },
   claudeSonnet46Ikun: {
     id: "claudeSonnet46Ikun",
@@ -258,7 +242,6 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "claude-sonnet-4-6",
     format: "anthropic",
     backend: "ikun",
-    systemPrompt: aetherSystemPrompt,
   },
   claudeSonnet46Rightcode: {
     id: "claudeSonnet46Rightcode",
@@ -266,47 +249,46 @@ const ROLE_CONFIGS: Record<string, RoleConfig> = {
     model: "claude-sonnet-4-6",
     format: "anthropic",
     backend: "rightcode-claude",
-    systemPrompt: aetherSystemPrompt,
-  },
-  englishTeacherAssistant: {
-    id: "englishTeacherAssistant",
-    name: "英语教学助手",
-    model: "claude-sonnet-4-6",
-    format: "anthropic",
-    backend: "rightcode-claude",
-    systemPrompt: englishTeacherSystemPrompt,
-  },
-  englishTeacherAssistantGemini: {
-    id: "englishTeacherAssistantGemini",
-    name: "英语教学助手 (Gemini)",
-    model: "gemini-3.1-pro-preview",
-    format: "gemini",
-    backend: "rightcode-gemini",
-    systemPrompt: englishTeacherSystemPrompt,
   },
 };
 
-export const getAvailableRoles = (): { id: string; name: string }[] =>
-  Object.values(ROLE_CONFIGS).map(({ id, name }) => ({ id, name }));
+export const getAvailableModels = (): { id: string; name: string }[] =>
+  Object.values(MODEL_CONFIGS).map(({ id, name }) => ({ id, name }));
 
-export const getRoleConfig = (roleId: string): RoleConfig | null => {
-  const id = roleId.trim();
+export const getModelConfig = (modelId: string): ModelConfig | null => {
+  const id = modelId.trim();
   return (
-    ROLE_CONFIGS[id] ??
-    Object.values(ROLE_CONFIGS).find(
+    MODEL_CONFIGS[id] ??
+    Object.values(MODEL_CONFIGS).find(
       (role) => role.id === id || role.name === id,
     ) ??
     null
   );
 };
 
-export const getDefaultRoleId = (): string | null =>
-  getAvailableRoles()[0]?.id ?? null;
+export const getDefaultModelId = (): string | null =>
+  getAvailableModels()[0]?.id ?? null;
 
-export const getDefaultRoleConfig = (): RoleConfig | null => {
-  const id = getDefaultRoleId();
-  return id ? getRoleConfig(id) : null;
+export const getDefaultModelConfig = (): ModelConfig | null => {
+  const id = getDefaultModelId();
+  return id ? getModelConfig(id) : null;
 };
+
+export const getAvailablePrompts = (): { id: string; name: string }[] =>
+  Object.values(PROMPT_CONFIGS).map(({ id, name }) => ({ id, name }));
+
+export const getPromptById = (promptId: string): PromptConfig | null => {
+  const id = promptId.trim();
+  return (
+    PROMPT_CONFIGS[id] ??
+    Object.values(PROMPT_CONFIGS).find(
+      (p) => p.id === id || p.name === id,
+    ) ??
+    null
+  );
+};
+
+export const getDefaultPromptId = (): string => "aether";
 
 export const buildSystemPrompt = () => {
   const now = new Date();

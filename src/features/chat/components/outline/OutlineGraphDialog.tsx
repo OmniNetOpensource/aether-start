@@ -1,48 +1,48 @@
-import { useEffect, useRef } from 'react'
-import type { Message } from '@/types/message'
-import type { TreeLayout } from '@/lib/chat/tree-layout'
-import { NODE_H, NODE_W } from '@/lib/chat/tree-layout'
+import { useEffect, useRef } from "react";
+import type { Message } from "@/types/message";
+import type { TreeLayout } from "@/lib/chat/tree-layout";
+import { NODE_H, NODE_W } from "@/lib/chat/tree-layout";
 
-const CANVAS_PADDING = 24
-const MIN_CANVAS_WIDTH = 560
-const EMPTY_HEIGHT = 240
-const EDGE_CURVE_Y = 26
-const PREVIEW_LIMIT = 18
+const CANVAS_PADDING = 24;
+const MIN_CANVAS_WIDTH = 560;
+const EMPTY_HEIGHT = 240;
+const EDGE_CURVE_Y = 26;
+const PREVIEW_LIMIT = 18;
 
 type OutlineGraphDialogProps = {
-  open: boolean
-  layout: TreeLayout | null
-  currentPath: number[]
-  onSelect: (messageId: number) => void
-  disabled?: boolean
-}
+  open: boolean;
+  layout: TreeLayout | null;
+  currentPath: number[];
+  onSelect: (messageId: number) => void;
+  disabled?: boolean;
+};
 
-const roleLabelMap: Record<Message['role'], string> = {
-  user: '用户',
-  assistant: '助手',
-}
+const roleLabelMap: Record<Message["role"], string> = {
+  user: "用户",
+  assistant: "助手",
+};
 
-const roleColorMap: Record<Message['role'], string> = {
-  user: '#3b82f6',
-  assistant: '#22c55e',
-}
+const roleColorMap: Record<Message["role"], string> = {
+  user: "#3b82f6",
+  assistant: "#22c55e",
+};
 
 const trimPreview = (text: string) => {
-  const chars = Array.from(text)
+  const chars = Array.from(text);
   if (chars.length <= PREVIEW_LIMIT) {
-    return text
+    return text;
   }
 
-  return `${chars.slice(0, PREVIEW_LIMIT).join('')}…`
-}
+  return `${chars.slice(0, PREVIEW_LIMIT).join("")}…`;
+};
 
 const buildCurvePath = (x1: number, y1: number, x2: number, y2: number) => {
-  const c1y = y1 + EDGE_CURVE_Y
-  const c2y = y2 - EDGE_CURVE_Y
-  return `M ${x1} ${y1} C ${x1} ${c1y}, ${x2} ${c2y}, ${x2} ${y2}`
-}
+  const c1y = y1 + EDGE_CURVE_Y;
+  const c2y = y2 - EDGE_CURVE_Y;
+  return `M ${x1} ${y1} C ${x1} ${c1y}, ${x2} ${c2y}, ${x2} ${y2}`;
+};
 
-const edgeKey = (fromId: number, toId: number) => `${fromId}:${toId}`
+const edgeKey = (fromId: number, toId: number) => `${fromId}:${toId}`;
 
 export function OutlineGraphDialog({
   open,
@@ -51,61 +51,61 @@ export function OutlineGraphDialog({
   onSelect,
   disabled = false,
 }: OutlineGraphDialogProps) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const currentPathSet = new Set(currentPath)
+  const currentPathSet = new Set(currentPath);
   const currentEdgeSet = (() => {
-    const next = new Set<string>()
+    const next = new Set<string>();
     for (let index = 1; index < currentPath.length; index += 1) {
-      next.add(edgeKey(currentPath[index - 1], currentPath[index]))
+      next.add(edgeKey(currentPath[index - 1], currentPath[index]));
     }
-    return next
-  })()
+    return next;
+  })();
 
   useEffect(() => {
     if (!open || !layout || currentPath.length === 0) {
-      return
+      return;
     }
 
-    const nodeById = new Map<number, TreeLayout['nodes'][number]>()
+    const nodeById = new Map<number, TreeLayout["nodes"][number]>();
     for (const node of layout.nodes) {
-      nodeById.set(node.messageId, node)
+      nodeById.set(node.messageId, node);
     }
 
-    const lastId = currentPath[currentPath.length - 1]
-    const targetNode = nodeById.get(lastId)
+    const lastId = currentPath[currentPath.length - 1];
+    const targetNode = nodeById.get(lastId);
     if (!targetNode) {
-      return
+      return;
     }
 
-    const container = containerRef.current
+    const container = containerRef.current;
     if (!container) {
-      return
+      return;
     }
 
-    let frame1 = 0
-    let frame2 = 0
+    let frame1 = 0;
+    let frame2 = 0;
 
     const scrollToTarget = () => {
-      const targetX = targetNode.x + NODE_W / 2 + CANVAS_PADDING
-      const targetY = targetNode.y + NODE_H / 2 + CANVAS_PADDING
+      const targetX = targetNode.x + NODE_W / 2 + CANVAS_PADDING;
+      const targetY = targetNode.y + NODE_H / 2 + CANVAS_PADDING;
 
       container.scrollTo({
         left: Math.max(0, targetX - container.clientWidth / 2),
         top: Math.max(0, targetY - container.clientHeight / 2),
-        behavior: 'smooth',
-      })
-    }
+        behavior: "smooth",
+      });
+    };
 
     frame1 = requestAnimationFrame(() => {
-      frame2 = requestAnimationFrame(scrollToTarget)
-    })
+      frame2 = requestAnimationFrame(scrollToTarget);
+    });
 
     return () => {
-      cancelAnimationFrame(frame1)
-      cancelAnimationFrame(frame2)
-    }
-  }, [open, layout, currentPath])
+      cancelAnimationFrame(frame1);
+      cancelAnimationFrame(frame2);
+    };
+  }, [open, layout, currentPath]);
 
   if (!layout || layout.nodes.length === 0) {
     return (
@@ -114,11 +114,17 @@ export function OutlineGraphDialog({
           暂无可导航消息
         </div>
       </div>
-    )
+    );
   }
 
-  const canvasWidth = Math.max(layout.width + CANVAS_PADDING * 2, MIN_CANVAS_WIDTH)
-  const canvasHeight = Math.max(layout.height + CANVAS_PADDING * 2, EMPTY_HEIGHT)
+  const canvasWidth = Math.max(
+    layout.width + CANVAS_PADDING * 2,
+    MIN_CANVAS_WIDTH,
+  );
+  const canvasHeight = Math.max(
+    layout.height + CANVAS_PADDING * 2,
+    EMPTY_HEIGHT,
+  );
 
   return (
     <div
@@ -135,8 +141,8 @@ export function OutlineGraphDialog({
         <g transform={`translate(${CANVAS_PADDING} ${CANVAS_PADDING})`}>
           {layout.edges.map((edge) => {
             const isCurrentPathEdge = currentEdgeSet.has(
-              edgeKey(edge.fromId, edge.toId)
-            )
+              edgeKey(edge.fromId, edge.toId),
+            );
 
             return (
               <path
@@ -145,18 +151,18 @@ export function OutlineGraphDialog({
                 fill="none"
                 stroke={
                   isCurrentPathEdge
-                    ? 'var(--interactive-primary)'
-                    : 'var(--border-primary)'
+                    ? "var(--interactive-primary)"
+                    : "var(--border-primary)"
                 }
                 strokeWidth={isCurrentPathEdge ? 2.4 : 1.4}
                 strokeOpacity={isCurrentPathEdge ? 0.95 : 0.8}
               />
-            )
+            );
           })}
 
           {layout.nodes.map((node) => {
-            const isCurrentPathNode = currentPathSet.has(node.messageId)
-            const roleLabel = roleLabelMap[node.role]
+            const isCurrentPathNode = currentPathSet.has(node.messageId);
+            const roleLabel = roleLabelMap[node.role];
 
             return (
               <g
@@ -165,23 +171,23 @@ export function OutlineGraphDialog({
                 role="button"
                 tabIndex={disabled ? -1 : 0}
                 style={{
-                  cursor: disabled ? 'not-allowed' : 'pointer',
+                  cursor: disabled ? "not-allowed" : "pointer",
                   opacity: disabled ? 0.65 : 1,
                 }}
                 onClick={() => {
                   if (disabled) {
-                    return
+                    return;
                   }
-                  onSelect(node.messageId)
+                  onSelect(node.messageId);
                 }}
                 onKeyDown={(event) => {
                   if (disabled) {
-                    return
+                    return;
                   }
 
-                  if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault()
-                    onSelect(node.messageId)
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    onSelect(node.messageId);
                   }
                 }}
               >
@@ -194,13 +200,13 @@ export function OutlineGraphDialog({
                   rx={8}
                   fill={
                     isCurrentPathNode
-                      ? 'var(--surface-muted)'
-                      : 'var(--surface-primary)'
+                      ? "var(--surface-muted)"
+                      : "var(--surface-primary)"
                   }
                   stroke={
                     isCurrentPathNode
-                      ? 'var(--interactive-primary)'
-                      : 'var(--border-primary)'
+                      ? "var(--interactive-primary)"
+                      : "var(--border-primary)"
                   }
                   strokeWidth={isCurrentPathNode ? 2 : 1}
                 />
@@ -250,10 +256,10 @@ export function OutlineGraphDialog({
                   </>
                 )}
               </g>
-            )
+            );
           })}
         </g>
       </svg>
     </div>
-  )
+  );
 }

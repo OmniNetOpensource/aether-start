@@ -14,6 +14,7 @@ import {
   selectActiveRequestId,
   selectChatRequestStatus,
   selectCurrentRole,
+  selectCurrentPrompt,
   useChatRequestStore,
 } from "@/stores/zustand/useChatRequestStore";
 import type { ChatServerToClientEvent } from "@/types/chat-event-types";
@@ -338,6 +339,7 @@ type StartRequestOptions = {
 const buildPreparedRequest = (
   conversationId: string,
   role: string,
+  promptId: string | undefined,
   requestId: string,
   messages: Message[],
 ) => {
@@ -353,7 +355,14 @@ const buildPreparedRequest = (
     .getState()
     ._getTreeState() as MessageTreeSnapshot;
 
-  return { requestId, role, conversationId, conversationHistory, treeSnapshot };
+  return {
+    requestId,
+    role,
+    promptId,
+    conversationId,
+    conversationHistory,
+    treeSnapshot,
+  };
 };
 
 // ── Public commands ─────────────────────────────────────────────────────
@@ -362,6 +371,7 @@ export const startChatRequest = async (options: StartRequestOptions) => {
   const { messages } = options;
   const store = useChatRequestStore.getState();
   const selectedRole = selectCurrentRole(store);
+  const selectedPrompt = selectCurrentPrompt(store);
 
   if (isChatRequestActive(selectChatRequestStatus(store))) return;
   if (!selectedRole) {
@@ -393,6 +403,7 @@ export const startChatRequest = async (options: StartRequestOptions) => {
   const body = buildPreparedRequest(
     currentConversationId,
     selectedRole,
+    selectedPrompt || undefined,
     requestId,
     messages,
   );

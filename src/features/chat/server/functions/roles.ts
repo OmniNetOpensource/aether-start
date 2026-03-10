@@ -1,5 +1,4 @@
-import { createServerFn } from '@tanstack/react-start'
-import { getAvailableRoles } from '@/server/agents/services/chat-config'
-
-export const getAvailableRolesFn = createServerFn({ method: 'GET' })
-  .handler(() => getAvailableRoles())
+/**
+ * @deprecated Use getAvailableModelsFn from @/server/functions/chat/models
+ */
+export { getAvailableModelsFn as getAvailableRolesFn } from './models'

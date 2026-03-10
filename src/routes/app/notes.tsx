@@ -7,7 +7,7 @@ import { buildAttachmentsFromFiles } from '@/features/chat/lib/attachments'
 import { useChatRequestStore } from '@/features/chat/store/useChatRequestStore'
 import { useComposerStore } from '@/features/chat/store/useComposerStore'
 import { useEditingStore } from '@/features/chat/store/useEditingStore'
-import { useMessageTreeStore } from '@/features/conversations/store/useMessageTreeStore'
+import { useMessageTreeStore } from '@/features/sidebar/store/useMessageTreeStore'
 import { useNotesStore, type NoteItem } from '@/features/notes/store/useNotesStore'
 import {
   AlertDialog,

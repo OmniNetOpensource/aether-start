@@ -31,7 +31,6 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  buildFontEmbedCSS,
   buildMessageSnippet,
   downloadDataUrl,
   prepareCrossOriginImagesForExport,
@@ -63,8 +62,19 @@ const ROLE_LABEL: Record<Message['role'], string> = {
   assistant: '助手',
 }
 
-const capturePixelRatio = () =>
-  Math.min(2, typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1)
+const capturePixelRatio = () => {
+  if (typeof window === 'undefined') {
+    return 1
+  }
+
+  const devicePixelRatio = window.devicePixelRatio || 1
+  const isCoarsePointer = window.matchMedia?.('(pointer: coarse)').matches ?? false
+
+  return Math.min(isCoarsePointer ? 1 : 2, devicePixelRatio)
+}
+
+const EXPORT_FONT_FAMILY =
+  'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif'
 
 const waitForFrames = async () => {
   await new Promise<void>((resolve) =>
@@ -296,11 +306,10 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
       restoreCrossOriginImages = await prepareCrossOriginImagesForExport(captureNode)
       await waitForImages(captureNode)
 
-      const fontEmbedCSS = await buildFontEmbedCSS()
       const dataUrl = await toPng(captureNode, {
         cacheBust: true,
         pixelRatio: capturePixelRatio(),
-        fontEmbedCSS,
+        fontEmbedCSS: '',
       })
       setPreviewDataUrl(dataUrl)
     } catch (previewError) {
@@ -312,14 +321,24 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     }
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!previewDataUrl) {
       return
     }
 
     const titlePart = sanitizeFilename(conversationTitle)
     const filename = `Aether-${titlePart}.png`
-    downloadDataUrl(previewDataUrl, filename)
+
+    try {
+      await downloadDataUrl(previewDataUrl, filename)
+    } catch (downloadError) {
+      if (downloadError instanceof DOMException && downloadError.name === 'AbortError') {
+        return
+      }
+
+      console.error('Failed to download share image', downloadError)
+      toast.error('保存图片失败，请重试')
+    }
   }
 
   return (
@@ -597,8 +616,11 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         >
           <div
             ref={captureRef}
-            className='w-250 rounded-2xl border border-border bg-background p-10 text-foreground'
-            style={{ fontFamily: 'var(--font-body)' }}
+            className='rounded-2xl border border-border bg-background p-10 text-foreground'
+            style={{
+              width: 960,
+              fontFamily: EXPORT_FONT_FAMILY,
+            }}
           >
             <SharedConversationView messages={selectedRenderableMessages} />
 

@@ -1,30 +1,56 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
-import { getAvailableRolesFn } from "@/server/functions/chat/roles";
+import {
+  getAvailableModelsFn,
+  getAvailablePromptsFn,
+} from "@/server/functions/chat/models";
 
 export type ChatConnectionState = "connecting" | "connected" | "disconnected";
 
 export type RoleInfo = { id: string; name: string };
 
+export type PromptInfo = { id: string; name: string };
+
 export type ChatRequestStatus = "sending" | "answering" | "done";
 
-const ROLE_STORAGE_KEY = "aether_current_role";
+const MODEL_STORAGE_KEY = "aether_current_role";
+const PROMPT_STORAGE_KEY = "aether_current_prompt";
 
-function getStoredRole(): string | null {
+function getStoredModel(): string | null {
   if (typeof window === "undefined") return null;
 
   try {
-    return localStorage.getItem(ROLE_STORAGE_KEY);
+    return localStorage.getItem(MODEL_STORAGE_KEY);
   } catch {
     return null;
   }
 }
 
-function setStoredRole(role: string): void {
+function setStoredModel(model: string): void {
   if (typeof window === "undefined") return;
 
   try {
-    localStorage.setItem(ROLE_STORAGE_KEY, role);
+    localStorage.setItem(MODEL_STORAGE_KEY, model);
+  } catch {
+    // ignore
+  }
+}
+
+function getStoredPrompt(): string | null {
+  if (typeof window === "undefined") return null;
+
+  try {
+    return localStorage.getItem(PROMPT_STORAGE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function setStoredPrompt(prompt: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(PROMPT_STORAGE_KEY, prompt);
   } catch {
     // ignore
   }
@@ -37,6 +63,9 @@ export type ChatRequestState = {
   currentRole: string;
   availableRoles: RoleInfo[];
   rolesLoading: boolean;
+  currentPrompt: string;
+  availablePrompts: PromptInfo[];
+  promptsLoading: boolean;
 };
 
 type ChatRequestActions = {
@@ -47,6 +76,11 @@ type ChatRequestActions = {
   setAvailableRoles: (roles: RoleInfo[]) => void;
   setRolesLoading: (loading: boolean) => void;
   loadAvailableRoles: () => Promise<void>;
+  setCurrentPrompt: (promptId: string) => void;
+  setAvailablePrompts: (prompts: PromptInfo[]) => void;
+  setPromptsLoading: (loading: boolean) => void;
+  loadAvailablePrompts: () => Promise<void>;
+  cyclePrompt: () => void;
   clearRequestState: () => void;
 };
 
@@ -59,6 +93,9 @@ export const initialChatRequestState: ChatRequestState = {
   currentRole: "",
   availableRoles: [],
   rolesLoading: false,
+  currentPrompt: "",
+  availablePrompts: [],
+  promptsLoading: false,
 };
 
 export const useChatRequestStore = create<ChatRequestStore>()(
@@ -74,7 +111,7 @@ export const useChatRequestStore = create<ChatRequestStore>()(
         set({ currentRole }, false, "setCurrentRole");
 
         if (currentRole) {
-          setStoredRole(currentRole);
+          setStoredModel(currentRole);
         }
       },
       setAvailableRoles: (availableRoles) =>
@@ -90,9 +127,9 @@ export const useChatRequestStore = create<ChatRequestStore>()(
         set({ rolesLoading: true }, false, "loadAvailableRoles/start");
 
         try {
-          const roles = await getAvailableRolesFn();
+          const roles = await getAvailableModelsFn();
           const firstId = roles[0]?.id ?? "";
-          const stored = getStoredRole();
+          const stored = getStoredModel();
           const storedValid =
             stored && roles.some((role) => role.id === stored);
           const roleToUse = storedValid ? stored : firstId;
@@ -108,6 +145,53 @@ export const useChatRequestStore = create<ChatRequestStore>()(
           set({ rolesLoading: false }, false, "loadAvailableRoles/done");
         }
       },
+      setCurrentPrompt: (currentPrompt) => {
+        set({ currentPrompt }, false, "setCurrentPrompt");
+
+        if (currentPrompt) {
+          setStoredPrompt(currentPrompt);
+        }
+      },
+      setAvailablePrompts: (availablePrompts) =>
+        set({ availablePrompts }, false, "setAvailablePrompts"),
+      setPromptsLoading: (promptsLoading) =>
+        set({ promptsLoading }, false, "setPromptsLoading"),
+      loadAvailablePrompts: async () => {
+        const state = get();
+        if (state.availablePrompts.length > 0 || state.promptsLoading) {
+          return;
+        }
+
+        set({ promptsLoading: true }, false, "loadAvailablePrompts/start");
+
+        try {
+          const prompts = await getAvailablePromptsFn();
+          const firstId = prompts[0]?.id ?? "aether";
+          const stored = getStoredPrompt();
+          const storedValid =
+            stored && prompts.some((p) => p.id === stored);
+          const promptToUse = storedValid ? stored : firstId;
+
+          if (promptToUse) {
+            get().setCurrentPrompt(promptToUse);
+          }
+
+          set({ availablePrompts: prompts }, false, "loadAvailablePrompts/success");
+        } catch {
+          // ignore
+        } finally {
+          set({ promptsLoading: false }, false, "loadAvailablePrompts/done");
+        }
+      },
+      cyclePrompt: () => {
+        const state = get();
+        const prompts = state.availablePrompts;
+        if (prompts.length === 0) return;
+
+        const idx = prompts.findIndex((p) => p.id === state.currentPrompt);
+        const nextIdx = idx < 0 ? 0 : (idx + 1) % prompts.length;
+        get().setCurrentPrompt(prompts[nextIdx].id);
+      },
       clearRequestState: () =>
         set(
           (state) => ({
@@ -117,6 +201,9 @@ export const useChatRequestStore = create<ChatRequestStore>()(
             currentRole: state.currentRole,
             availableRoles: state.availableRoles,
             rolesLoading: state.rolesLoading,
+            currentPrompt: state.currentPrompt,
+            availablePrompts: state.availablePrompts,
+            promptsLoading: state.promptsLoading,
           }),
           false,
           "clearRequestState",
@@ -139,6 +226,9 @@ export const selectChatRequestState = (state: ChatRequestStore) => ({
   currentRole: state.currentRole,
   availableRoles: state.availableRoles,
   rolesLoading: state.rolesLoading,
+  currentPrompt: state.currentPrompt,
+  availablePrompts: state.availablePrompts,
+  promptsLoading: state.promptsLoading,
 });
 
 export const selectChatRequestStatus = (state: ChatRequestStore) =>
@@ -152,3 +242,9 @@ export const selectAvailableRoles = (state: ChatRequestStore) =>
   state.availableRoles;
 export const selectRolesLoading = (state: ChatRequestStore) =>
   state.rolesLoading;
+export const selectCurrentPrompt = (state: ChatRequestStore) =>
+  state.currentPrompt;
+export const selectAvailablePrompts = (state: ChatRequestStore) =>
+  state.availablePrompts;
+export const selectPromptsLoading = (state: ChatRequestStore) =>
+  state.promptsLoading;

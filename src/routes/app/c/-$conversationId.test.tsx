@@ -24,7 +24,7 @@ vi.mock('@tanstack/react-router', () => ({
   }),
 }))
 
-vi.mock('@/features/conversations/hooks/useConversationLoader', () => ({
+vi.mock('@/features/sidebar/hooks/useConversationLoader', () => ({
   useConversationLoader: useConversationLoaderMock,
 }))
 
@@ -42,7 +42,7 @@ vi.mock('@/features/chat/store/useChatRequestStore', () => ({
   },
 }))
 
-vi.mock('@/features/conversations/store/useConversationsStore', () => ({
+vi.mock('@/features/sidebar/store/useConversationsStore', () => ({
   useConversationsStore: (selector: (state: { conversations: Array<{ id: string; title: string }> }) => unknown) =>
     selector({
       conversations: [{ id: 'conv-1', title: 'Conversation' }],

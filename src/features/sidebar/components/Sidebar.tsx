@@ -3,31 +3,19 @@ import { AetherLogo } from "@/components/AetherLogo";
 import { NewChatButton } from "@/features/chat/components/NewChatButton";
 import { useResponsive } from "@/components/ResponsiveContext";
 import { NotesButton } from "@/features/notes/components/NotesButton";
-import { ConversationList } from "@/features/conversations/components/ConversationList";
-import { ConversationSearchTrigger } from "@/features/conversations/components/search/ConversationSearchTrigger";
+import { ConversationList } from "@/features/sidebar/components/ConversationList";
+import { ConversationSearchTrigger } from "@/features/sidebar/components/search/ConversationSearchTrigger";
 import { ProfileMenu } from "@/features/settings/components/ProfileMenu";
 
 export default function Sidebar() {
   const RIGHT_LEAVE_TOLERANCE_PX = 1;
-  const CLOSE_DELAY_MS = 200;
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const sidebarRef = useRef<HTMLElement>(null);
   const openDropdownRef = useRef(false);
   const deviceType = useResponsive();
   const isMobile = deviceType === "mobile";
 
-  const clearCloseTimer = () => {
-    if (!closeTimerRef.current) {
-      return;
-    }
-
-    clearTimeout(closeTimerRef.current);
-    closeTimerRef.current = null;
-  };
-
   const handleDropdownOpenChange = (open: boolean) => {
     openDropdownRef.current = open;
-    if (open) clearCloseTimer();
   };
 
   const isSidebarOpen = () => {
@@ -35,29 +23,14 @@ export default function Sidebar() {
   };
 
   const openSidebar = () => {
-    clearCloseTimer();
     sidebarRef.current?.classList.remove("-translate-x-full");
     document.body.style.overflow = "hidden";
   };
 
   const closeSidebar = () => {
-    clearCloseTimer();
     openDropdownRef.current = false;
     sidebarRef.current?.classList.add("-translate-x-full");
     document.body.style.overflow = "";
-  };
-
-  const scheduleClose = () => {
-    clearCloseTimer();
-
-    if (openDropdownRef.current) {
-      return;
-    }
-
-    closeTimerRef.current = setTimeout(() => {
-      closeSidebar();
-      closeTimerRef.current = null;
-    }, CLOSE_DELAY_MS);
   };
 
   const handleMouseLeave = (event: ReactMouseEvent<HTMLElement>) => {
@@ -66,7 +39,6 @@ export default function Sidebar() {
     }
 
     if (openDropdownRef.current) {
-      clearCloseTimer();
       return;
     }
 
@@ -74,16 +46,12 @@ export default function Sidebar() {
     const leftFromRightSide = event.clientX >= right - RIGHT_LEAVE_TOLERANCE_PX;
 
     if (leftFromRightSide) {
-      scheduleClose();
-      return;
+      closeSidebar();
     }
-
-    clearCloseTimer();
   };
 
   useEffect(() => {
     const closeSidebarFromOutside = () => {
-      clearCloseTimer();
       openDropdownRef.current = false;
       sidebarRef.current?.classList.add("-translate-x-full");
       document.body.style.overflow = "";
@@ -114,7 +82,6 @@ export default function Sidebar() {
 
   useEffect(() => {
     const closeSidebarOnEscape = () => {
-      clearCloseTimer();
       openDropdownRef.current = false;
       sidebarRef.current?.classList.add("-translate-x-full");
       document.body.style.overflow = "";
@@ -132,7 +99,6 @@ export default function Sidebar() {
 
   useEffect(() => {
     return () => {
-      clearCloseTimer();
       document.body.style.overflow = "";
     };
   }, []);

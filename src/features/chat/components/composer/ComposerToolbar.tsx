@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import type { ChatRequestStatus } from "@/stores/zustand/useChatRequestStore";
 import { ModelSelector } from "./ModelSelector";
+import { PromptSelector } from "./PromptSelector";
 
 type ComposerToolbarProps = {
   status: ChatRequestStatus;
@@ -71,7 +72,7 @@ export function ComposerToolbar({
 
   return (
     <div className="flex items-center justify-between px-1">
-      {/* Left group: Attachments */}
+      {/* Left group: Attachments + Prompt */}
       <div className="flex items-center gap-1">
         {/* File picker */}
         <span title={uploading ? "正在上传附件..." : "添加附件"}>
@@ -101,9 +102,10 @@ export function ComposerToolbar({
             )}
           </Button>
         </span>
+        <PromptSelector />
       </div>
 
-      {/* Right group: Role selector */}
+      {/* Right group: Model selector */}
       <div className="flex items-center gap-1">
         <ModelSelector />
         <Button

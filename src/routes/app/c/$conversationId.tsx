@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Composer } from "@/features/chat/components/composer/Composer";
 import { MessageList } from "@/features/chat/components/message/MessageList";
-import { useConversationLoader } from "@/features/conversations/hooks/useConversationLoader";
+import { useConversationLoader } from "@/features/sidebar/hooks/useConversationLoader";
 import {
   resetLastEventId,
   resumeRunningConversation,
 } from "@/features/chat/lib/api/chat-orchestrator";
 import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
-import { useConversationsStore } from "@/features/conversations/store/useConversationsStore";
+import { useConversationsStore } from "@/features/sidebar/store/useConversationsStore";
 
 export const Route = createFileRoute("/app/c/$conversationId")({
   component: ConversationPage,
