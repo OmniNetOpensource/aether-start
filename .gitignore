@@ -16,6 +16,7 @@ logs/
 src/routes/demo/
 
 resume.html
+resume-project.html
 coverage/
 test-results/
 playwright-report/
