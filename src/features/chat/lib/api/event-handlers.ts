@@ -7,50 +7,48 @@ export const enhanceServerErrorMessage = (safeMessage: string) => {
 
   if (lowerMessage.includes('load error') || lowerMessage.includes('load_error')) {
     return (
-      `模型加载失败: ${safeMessage}\n` +
-      `可能原因: 网络不稳定、模型服务暂时不可用\n` +
-      `建议: 请稍后重试或切换其他模型\n` +
-      `提示: 若持续出现，可尝试刷新页面`
+      `Model load failed: ${safeMessage}\n` +
+      'Possible cause: network instability or model service unavailable.\n' +
+      'Suggestion: retry later or switch to another model.'
     )
   }
 
   if (lowerMessage.includes('timeout') || lowerMessage.includes('timed out')) {
     return (
-      `请求超时: ${safeMessage}\n` +
-      `可能原因: 网络延迟过高、服务器响应缓慢\n` +
-      `建议: 请稍后重试\n` +
-      `提示: 可尝试切换网络或降低请求频率`
+      `Request timed out: ${safeMessage}\n` +
+      'Possible cause: network latency is too high or the server responded too slowly.\n' +
+      'Suggestion: retry later.'
     )
   }
 
   if (lowerMessage.includes('rate limit') || lowerMessage.includes('too many')) {
     return (
-      `请求频率限制: ${safeMessage}\n` +
-      `可能原因: 短时间内请求过多\n` +
-      `建议: 请稍等片刻后重试`
+      `Rate limit reached: ${safeMessage}\n` +
+      'Possible cause: too many requests in a short time.\n' +
+      'Suggestion: wait a moment and try again.'
     )
   }
 
   if (lowerMessage.includes('unavailable') || lowerMessage.includes('503')) {
     return (
-      `服务暂时不可用: ${safeMessage}\n` +
-      `可能原因: 服务器维护或过载\n` +
-      `建议: 请稍后重试`
+      `Service unavailable: ${safeMessage}\n` +
+      'Possible cause: maintenance or temporary overload.\n' +
+      'Suggestion: retry later.'
     )
   }
 
   if (lowerMessage.includes('connection') || lowerMessage.includes('network')) {
     return (
-      `网络连接问题: ${safeMessage}\n` +
-      `可能原因: 网络不稳定、连接被中断\n` +
-      `建议: 请检查网络连接后重试`
+      `Network connection issue: ${safeMessage}\n` +
+      'Possible cause: unstable connection or interrupted request.\n' +
+      'Suggestion: check your network and try again.'
     )
   }
 
   return (
-    `请求失败: ${safeMessage}\n` +
-    `可能原因: 服务异常或网络问题\n` +
-    `建议: 请稍后重试或刷新页面`
+    `Request failed: ${safeMessage}\n` +
+    'Possible cause: service or network issue.\n' +
+    'Suggestion: retry later or refresh the page.'
   )
 }
 
@@ -84,7 +82,7 @@ export const applyChatEventToTree = (
   }
 
   if (event.type === 'tool_call') {
-    const tool = typeof event.tool === 'string' ? event.tool : '未知工具'
+    const tool = typeof event.tool === 'string' ? event.tool : 'unknown_tool'
     const args =
       event.args && typeof event.args === 'object'
         ? (event.args as Record<string, unknown>)
@@ -97,29 +95,7 @@ export const applyChatEventToTree = (
           tool,
           args,
         },
-        progress: [],
       },
-    })
-    return
-  }
-
-  if (event.type === 'tool_progress') {
-    useMessageTreeStore.getState().appendToAssistant({
-      kind: 'tool_progress',
-      tool: typeof event.tool === 'string' ? event.tool : '未知工具',
-      stage: typeof event.stage === 'string' ? event.stage : 'progress',
-      message:
-        typeof event.message === 'string'
-          ? event.message
-          : String(event.message ?? ''),
-      receivedBytes:
-        typeof event.receivedBytes === 'number'
-          ? event.receivedBytes
-          : undefined,
-      totalBytes:
-        typeof event.totalBytes === 'number'
-          ? event.totalBytes
-          : undefined,
     })
     return
   }
@@ -138,7 +114,7 @@ export const applyChatEventToTree = (
 
     useMessageTreeStore.getState().appendToAssistant({
       kind: 'tool_result',
-      tool: typeof event.tool === 'string' ? event.tool : '未知工具',
+      tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
       result: resultText,
     })
     return
@@ -149,7 +125,7 @@ export const applyChatEventToTree = (
       typeof event.message === 'string'
         ? event.message
         : String(event.message ?? '')
-    const safeMessage = rawMessage || '未知错误'
+    const safeMessage = rawMessage || 'unknown error'
     const enhancedMessage = enhanceServerErrorMessage(safeMessage)
 
     useMessageTreeStore.getState().appendToAssistant({

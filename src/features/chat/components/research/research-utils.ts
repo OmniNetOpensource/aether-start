@@ -1,15 +1,12 @@
 import type {
   Tool,
-  ToolProgress,
   ToolResult,
 } from "@/types/message";
 
 export function getToolLifecycle(tool: Tool): {
-  progress: ToolProgress[];
   result?: ToolResult;
 } {
   return {
-    progress: tool.progress ?? [],
     result: tool.result,
   };
 }

@@ -165,43 +165,6 @@ describe('applyAssistantAddition', () => {
     expect(research.items[0].kind).toBe('tool')
   })
 
-  it('adds tool_progress to matching tool', () => {
-    const blocks: AssistantContentBlock[] = [
-      {
-        type: 'research',
-        items: [
-          { kind: 'tool', data: { call: { tool: 'search', args: {} } } },
-        ],
-      },
-    ]
-    const result = applyAssistantAddition(blocks, {
-      kind: 'tool_progress',
-      tool: 'search',
-      stage: 'fetching',
-      message: 'loading',
-    })
-    const research = result[0] as Extract<AssistantContentBlock, { type: 'research' }>
-    const toolItem = research.items[0]
-    expect(toolItem.kind).toBe('tool')
-    if (toolItem.kind === 'tool') {
-      expect(toolItem.data.progress).toHaveLength(1)
-      expect(toolItem.data.progress![0].stage).toBe('fetching')
-    }
-  })
-
-  it('creates tool entry for tool_progress when no matching tool exists', () => {
-    const blocks: AssistantContentBlock[] = []
-    const result = applyAssistantAddition(blocks, {
-      kind: 'tool_progress',
-      tool: 'search',
-      stage: 'fetching',
-      message: 'loading',
-    })
-    const research = result[0] as Extract<AssistantContentBlock, { type: 'research' }>
-    expect(research.items).toHaveLength(1)
-    expect(research.items[0].kind).toBe('tool')
-  })
-
   it('adds tool_result to matching tool', () => {
     const blocks: AssistantContentBlock[] = [
       {

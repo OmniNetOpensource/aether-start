@@ -44,15 +44,7 @@ const appendToAssistant = (
     | { type: 'content'; content: string }
     | { type: 'error'; message: string }
     | { kind: 'thinking'; text: string }
-    | { kind: 'tool'; data: { call: { tool: string; args: Record<string, unknown> }; progress: [] } }
-    | {
-        kind: 'tool_progress'
-        tool: string
-        stage: string
-        message: string
-        receivedBytes?: number
-        totalBytes?: number
-      }
+    | { kind: 'tool'; data: { call: { tool: string; args: Record<string, unknown> } } }
     | { kind: 'tool_result'; tool: string; result: string },
 ): TreeState => {
   const target = ensureAssistantTarget(state)
@@ -105,19 +97,7 @@ export const processEventToTree = (
           tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
           args: normalizeToolArgs(event.args),
         },
-        progress: [],
       },
-    })
-  }
-
-  if (event.type === 'tool_progress') {
-    return appendToAssistant(state, {
-      kind: 'tool_progress',
-      tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
-      stage: typeof event.stage === 'string' ? event.stage : 'progress',
-      message: typeof event.message === 'string' ? event.message : String(event.message ?? ''),
-      receivedBytes: typeof event.receivedBytes === 'number' ? event.receivedBytes : undefined,
-      totalBytes: typeof event.totalBytes === 'number' ? event.totalBytes : undefined,
     })
   }
 

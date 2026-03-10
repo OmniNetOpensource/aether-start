@@ -286,7 +286,7 @@ const performSearch = async (
   }
 };
 
-const search: ToolHandler = async (args, _onProgress, signal) => {
+const search: ToolHandler = async (args, signal) => {
   const { query } = parseSearchArgs(args);
   const { SERP_API_KEY: apiKey } = getServerEnv()
 

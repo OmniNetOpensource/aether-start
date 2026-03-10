@@ -7,15 +7,6 @@ export type ChatServerToClientEvent =
       args: Record<string, object | string | number | boolean>
       callId?: string
     }
-  | {
-      type: 'tool_progress'
-      tool: string
-      stage: string
-      message: string
-      receivedBytes?: number
-      totalBytes?: number
-      callId?: string
-    }
   | { type: 'tool_result'; tool: string; result: string; callId?: string }
   | { type: 'error'; message: string }
   | {

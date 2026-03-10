@@ -4,14 +4,11 @@ import type {
   ContentBlock,
   Message,
   ResearchItem,
-  ToolProgress,
   UserContentBlock,
 } from "@/types/message";
 import { cloneBlocks, cloneResearchItem } from "./message-tree";
 
-type ToolLifecycleUpdate =
-  | ({ kind: "tool_progress"; tool: string } & ToolProgress)
-  | { kind: "tool_result"; tool: string; result: string };
+type ToolLifecycleUpdate = { kind: "tool_result"; tool: string; result: string };
 
 export type AssistantAddition = AssistantContentBlock | ResearchItem | ToolLifecycleUpdate;
 
@@ -140,49 +137,6 @@ export const applyAssistantAddition = (
         ...researchBlock,
         items: [...researchBlock.items, { ...addition }],
       };
-      return nextBlocks;
-    }
-
-    if (addition.kind === "tool_progress") {
-      const researchIndex = ensureResearchBlock(nextBlocks);
-      const researchBlock = nextBlocks[researchIndex] as Extract<
-        AssistantContentBlock,
-        { type: "research" }
-      >;
-      const items = [...researchBlock.items];
-      const targetIndex = findToolIndex(items, addition.tool);
-      const progressEntry: ToolProgress = {
-        stage: addition.stage,
-        message: addition.message,
-        receivedBytes: addition.receivedBytes,
-        totalBytes: addition.totalBytes,
-      };
-
-      if (targetIndex === -1) {
-        items.push({
-          kind: "tool",
-          data: {
-            call: { tool: addition.tool, args: {} },
-            progress: [progressEntry],
-          },
-        });
-      } else {
-        const targetItem = items[targetIndex];
-        if (targetItem.kind === "tool") {
-          items[targetIndex] = {
-            ...targetItem,
-            data: {
-              ...targetItem.data,
-              progress: [
-                ...(targetItem.data.progress ?? []),
-                progressEntry,
-              ],
-            },
-          };
-        }
-      }
-
-      nextBlocks[researchIndex] = { ...researchBlock, items };
       return nextBlocks;
     }
 

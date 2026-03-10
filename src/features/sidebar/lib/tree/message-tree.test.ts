@@ -336,7 +336,6 @@ describe('cloneBlocks', () => {
             kind: 'tool',
             data: {
               call: { tool: 'search', args: { q: 'test' } },
-              progress: [{ stage: 'fetching', message: 'loading' }],
               result: { result: 'done' },
             },
           },
@@ -378,7 +377,6 @@ describe('cloneResearchItem', () => {
       kind: 'tool' as const,
       data: {
         call: { tool: 'search', args: { q: 'test' } },
-        progress: [{ stage: 'fetching', message: 'loading' }],
         result: { result: 'done' },
       },
     }
@@ -387,12 +385,11 @@ describe('cloneResearchItem', () => {
     expect(cloned).not.toBe(item)
     if (cloned.kind === 'tool') {
       expect(cloned.data.call.args).not.toBe(item.data.call.args)
-      expect(cloned.data.progress![0]).not.toBe(item.data.progress![0])
       expect(cloned.data.result).not.toBe(item.data.result)
     }
   })
 
-  it('handles tool item without progress/result', () => {
+  it('handles tool item without result', () => {
     const item = {
       kind: 'tool' as const,
       data: {
@@ -402,7 +399,6 @@ describe('cloneResearchItem', () => {
     const cloned = cloneResearchItem(item)
     expect(cloned).toEqual(item)
     if (cloned.kind === 'tool') {
-      expect(cloned.data.progress).toBeUndefined()
       expect(cloned.data.result).toBeUndefined()
     }
   })

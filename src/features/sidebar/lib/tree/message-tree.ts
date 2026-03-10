@@ -45,9 +45,6 @@ export const cloneResearchItem = (item: ResearchItem): ResearchItem => {
         tool: item.data.call.tool,
         args: { ...item.data.call.args },
       },
-      progress: item.data.progress
-        ? item.data.progress.map((entry) => ({ ...entry }))
-        : undefined,
       result: item.data.result ? { ...item.data.result } : undefined,
     },
   };

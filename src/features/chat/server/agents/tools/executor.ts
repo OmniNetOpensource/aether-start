@@ -6,7 +6,7 @@ import {
 import { searchTool } from './search'
 import { getServerEnv } from '@/server/env'
 import { log } from '@/server/agents/services/logger'
-import type { ChatTool, ToolHandler, ToolProgressUpdate } from './types'
+import type { ChatTool, ToolHandler } from './types'
 import type { PendingToolInvocation, ToolInvocationResult, ChatServerToClientEvent } from '@/types/chat-api'
 
 // Get tool handler by name (replaces registry)
@@ -46,7 +46,6 @@ export const getAvailableTools = (): ChatTool[] => {
 const callToolByName = async (
   name: string,
   args: unknown,
-  onProgress?: (progress: ToolProgressUpdate) => void,
   signal?: AbortSignal,
 ): Promise<string> => {
   const handler = getToolHandler(name)
@@ -59,7 +58,7 @@ const callToolByName = async (
     if (signal?.aborted) {
       throw new DOMException('Aborted', 'AbortError')
     }
-    return await handler(args, onProgress, signal)
+    return await handler(args, signal)
   } catch (error) {
     if (
       (error instanceof DOMException && error.name === 'AbortError') ||
@@ -92,8 +91,8 @@ const isFetchResultError = (result: string) => {
   }
 
   const isSystemPromptTooLong =
-    text.startsWith('[系统提示:') &&
-    (text.includes('内容过长') || text.includes('已省略不返回'))
+    text.startsWith('[绯荤粺鎻愮ず:') &&
+    (text.includes('鍐呭杩囬暱') || text.includes('宸茬渷鐣ヤ笉杩斿洖'))
 
   return text.startsWith('Error') || isSystemPromptTooLong
 }
@@ -173,26 +172,10 @@ export async function* executeToolsGen(
 
     yield { type: 'tool_call', tool: tc.name, args: tc.args as Record<string, object | string | number | boolean>, callId: tc.id }
 
-    const progressBuffer: ChatServerToClientEvent[] = []
-
-    const result = await callToolByName(tc.name, tc.args, (progress: ToolProgressUpdate) => {
-      progressBuffer.push({
-        type: 'tool_progress',
-        tool: tc.name,
-        stage: progress.stage,
-        message: String(progress.message ?? ''),
-        receivedBytes: progress.receivedBytes,
-        totalBytes: progress.totalBytes,
-        callId: tc.id,
-      })
-    }, signal)
+    const result = await callToolByName(tc.name, tc.args, signal)
 
     if (signal?.aborted) {
       throw new DOMException('Aborted', 'AbortError')
-    }
-
-    for (const event of progressBuffer) {
-      yield event
     }
 
     const normalizedResult = typeof result === 'string' ? result : JSON.stringify(result)

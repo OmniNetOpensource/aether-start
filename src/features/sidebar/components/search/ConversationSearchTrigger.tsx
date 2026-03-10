@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Search } from 'lucide-react'
 import { ConversationSearchDialog } from './ConversationSearchDialog'
 import { Button } from '@/components/ui/button'
@@ -9,29 +9,6 @@ type ConversationSearchTriggerProps = {
 
 export function ConversationSearchTrigger({ variant = 'icon' }: ConversationSearchTriggerProps) {
   const [open, setOpen] = useState(false)
-
-  useEffect(() => {
-    const handleKeydown = (event: KeyboardEvent) => {
-      if (event.isComposing) {
-        return
-      }
-
-      if (event.key.toLowerCase() !== 'k') {
-        return
-      }
-
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) {
-        return
-      }
-
-      event.preventDefault()
-      setOpen(true)
-    }
-
-    window.addEventListener('keydown', handleKeydown)
-    return () => window.removeEventListener('keydown', handleKeydown)
-  }, [])
-
   const isSidebar = variant === 'sidebar'
 
   return (
@@ -46,7 +23,7 @@ export function ConversationSearchTrigger({ variant = 'icon' }: ConversationSear
             : 'rounded-lg'
         }
         aria-label='搜索聊天记录'
-        title='搜索聊天记录 (Ctrl/Cmd+K)'
+        title='搜索聊天记录'
         onClick={() => setOpen(true)}
       >
         {isSidebar ? (

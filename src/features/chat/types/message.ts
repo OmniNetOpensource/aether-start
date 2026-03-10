@@ -3,20 +3,12 @@ type ToolCall = {
   args: Record<string, unknown>;
 };
 
-export type ToolProgress = {
-  stage: string;
-  message: string;
-  receivedBytes?: number;
-  totalBytes?: number;
-};
-
 export type ToolResult = {
   result: string;
 };
 
 export type Tool = {
   call: ToolCall;
-  progress?: ToolProgress[];
   result?: ToolResult;
 };
 

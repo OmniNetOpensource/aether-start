@@ -26,11 +26,6 @@ const cloneTool = (tool: Tool): Tool => ({
     tool: tool.call.tool,
     args: { ...tool.call.args },
   },
-  ...(tool.progress
-    ? {
-        progress: tool.progress.map((entry) => ({ ...entry })),
-      }
-    : {}),
   ...(tool.result
     ? {
         result: { ...tool.result },

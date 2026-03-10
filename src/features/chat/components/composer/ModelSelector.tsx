@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Bot, Check, ChevronDown } from "lucide-react";
 import {
   selectAvailableRoles,
   selectCurrentRole,
@@ -76,13 +76,23 @@ export function ModelSelector() {
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
+        aria-label={currentRoleName ? `选择模型，当前为 ${currentRoleName}` : "选择模型"}
+        title={currentRoleName || "选择模型"}
         className={cn(
           toolButtonBaseClass,
-          "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
+          isMobile
+            ? "w-8 px-0 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground"
+            : "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
         )}
       >
-        <span className="max-w-25 truncate">{currentRoleName}</span>
-        <ChevronDown className="h-3 w-3 transition-transform duration-300" />
+        {isMobile ? (
+          <Bot className="h-3.5 w-3.5" />
+        ) : (
+          <>
+            <span className="max-w-25 truncate">{currentRoleName}</span>
+            <ChevronDown className="h-3 w-3 transition-transform duration-300" />
+          </>
+        )}
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen} label="选择模型">
         <Command className="rounded-lg border-0" loop>

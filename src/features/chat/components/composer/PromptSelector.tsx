@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useResponsive } from "@/components/ResponsiveContext";
 import {
   selectAvailablePrompts,
   selectCurrentPrompt,
@@ -17,6 +18,8 @@ import {
 } from "@/stores/zustand/useChatRequestStore";
 
 export function PromptSelector() {
+  const deviceType = useResponsive();
+  const isMobile = deviceType === "mobile";
   const currentPrompt = useChatRequestStore(selectCurrentPrompt);
   const prompts = useChatRequestStore(selectAvailablePrompts);
   const loadAvailablePrompts = useChatRequestStore(
@@ -43,14 +46,22 @@ export function PromptSelector() {
           type="button"
           variant="ghost"
           size="sm"
+          aria-label={`选择提示词，当前为 ${currentPromptName}`}
+          title={currentPromptName}
           className={cn(
             toolButtonBaseClass,
-            "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
+            isMobile
+              ? "w-8 px-0 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground"
+              : "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
           )}
         >
           <MessageSquareText className="h-3.5 w-3.5" />
-          <span className="max-w-20 truncate">{currentPromptName}</span>
-          <ChevronDown className="h-3 w-3 transition-transform duration-300" />
+          {!isMobile && (
+            <>
+              <span className="max-w-20 truncate">{currentPromptName}</span>
+              <ChevronDown className="h-3 w-3 transition-transform duration-300" />
+            </>
+          )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={4}>
