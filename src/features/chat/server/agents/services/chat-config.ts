@@ -3,6 +3,7 @@ import { getServerEnv } from "@/server/env";
 export type ChatFormat = "anthropic" | "openai" | "gemini" | "openai-responses";
 export type ChatBackend =
   | "rightcode-claude"
+  | "rightcode-claude-sale"
   | "rightcode-gemini"
   | "rightcode-openai"
   | "dmx"
@@ -243,12 +244,26 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "anthropic",
     backend: "ikun",
   },
+  claudeHaiku45Ikun: {
+    id: "claudeHaiku45Ikun",
+    name: "claude-haiku-4-5-20251001+ikun",
+    model: "claude-haiku-4-5-20251001",
+    format: "anthropic",
+    backend: "ikun",
+  },
   claudeSonnet46Rightcode: {
     id: "claudeSonnet46Rightcode",
     name: "claude-sonnet-4-6+rightcode",
     model: "claude-sonnet-4-6",
     format: "anthropic",
     backend: "rightcode-claude",
+  },
+  claudeOpus46RightcodeSale: {
+    id: "claudeOpus46RightcodeSale",
+    name: "claude-opus-4-6+rightcode-sale",
+    model: "claude-opus-4-6",
+    format: "anthropic",
+    backend: "rightcode-claude-sale",
   },
 };
 
@@ -290,6 +305,9 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
 
 export const getDefaultPromptId = (): string => "aether";
 
+/** Model ID used for conversation title generation. */
+export const TITLE_GENERATION_MODEL_ID = "claudeHaiku45Ikun";
+
 export const buildSystemPrompt = () => {
   const now = new Date();
   const localDate = now.toLocaleDateString("zh-CN", {
@@ -320,6 +338,21 @@ export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
     const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE;
     if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY_RIGHTCODE");
     if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_RIGHTCODE");
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: {
+        "User-Agent": "aether",
+        "anthropic-beta": "interleaved-thinking-2025-05-14",
+      },
+    };
+  }
+
+  if (backend === "rightcode-claude-sale") {
+    const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE_SALE;
+    const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE_SALE;
+    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY_RIGHTCODE_SALE");
+    if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_RIGHTCODE_SALE");
     return {
       apiKey,
       baseURL,

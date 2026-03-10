@@ -7,6 +7,8 @@ type ServerEnv = {
   LLM_STREAM_LOGGING?: string
   ANTHROPIC_API_KEY_RIGHTCODE?: string
   ANTHROPIC_BASE_URL_RIGHTCODE?: string
+  ANTHROPIC_API_KEY_RIGHTCODE_SALE?: string
+  ANTHROPIC_BASE_URL_RIGHTCODE_SALE?: string
   GEMINI_API_KEY_RIGHTCODE?: string
   GEMINI_BASE_URL_RIGHTCODE?: string
   OPENAI_API_KEY_RIGHTCODE?: string
@@ -70,6 +72,12 @@ export const getServerEnv = (): ServerEnv => {
     ANTHROPIC_BASE_URL_RIGHTCODE:
       readString(bindings.ANTHROPIC_BASE_URL_RIGHTCODE) ??
       readStringFromProcess('ANTHROPIC_BASE_URL_RIGHTCODE'),
+    ANTHROPIC_API_KEY_RIGHTCODE_SALE:
+      readString(bindings.ANTHROPIC_API_KEY_RIGHTCODE_SALE) ??
+      readStringFromProcess('ANTHROPIC_API_KEY_RIGHTCODE_SALE'),
+    ANTHROPIC_BASE_URL_RIGHTCODE_SALE:
+      readString(bindings.ANTHROPIC_BASE_URL_RIGHTCODE_SALE) ??
+      readStringFromProcess('ANTHROPIC_BASE_URL_RIGHTCODE_SALE'),
     GEMINI_API_KEY_RIGHTCODE:
       readString(bindings.GEMINI_API_KEY_RIGHTCODE) ??
       readStringFromProcess('GEMINI_API_KEY_RIGHTCODE'),
