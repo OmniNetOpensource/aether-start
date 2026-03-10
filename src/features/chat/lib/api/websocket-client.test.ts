@@ -1,0 +1,120 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { fetchMock } = vi.hoisted(() => {
+  const fetchMock = vi.fn()
+  return { fetchMock }
+})
+
+// Mock global fetch
+vi.stubGlobal('fetch', fetchMock)
+
+// Mock stores
+vi.mock('@/stores/zustand/useChatRequestStore', () => {
+  const store = {
+    getState: () => store._state,
+    _state: {
+      status: 'done' as string,
+      activeRequestId: null as string | null,
+      connectionState: 'idle' as string,
+      currentRole: 'aether',
+      availableRoles: [],
+      rolesLoading: false,
+      setStatus: vi.fn(),
+      setActiveRequestId: vi.fn(),
+      setConnectionState: vi.fn(),
+      clearRequestState: vi.fn(),
+      setCurrentRole: vi.fn(),
+    },
+  }
+  return {
+    useChatRequestStore: store,
+    isChatRequestActive: (status: string) => status !== 'done',
+    selectActiveRequestId: (state: typeof store._state) => state.activeRequestId,
+    selectChatRequestStatus: (state: typeof store._state) => state.status,
+    selectCurrentRole: (state: typeof store._state) => state.currentRole,
+  }
+})
+
+vi.mock('@/stores/zustand/useMessageTreeStore', () => ({
+  useMessageTreeStore: {
+    getState: () => ({
+      conversationId: 'conv-a',
+      _getTreeState: () => ({
+        messages: [],
+        currentPath: [],
+        latestRootId: null,
+        nextId: 1,
+      }),
+    }),
+  },
+}))
+
+vi.mock('@/stores/zustand/useConversationsStore', () => ({
+  useConversationsStore: {
+    getState: () => ({
+      addConversation: vi.fn(),
+    }),
+  },
+}))
+
+vi.mock('@/lib/chat/api/event-handlers', () => ({
+  applyChatEventToTree: vi.fn(),
+}))
+
+vi.mock('@/lib/navigation', () => ({
+  appNavigate: vi.fn(),
+}))
+
+vi.mock('@/hooks/useToast', () => ({
+  toast: { warning: vi.fn() },
+}))
+
+import {
+  resetLastEventId,
+  checkAgentStatus,
+} from './chat-orchestrator'
+
+describe('SSE orchestrator', () => {
+  beforeEach(() => {
+    resetLastEventId()
+    fetchMock.mockReset()
+  })
+
+  describe('checkAgentStatus', () => {
+    it('returns idle status on 404', async () => {
+      fetchMock.mockResolvedValueOnce({
+        status: 404,
+        ok: false,
+      })
+
+      const result = await checkAgentStatus('conv-a')
+      expect(result).toEqual({ status: 'idle' })
+    })
+
+    it('returns running status with requestId', async () => {
+      fetchMock.mockResolvedValueOnce({
+        status: 200,
+        ok: true,
+        json: async () => ({ status: 'running', requestId: 'req-1' }),
+      })
+
+      const result = await checkAgentStatus('conv-a')
+      expect(result).toEqual({ status: 'running', requestId: 'req-1' })
+    })
+
+    it('throws on non-ok non-404 response', async () => {
+      fetchMock.mockResolvedValueOnce({
+        status: 500,
+        ok: false,
+      })
+
+      await expect(checkAgentStatus('conv-a')).rejects.toThrow('Agent status probe failed: 500')
+    })
+  })
+
+  describe('resetLastEventId', () => {
+    it('can be called without error', () => {
+      expect(() => resetLastEventId()).not.toThrow()
+    })
+  })
+})

@@ -1,8 +1,8 @@
 import { Link, createFileRoute } from '@tanstack/react-router'
 import { useEffect, useState } from 'react'
 import { Loader2 } from 'lucide-react'
-import { SharedConversationView, type ShareRenderableMessage } from '@/components/chat/share/SharedConversationView'
-import { getPublicConversationShareFn } from '@/server/functions/shares'
+import { SharedConversationView, type ShareRenderableMessage } from '@/features/share/components/SharedConversationView'
+import { getPublicConversationShareFn } from '@/features/share/server/shares'
 
 type PublicShareData = Awaited<ReturnType<typeof getPublicConversationShareFn>>
 

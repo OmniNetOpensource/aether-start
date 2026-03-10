@@ -5,15 +5,17 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 ;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
 
 const {
-  disposeConnectionMock,
   resetLastEventIdMock,
-  resumeIfRunningMock,
+  resumeRunningConversationMock,
   useConversationLoaderMock,
+  clearRequestStateMock,
+  setConnectionStateMock,
 } = vi.hoisted(() => ({
-  disposeConnectionMock: vi.fn(),
   resetLastEventIdMock: vi.fn(),
-  resumeIfRunningMock: vi.fn(),
+  resumeRunningConversationMock: vi.fn().mockResolvedValue(undefined),
   useConversationLoaderMock: vi.fn(),
+  clearRequestStateMock: vi.fn(),
+  setConnectionStateMock: vi.fn(),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -22,124 +24,113 @@ vi.mock('@tanstack/react-router', () => ({
   }),
 }))
 
-vi.mock('@/hooks/useConversationLoader', () => ({
+vi.mock('@/features/conversations/hooks/useConversationLoader', () => ({
   useConversationLoader: useConversationLoaderMock,
 }))
 
-vi.mock('@/lib/chat/api/websocket-client', () => ({
+vi.mock('@/features/chat/lib/api/chat-orchestrator', () => ({
   resetLastEventId: resetLastEventIdMock,
+  resumeRunningConversation: resumeRunningConversationMock,
 }))
 
-vi.mock('@/stores/useConversationsStore', () => ({
+vi.mock('@/features/chat/store/useChatRequestStore', () => ({
+  useChatRequestStore: {
+    getState: () => ({
+      clearRequestState: clearRequestStateMock,
+      setConnectionState: setConnectionStateMock,
+    }),
+  },
+}))
+
+vi.mock('@/features/conversations/store/useConversationsStore', () => ({
   useConversationsStore: (selector: (state: { conversations: Array<{ id: string; title: string }> }) => unknown) =>
     selector({
       conversations: [{ id: 'conv-1', title: 'Conversation' }],
     }),
 }))
 
-vi.mock('@/stores/useChatRequestStore', () => ({
-  useChatRequestStore: {
-    getState: () => ({
-      disposeConnection: disposeConnectionMock,
-      resumeIfRunning: resumeIfRunningMock,
-    }),
-  },
-}))
-
-vi.mock('@/components/chat/composer/Composer', () => ({
+vi.mock('@/features/chat/components/composer/Composer', () => ({
   Composer: () => <div>Composer</div>,
 }))
 
-vi.mock('@/components/chat/message/MessageList', () => ({
+vi.mock('@/features/chat/components/message/MessageList', () => ({
   MessageList: () => <div>MessageList</div>,
 }))
 
 import { ConversationPage } from './$conversationId'
 
-const dispatchPageTransitionEvent = (type: 'pagehide' | 'pageshow', persisted: boolean) => {
-  const event = new Event(type)
-  Object.defineProperty(event, 'persisted', {
-    configurable: true,
-    value: persisted,
-  })
-  window.dispatchEvent(event)
+const flush = async () => {
+  await Promise.resolve()
+  await Promise.resolve()
 }
 
-describe('ConversationPage cleanup', () => {
+describe('ConversationPage SSE lifecycle', () => {
   beforeEach(() => {
-    disposeConnectionMock.mockReset()
     resetLastEventIdMock.mockReset()
-    resumeIfRunningMock.mockReset()
+    resumeRunningConversationMock.mockReset()
+    resumeRunningConversationMock.mockResolvedValue(undefined)
+    clearRequestStateMock.mockReset()
+    setConnectionStateMock.mockReset()
     useConversationLoaderMock.mockReturnValue({ isLoading: false })
   })
 
-  it('ignores pagehide when the page is entering the bfcache', async () => {
+  it('calls resumeRunningConversation on mount with an AbortSignal', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
     await act(async () => {
       root.render(<ConversationPage />)
+      await flush()
     })
 
-    dispatchPageTransitionEvent('pagehide', true)
-
-    expect(resetLastEventIdMock).not.toHaveBeenCalled()
-    expect(disposeConnectionMock).not.toHaveBeenCalled()
+    expect(resetLastEventIdMock).toHaveBeenCalled()
+    expect(resumeRunningConversationMock).toHaveBeenCalledTimes(1)
+    expect(resumeRunningConversationMock).toHaveBeenCalledWith(
+      'conv-1',
+      expect.any(AbortSignal),
+    )
 
     await act(async () => {
       root.unmount()
+      await flush()
     })
   })
 
-  it('resets global lastEventId and disposes the connection on real pagehide', async () => {
+  it('clears request state on unmount', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
     await act(async () => {
       root.render(<ConversationPage />)
+      await flush()
     })
-
-    dispatchPageTransitionEvent('pagehide', false)
-
-    expect(resetLastEventIdMock).toHaveBeenCalledTimes(1)
-    expect(disposeConnectionMock).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       root.unmount()
+      await flush()
     })
+
+    expect(clearRequestStateMock).toHaveBeenCalled()
+    expect(setConnectionStateMock).toHaveBeenCalledWith('idle')
   })
 
-  it('resumes the conversation when restoring from the bfcache', async () => {
+  it('resets event cursor on both mount and unmount', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
     await act(async () => {
       root.render(<ConversationPage />)
+      await flush()
     })
 
-    dispatchPageTransitionEvent('pageshow', true)
-
-    expect(resumeIfRunningMock).toHaveBeenCalledWith('conv-1')
-    expect(disposeConnectionMock).not.toHaveBeenCalled()
+    const mountResetCount = resetLastEventIdMock.mock.calls.length
 
     await act(async () => {
       root.unmount()
-    })
-  })
-
-  it('resets global lastEventId and disposes the connection on unmount', async () => {
-    const container = document.createElement('div')
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(<ConversationPage />)
+      await flush()
     })
 
-    await act(async () => {
-      root.unmount()
-    })
-
-    expect(resetLastEventIdMock).toHaveBeenCalledTimes(1)
-    expect(disposeConnectionMock).toHaveBeenCalledTimes(1)
+    // Reset called at least on mount, and again on unmount cleanup
+    expect(resetLastEventIdMock.mock.calls.length).toBeGreaterThan(mountResetCount)
   })
 })

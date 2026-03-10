@@ -1,18 +1,26 @@
-import { Outlet, createFileRoute, redirect, useMatch } from '@tanstack/react-router'
+import { Outlet, createFileRoute, redirect, useMatch, type ParsedLocation } from '@tanstack/react-router'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { getSessionStateFn } from '@/server/functions/auth/session-state'
-import { ChatRoom } from '@/components/ChatRoom'
+import { ChatRoom } from '@/features/chat/components/ChatRoom'
+
+export function getNormalizedAppTarget(
+  location: Pick<ParsedLocation, 'pathname' | 'searchStr' | 'hash'>,
+) {
+  const hashSuffix = location.hash ? `#${location.hash}` : ''
+  return `${location.pathname}${location.searchStr}${hashSuffix}`
+}
 
 export const Route = createFileRoute('/app')({
   beforeLoad: async ({ location }) => {
+    const normalizedTarget = getNormalizedAppTarget(location)
+
     const sessionState = await getSessionStateFn()
     if (sessionState.isAuthenticated) {
       return
     }
 
-    const target = `${location.pathname}${location.search}${location.hash}`
     throw redirect({
-      href: `/auth/login?redirect=${encodeURIComponent(target)}`,
+      href: `/auth/login?redirect=${encodeURIComponent(normalizedTarget)}`,
     })
   },
   component: AppLayout,

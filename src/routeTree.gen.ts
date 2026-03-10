@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as RenderTrackerDemoRouteImport } from './routes/render-tracker-demo'
 import { Route as R404RouteImport } from './routes/404'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -27,6 +28,11 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
 import { Route as ApiShareAssetsTokenAttachmentIdRouteImport } from './routes/api/share-assets/$token/$attachmentId'
 
+const RenderTrackerDemoRoute = RenderTrackerDemoRouteImport.update({
+  id: '/render-tracker-demo',
+  path: '/render-tracker-demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const R404Route = R404RouteImport.update({
   id: '/404',
   path: '/404',
@@ -118,6 +124,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/sentry': typeof ApiSentryRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
+  '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/sentry': typeof ApiSentryRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/sentry': typeof ApiSentryRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/404'
+    | '/render-tracker-demo'
     | '/api/sentry'
     | '/app/notes'
     | '/auth/forgot-password'
@@ -195,6 +205,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/404'
+    | '/render-tracker-demo'
     | '/api/sentry'
     | '/app/notes'
     | '/auth/forgot-password'
@@ -214,6 +225,7 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/404'
+    | '/render-tracker-demo'
     | '/api/sentry'
     | '/app/notes'
     | '/auth/forgot-password'
@@ -234,6 +246,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   R404Route: typeof R404Route
+  RenderTrackerDemoRoute: typeof RenderTrackerDemoRoute
   ApiSentryRoute: typeof ApiSentryRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -249,6 +262,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/render-tracker-demo': {
+      id: '/render-tracker-demo'
+      path: '/render-tracker-demo'
+      fullPath: '/render-tracker-demo'
+      preLoaderRoute: typeof RenderTrackerDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/404': {
       id: '/404'
       path: '/404'
@@ -391,6 +411,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   R404Route: R404Route,
+  RenderTrackerDemoRoute: RenderTrackerDemoRoute,
   ApiSentryRoute: ApiSentryRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,

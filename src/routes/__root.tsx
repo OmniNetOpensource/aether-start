@@ -82,6 +82,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={theme === "dark" ? "dark" : ""}>
       <head>
+        {import.meta.env.DEV && (
+          <script
+            crossOrigin="anonymous"
+            src="https://unpkg.com/react-scan/dist/auto.global.js"
+          />
+        )}
         <meta charSet="utf-8" />
         <meta
           name="viewport"

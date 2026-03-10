@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm packages/react-render-tracker/src/index.ts packages/react-render-tracker/src/types.ts)",
+      "Bash(rm -rf packages/react-render-tracker/src/internal/)",
+      "Bash(pnpm type-check)",
+      "Bash(pnpm test)",
+      "mcp__ide__getDiagnostics",
+      "Bash(cd \"D:\\\\develop\\\\projects\\\\aether-start\" && pnpm --filter @aether/react-render-tracker type-check 2>&1)",
+      "Bash(cd \"D:\\\\develop\\\\projects\\\\aether-start\" && pnpm --filter @aether/react-render-tracker build 2>&1)",
+      "Bash(cd \"D:\\\\develop\\\\projects\\\\aether-start\" && pnpm type-check:tracker 2>&1)",
+      "Bash(xargs wc -l)",
+      "Bash(tail:*)"
+    ]
+  }
+}

@@ -35,5 +35,21 @@ export default tseslint.config(
     rules: {
       "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     },
+  },
+  {
+    files: ["public/**/*.js"],
+    languageOptions: {
+      globals: {
+        window: "readonly",
+        document: "readonly",
+        console: "readonly",
+        Element: "readonly",
+        requestAnimationFrame: "readonly",
+        performance: "readonly",
+        innerWidth: "readonly",
+        innerHeight: "readonly",
+        devicePixelRatio: "readonly",
+      },
+    },
   }
 );

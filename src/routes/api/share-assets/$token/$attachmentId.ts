@@ -4,7 +4,7 @@ import {
   getPublicShareByToken,
   isSafeShareToken,
   resolveStorageKeyForSharedAttachment,
-} from '@/server/db/conversation-shares-db'
+} from '@/features/share/server/conversation-shares-db'
 import { getServerBindings } from '@/server/env'
 
 const safeDecodeURIComponent = (value: string): string | null => {

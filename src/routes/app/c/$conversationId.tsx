@@ -1,89 +1,74 @@
-import { useEffect } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { Composer } from '@/components/chat/composer/Composer'
-import { MessageList } from '@/components/chat/message/MessageList'
-import { useConversationLoader } from '@/hooks/useConversationLoader'
-import { resetLastEventId } from '@/lib/chat/api/websocket-client'
-import { useConversationsStore } from '@/stores/useConversationsStore'
-import { useChatRequestStore } from '@/stores/useChatRequestStore'
+import { useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Composer } from "@/features/chat/components/composer/Composer";
+import { MessageList } from "@/features/chat/components/message/MessageList";
+import { useConversationLoader } from "@/features/conversations/hooks/useConversationLoader";
+import {
+  resetLastEventId,
+  resumeRunningConversation,
+} from "@/features/chat/lib/api/chat-orchestrator";
+import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
+import { useConversationsStore } from "@/features/conversations/store/useConversationsStore";
 
-export const Route = createFileRoute('/app/c/$conversationId')({
+export const Route = createFileRoute("/app/c/$conversationId")({
   component: ConversationPage,
-})
+});
 
 export function ConversationPage() {
-  const { conversationId } = Route.useParams()
-  const { isLoading } = useConversationLoader(conversationId)
+  const { conversationId } = Route.useParams();
+  const { isLoading } = useConversationLoader(conversationId);
 
   const title = useConversationsStore(
     (state) => state.conversations.find((c) => c.id === conversationId)?.title,
-  )
+  );
 
   useEffect(() => {
-    const defaultTitle = 'Aether'
+    const defaultTitle = "Aether";
 
     if (title) {
-      const truncatedTitle = title.length > 50 ? `${title.slice(0, 50)}...` : title
-      document.title = `${truncatedTitle} - Aether`
+      const truncatedTitle =
+        title.length > 50 ? `${title.slice(0, 50)}...` : title;
+      document.title = `${truncatedTitle} - Aether`;
     } else {
-      document.title = defaultTitle
+      document.title = defaultTitle;
     }
 
     return () => {
-      document.title = defaultTitle
-    }
-  }, [title])
+      document.title = defaultTitle;
+    };
+  }, [title]);
 
   useEffect(() => {
-    const disposeConnection = () => {
-      resetLastEventId()
-      useChatRequestStore.getState().disposeConnection()
+    if (!conversationId) {
+      return;
     }
 
-    const handlePageHide = (event: PageTransitionEvent) => {
-      if (event.persisted) {
-        return
-      }
+    resetLastEventId();
 
-      disposeConnection()
-    }
+    const ac = new AbortController();
 
-    const handleBeforeUnload = () => {
-      disposeConnection()
-    }
-
-    const handlePageShow = (event: PageTransitionEvent) => {
-      if (!event.persisted || !conversationId) {
-        return
-      }
-
-      void useChatRequestStore.getState().resumeIfRunning(conversationId)
-    }
-
-    window.addEventListener('pagehide', handlePageHide)
-    window.addEventListener('beforeunload', handleBeforeUnload)
-    window.addEventListener('pageshow', handlePageShow)
+    resumeRunningConversation(conversationId, ac.signal).catch(() => {});
 
     return () => {
-      window.removeEventListener('pagehide', handlePageHide)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-      window.removeEventListener('pageshow', handlePageShow)
-      disposeConnection()
-    }
-  }, [conversationId])
+      ac.abort();
+      resetLastEventId();
+      useChatRequestStore.getState().clearRequestState();
+      useChatRequestStore.getState().setConnectionState("idle");
+    };
+  }, [conversationId]);
 
   if (isLoading) {
-    return null
+    return null;
   }
 
   return (
-    <div className='flex h-full w-full flex-col'>
-      <main className='relative flex min-h-0 flex-1'>
-        <div className='relative flex min-w-0 flex-1 flex-col'>
+    <div className="flex h-full w-full flex-col">
+      <main className="relative flex min-h-0 flex-1">
+        <div className="relative flex min-w-0 flex-1 flex-col">
           <MessageList />
           <Composer />
         </div>
       </main>
     </div>
-  )
+  );
 }

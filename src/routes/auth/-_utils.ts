@@ -8,7 +8,7 @@ export const authSearchSchema = z.object({
 
 export const getSafeRedirectTarget = (value: string | undefined) => {
   if (!value || !value.startsWith('/') || value.startsWith('/auth')) {
-    return '/app'
+    return '/app/'
   }
   return value
 }

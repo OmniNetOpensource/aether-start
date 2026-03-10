@@ -1,8 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Lightbulb, Loader2, Plus } from 'lucide-react'
-import { NoteCard } from '@/components/notes/NoteCard'
-import { NoteEditDialog } from '@/components/notes/NoteEditDialog'
+import { NoteCard } from '@/features/notes/components/NoteCard'
+import { NoteEditDialog } from '@/features/notes/components/NoteEditDialog'
+import { buildAttachmentsFromFiles } from '@/features/chat/lib/attachments'
+import { useChatRequestStore } from '@/features/chat/store/useChatRequestStore'
+import { useComposerStore } from '@/features/chat/store/useComposerStore'
+import { useEditingStore } from '@/features/chat/store/useEditingStore'
+import { useMessageTreeStore } from '@/features/conversations/store/useMessageTreeStore'
+import { useNotesStore, type NoteItem } from '@/features/notes/store/useNotesStore'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,13 +20,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { buildAttachmentsFromFiles } from '@/lib/chat/attachments'
 import { toast } from '@/hooks/useToast'
-import { useChatRequestStore } from '@/stores/useChatRequestStore'
-import { useComposerStore } from '@/stores/useComposerStore'
-import { useEditingStore } from '@/stores/useEditingStore'
-import { useMessageTreeStore } from '@/stores/useMessageTreeStore'
-import { useNotesStore, type NoteItem } from '@/stores/useNotesStore'
 
 export const Route = createFileRoute('/app/notes')({
   component: NotesPage,
@@ -175,7 +175,7 @@ function NotesPage() {
     : null
 
   const handleStartConversation = (note: NoteItem) => {
-    useChatRequestStore.getState().clear()
+    useChatRequestStore.getState().clearRequestState()
     useEditingStore.getState().clear()
     useMessageTreeStore.getState().clear()
 

@@ -2,19 +2,36 @@ import {
   createStartHandler,
   defaultStreamHandler,
 } from "@tanstack/react-start/server";
-import { routeAgentRequest } from "agents";
 import { env as workerEnv } from "cloudflare:workers";
 import { createServerEntry } from "@tanstack/react-start/server-entry";
 import { withSentry } from "@sentry/cloudflare";
 import type { RequestHandler } from "@tanstack/react-start/server";
 import type { Register } from "@tanstack/react-router";
-import { ChatAgent as _ChatAgent } from "@/server/agents/chat-agent";
-import { getSessionFromRequest } from "@/server/functions/auth/session";
+import { ChatAgent as _ChatAgent } from "@/features/chat/server/agents/chat-agent";
+import { getSessionFromRequest } from "@/features/auth/server/session";
 
 const startFetch = createStartHandler(defaultStreamHandler);
 
-const isProtectedAgentLobby = (lobby: { className: string; name: string }) =>
-  lobby.className === "ChatAgent";
+const AGENT_PATH_PREFIX = "/agents/chat-agent/";
+
+const matchAgentRoute = (url: URL): string | null => {
+  if (!url.pathname.startsWith(AGENT_PATH_PREFIX)) {
+    return null;
+  }
+
+  const name = url.pathname.slice(AGENT_PATH_PREFIX.length).split("/")[0];
+  return name || null;
+};
+
+const routeToAgent = (
+  request: Request,
+  env: { ChatAgent: DurableObjectNamespace<_ChatAgent> },
+  name: string,
+) => {
+  const id = env.ChatAgent.idFromName(name);
+  const stub = env.ChatAgent.get(id);
+  return stub.fetch(request);
+};
 
 const withInjectedUserIdHeader = (request: Request, userId: string) => {
   const headers = new Headers(request.headers);
@@ -23,14 +40,7 @@ const withInjectedUserIdHeader = (request: Request, userId: string) => {
   return new Request(request, { headers });
 };
 
-const protectAgentRequest = async (
-  request: Request,
-  lobby: { className: string; name: string },
-) => {
-  if (!isProtectedAgentLobby(lobby)) {
-    return request;
-  }
-
+const protectAgentRequest = async (request: Request) => {
   const session = await getSessionFromRequest(request);
   if (!session?.user?.id) {
     return new Response("Unauthorized", { status: 401 });
@@ -40,14 +50,16 @@ const protectAgentRequest = async (
 };
 
 const fetch: RequestHandler<Register> = async (request, opts) => {
-  const agentResponse = await routeAgentRequest(request, workerEnv, {
-    onBeforeConnect: async (agentRequest, lobby) =>
-      protectAgentRequest(agentRequest, lobby),
-    onBeforeRequest: async (agentRequest, lobby) =>
-      protectAgentRequest(agentRequest, lobby),
-  });
-  if (agentResponse) {
-    return agentResponse;
+  const url = new URL(request.url);
+  const agentName = matchAgentRoute(url);
+
+  if (agentName) {
+    const result = await protectAgentRequest(request);
+    if (result instanceof Response) {
+      return result;
+    }
+
+    return routeToAgent(result, workerEnv as unknown as { ChatAgent: DurableObjectNamespace<_ChatAgent> }, agentName);
   }
 
   return startFetch(request, opts);
