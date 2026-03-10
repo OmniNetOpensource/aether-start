@@ -3,7 +3,7 @@ import {
   buildSystemPrompt,
   type BackendConfig,
 } from "@/server/agents/services/chat-config";
-import { log } from "./logger";
+import { log, logProviderCommunication } from "./logger";
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import type {
   PendingToolInvocation,
@@ -195,6 +195,11 @@ async function* streamAnthropicCompletion(requestParams: {
     if (requestParams.signal?.aborted) {
       throw new DOMException('Aborted', 'AbortError')
     }
+
+    logProviderCommunication('anthropic', 'Stream event', {
+      model: requestParams.model,
+      event,
+    })
 
     if (event.type === "content_block_start") {
       if (event.content_block.type === "tool_use") {

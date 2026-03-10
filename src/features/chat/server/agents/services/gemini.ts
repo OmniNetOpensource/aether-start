@@ -1,7 +1,7 @@
 import { GoogleGenAI, createPartFromFunctionResponse } from '@google/genai'
 import type * as genai from '@google/genai'
 import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/chat-config'
-import { log } from './logger'
+import { log, logProviderCommunication } from './logger'
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import type {
   PendingToolInvocation,
@@ -182,6 +182,11 @@ export class GeminiChatProvider {
         if (signal?.aborted) {
           throw new DOMException('Aborted', 'AbortError')
         }
+
+        logProviderCommunication('gemini', 'Stream chunk', {
+          model: this.model,
+          chunk,
+        })
 
         const candidate = chunk.candidates?.[0]
         if (!candidate?.content?.parts) continue

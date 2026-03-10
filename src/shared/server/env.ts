@@ -4,6 +4,7 @@ type ServerEnv = {
   BETTER_AUTH_SECRET?: string
   BETTER_AUTH_URL?: string
   ADMIN_EMAIL_ALLOWLIST?: string
+  LLM_STREAM_LOGGING?: string
   ANTHROPIC_API_KEY_RIGHTCODE?: string
   ANTHROPIC_BASE_URL_RIGHTCODE?: string
   GEMINI_API_KEY_RIGHTCODE?: string
@@ -60,6 +61,9 @@ export const getServerEnv = (): ServerEnv => {
     ADMIN_EMAIL_ALLOWLIST:
       readString((bindings as Record<string, unknown>).ADMIN_EMAIL_ALLOWLIST) ??
       readStringFromProcess('ADMIN_EMAIL_ALLOWLIST'),
+    LLM_STREAM_LOGGING:
+      readString((bindings as Record<string, unknown>).LLM_STREAM_LOGGING) ??
+      readStringFromProcess('LLM_STREAM_LOGGING'),
     ANTHROPIC_API_KEY_RIGHTCODE:
       readString(bindings.ANTHROPIC_API_KEY_RIGHTCODE) ??
       readStringFromProcess('ANTHROPIC_API_KEY_RIGHTCODE'),

@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/chat-config'
-import { log } from './logger'
+import { log, logProviderCommunication } from './logger'
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import { getOpenAIClient } from './openai'
 import type {
@@ -206,13 +206,18 @@ export class OpenAIResponsesChatProvider {
     const toolCallsByOutputIndex = new Map<number, AccumulatedToolCall>()
 
     try {
-      const client = getOpenAIClient(this.backendConfig)
+      const client = getOpenAIClient(this.backendConfig, 'openai-responses')
       const stream = await client.responses.create(streamParams, { signal })
 
       for await (const event of stream) {
         if (signal?.aborted) {
           throw new DOMException('Aborted', 'AbortError')
         }
+
+        logProviderCommunication('openai-responses', 'Stream event', {
+          model: this.model,
+          event,
+        })
 
         if (event.type === 'response.output_text.delta' && event.delta) {
           yield { type: 'content', content: event.delta }

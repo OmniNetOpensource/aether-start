@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/chat-config'
-import { log } from './logger'
+import { log, logProviderCommunication, shouldLogProviderCommunication } from './logger'
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import type {
   PendingToolInvocation,
@@ -50,55 +50,69 @@ type OpenAIChatProviderConfig = {
   systemPrompt: string
 }
 
-const loggingFetch: typeof fetch = async (input, init) => {
-  const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-  let requestBody: unknown
-  try {
-    requestBody = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body
-  } catch {
-    requestBody = init?.body
+const serializeHeaders = (headers: HeadersInit | undefined): Record<string, string> | undefined => {
+  if (!headers) {
+    return undefined
   }
 
-  log('OPENAI', 'HTTP Request', {
-    method: init?.method ?? 'GET',
-    url,
-    headers: init?.headers,
-    body: requestBody,
-  })
-
-  const response = await fetch(input, init)
-
-  log('OPENAI', 'HTTP Response', {
-    status: response.status,
-    statusText: response.statusText,
-    headers: Object.fromEntries(response.headers.entries()),
-  })
-
-  if (!response.body) {
-    return response
+  if (headers instanceof Headers) {
+    return Object.fromEntries(headers.entries())
   }
 
-  const transform = new TransformStream<Uint8Array, Uint8Array>({
-    transform(chunk, controller) {
-      const text = new TextDecoder().decode(chunk)
-      log('OPENAI', 'HTTP SSE chunk', text)
-      controller.enqueue(chunk)
-    },
-  })
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers)
+  }
 
-  return new Response(response.body.pipeThrough(transform), {
-    status: response.status,
-    statusText: response.statusText,
-    headers: response.headers,
-  })
+  return { ...headers }
 }
 
-export const getOpenAIClient = (config: BackendConfig) => {
+const createLoggingFetch = (provider: 'openai' | 'openai-responses'): typeof fetch => {
+  return async (input, init) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
+    let requestBody: unknown
+    try {
+      requestBody = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body
+    } catch {
+      requestBody = init?.body
+    }
+
+    const isStreamingRequest =
+      !!requestBody &&
+      typeof requestBody === 'object' &&
+      (requestBody as { stream?: unknown }).stream === true
+
+    if (isStreamingRequest && shouldLogProviderCommunication(provider)) {
+      logProviderCommunication(provider, 'HTTP Request', {
+        method: init?.method ?? 'GET',
+        url,
+        headers: serializeHeaders(init?.headers),
+        body: requestBody,
+      })
+    }
+
+    const response = await fetch(input, init)
+
+    if (isStreamingRequest && shouldLogProviderCommunication(provider)) {
+      logProviderCommunication(provider, 'HTTP Response', {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+      })
+    }
+
+    return response
+  }
+}
+
+export const getOpenAIClient = (
+  config: BackendConfig,
+  provider: 'openai' | 'openai-responses' = 'openai',
+) => {
   return new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseURL,
     defaultHeaders: config.defaultHeaders,
-    fetch: loggingFetch,
+    fetch: createLoggingFetch(provider),
   })
 }
 
@@ -258,7 +272,7 @@ export class OpenAIChatProvider {
     const toolCallsByIndex = new Map<number, { id: string; name: string; argsJson: string }>()
 
     try {
-      const client = getOpenAIClient(this.backendConfig)
+      const client = getOpenAIClient(this.backendConfig, 'openai')
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const streamParams: any = {
@@ -280,6 +294,11 @@ export class OpenAIChatProvider {
         if (signal?.aborted) {
           throw new DOMException('Aborted', 'AbortError')
         }
+
+        logProviderCommunication('openai', 'Stream chunk', {
+          model: this.model,
+          chunk,
+        })
 
         const choice = chunk.choices?.[0]
         if (!choice) {

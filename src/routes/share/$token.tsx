@@ -24,7 +24,10 @@ const toReadonlyMessage = (message: SharedPageMessage): Message =>
     : {
         id: message.id,
         role: "assistant",
-        blocks: message.blocks as Extract<Message, { role: "assistant" }>["blocks"],
+        blocks: message.blocks as Extract<
+          Message,
+          { role: "assistant" }
+        >["blocks"],
         createdAt: message.createdAt,
         parentId: null,
         prevSibling: null,
@@ -52,7 +55,9 @@ function SharedConversationPage() {
   const [data, setData] = useState<PublicShareData | null>(null);
   const [loading, setLoading] = useState(true);
   const readonlyMessages =
-    data?.status === "active" ? data.snapshot.messages.map(toReadonlyMessage) : [];
+    data?.status === "active"
+      ? data.snapshot.messages.map(toReadonlyMessage)
+      : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -139,25 +144,24 @@ function SharedConversationPage() {
   }
 
   return (
-    <main className="min-h-screen w-full bg-(--surface-primary) pb-12">
-      <div className="mx-auto w-[92%] max-w-4xl pt-12">
-        <div className="rounded-2xl p-6">
+    <main className="h-screen w-full bg-(--surface-primary) overflow-y-auto">
+      <div className="pt-12">
+        <div className="mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-1 mb-8">
           <h1 className="text-2xl font-semibold text-(--text-primary)">
             {data.title?.trim() || "Aether 分享"}
           </h1>
           <p className="mt-2 text-sm text-(--text-secondary)">
             该页面为只读分享内容
           </p>
-          <MessageList
-            messages={readonlyMessages}
-            readonly
-            showConnectionStatus={false}
-            showSelectionToolbar={false}
-            usePageScroll
-            className="min-h-0"
-            listClassName="pb-6"
-          />
         </div>
+        <MessageList
+          messages={readonlyMessages}
+          readonly
+          showConnectionStatus={false}
+          showSelectionToolbar={false}
+          usePageScroll
+          listClassName="!pb-12"
+        />
       </div>
     </main>
   );
