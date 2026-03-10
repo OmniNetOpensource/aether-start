@@ -29,6 +29,45 @@ const buildBranchedMessages = (): Message[] => {
   return siblingAssistant.messages
 }
 
+const buildNestedBranchedState = () => {
+  let state = addMessage(createEmptyMessageState(), 'user', [textBlock('q1')], '2024-01-01')
+  state = addMessage(state, 'assistant', [textBlock('a1')], '2024-01-02')
+  state = addMessage(state, 'user', [textBlock('follow a1')], '2024-01-03')
+  state = addMessage(
+    {
+      messages: state.messages,
+      currentPath: [1],
+      latestRootId: state.latestRootId,
+      nextId: state.nextId,
+    },
+    'assistant',
+    [textBlock('a2')],
+    '2024-01-04',
+  )
+  state = addMessage(state, 'user', [textBlock('follow a2')], '2024-01-05')
+
+  return state
+}
+
+const buildMultiRootState = () => {
+  let state = addMessage(createEmptyMessageState(), 'user', [textBlock('root1')], '2024-01-01')
+  state = addMessage(state, 'assistant', [textBlock('root1 child')], '2024-01-02')
+  state = addMessage(
+    {
+      messages: state.messages,
+      currentPath: [],
+      latestRootId: state.latestRootId,
+      nextId: state.nextId,
+    },
+    'user',
+    [textBlock('root2')],
+    '2024-01-03',
+  )
+  state = addMessage(state, 'assistant', [textBlock('root2 child')], '2024-01-04')
+
+  return state
+}
+
 describe('useMessageTreeStore', () => {
   beforeEach(() => {
     useMessageTreeStore.setState({
@@ -50,6 +89,36 @@ describe('useMessageTreeStore', () => {
       latestRootId: 1,
       nextId: 3,
     })
+  })
+
+  it('normalizes parentId for messages loaded from older snapshots', () => {
+    useMessageTreeStore.getState().initializeTree(
+      [
+        {
+          id: 1,
+          role: 'user',
+          blocks: [textBlock('q')],
+          prevSibling: null,
+          nextSibling: null,
+          latestChild: 2,
+          createdAt: '2024-01-01T00:00:00.000Z',
+        },
+        {
+          id: 2,
+          role: 'assistant',
+          blocks: [textBlock('a')],
+          prevSibling: null,
+          nextSibling: null,
+          latestChild: null,
+          createdAt: '2024-01-01T00:00:01.000Z',
+        },
+      ] as Message[],
+      [1, 2],
+    )
+
+    const [root, child] = useMessageTreeStore.getState().messages
+    expect(root.parentId).toBeNull()
+    expect(child.parentId).toBe(1)
   })
 
   it('appends streamed text to the latest assistant message', () => {
@@ -98,6 +167,26 @@ describe('useMessageTreeStore', () => {
 
     useMessageTreeStore.getState().navigateBranch(3, 2, 'prev')
     expect(useMessageTreeStore.getState().currentPath).toEqual([1, 2])
+  })
+
+  it('selects a message and rebuilds the active path through its descendants', () => {
+    const state = buildNestedBranchedState()
+    useMessageTreeStore.getState().initializeTree(state.messages, state.currentPath)
+
+    useMessageTreeStore.getState().selectMessage(2)
+
+    expect(useMessageTreeStore.getState().currentPath).toEqual([1, 2, 3])
+    expect(useMessageTreeStore.getState().messages[0].latestChild).toBe(2)
+  })
+
+  it('selects a message under another root and updates latestRootId', () => {
+    const state = buildMultiRootState()
+    useMessageTreeStore.getState().initializeTree(state.messages, state.currentPath)
+
+    useMessageTreeStore.getState().selectMessage(2)
+
+    expect(useMessageTreeStore.getState().currentPath).toEqual([1, 2])
+    expect(useMessageTreeStore.getState().latestRootId).toBe(1)
   })
 
   it('extracts path messages and clears store state', () => {

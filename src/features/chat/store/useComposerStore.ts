@@ -1,11 +1,18 @@
 import { create } from "zustand";
 import type { Attachment } from "@/types/message";
-import { buildAttachmentsFromFiles } from "@/lib/chat/attachments";
+import {
+  createPendingAttachmentUpload,
+  revokePendingAttachmentUpload,
+  type PendingAttachmentUpload,
+  uploadAttachmentFile,
+} from "@/lib/chat/attachments";
 
 type ComposerState = {
   input: string;
   pendingAttachments: Attachment[];
+  uploadingAttachments: PendingAttachmentUpload[];
   uploading: boolean;
+  _uploadGeneration: number;
 };
 
 type ComposerActions = {
@@ -19,48 +26,97 @@ type ComposerActions = {
 };
 
 export const useComposerStore = create<ComposerState & ComposerActions>()(
-  (set) => ({
-      input: "",
-      pendingAttachments: [],
-      uploading: false,
-      setInput: (value) => set({ input: value }),
-      setPendingAttachments: (attachments) => set({ pendingAttachments: attachments }),
-      addAttachments: async (files) => {
-        if (files.length === 0) {
-          return;
-        }
+  (set, get) => ({
+    input: "",
+    pendingAttachments: [],
+    uploadingAttachments: [],
+    uploading: false,
+    _uploadGeneration: 0,
+    setInput: (value) => set({ input: value }),
+    setPendingAttachments: (attachments) => set({ pendingAttachments: attachments }),
+    addAttachments: async (files) => {
+      if (files.length === 0 || get().uploading) {
+        return;
+      }
 
-        set({ uploading: true });
+      const uploadingAttachments = files.map(createPendingAttachmentUpload);
+      const uploadGeneration = get()._uploadGeneration + 1;
 
-        const attachments = await buildAttachmentsFromFiles(files);
+      set((state) => ({
+        uploading: true,
+        uploadingAttachments: [...state.uploadingAttachments, ...uploadingAttachments],
+        _uploadGeneration: uploadGeneration,
+      }));
 
-        if (attachments.length === 0) {
-          set({ uploading: false });
-          return;
-        }
+      await Promise.allSettled(
+        files.map(async (file, index) => {
+          const draft = uploadingAttachments[index];
+          const attachment = await uploadAttachmentFile(file);
 
-        // 将新附件追加到现有待发送附件列表中
-        set((state) => ({
-          pendingAttachments: [...state.pendingAttachments, ...attachments],
-          uploading: false,
-        }));
-      },
-      removeAttachment: (id) =>
-        set((state) => {
-          return {
-            pendingAttachments: state.pendingAttachments.filter(
-              (item) => item.id !== id
+          revokePendingAttachmentUpload(draft);
+
+          if (get()._uploadGeneration !== uploadGeneration) {
+            return;
+          }
+
+          set((state) => ({
+            pendingAttachments: attachment
+              ? [...state.pendingAttachments, attachment]
+              : state.pendingAttachments,
+            uploadingAttachments: state.uploadingAttachments.filter(
+              (item) => item.id !== draft.id
             ),
-          };
+          }));
         }),
-      clearInput: () => set({ input: "" }),
-      clearAttachments: () => set({ pendingAttachments: [] }),
-      clear: () => {
-        set({
+      );
+
+      if (get()._uploadGeneration !== uploadGeneration) {
+        return;
+      }
+
+      set((state) => ({
+        uploading: false,
+        uploadingAttachments: state.uploadingAttachments.filter(
+          (item) => !uploadingAttachments.some((draft) => draft.id === item.id)
+        ),
+      }));
+    },
+    removeAttachment: (id) =>
+      set((state) => {
+        return {
+          pendingAttachments: state.pendingAttachments.filter(
+            (item) => item.id !== id
+          ),
+        };
+      }),
+    clearInput: () => set({ input: "" }),
+    clearAttachments: () =>
+      set((state) => {
+        for (const attachment of state.uploadingAttachments) {
+          revokePendingAttachmentUpload(attachment);
+        }
+
+        return {
+          pendingAttachments: [],
+          uploadingAttachments: [],
+          uploading: false,
+          _uploadGeneration: state._uploadGeneration + 1,
+        };
+      }),
+    clear: () => {
+      set((state) => {
+        for (const attachment of state.uploadingAttachments) {
+          revokePendingAttachmentUpload(attachment);
+        }
+
+        return {
           input: "",
           pendingAttachments: [],
+          uploadingAttachments: [],
           uploading: false,
-        });
-      },
-    })
+          _uploadGeneration: state._uploadGeneration + 1,
+        };
+      });
+    },
+  })
 );

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from "react";
 import type {
   MouseEvent as ReactMouseEvent,
@@ -11,6 +10,7 @@ import { formatFileSize } from "@/lib/utils/file";
 
 type ImagePreviewProps = {
   url: string;
+  previewUrl?: string;
   name: string;
   size: number;
   className?: string;
@@ -22,6 +22,7 @@ const SCALE_STEP = 0.1;
 
 export function ImagePreview({
   url,
+  previewUrl,
   name,
   size,
   className,
@@ -62,7 +63,7 @@ export function ImagePreview({
     event.stopPropagation();
     const direction = event.deltaY > 0 ? -1 : 1;
     setScale((prev) =>
-      clampScale(Number((prev + direction * SCALE_STEP).toFixed(2)))
+      clampScale(Number((prev + direction * SCALE_STEP).toFixed(2))),
     );
   };
 
@@ -116,13 +117,13 @@ export function ImagePreview({
         className={cn(
           "relative h-20 w-20 overflow-hidden rounded-xl",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--interactive-primary)",
-          className
+          className,
         )}
         title={previewLabel}
         aria-label={`预览图片 ${name}`}
       >
         <img
-          src={url}
+          src={previewUrl ?? url}
           alt={name}
           className="h-full w-full object-cover"
           draggable={false}
@@ -153,7 +154,7 @@ export function ImagePreview({
                   <div
                     className={cn(
                       "select-none",
-                      isDragging ? "cursor-grabbing" : "cursor-grab"
+                      isDragging ? "cursor-grabbing" : "cursor-grab",
                     )}
                     onClick={(event) => event.stopPropagation()}
                     onMouseDown={handleMouseDown}
@@ -174,7 +175,7 @@ export function ImagePreview({
               </motion.div>
             )}
           </AnimatePresence>,
-          document.body
+          document.body,
         )}
     </>
   );

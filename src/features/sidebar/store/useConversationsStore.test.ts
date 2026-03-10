@@ -146,15 +146,15 @@ describe('useConversationsStore', () => {
     ])
   })
 
-  it('loadMoreConversations merges next page and updates cursor', async () => {
+  it('loadMoreConversations appends next page and updates cursor', async () => {
     useConversationsStore.setState({
-      conversations: [createMeta('c-1', '2024-01-02T00:00:00.000Z')],
+      conversations: [createMeta('c-1', '2024-01-04T00:00:00.000Z')],
       hasLoaded: true,
       hasMore: true,
       conversationsCursor: {
         is_pinned: 0,
-        sort_at: '2024-01-02T00:00:00.000Z',
-        updated_at: '2024-01-02T00:00:00.000Z',
+        sort_at: '2024-01-04T00:00:00.000Z',
+        updated_at: '2024-01-04T00:00:00.000Z',
         id: 'c-1',
       },
       conversationsLoading: false,
@@ -162,7 +162,7 @@ describe('useConversationsStore', () => {
     })
 
     listConversationsPageFnMock.mockResolvedValueOnce({
-      items: [createDetail('c-3', '2024-01-04T00:00:00.000Z', 'role-new')],
+      items: [createDetail('c-3', '2024-01-03T00:00:00.000Z', 'role-new')],
       nextCursor: null,
     })
 
@@ -173,8 +173,8 @@ describe('useConversationsStore', () => {
         limit: 10,
         cursor: {
           is_pinned: 0,
-          sort_at: '2024-01-02T00:00:00.000Z',
-          updated_at: '2024-01-02T00:00:00.000Z',
+          sort_at: '2024-01-04T00:00:00.000Z',
+          updated_at: '2024-01-04T00:00:00.000Z',
           id: 'c-1',
         },
       },
@@ -185,8 +185,8 @@ describe('useConversationsStore', () => {
       conversationsCursor: null,
     })
     expect(useConversationsStore.getState().conversations.map((item) => item.id)).toEqual([
-      'c-3',
       'c-1',
+      'c-3',
     ])
   })
 

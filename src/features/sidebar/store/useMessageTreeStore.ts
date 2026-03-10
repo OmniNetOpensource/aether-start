@@ -13,6 +13,7 @@ import {
   createLinearMessages,
   editMessage,
   getBranchInfo,
+  normalizeMessageParentIds,
   switchBranch,
 } from "@/lib/conversation/tree/message-tree";
 import {
@@ -31,6 +32,7 @@ type MessageTreeActions = {
   initializeTree: (messages?: Message[], currentPath?: number[]) => void;
   getMessagesFromPath: () => Message[];
   setConversationId: (id: string | null) => void;
+  selectMessage: (messageId: number) => void;
   appendToAssistant: (addition: AssistantAddition) => void;
   getBranchInfo: (messageId: number) => BranchInfo | null;
   navigateBranch: (
@@ -74,22 +76,27 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
         });
       },
       initializeTree: (messages = [], currentPath = []) => {
+        const normalizedMessages = normalizeMessageParentIds(messages);
         const resolvedCurrentPath =
           Array.isArray(currentPath) &&
           currentPath.every((id) => typeof id === "number")
             ? currentPath
             : [];
-        const fallbackRootId = messages.length > 0 ? messages[0].id : null;
+        const fallbackRootId =
+          normalizedMessages.length > 0 ? normalizedMessages[0].id : null;
         const nextPath =
           resolvedCurrentPath.length > 0
             ? resolvedCurrentPath
-            : buildCurrentPath(messages, fallbackRootId);
+            : buildCurrentPath(normalizedMessages, fallbackRootId);
         const latestRootId = nextPath[0] ?? fallbackRootId;
         const nextId =
-          messages.reduce((maxId, message) => Math.max(maxId, message.id), 0) + 1;
+          normalizedMessages.reduce(
+            (maxId, message) => Math.max(maxId, message.id),
+            0
+          ) + 1;
 
         set({
-          messages,
+          messages: normalizedMessages,
           currentPath: nextPath,
           latestRootId,
           nextId,
@@ -98,6 +105,41 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
       getMessagesFromPath: () =>
         computeMessagesFromPath(get().messages, get().currentPath),
       setConversationId: (id) => set({ conversationId: id }),
+      selectMessage: (messageId) => {
+        const state = get();
+        const targetPath: number[] = [];
+        const visited = new Set<number>();
+        let currentId: number | null = messageId;
+
+        while (currentId !== null) {
+          if (visited.has(currentId)) {
+            return;
+          }
+
+          const currentMessage: Message | undefined = state.messages[currentId - 1];
+          if (!currentMessage) {
+            return;
+          }
+
+          targetPath.push(currentId);
+          visited.add(currentId);
+          currentId = currentMessage.parentId;
+        }
+
+        targetPath.reverse();
+
+        let nextState = state._getTreeState();
+        for (let index = 0; index < targetPath.length; index += 1) {
+          nextState = switchBranch(nextState, index + 1, targetPath[index]);
+        }
+
+        set({
+          messages: nextState.messages,
+          currentPath: nextState.currentPath,
+          latestRootId: nextState.latestRootId,
+          nextId: nextState.nextId,
+        });
+      },
       clear: () => {
         set({
           ...createEmptyMessageState(),
@@ -115,7 +157,9 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
       },
       _setTreeState: (partial) =>
         set((state) => ({
-          messages: partial.messages ?? state.messages,
+          messages: partial.messages
+            ? normalizeMessageParentIds(partial.messages)
+            : state.messages,
           currentPath: partial.currentPath ?? state.currentPath,
           latestRootId: partial.latestRootId ?? state.latestRootId,
           nextId: partial.nextId ?? state.nextId,

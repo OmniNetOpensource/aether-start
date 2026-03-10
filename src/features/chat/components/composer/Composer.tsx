@@ -28,6 +28,7 @@ export function Composer() {
   const input = useComposerStore((state) => state.input);
   const status = useChatRequestStore(selectChatRequestStatus);
   const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
+  const uploadingAttachments = useComposerStore((state) => state.uploadingAttachments);
   const uploading = useComposerStore((state) => state.uploading);
   const currentRole = useChatRequestStore(selectCurrentRole);
   const deviceType = useResponsive();
@@ -149,7 +150,8 @@ export function Composer() {
   };
 
   const hasText = input.trim().length > 0;
-  const hasAttachments = pendingAttachments.length > 0;
+  const hasAttachments =
+    pendingAttachments.length > 0 || uploadingAttachments.length > 0;
   const hasRole = !!currentRole;
   const sendDisabled = isBusy
     ? false
@@ -172,6 +174,7 @@ export function Composer() {
           <div className="w-full flex justify-start">
             <PeekingAttachments
               attachments={pendingAttachments}
+              uploadingAttachments={uploadingAttachments}
               onRemove={removeAttachment}
             />
           </div>
@@ -230,6 +233,7 @@ export function Composer() {
           <div className="w-full flex justify-start">
             <PeekingAttachments
               attachments={pendingAttachments}
+              uploadingAttachments={uploadingAttachments}
               onRemove={removeAttachment}
             />
           </div>

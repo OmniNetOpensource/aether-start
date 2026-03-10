@@ -12,7 +12,10 @@ import {
 } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
 import { toast } from '@/hooks/useToast'
-import { buildAttachmentsFromFiles } from '@/lib/chat/attachments'
+import {
+  buildAttachmentsFromFiles,
+  getAttachmentPreviewUrl,
+} from '@/lib/chat/attachments'
 import type { Attachment } from '@/types/message'
 import type { NoteItem } from '@/stores/zustand/useNotesStore'
 
@@ -146,6 +149,7 @@ export function NoteEditDialog({
                 <div key={attachment.id} className='group relative'>
                   <ImagePreview
                     url={attachment.url}
+                    previewUrl={getAttachmentPreviewUrl(attachment)}
                     name={attachment.name}
                     size={attachment.size}
                   />

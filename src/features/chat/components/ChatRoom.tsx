@@ -1,5 +1,5 @@
 import { NewChatButton } from "@/features/chat/components/NewChatButton";
-import { OutlineButton } from "@/features/chat/components/outline/OutlineButton";
+import { OutlineButton } from "@/features/chat/components/outline";
 import { ShareButton } from "@/features/share/components/ShareButton";
 
 interface ChatRoomProps {

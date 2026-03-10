@@ -80,9 +80,17 @@ export const buildParentMap = (messages: Message[]): Record<number, number> => {
   const parentById: Record<number, number> = {}
 
   for (const message of messages) {
+    if (typeof message.parentId === 'number') {
+      parentById[message.id] = message.parentId
+    }
+  }
+
+  for (const message of messages) {
     const childIds = collectSiblingIds(messages, message.latestChild)
     for (const childId of childIds) {
-      parentById[childId] = message.id
+      if (!(childId in parentById)) {
+        parentById[childId] = message.id
+      }
     }
   }
 

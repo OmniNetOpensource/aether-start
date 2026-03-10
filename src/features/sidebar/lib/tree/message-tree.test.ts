@@ -37,6 +37,7 @@ describe('addMessage', () => {
 
     expect(result.messages).toHaveLength(1)
     expect(result.messages[0].id).toBe(1)
+    expect(result.messages[0].parentId).toBeNull()
     expect(result.messages[0].role).toBe('user')
     expect(result.currentPath).toEqual([1])
     expect(result.latestRootId).toBe(1)
@@ -50,6 +51,7 @@ describe('addMessage', () => {
 
     expect(result.messages).toHaveLength(2)
     expect(result.messages[1].id).toBe(2)
+    expect(result.messages[1].parentId).toBe(1)
     expect(result.currentPath).toEqual([1, 2])
     expect(result.latestRootId).toBe(1)
     // parent's latestChild should point to new message
@@ -74,6 +76,8 @@ describe('addMessage', () => {
     // sibling links
     expect(afterSecond.messages[1].nextSibling).toBe(3) // assistant1 -> assistant2
     expect(afterSecond.messages[2].prevSibling).toBe(2) // assistant2 <- assistant1
+    expect(afterSecond.messages[1].parentId).toBe(1)
+    expect(afterSecond.messages[2].parentId).toBe(1)
     // parent latestChild updated
     expect(afterSecond.messages[0].latestChild).toBe(3)
   })
@@ -94,6 +98,7 @@ describe('addMessage', () => {
     expect(result.latestRootId).toBe(2)
     expect(result.messages[0].nextSibling).toBe(2)
     expect(result.messages[1].prevSibling).toBe(1)
+    expect(result.messages[1].parentId).toBeNull()
   })
 })
 
@@ -248,6 +253,7 @@ describe('editMessage', () => {
     expect(result).not.toBeNull()
     expect(result!.messages).toHaveLength(3)
     // New message is a sibling of original
+    expect(result!.addedMessage.parentId).toBeNull()
     expect(result!.addedMessage.prevSibling).toBe(1)
     expect(result!.messages[0].nextSibling).toBe(3)
     // Path switches to new branch
@@ -273,6 +279,7 @@ describe('editMessage', () => {
     expect(result!.messages[0].nextSibling).toBe(3)
     // New message's nextSibling should be the old nextSibling
     expect(result!.addedMessage.nextSibling).toBe(2)
+    expect(result!.addedMessage.parentId).toBeNull()
     // Old nextSibling's prevSibling should point to new message
     expect(result!.messages[1].prevSibling).toBe(3)
   })
@@ -300,6 +307,9 @@ describe('createLinearMessages', () => {
     expect(state.messages[0].latestChild).toBe(2)
     expect(state.messages[1].latestChild).toBe(3)
     expect(state.messages[2].latestChild).toBeNull()
+    expect(state.messages[0].parentId).toBeNull()
+    expect(state.messages[1].parentId).toBe(1)
+    expect(state.messages[2].parentId).toBe(2)
 
     // No siblings in linear chain
     expect(state.messages[0].prevSibling).toBeNull()

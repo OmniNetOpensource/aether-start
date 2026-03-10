@@ -90,6 +90,84 @@ const updateMessage = (
   messages[index] = updater(current) as Message;
 };
 
+const collectSiblingIds = (
+  messages: Message[],
+  anchorId: number | null
+): number[] => {
+  if (anchorId === null) {
+    return [];
+  }
+
+  const anchor = messages[anchorId - 1];
+  if (!anchor) {
+    return [];
+  }
+
+  let leftmostId = anchorId;
+  const leftVisited = new Set<number>([anchorId]);
+
+  while (true) {
+    const current: Message | undefined = messages[leftmostId - 1];
+    if (!current || current.prevSibling === null) {
+      break;
+    }
+
+    if (leftVisited.has(current.prevSibling)) {
+      break;
+    }
+
+    leftmostId = current.prevSibling;
+    leftVisited.add(leftmostId);
+  }
+
+  const siblingIds: number[] = [];
+  const rightVisited = new Set<number>();
+  let currentId: number | null = leftmostId;
+
+  while (currentId !== null) {
+    if (rightVisited.has(currentId)) {
+      break;
+    }
+
+    const current: Message | undefined = messages[currentId - 1];
+    if (!current) {
+      break;
+    }
+
+    siblingIds.push(currentId);
+    rightVisited.add(currentId);
+    currentId = current.nextSibling;
+  }
+
+  return siblingIds;
+};
+
+export const normalizeMessageParentIds = (messages: Message[]): Message[] => {
+  if (messages.length === 0) {
+    return [];
+  }
+
+  const normalized = messages.map(
+    (message) =>
+      ({
+        ...message,
+        parentId: null,
+      }) as Message
+  );
+
+  for (const message of normalized) {
+    const childIds = collectSiblingIds(normalized, message.latestChild);
+    for (const childId of childIds) {
+      updateMessage(normalized, childId, () => ({
+        ...normalized[childId - 1],
+        parentId: message.id,
+      }));
+    }
+  }
+
+  return normalized;
+};
+
 export const buildCurrentPath = (
   messages: Message[],
   latestRootId: number | null
@@ -131,6 +209,7 @@ export const addMessage = (
 
   const newMessage = {
     id,
+    parentId,
     role,
     blocks,
     prevSibling: null,
@@ -278,6 +357,7 @@ export const editMessage = (
   const id = nextId;
   const newMessage = {
     id,
+    parentId: target.parentId,
     role: target.role,
     blocks: newBlocks,
     prevSibling: messageId,
@@ -337,6 +417,7 @@ export const createLinearMessages = (
 
     messages.push({
       id,
+      parentId: index > 0 ? id - 1 : null,
       role: item.role,
       blocks: cloneBlocks(item.blocks ?? []),
       prevSibling: null,
@@ -396,6 +477,7 @@ export const migrateFromOldTree = (tree: LegacyMessageTree): MessageState => {
 
     messages.push({
       id: newId,
+      parentId: node.parentId ? idMap.get(node.parentId) ?? null : null,
       role: node.role,
       blocks: cloneBlocks(node.blocks ?? []),
       prevSibling:

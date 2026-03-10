@@ -15,7 +15,10 @@ import {
   useChatRequestStore,
 } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from '@/stores/zustand/useComposerStore'
-import { buildAttachmentsFromFiles } from "@/lib/chat/attachments";
+import {
+  buildAttachmentsFromFiles,
+  getAttachmentPreviewUrl,
+} from "@/lib/chat/attachments";
 
 type MessageEditorProps = {
   messageId: number;
@@ -160,6 +163,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
             <div key={attachment.id} className="group relative">
               <ImagePreview
                 url={attachment.url}
+                previewUrl={getAttachmentPreviewUrl(attachment)}
                 name={attachment.name}
                 size={attachment.size}
               />

@@ -18,6 +18,7 @@ export type AssistantAddition = AssistantContentBlock | ResearchItem | ToolLifec
 export const cloneMessages = (messages: Message[]): Message[] =>
   messages.map((msg) => ({
     id: msg.id,
+    parentId: msg.parentId,
     role: msg.role,
     blocks: cloneBlocks(msg.blocks ?? []),
     prevSibling: msg.prevSibling,

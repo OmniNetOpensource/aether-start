@@ -225,21 +225,6 @@ const dataUrlToBlob = async (dataUrl: string) => {
 
 export const downloadDataUrl = async (dataUrl: string, filename: string) => {
   const blob = await dataUrlToBlob(dataUrl)
-  const file = new File([blob], filename, { type: blob.type || 'image/png' })
-
-  if (
-    typeof navigator !== 'undefined' &&
-    typeof navigator.share === 'function' &&
-    typeof navigator.canShare === 'function' &&
-    navigator.canShare({ files: [file] })
-  ) {
-    await navigator.share({
-      files: [file],
-      title: filename,
-    })
-    return
-  }
-
   const objectUrl = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = objectUrl

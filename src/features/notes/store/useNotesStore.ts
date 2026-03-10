@@ -48,7 +48,7 @@ const sortByUpdatedAt = (notes: NoteItem[]) => {
   return sorted
 }
 
-const mergeNotes = (notes: NoteItem[], incoming: NoteItem[]) => {
+const upsertNotes = (notes: NoteItem[], incoming: NoteItem[]) => {
   const map = new Map<string, NoteItem>()
 
   for (const note of notes) {
@@ -96,7 +96,7 @@ export const useNotesStore = create<NotesState & NotesActions>()(
 
           set((state) => ({
             ...state,
-            notes: mergeNotes(state.notes, mapped),
+            notes: [...state.notes, ...mapped],
             loading: false,
             loadingMore: false,
             hasLoaded: true,
@@ -132,7 +132,7 @@ export const useNotesStore = create<NotesState & NotesActions>()(
 
           set((state) => ({
             ...state,
-            notes: mergeNotes(state.notes, mapped),
+            notes: [...state.notes, ...mapped],
             loadingMore: false,
             hasMore: page.nextCursor !== null,
             cursor: page.nextCursor,
@@ -153,7 +153,7 @@ export const useNotesStore = create<NotesState & NotesActions>()(
 
         set((state) => ({
           ...state,
-          notes: mergeNotes(state.notes, [normalized]),
+          notes: upsertNotes(state.notes, [normalized]),
         }))
 
         try {

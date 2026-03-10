@@ -37,6 +37,8 @@ type AttachmentBase = {
 export type Attachment = AttachmentBase & {
   url: string;
   storageKey?: string;
+  thumbnailUrl?: string;
+  thumbnailStorageKey?: string;
 };
 
 type ResearchBlock = {
@@ -61,6 +63,7 @@ export type ContentBlock = UserContentBlock | AssistantContentBlock;
 
 type MessageFields = {
   id: number;
+  parentId: number | null;
   prevSibling: number | null;
   nextSibling: number | null;
   latestChild: number | null;

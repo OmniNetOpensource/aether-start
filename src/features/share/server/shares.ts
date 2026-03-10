@@ -8,6 +8,7 @@ import {
   isSafeShareToken,
   revokeShare,
   resolveStorageKeyForSharedAttachment,
+  resolveThumbnailStorageKeyForSharedAttachment,
   upsertOrReactivateShare,
 } from '@/server/db/conversation-shares-db'
 import { getConversationById } from '@/server/db/conversations-db'
@@ -58,6 +59,10 @@ const sanitizeSharedAttachment = (value: unknown): SharedAttachmentSnapshot | nu
     mimeType: value.mimeType,
     url: value.url,
     ...(typeof value.storageKey === 'string' ? { storageKey: value.storageKey } : {}),
+    ...(typeof value.thumbnailUrl === 'string' ? { thumbnailUrl: value.thumbnailUrl } : {}),
+    ...(typeof value.thumbnailStorageKey === 'string'
+      ? { thumbnailStorageKey: value.thumbnailStorageKey }
+      : {}),
   }
 
   const storageKey = resolveStorageKeyForSharedAttachment(attachment)
@@ -65,9 +70,17 @@ const sanitizeSharedAttachment = (value: unknown): SharedAttachmentSnapshot | nu
     return null
   }
 
+  const thumbnailStorageKey = resolveThumbnailStorageKeyForSharedAttachment(attachment)
+
   return {
     ...attachment,
     storageKey,
+    ...(thumbnailStorageKey
+      ? {
+          thumbnailStorageKey,
+          thumbnailUrl: `/api/assets/${encodeURIComponent(thumbnailStorageKey)}`,
+        }
+      : {}),
     // Ensure stored URL points to an allowlisted internal asset route.
     url: `/api/assets/${encodeURIComponent(storageKey)}`,
   }
@@ -191,9 +204,14 @@ const buildPublicSnapshot = (
           type: 'attachments' as const,
           attachments: block.attachments.map((attachment) => {
             const storageKey = resolveStorageKeyForSharedAttachment(attachment)
+            const thumbnailStorageKey =
+              resolveThumbnailStorageKeyForSharedAttachment(attachment)
             const publicUrl = storageKey
               ? `/api/share-assets/${encodeURIComponent(token)}/${encodeURIComponent(attachment.id)}`
               : attachment.url
+            const publicThumbnailUrl = thumbnailStorageKey
+              ? `/api/share-assets/${encodeURIComponent(token)}/${encodeURIComponent(attachment.id)}?variant=thumbnail`
+              : undefined
 
             return {
               id: attachment.id,
@@ -202,6 +220,7 @@ const buildPublicSnapshot = (
               size: attachment.size,
               mimeType: attachment.mimeType,
               url: publicUrl,
+              ...(publicThumbnailUrl ? { thumbnailUrl: publicThumbnailUrl } : {}),
             }
           }),
         }

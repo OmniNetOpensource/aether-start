@@ -15,30 +15,6 @@ import {
 
 const PAGE_SIZE = 20
 
-const mergeSearchItems = (
-  previous: ConversationSearchItem[],
-  incoming: ConversationSearchItem[],
-) => {
-  const map = new Map<string, ConversationSearchItem>()
-
-  for (const item of previous) {
-    map.set(item.id, item)
-  }
-
-  for (const item of incoming) {
-    map.set(item.id, item)
-  }
-
-  return Array.from(map.values()).sort((a, b) => {
-    const byUpdated = b.updated_at.localeCompare(a.updated_at)
-    if (byUpdated !== 0) {
-      return byUpdated
-    }
-
-    return b.id.localeCompare(a.id)
-  })
-}
-
 const formatUpdatedAt = (value: string) => {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) {
@@ -208,7 +184,7 @@ export function ConversationSearchDialog({
           return
         }
 
-        setItems((prev) => mergeSearchItems(prev, page.items))
+        setItems((prev) => [...prev, ...page.items])
         setCursor(page.nextCursor)
         setHasSearched(true)
       } catch (error) {

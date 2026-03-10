@@ -16,7 +16,13 @@ import type {
 } from '@/types/message'
 
 const restoreAttachments = (
-  attachments: Array<Attachment & { displayUrl?: string }>,
+  attachments: Array<
+    Attachment & {
+      displayUrl?: string
+      thumbnailUrl?: string
+      thumbnailStorageKey?: string
+    }
+  >,
 ): Attachment[] =>
   attachments
     .map((att) => ({
@@ -27,6 +33,8 @@ const restoreAttachments = (
       mimeType: att.mimeType,
       url: att.url ?? att.displayUrl ?? '',
       storageKey: att.storageKey,
+      thumbnailUrl: att.thumbnailUrl,
+      thumbnailStorageKey: att.thumbnailStorageKey,
     }))
     .filter((att) => att.mimeType?.startsWith('image/') && !!att.url)
 
@@ -52,6 +60,7 @@ const hydrateBlocks = (blocks: Message['blocks']) =>
 const hydrateMessage = (msg: Message): Message =>
   ({
     id: msg.id,
+    parentId: msg.parentId ?? null,
     role: msg.role,
     blocks: hydrateBlocks(msg.blocks),
     prevSibling: msg.prevSibling ?? null,

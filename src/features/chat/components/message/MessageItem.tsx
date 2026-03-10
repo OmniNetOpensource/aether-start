@@ -3,6 +3,7 @@ import { useState, type ReactNode } from "react";
 import Markdown from "@/components/Markdown";
 import { ImagePreview } from "@/components/ImagePreview";
 import { Message } from "@/types/message";
+import { getAttachmentPreviewUrl } from "@/lib/chat/attachments";
 import { getBranchInfo as getBranchInfoFn } from "@/lib/conversation/tree/message-tree";
 import { ResearchBlock } from "../research/ResearchBlock";
 import {
@@ -167,6 +168,7 @@ export function MessageItem({
                   <ImagePreview
                     key={attachment.id}
                     url={attachment.url}
+                    previewUrl={getAttachmentPreviewUrl(attachment)}
                     name={attachment.name}
                     size={attachment.size}
                     className="shrink-0"
