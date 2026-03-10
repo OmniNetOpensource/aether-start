@@ -207,7 +207,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     }
 
     if (request.method === 'POST' && sub === 'abort') {
-      return this.handleAbort(request)
+      if (!userId) return new Response('Unauthorized', { status: 401 })
+      return this.handleAbort(request, userId)
     }
 
     // Status probe
@@ -402,7 +403,11 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
   // ── POST /abort ──────────────────────────────────────────────────────
 
-  private async handleAbort(request: Request): Promise<Response> {
+  private async handleAbort(request: Request, userId: string): Promise<Response> {
+    if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
+      return new Response('Unauthorized', { status: 401 })
+    }
+
     const body = await request.json().catch(() => ({})) as Record<string, unknown>
     const requestId = asString(body.requestId) ?? undefined
 

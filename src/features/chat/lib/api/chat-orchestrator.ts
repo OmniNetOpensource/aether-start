@@ -493,7 +493,7 @@ export const resumeRunningConversation = async (
 ) => {
   if (!conversationId) return;
 
-  let agentStatus: AgentStatusResponse | null = null;
+  let agentStatus: AgentStatusResponse;
   try {
     agentStatus = await checkAgentStatus(conversationId);
   } catch {

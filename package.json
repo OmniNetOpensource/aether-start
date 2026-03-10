@@ -4,9 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite dev --host :: --port 3000 --strictPort",
-    "build": "pnpm build:tracker && pnpm build:app",
-    "build:app": "vite build",
-    "build:tracker": "pnpm --filter @aether/react-render-tracker build",
+    "build": "vite build",
     "preview": "vite preview",
     "auth:generate": "better-auth generate --config src/features/auth/server/auth.ts --output src/features/auth/server/auth.schema.ts --yes",
     "auth:migration:generate": "drizzle-kit generate --dialect sqlite --driver d1-http --schema src/features/auth/server/auth.schema.ts --out migrations --name better_auth",
@@ -16,9 +14,7 @@
     "cf:deploy": "vite build && node scripts/patch-wrangler-config.mjs && wrangler deploy",
     "cf:sync-secrets": "node scripts/sync-env-to-cloudflare.mjs",
     "lint": "eslint .",
-    "type-check": "pnpm type-check:app && pnpm type-check:tracker",
-    "type-check:app": "tsc --noEmit",
-    "type-check:tracker": "pnpm --filter @aether/react-render-tracker type-check",
+    "type-check": "tsc --noEmit",
     "check": "pnpm type-check && pnpm lint && pnpm build",
     "test": "pnpm test:app",
     "test:app": "vitest --run",
@@ -77,7 +73,6 @@
     "zustand": "^5.0.11"
   },
   "devDependencies": {
-    "@aether/react-render-tracker": "workspace:*",
     "@better-auth/cli": "^1.4.20",
     "@cloudflare/vite-plugin": "^1.25.6",
     "@eslint/js": "^10.0.1",

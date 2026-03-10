@@ -10,7 +10,11 @@
       "Bash(cd \"D:\\\\develop\\\\projects\\\\aether-start\" && pnpm --filter @aether/react-render-tracker build 2>&1)",
       "Bash(cd \"D:\\\\develop\\\\projects\\\\aether-start\" && pnpm type-check:tracker 2>&1)",
       "Bash(xargs wc -l)",
-      "Bash(tail:*)"
+      "Bash(tail:*)",
+      "Bash(cd:*)",
+      "Bash(echo EXIT_CODE: $?:*)",
+      "Bash(cd /c/develop/projects/aether-start && pnpm install --no-frozen-lockfile 2>&1)",
+      "Bash(pnpm install:*)"
     ]
   }
 }
