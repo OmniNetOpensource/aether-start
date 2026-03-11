@@ -9,14 +9,13 @@ import {
 } from './search-result-payload'
 
 describe('search-result-payload', () => {
-  it('parses optional faviconDataUrl for search client payloads', () => {
+  it('parses search client payloads with title/url only', () => {
     const parsed = parseSearchClientPayload(
       JSON.stringify({
         results: [
           {
             title: 'Example',
             url: 'https://example.com',
-            faviconDataUrl: 'data:image/png;base64,abc123',
           },
         ],
       }),
@@ -27,7 +26,6 @@ describe('search-result-payload', () => {
         {
           title: 'Example',
           url: 'https://example.com',
-          faviconDataUrl: 'data:image/png;base64,abc123',
         },
       ],
     })
@@ -49,17 +47,15 @@ describe('search-result-payload', () => {
     expect(stripped).toBe('{"results":[{"title":"Example","url":"https://example.com"}]}')
   })
 
-  it('parses optional faviconDataUrl for fetch client payloads', () => {
+  it('parses fetch client payloads without favicon data', () => {
     const parsed = parseFetchClientPayload(
       JSON.stringify({
         type: 'fetch_result',
-        faviconDataUrl: 'data:image/png;base64,abc123',
       }),
     )
 
     expect(parsed).toEqual({
       type: 'fetch_result',
-      faviconDataUrl: 'data:image/png;base64,abc123',
     })
   })
 

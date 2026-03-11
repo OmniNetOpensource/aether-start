@@ -85,7 +85,7 @@ export function ModelSelector() {
           <Bot className="h-3.5 w-3.5" />
         ) : (
           <>
-            <span className="max-w-25 truncate">{currentRoleName}</span>
+            <span className="max-w-40 truncate">{currentRoleName}</span>
             <ChevronDown className="h-3 w-3 transition-transform duration-300" />
           </>
         )}

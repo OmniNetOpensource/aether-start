@@ -2,7 +2,6 @@ import { ChatTool, ToolDefinition, ToolHandler } from "./types";
 import { stringifySearchClientPayload, type SearchClientResult } from '@/lib/chat/search-result-payload'
 import { log } from "@/server/agents/services/logger";
 import { getServerEnv } from '@/server/env'
-import { fetchFaviconDataUrl } from './favicon'
 
 type SearchArgs = {
   query: string;
@@ -72,46 +71,17 @@ const buildAiMarkdown = (results: NormalizedSearchResult[]): string => {
     .join("\n\n");
 };
 
-const MAX_FAVICON_RESULTS = 10
-const enrichClientResultsWithFavicons = async (
-  results: SearchClientResult[],
-  signal?: AbortSignal,
-): Promise<SearchClientResult[]> => {
-  const faviconByUrl = new Map<string, Promise<string | undefined>>()
-
-  return Promise.all(
-    results.map(async (result, index) => {
-      if (index >= MAX_FAVICON_RESULTS) {
-        return result
-      }
-
-      let faviconPromise = faviconByUrl.get(result.url)
-      if (!faviconPromise) {
-        faviconPromise = fetchFaviconDataUrl(result.url, signal)
-        faviconByUrl.set(result.url, faviconPromise)
-      }
-
-      const faviconDataUrl = await faviconPromise
-      return faviconDataUrl ? { ...result, faviconDataUrl } : result
-    }),
-  )
-}
-
 export const formatSearchResponse = async (
   data: { organic?: SearchResult[] },
-  signal?: AbortSignal,
 ): Promise<string> => {
   const rawResults = Array.isArray(data.organic) ? data.organic : [];
   const normalizedResults = rawResults
     .map((result) => normalizeSearchResult(result))
     .filter((result): result is NormalizedSearchResult => Boolean(result));
-  const clientResults = await enrichClientResultsWithFavicons(
-    normalizedResults.map((result) => ({
-      title: result.title,
-      url: result.url,
-    })),
-    signal,
-  )
+  const clientResults: SearchClientResult[] = normalizedResults.map((result) => ({
+    title: result.title,
+    url: result.url,
+  }))
 
   const payload: SearchPayload = {
     client: {
@@ -210,7 +180,7 @@ const performSearch = async (
     }
 
     const data = (await response.json()) as { organic?: SearchResult[] };
-    return await formatSearchResponse(data, signal);
+    return await formatSearchResponse(data);
   } catch (error) {
     const isAbortError =
       typeof error === "object" &&

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { beforeEach, afterEach, vi } from 'vitest'
+import { vi } from 'vitest'
 
 vi.mock('cloudflare:workers', () => ({
   env: {},
@@ -13,21 +13,12 @@ import { formatSearchResponse } from './search'
 
 type SearchFormatPayload = {
   client: {
-    results: Array<{ title: string; url: string; faviconDataUrl?: string }>
+    results: Array<{ title: string; url: string }>
   }
   ai: string
 }
 
 const parsePayload = (value: string) => JSON.parse(value) as SearchFormatPayload
-const originalFetch = global.fetch
-
-beforeEach(() => {
-  global.fetch = vi.fn().mockRejectedValue(new Error('favicon unavailable')) as typeof fetch
-})
-
-afterEach(() => {
-  global.fetch = originalFetch
-})
 
 describe('formatSearchResponse', () => {
   it('keeps only title/url in client results and filters invalid entries', () => {
@@ -109,15 +100,7 @@ describe('formatSearchResponse', () => {
       })
   })
 
-  it('includes faviconDataUrl for client results when favicon fetch succeeds', async () => {
-    global.fetch = vi.fn().mockResolvedValue(
-      new Response('icon', {
-        headers: {
-          'content-type': 'image/png',
-        },
-      }),
-    ) as typeof fetch
-
+  it('does not include favicon data in client results', async () => {
     const payload = parsePayload(await formatSearchResponse({
       organic: [
         {
@@ -132,6 +115,6 @@ describe('formatSearchResponse', () => {
       title: 'Example Result',
       url: 'https://example.com',
     })
-    expect(payload.client.results[0]?.faviconDataUrl).toMatch(/^data:image\/png;base64,/)
+    expect(Object.keys(payload.client.results[0] ?? {})).toEqual(['title', 'url'])
   })
 })

@@ -65,9 +65,15 @@ function LoginPage() {
     }
 
     if (isEmailNotVerifiedError(signInError)) {
-      const qs = new URLSearchParams({ email: normalizedEmail })
-      if (redirectTarget) qs.set('redirect', redirectTarget)
-      await navigate({ href: `/auth/verify-email?${qs}`, replace: true })
+      await navigate({
+        to: '/auth/register',
+        search: {
+          email: normalizedEmail,
+          redirect: redirectTarget,
+          verify: 'true',
+        },
+        replace: true,
+      })
       return
     }
 

@@ -1,7 +1,12 @@
 import type { Message } from '@/types/message'
 import type { ChatServerToClientEvent } from './chat-event-types'
 
-export type { ChatServerToClientEvent } from './chat-event-types'
+export type {
+  ChatErrorCode,
+  ChatErrorInfo,
+  ChatErrorProvider,
+  ChatServerToClientEvent,
+} from './chat-event-types'
 
 // Tool call pending execution
 export type PendingToolInvocation = {

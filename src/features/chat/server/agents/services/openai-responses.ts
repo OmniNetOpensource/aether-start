@@ -1,6 +1,7 @@
 import OpenAI from 'openai'
 import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/model-provider-config'
 import { log, logProviderCommunication } from './logger'
+import { buildProviderErrorEvent } from './provider-error'
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import { getOpenAIClient } from './openai'
 import type {
@@ -251,10 +252,13 @@ export class OpenAIResponsesChatProvider {
         }
 
         if (event.type === 'error') {
-          yield {
-            type: 'error',
-            message: `错误：OpenAI Responses 流式事件异常 (model=${this.model}): ${event.message}`,
-          }
+          yield buildProviderErrorEvent({
+            provider: 'openai-responses',
+            model: this.model,
+            backendConfig: this.backendConfig,
+            error: new Error(event.message),
+            fallbackMessage: 'OpenAI Responses stream event failed',
+          })
         }
       }
     } catch (error) {
@@ -271,11 +275,13 @@ export class OpenAIResponsesChatProvider {
         model: this.model,
       })
 
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start OpenAI Responses completion'
-      yield {
-        type: 'error',
-        message: `错误：OpenAI Responses 请求失败 (model=${this.model}): ${errorMessage}`,
-      }
+      yield buildProviderErrorEvent({
+        provider: 'openai-responses',
+        model: this.model,
+        backendConfig: this.backendConfig,
+        error,
+        fallbackMessage: 'Failed to start OpenAI Responses completion',
+      })
       return emptyResult
     }
 

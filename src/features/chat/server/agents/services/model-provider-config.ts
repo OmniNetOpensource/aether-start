@@ -163,14 +163,14 @@ const PROMPT_CONFIGS: Record<string, PromptConfig> = {
 const MODEL_CONFIGS: Record<string, ModelConfig> = {
   claudeOpus46Ikun: {
     id: "claudeOpus46Ikun",
-    name: "claude-opus-4-6+ikun",
+    name: "opus-4-6+ikun",
     model: "claude-opus-4-6",
     format: "anthropic",
     backend: "ikun",
   },
   claudeOpus45Ikun: {
     id: "claudeOpus45Ikun",
-    name: "claude-opus-4-5+ikun",
+    name: "opus-4-5+ikun",
     model: "claude-opus-4-5-20251101",
     format: "anthropic",
     backend: "ikun",
@@ -219,15 +219,22 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   },
   gemini31ProRightcode: {
     id: "gemini31ProRightcode",
-    name: "gemini-3.1-pro-preview+rightcode",
+    name: "gemini-3.1-pro+rightcode",
     model: "gemini-3.1-pro-preview",
     format: "gemini",
     backend: "rightcode-gemini",
   },
   gemini31ProIkun: {
     id: "gemini31ProIkun",
-    name: "gemini-3.1-pro-preview+ikun",
+    name: "gemini-3.1-pro+ikun",
     model: "gemini-3.1-pro-preview",
+    format: "gemini",
+    backend: "ikun-gemini",
+  },
+  gemini3FlashIkun: {
+    id: "gemini3FlashIkun",
+    name: "gemini-3-flash-preview+ikun",
+    model: "gemini-3-flash-preview",
     format: "gemini",
     backend: "ikun-gemini",
   },
@@ -240,35 +247,35 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
   },
   claudeOpus46Rightcode: {
     id: "claudeOpus46Rightcode",
-    name: "claude-opus-4-6+rightcode",
+    name: "opus-4-6+rightcode",
     model: "claude-opus-4-6",
     format: "anthropic",
     backend: "rightcode-claude",
   },
   claudeSonnet46Ikun: {
     id: "claudeSonnet46Ikun",
-    name: "claude-sonnet-4-6+ikun",
+    name: "sonnet-4-6+ikun",
     model: "claude-sonnet-4-6",
     format: "anthropic",
     backend: "ikun",
   },
   claudeHaiku45Ikun: {
     id: "claudeHaiku45Ikun",
-    name: "claude-haiku-4-5-20251001+ikun",
+    name: "haiku-4-5-20251001+ikun",
     model: "claude-haiku-4-5-20251001",
     format: "anthropic",
     backend: "ikun",
   },
   claudeSonnet46Rightcode: {
     id: "claudeSonnet46Rightcode",
-    name: "claude-sonnet-4-6+rightcode",
+    name: "sonnet-4-6+rightcode",
     model: "claude-sonnet-4-6",
     format: "anthropic",
     backend: "rightcode-claude",
   },
   claudeOpus46RightcodeSale: {
     id: "claudeOpus46RightcodeSale",
-    name: "claude-opus-4-6+rightcode-sale",
+    name: "opus-4-6+rightcode-sale",
     model: "claude-opus-4-6",
     format: "anthropic",
     backend: "rightcode-claude-sale",
@@ -314,7 +321,7 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
 export const getDefaultPromptId = (): string => "aether";
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = "claudeHaiku45Ikun";
+export const TITLE_GENERATION_MODEL_ID = "gemini3FlashIkun";
 
 export const buildSystemPrompt = () => {
   const now = new Date();

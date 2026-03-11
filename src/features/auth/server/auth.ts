@@ -2,6 +2,7 @@ import { betterAuth } from 'better-auth'
 import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { emailOTP } from 'better-auth/plugins'
 import { tanstackStartCookies } from 'better-auth/tanstack-start'
+import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/d1'
 import { Resend } from 'resend'
 import { getServerEnv } from '@/server/env'
@@ -35,6 +36,21 @@ const toOrigin = (value: string) => {
   } catch {
     return value
   }
+}
+
+const getRequestIp = (headers: Headers | undefined) => {
+  if (!headers) {
+    return null
+  }
+
+  for (const key of ['cf-connecting-ip', 'x-forwarded-for']) {
+    const value = headers.get(key)?.split(',')[0]?.trim()
+    if (value) {
+      return value
+    }
+  }
+
+  return null
 }
 
 const createPlaceholderD1Database = (): D1Database =>
@@ -86,6 +102,22 @@ const createAuth = () => {
     basePath: '/api/auth',
     secret,
     trustedOrigins: [toOrigin(baseURL)],
+    user: {
+      additionalFields: {
+        registrationIp: {
+          type: 'string',
+          required: false,
+          input: false,
+          returned: false,
+        },
+        lastLoginAt: {
+          type: 'date',
+          required: false,
+          input: false,
+          returned: false,
+        },
+      },
+    },
     advanced: {
       ipAddress: {
         ipAddressHeaders: ['cf-connecting-ip', 'x-forwarded-for'],
@@ -106,6 +138,35 @@ const createAuth = () => {
       provider: 'sqlite',
       schema: authSchema,
     }),
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user, context) => {
+            const data = { ...user }
+            delete data.image
+            data.registrationIp = getRequestIp(context?.request?.headers)
+            return { data }
+          },
+        },
+        update: {
+          before: async (user) => {
+            const data = { ...user }
+            delete data.image
+            return { data }
+          },
+        },
+      },
+      session: {
+        create: {
+          after: async (session) => {
+            await db
+              .update(authSchema.user)
+              .set({ lastLoginAt: new Date() })
+              .where(eq(authSchema.user.id, session.userId))
+          },
+        },
+      },
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,

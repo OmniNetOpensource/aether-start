@@ -2,7 +2,6 @@ import { Search, Link, Wrench } from "lucide-react";
 import { useState } from "react";
 import Markdown from "@/components/Markdown";
 import {
-  parseFetchClientPayload,
   parseSearchClientPayload,
   SEARCH_TOOL_NAMES,
   type SearchClientResult,
@@ -86,15 +85,13 @@ function getFaviconUrl(url: string): string {
 
 function Favicon({
   url,
-  faviconDataUrl,
   fallback,
 }: {
   url: string;
-  faviconDataUrl?: string;
   fallback?: React.ReactNode;
 }) {
   const [hasError, setHasError] = useState(false);
-  const faviconSrc = faviconDataUrl || getFaviconUrl(url);
+  const faviconSrc = getFaviconUrl(url);
 
   if (!faviconSrc || hasError) return <>{fallback}</>;
   return (
@@ -165,9 +162,8 @@ function SearchStep({
               href={r.url}
               icon={
                 <Favicon
-                  key={r.faviconDataUrl ?? getFaviconUrl(r.url)}
+                  key={getFaviconUrl(r.url)}
                   url={r.url}
-                  faviconDataUrl={r.faviconDataUrl}
                   fallback={<Link className="h-4 w-4" />}
                 />
               }
@@ -197,25 +193,6 @@ function parseFetchImageResult(tool: Tool): string | null {
   return null;
 }
 
-function getFetchFaviconDataUrl(tool: Tool): string | undefined {
-  const { result } = getToolLifecycle(tool);
-  if (!result) return undefined;
-
-  const fetchPayload = parseFetchClientPayload(result.result);
-  if (fetchPayload?.faviconDataUrl) {
-    return fetchPayload.faviconDataUrl;
-  }
-
-  try {
-    const parsed = JSON.parse(result.result);
-    return typeof parsed?.faviconDataUrl === "string"
-      ? parsed.faviconDataUrl
-      : undefined;
-  } catch {
-    return undefined;
-  }
-}
-
 // Render a fetch tool step
 function FetchStep({
   tool,
@@ -230,7 +207,6 @@ function FetchStep({
   const url = typeof args.url === "string" ? args.url : "";
   const stepStatus = getStepStatus(tool, isActive);
   const imageDataUrl = parseFetchImageResult(tool);
-  const faviconDataUrl = getFetchFaviconDataUrl(tool);
 
   const { result } = getToolLifecycle(tool);
   const resultText = result
@@ -253,9 +229,8 @@ function FetchStep({
     <ChainOfThoughtStep
       icon={
         <Favicon
-          key={faviconDataUrl ?? getFaviconUrl(url)}
+          key={getFaviconUrl(url)}
           url={url}
-          faviconDataUrl={faviconDataUrl}
           fallback={<Link className="h-full w-full" />}
         />
       }

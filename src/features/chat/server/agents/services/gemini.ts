@@ -2,6 +2,7 @@ import { GoogleGenAI, createPartFromFunctionResponse } from '@google/genai'
 import type * as genai from '@google/genai'
 import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/model-provider-config'
 import { log, logProviderCommunication } from './logger'
+import { buildProviderErrorEvent } from './provider-error'
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import type {
   PendingToolInvocation,
@@ -220,11 +221,13 @@ export class GeminiChatProvider {
         model: this.model,
       })
 
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start Gemini completion'
-      yield {
-        type: 'error',
-        message: `错误：Gemini 请求失败 (model=${this.model}): ${errorMessage}`,
-      }
+      yield buildProviderErrorEvent({
+        provider: 'gemini',
+        model: this.model,
+        backendConfig: this.backendConfig,
+        error,
+        fallbackMessage: 'Failed to start Gemini completion',
+      })
       return emptyResult
     }
 

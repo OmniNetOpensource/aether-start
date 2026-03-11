@@ -4,6 +4,7 @@ import {
   type BackendConfig,
 } from "@/server/agents/services/model-provider-config";
 import { log, logProviderCommunication } from "./logger";
+import { buildProviderErrorEvent } from './provider-error'
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import type {
   PendingToolInvocation,
@@ -422,11 +423,13 @@ export class AnthropicChatProvider {
         model: this.model,
       })
 
-      const errorMessage = error instanceof Error ? error.message : 'Failed to start Anthropic completion'
-      yield {
-        type: 'error',
-        message: `错误：Anthropic 请求失败 (model=${this.model}): ${errorMessage}`,
-      }
+      yield buildProviderErrorEvent({
+        provider: 'anthropic',
+        model: this.model,
+        backendConfig: this.backendConfig,
+        error,
+        fallbackMessage: 'Failed to start Anthropic completion',
+      })
       return emptyResult
     }
 

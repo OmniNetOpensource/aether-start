@@ -11,7 +11,6 @@ export const SEARCH_TOOL_NAMES = new Set([
 export type SearchClientResult = {
   title: string
   url: string
-  faviconDataUrl?: string
 }
 
 export type SearchClientPayload = {
@@ -20,7 +19,6 @@ export type SearchClientPayload = {
 
 export type FetchClientPayload = {
   type: 'fetch_result'
-  faviconDataUrl?: string
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -53,18 +51,12 @@ export const parseSearchClientPayload = (raw: string): SearchClientPayload | nul
 
         const title = typeof item.title === 'string' ? item.title.trim() : ''
         const url = typeof item.url === 'string' ? item.url : ''
-        const faviconDataUrl =
-          typeof item.faviconDataUrl === 'string' && item.faviconDataUrl.length > 0
-            ? item.faviconDataUrl
-            : undefined
 
         if (!title || !url) {
           return null
         }
 
-        return faviconDataUrl
-          ? { title, url, faviconDataUrl }
-          : { title, url }
+        return { title, url }
       })
       .filter((item): item is SearchClientResult => Boolean(item))
 
@@ -76,18 +68,10 @@ export const parseSearchClientPayload = (raw: string): SearchClientPayload | nul
 
 export const stringifySearchClientPayload = (payload: SearchClientPayload): string =>
   JSON.stringify({
-    results: payload.results.map((item) =>
-      item.faviconDataUrl
-        ? {
-            title: item.title,
-            url: item.url,
-            faviconDataUrl: item.faviconDataUrl,
-          }
-        : {
-            title: item.title,
-            url: item.url,
-          },
-    ),
+    results: payload.results.map((item) => ({
+      title: item.title,
+      url: item.url,
+    })),
   })
 
 export const parseFetchClientPayload = (raw: string): FetchClientPayload | null => {
@@ -97,30 +81,14 @@ export const parseFetchClientPayload = (raw: string): FetchClientPayload | null 
       return null
     }
 
-    const faviconDataUrl =
-      typeof parsed.faviconDataUrl === 'string' && parsed.faviconDataUrl.length > 0
-        ? parsed.faviconDataUrl
-        : undefined
-
-    return faviconDataUrl
-      ? { type: 'fetch_result', faviconDataUrl }
-      : { type: 'fetch_result' }
+    return { type: 'fetch_result' }
   } catch {
     return null
   }
 }
 
 export const stringifyFetchClientPayload = (payload: FetchClientPayload): string =>
-  JSON.stringify(
-    payload.faviconDataUrl
-      ? {
-          type: 'fetch_result',
-          faviconDataUrl: payload.faviconDataUrl,
-        }
-      : {
-          type: 'fetch_result',
-        },
-  )
+  JSON.stringify(payload)
 
 export const stripTransientSearchClientPayload = (raw: string): string => {
   const parsed = parseSearchClientPayload(raw)

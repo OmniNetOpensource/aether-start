@@ -80,7 +80,6 @@ describe('executeToolsGen for search dual-channel result routing', () => {
         results: [{
           title: 'Result A',
           url: 'https://example.com/a',
-          faviconDataUrl: 'data:image/png;base64,abc123',
         }],
       },
       ai:
@@ -111,7 +110,7 @@ describe('executeToolsGen for search dual-channel result routing', () => {
     expect(events[1]).toEqual({
       type: 'tool_result',
       tool: 'search',
-      result: '{"results":[{"title":"Result A","url":"https://example.com/a","faviconDataUrl":"data:image/png;base64,abc123"}]}',
+      result: '{"results":[{"title":"Result A","url":"https://example.com/a"}]}',
       callId: 'call_1',
     })
     expect(results).toEqual([
@@ -155,50 +154,35 @@ describe('executeToolsGen for search dual-channel result routing', () => {
     ])
   })
 
-  it('sends fetch favicon payload to the client and keeps raw result for the model', async () => {
+  it('sends fetch marker payload to the client and keeps raw result for the model', async () => {
     fetchHandlerMock.mockResolvedValueOnce('Fetched markdown content')
 
-    const originalFetch = global.fetch
-    global.fetch = vi.fn().mockResolvedValue(
-      new Response('icon', {
-        headers: {
-          'content-type': 'image/png',
+    const toolCalls: PendingToolInvocation[] = [
+      {
+        id: 'call_3',
+        name: 'fetch_url',
+        args: {
+          url: 'https://example.com/article',
+          response_type: 'markdown',
         },
-      }),
-    ) as typeof fetch
+      },
+    ]
 
-    try {
-      const toolCalls: PendingToolInvocation[] = [
-        {
-          id: 'call_3',
-          name: 'fetch_url',
-          args: {
-            url: 'https://example.com/article',
-            response_type: 'markdown',
-          },
-        },
-      ]
+    const { events, results } = await collectExecution(executeToolsGen(toolCalls))
 
-      const { events, results } = await collectExecution(executeToolsGen(toolCalls))
-
-      expect(events).toHaveLength(2)
-      expect(events[1]).toEqual({
-        type: 'tool_result',
-        tool: 'fetch_url',
-        result: expect.stringMatching(
-          /^\{"type":"fetch_result","faviconDataUrl":"data:image\/png;base64,/,
-        ),
-        callId: 'call_3',
-      })
-      expect(results).toEqual([
-        {
-          id: 'call_3',
-          name: 'fetch_url',
-          result: 'Fetched markdown content',
-        },
-      ])
-    } finally {
-      global.fetch = originalFetch
-    }
+    expect(events).toHaveLength(2)
+    expect(events[1]).toEqual({
+      type: 'tool_result',
+      tool: 'fetch_url',
+      result: '{"type":"fetch_result"}',
+      callId: 'call_3',
+    })
+    expect(results).toEqual([
+      {
+        id: 'call_3',
+        name: 'fetch_url',
+        result: 'Fetched markdown content',
+      },
+    ])
   })
 })

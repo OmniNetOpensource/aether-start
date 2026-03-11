@@ -4,7 +4,6 @@ import {
   parseSearchClientPayload,
   stringifySearchClientPayload,
 } from '@/lib/chat/search-result-payload'
-import { fetchFaviconDataUrl } from './favicon'
 import { searchTool } from './search'
 import { getServerEnv } from '@/server/env'
 import { log } from '@/server/agents/services/logger'
@@ -102,9 +101,7 @@ const isFetchResultError = (result: string) => {
 // Format tool result for client display
 const formatToolResultForClient = async (
   toolName: string,
-  args: unknown,
   result: string,
-  signal?: AbortSignal,
 ) => {
   if (toolName !== 'fetch_url') {
     return result
@@ -114,40 +111,15 @@ const formatToolResultForClient = async (
     return 'Error: Fetch failed'
   }
 
-  const url =
-    args &&
-    typeof args === 'object' &&
-    'url' in args &&
-    typeof args.url === 'string'
-      ? args.url
-      : ''
-  const faviconDataUrl = url ? await fetchFaviconDataUrl(url, signal) : undefined
-
   // Pass through image results so the client can display them
   try {
     const parsed = JSON.parse(result)
     if (parsed.type === 'image' && parsed.data_url) {
-      return JSON.stringify(
-        faviconDataUrl
-          ? {
-              ...parsed,
-              faviconDataUrl,
-            }
-          : parsed,
-      )
+      return JSON.stringify(parsed)
     }
   } catch { /* not JSON */ }
 
-  return stringifyFetchClientPayload(
-    faviconDataUrl
-      ? {
-          type: 'fetch_result',
-          faviconDataUrl,
-        }
-      : {
-          type: 'fetch_result',
-        },
-  )
+  return stringifyFetchClientPayload({ type: 'fetch_result' })
 }
 
 const parseSearchResultChannels = (result: string) => {
@@ -217,9 +189,7 @@ export async function* executeToolsGen(
         : {
             clientResult: await formatToolResultForClient(
               tc.name,
-              tc.args,
               normalizedResult,
-              signal,
             ),
             modelResult: normalizedResult,
           }
