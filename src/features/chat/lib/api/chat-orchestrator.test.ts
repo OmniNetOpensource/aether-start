@@ -72,21 +72,37 @@ const emptyStream = () =>
   })
 
 // Helper: create an SSE stream from events
-const sseStream = (events: Array<{ event: string; data: unknown }>) =>
+const sseStream = (
+  events: Array<{ event: string; data: unknown }>,
+  options?: { lineEnding?: '\n' | '\r\n'; chunkSize?: number },
+) =>
   new ReadableStream<Uint8Array>({
     start(controller) {
       const encoder = new TextEncoder()
-      for (const { event, data } of events) {
-        controller.enqueue(
-          encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`),
+      const lineEnding = options?.lineEnding ?? '\n'
+      const payload = events
+        .map(
+          ({ event, data }) =>
+            `event: ${event}${lineEnding}data: ${JSON.stringify(data)}${lineEnding}${lineEnding}`,
         )
+        .join('')
+
+      if (options?.chunkSize) {
+        for (let index = 0; index < payload.length; index += options.chunkSize) {
+          controller.enqueue(
+            encoder.encode(payload.slice(index, index + options.chunkSize)),
+          )
+        }
+      } else {
+        controller.enqueue(encoder.encode(payload))
       }
+
       controller.close()
     },
   })
 
 describe('chat-orchestrator SSE model', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     addConversationMock.mockReset()
     appNavigateMock.mockReset()
     applyChatEventToTreeMock.mockReset()
@@ -101,6 +117,9 @@ describe('chat-orchestrator SSE model', () => {
     messageTreeState.conversationId = 'conv-1'
     messageTreeState.setConversationId.mockClear()
     messageTreeState._getTreeState.mockClear()
+
+    const orchestrator = await import('./chat-orchestrator')
+    orchestrator.resetLastEventId()
   })
 
   it('sends a POST to /chat and consumes the SSE response', async () => {
@@ -165,6 +184,41 @@ describe('chat-orchestrator SSE model', () => {
     expect(appNavigateMock).toHaveBeenCalledWith(
       expect.stringContaining('/app/c/'),
     )
+  })
+
+  it('parses CRLF SSE streams across chunk boundaries', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: sseStream(
+        [
+          { event: 'chat_started', data: { requestId: 'req-crlf' } },
+          {
+            event: 'chat_event',
+            data: {
+              eventId: 1,
+              requestId: 'req-crlf',
+              event: { type: 'content', content: 'hello crlf' },
+            },
+          },
+          {
+            event: 'chat_finished',
+            data: { requestId: 'req-crlf', status: 'completed' },
+          },
+        ],
+        { lineEnding: '\r\n', chunkSize: 17 },
+      ),
+    })
+
+    const orchestrator = await import('./chat-orchestrator')
+    await orchestrator.startChatRequest({
+      messages: [{ role: 'user', blocks: [] } as never],
+    })
+
+    expect(applyChatEventToTreeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'content', content: 'hello crlf' }),
+    )
+    expect(useChatRequestStore.getState().status).toBe('done')
   })
 
   it('handles 409 busy response from server', async () => {

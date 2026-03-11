@@ -6,7 +6,7 @@ import {
   getBackendConfig,
   getPromptById,
   getDefaultPromptId,
-} from '@/server/agents/services/chat-config'
+} from '@/server/agents/services/model-provider-config'
 import { log } from '@/server/agents/services/logger'
 import { createChatProvider } from '@/server/agents/services/provider-factory'
 import type { ProviderRunResult } from '@/server/agents/services/provider-types'
@@ -28,6 +28,8 @@ import type {
 } from '@/types/chat-api'
 import type { Message, SerializedMessage } from '@/types/message'
 
+// Durable Object 只服务一个会话实例，所以这里记录的是“这一个会话”当前的运行态。
+// 前端恢复连接、轮询状态、发起中断时，都会依赖这里的信息判断该怎么继续。
 type ChatAgentState = {
   status: ChatAgentStatus
   currentRequestId: string | null
@@ -36,6 +38,8 @@ type ChatAgentState = {
   updatedAt: number
 }
 
+// 这里显式列出会被 provider、tool、持久化层读取到的绑定。
+// 这样看这个文件时就能直接知道 ChatAgent 依赖了哪些运行环境能力。
 type ChatAgentEnv = Cloudflare.Env & {
   DB: D1Database
   CHAT_ASSETS: R2Bucket
@@ -52,16 +56,22 @@ type ChatAgentEnv = Cloudflare.Env & {
   SUPADATA_API_KEY?: string
 }
 
+// 一次回复可能会经历多轮“模型输出 -> 调工具 -> 带工具结果继续推理”。
+// 这里限制最大轮数，避免模型陷入无穷工具循环。
 const MAX_ITERATIONS = 200
 
+// 请求体来自网络边界，先把 unknown 缩小成可用结构。
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
 const asString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null
 
+// 标题生成只需要覆盖最近一段有效对话，截断可以控制 token 成本。
 const MAX_TITLE_TRANSCRIPT_CHARS = 4_000
 
+// 标题只根据当前分支生成，而不是整棵消息树。
+// 这样分叉会话重新命名时，标题能反映用户当前正在看的那条路径。
 const extractConversationTranscript = (messages: Message[], currentPath: number[]) => {
   const lines = currentPath
     .map((id) => messages[id - 1])
@@ -95,6 +105,9 @@ const toEventError = (message: string): ChatServerToClientEvent => ({
   message,
 })
 
+// 前端发起一次聊天请求时会同时上传：
+// 1. conversationHistory：给模型推理用的线性消息历史
+// 2. treeSnapshot：给服务端维护消息树和最终落库用的完整快照
 type ChatRequestBody = {
   requestId: string
   conversationId: string
@@ -104,6 +117,7 @@ type ChatRequestBody = {
   treeSnapshot: MessageTreeSnapshot
 }
 
+// 这里只做最低限度的结构校验，保证后续逻辑不会直接踩到 undefined / 类型错误。
 const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   if (!isObject(body)) return null
 
@@ -159,10 +173,16 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   }
 }
 
+// 这个 Durable Object 以 conversation 为粒度串行化整次对话：
+// 接收请求、推送 SSE、执行工具调用、缓存事件，并在结束后落库快照。
 export class ChatAgent extends DurableObject<ChatAgentEnv> {
+  // instanceName 对应 URL 里的 conversationId。
+  // 一个 Durable Object 实例一旦绑定某个会话，后续请求都应该落到同一个实例里。
   private instanceName: string | null = null
 
+  // abortController 负责终止当前运行中的模型调用和工具执行链路。
   private abortController: AbortController | null = null
+  // eventCache 用来支持断线重连。前端带上 lastEventId 后，可以从这里补拉遗漏事件。
   private eventCache: PersistedChatEvent[] = []
   private nextEventId = 1
   private eventCacheClearTimer: ReturnType<typeof setTimeout> | null = null
@@ -174,10 +194,11 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     updatedAt: Date.now(),
   }
 
-  // SSE subscriber streams
+  // /chat 的首条流式连接和 /events 的补连都会挂在这里一起收广播。
   private writers = new Set<WritableStreamDefaultWriter<Uint8Array>>()
   private encoder = new TextEncoder()
 
+  // 第一次收到某个 conversation 的请求时，把实例和会话绑定起来。
   private ensureInitialized(name: string) {
     if (!this.instanceName) {
       this.instanceName = name
@@ -187,7 +208,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url)
-    // Extract instance name and sub-path from URL: /agents/chat-agent/<name>[/<sub>]
+    // 路由形如 /agents/chat-agent/<conversationId>[/chat|events|abort]。
+    // Durable Object 入口不走 TanStack Router，所以这里手动拆路径。
     const segments = url.pathname.split('/')
     const nameIndex = segments.indexOf('chat-agent')
     const name = nameIndex >= 0 && segments.length > nameIndex + 1
@@ -204,6 +226,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
     const userId = request.headers.get('x-aether-user-id')?.trim() ?? null
 
+    // 真正会操作会话内容的接口都要求知道当前用户，避免会话串号。
     if (request.method === 'POST' && sub === 'chat') {
       if (!userId) return new Response('Unauthorized', { status: 401 })
       return this.handleChat(request, userId)
@@ -219,7 +242,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       return this.handleAbort(request, userId)
     }
 
-    // Status probe
+    // 空子路径只返回轻量状态，给前端恢复页面时探测“这个会话是不是还在跑”。
     if (request.method === 'GET' && sub === '') {
       return Response.json({
         status: this.runtimeState.status,
@@ -233,6 +256,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   // ── SSE helpers ──────────────────────────────────────────────────────
 
   private sendSSE(writer: WritableStreamDefaultWriter<Uint8Array>, event: string, data: unknown) {
+    // 单个连接写失败时只移除它自己，不影响其他订阅者继续收流。
     writer.write(this.encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
       .catch(() => this.writers.delete(writer))
   }
@@ -245,6 +269,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
   // ── POST /chat ───────────────────────────────────────────────────────
 
+  // 接收一次新的聊天请求，完成鉴权、并发保护、quota 扣减，并立刻返回 SSE 流。
+  // 真正的模型执行在后台进行，这样前端可以第一时间开始监听事件。
   private async handleChat(request: Request, userId: string): Promise<Response> {
     const rawBody = await request.json().catch(() => null)
     const message = parseChatRequestBody(rawBody)
@@ -253,6 +279,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       return Response.json({ error: 'Invalid request body' }, { status: 400 })
     }
 
+    // 同一个会话实例一次只允许一个请求运行。
+    // 如果前端重复提交，把当前 requestId 回给它，让它改走同步/恢复逻辑。
     if (this.runtimeState.status === 'running' && this.runtimeState.currentRequestId) {
       return Response.json(
         { type: 'busy', currentRequestId: this.runtimeState.currentRequestId },
@@ -260,6 +288,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       )
     }
 
+    // URL 定位到的 Durable Object 实例和 body 里声明的 conversationId 必须一致。
+    // 不一致说明请求落到了错误实例，直接拒绝。
     if (message.conversationId !== this.instanceName) {
       return Response.json(
         { error: 'Conversation ID mismatch' },
@@ -267,7 +297,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       )
     }
 
-    // Ensure owner
+    // 一个会话一旦被某个用户占用，后续只允许同一用户继续访问这个实例。
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
       return new Response('Unauthorized', { status: 401 })
     }
@@ -275,10 +305,11 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       this.runtimeState = { ...this.runtimeState, ownerUserId: userId }
     }
 
-    // Starting a new request: clear stale cache
+    // 新请求开始后，旧请求的事件缓存已经没有意义，先清掉避免重连时串事件。
     this.cancelEventCacheClear()
     this.eventCache = []
 
+    // quota 在请求被“正式接受”时扣减，避免并发提交时出现重复接受。
     const consumeResult = await consumePromptQuotaOnAccept(
       this.env.DB,
       userId,
@@ -297,7 +328,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       )
     }
 
-    // Set running state
+    // 进入 running 状态后，状态探测和 /events 补连都会把这个会话视为仍在生成中。
     this.runtimeState = {
       status: 'running',
       currentRequestId: message.requestId,
@@ -306,14 +337,15 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       updatedAt: Date.now(),
     }
 
-    // Create SSE stream for this request
+    // /chat 自己也返回一个 SSE 流，这样首个请求无需额外再发起一次 /events 订阅。
     const { readable, writable } = new TransformStream<Uint8Array>()
     const writer = writable.getWriter()
     this.writers.add(writer)
 
     this.broadcast('chat_started', { requestId: message.requestId })
 
-    // Persist user message snapshot
+    // 在模型真正开始跑之前先把用户刚发出的消息落库。
+    // 这样哪怕后续 provider 初始化失败，用户输入也不会丢。
     try {
       const existing = await getConversationById(this.env.DB, message.conversationId, userId)
       const now = new Date().toISOString()
@@ -344,6 +376,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     this.abortController = new AbortController()
     const signal = this.abortController.signal
 
+    // 背景任务负责持续产出事件并最终收尾；fetch 本身尽快把流返回即可。
     const task = this.runChatInBackground(message, userId, signal)
       .catch((error) => {
         log('AGENT', 'runChatInBackground failed', {
@@ -369,11 +402,13 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
   // ── GET /events ──────────────────────────────────────────────────────
 
+  // 给断线重连或页面恢复用的事件补拉入口。
+  // 先回放 lastEventId 之后的缓存事件，再按当前状态决定是否继续挂长连接。
   private handleEvents(request: Request, userId: string): Response {
     const url = new URL(request.url)
     const lastEventId = Number(url.searchParams.get('lastEventId') ?? 0)
 
-    // Ensure owner
+    // /events 虽然是只读补拉，但仍然只能由会话拥有者访问。
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
       return new Response('Unauthorized', { status: 401 })
     }
@@ -384,7 +419,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     const { readable, writable } = new TransformStream<Uint8Array>()
     const writer = writable.getWriter()
 
-    // Send sync data
+    // 先把客户端缺失的事件一次性补齐，再决定是否保持连接接收后续增量。
     const events = this.listEvents(lastEventId)
     this.sendSSE(writer, 'sync_response', {
       status: this.runtimeState.status,
@@ -392,6 +427,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       events,
     })
 
+    // 会话还在运行时，需要继续保持长连接；否则回放完缓存即可关闭。
     if (this.runtimeState.status === 'running') {
       // Keep connection open to receive future events
       this.writers.add(writer)
@@ -411,6 +447,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
   // ── POST /abort ──────────────────────────────────────────────────────
 
+  // 中断当前运行中的请求。这里返回 ok，只表示中断信号已经发出。
   private async handleAbort(request: Request, userId: string): Promise<Response> {
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
       return new Response('Unauthorized', { status: 401 })
@@ -423,6 +460,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       return Response.json({ ok: true })
     }
 
+    // 如果前端带了 requestId，就只中断对应那一次请求，避免误伤新的运行。
     if (requestId && this.runtimeState.currentRequestId && requestId !== this.runtimeState.currentRequestId) {
       return Response.json({ ok: true })
     }
@@ -439,10 +477,12 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     signal: AbortSignal,
   ) {
     let finalStatus: Exclude<ChatAgentStatus, 'idle' | 'running'> = 'completed'
+    // 服务端维护一份“随事件不断推进”的消息树快照，结束时直接按这份快照落库。
     let workingTree = cloneTreeSnapshot(message.treeSnapshot)
     let hasErrorEvent = false
 
     const emitEvent = async (event: ChatServerToClientEvent) => {
+      // 服务端和前端都把事件流当成事实来源：每条事件都会先应用到树，再缓存并广播。
       workingTree = processEventToTree(workingTree, event)
       if (event.type === 'error') {
         hasErrorEvent = true
@@ -453,12 +493,14 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     try {
       const { conversationHistory, role, promptId } = message
 
+      // 这层校验主要是保护 provider，不让它接收到结构明显不合法的输入。
       if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) {
         await emitEvent(toEventError('Invalid conversation history: expected non-empty array.'))
         finalStatus = 'error'
         return
       }
 
+      // 当前设计要求至少能定位到一条有效的用户消息，否则没有继续生成的意义。
       const latestUserMessage = [...conversationHistory].reverse().find((item) => item.role === 'user')
       if (!latestUserMessage || !Array.isArray(latestUserMessage.blocks) || latestUserMessage.blocks.length === 0) {
         await emitEvent(
@@ -468,6 +510,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         return
       }
 
+      // role 决定模型、后端和 provider 格式；拿不到配置就无法继续。
       const modelConfig = role ? getModelConfig(role) : getDefaultModelConfig()
       if (!modelConfig) {
         await emitEvent(toEventError(`Invalid or missing role: "${String(role ?? '')}".`))
@@ -475,10 +518,12 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         return
       }
 
+      // 没传 promptId 时回退到默认 prompt，保持前后端行为一致。
       const promptConfig =
         promptId ? getPromptById(promptId) : getPromptById(getDefaultPromptId())
       const systemPrompt = promptConfig?.content ?? ''
 
+      // 把只用于前端展示的临时搜索数据剥掉，避免污染模型上下文。
       const normalizedHistory = stripTransientSearchDataFromMessages(
         conversationHistory.map((m) => ({
           ...m,
@@ -490,6 +535,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
       const backendConfig = getBackendConfig(modelConfig.backend)
 
+      // provider 层屏蔽了不同模型供应商的格式差异，ChatAgent 只关心统一接口。
       const provider = createChatProvider(modelConfig.format, {
         model: modelConfig.model,
         backendConfig,
@@ -506,6 +552,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         }
 
         iteration += 1
+        // 一轮 run 代表“带着当前上下文让模型跑到一个暂停点”：
+        // 要么自然结束，要么产出待执行的工具调用。
         const generator = provider.run(workingMessages, signal)
 
         let pendingToolCalls: PendingToolInvocation[] = []
@@ -515,12 +563,14 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         while (true) {
           const { done, value } = await generator.next()
           if (done) {
+            // generator 返回值里带着本轮结束时累计的工具调用信息。
             runResult = value
             pendingToolCalls = value.pendingToolCalls
             break
           }
 
           if (value.type === 'content') {
+            // 只累积纯文本内容，后面拼 continuation 消息时会用到。
             assistantText += value.content
           }
 
@@ -550,6 +600,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
             toolResults = toolGenResult.value
             break
           }
+          // 工具执行过程本身也可能流式产出事件，例如开始、结果、报错。
           await emitEvent(toolGenResult.value)
 
           if (signal.aborted) {
@@ -563,6 +614,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
           break
         }
 
+        // provider 负责把“本轮输出 + 工具调用 + 工具结果”拼回消息格式，
+        // 下一轮再继续请求模型，直到不再需要工具。
         const continuationMessages = provider.formatToolContinuation(
           assistantText,
           runResult,
@@ -572,6 +625,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         workingMessages = [...workingMessages, ...continuationMessages]
       }
 
+      // 达到上限却仍未收敛，通常意味着工具循环失控，强制转成错误态。
       if (iteration >= MAX_ITERATIONS && finalStatus === 'completed') {
         await emitEvent(
           toEventError(
@@ -581,6 +635,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         finalStatus = 'error'
       }
 
+      // 有些失败会以 error 事件优雅地下发，而不是直接 throw。
+      // 这时也要修正最终状态，避免前端误判为成功结束。
       if (hasErrorEvent && finalStatus === 'completed') {
         finalStatus = 'error'
       }
@@ -599,6 +655,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       }
     } finally {
       try {
+        // 无论成功、失败还是中断，都把最新快照落库。
+        // 只有完整成功的回复才会触发标题再生成，避免半成品覆盖原标题。
         await this.persistConversationSnapshot(
           message.conversationId,
           userId,
@@ -624,6 +682,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         updatedAt: Date.now(),
       }
 
+      // 会话结束后保留一小段时间缓存，给刷新页面或断线重连补拉尾部事件。
       this.scheduleEventCacheClear(message.requestId)
     }
   }
@@ -631,6 +690,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   // ── Event cache ──────────────────────────────────────────────────────
 
   private listEvents(lastEventId: number): PersistedChatEvent[] {
+    // 这里直接做 eventId > lastEventId 过滤，所以负数会自然回放全部缓存。
     return this.eventCache.filter((e) => e.eventId > lastEventId)
   }
 
@@ -638,6 +698,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     const eventId = this.nextEventId++
     const createdAt = Date.now()
 
+    // eventCache 是断线补拉来源，broadcast 是实时来源，两边必须写入同一条事件。
     this.eventCache.push({ eventId, requestId, event, createdAt })
 
     this.broadcast('chat_event', { eventId, requestId, event })
@@ -658,12 +719,12 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     this.eventCacheClearTimer = setTimeout(() => {
       this.eventCacheClearTimer = null
 
-      // If a new request started since scheduling, don't clear its cache.
+      // 如果期间已经开始了新请求，就不能误删新请求的缓存。
       if (this.runtimeState.currentRequestId !== requestId) {
         return
       }
 
-      // A running request still needs the cache for reconnect/sync.
+      // 运行中的请求还需要缓存给 /events 做重连补拉。
       if (this.runtimeState.status === 'running') {
         return
       }
@@ -692,6 +753,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     let resolvedTitle = existing?.title ?? 'New Chat'
 
     if (regenerateTitle) {
+      // 标题生成只基于当前路径上真正可见的正文内容，不包含工具中间态或空块。
       const conversationTranscript = extractConversationTranscript(
         snapshot.messages,
         snapshot.currentPath,
@@ -713,6 +775,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       updated_at: now,
     })
 
+    // 标题和更新时间变更后同步广播，让侧边栏列表和当前会话页保持一致。
     this.broadcast('conversation_update', {
       conversationId,
       title: resolvedTitle,

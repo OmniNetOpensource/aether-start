@@ -2,6 +2,7 @@ import { Search, Link, Wrench } from "lucide-react";
 import { useState } from "react";
 import Markdown from "@/components/Markdown";
 import {
+  parseFetchClientPayload,
   parseSearchClientPayload,
   SEARCH_TOOL_NAMES,
   type SearchClientResult,
@@ -196,6 +197,25 @@ function parseFetchImageResult(tool: Tool): string | null {
   return null;
 }
 
+function getFetchFaviconDataUrl(tool: Tool): string | undefined {
+  const { result } = getToolLifecycle(tool);
+  if (!result) return undefined;
+
+  const fetchPayload = parseFetchClientPayload(result.result);
+  if (fetchPayload?.faviconDataUrl) {
+    return fetchPayload.faviconDataUrl;
+  }
+
+  try {
+    const parsed = JSON.parse(result.result);
+    return typeof parsed?.faviconDataUrl === "string"
+      ? parsed.faviconDataUrl
+      : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // Render a fetch tool step
 function FetchStep({
   tool,
@@ -210,6 +230,7 @@ function FetchStep({
   const url = typeof args.url === "string" ? args.url : "";
   const stepStatus = getStepStatus(tool, isActive);
   const imageDataUrl = parseFetchImageResult(tool);
+  const faviconDataUrl = getFetchFaviconDataUrl(tool);
 
   const { result } = getToolLifecycle(tool);
   const resultText = result
@@ -230,7 +251,14 @@ function FetchStep({
 
   return (
     <ChainOfThoughtStep
-      icon={<Link className="h-full w-full" />}
+      icon={
+        <Favicon
+          key={faviconDataUrl ?? getFaviconUrl(url)}
+          url={url}
+          faviconDataUrl={faviconDataUrl}
+          fallback={<Link className="h-full w-full" />}
+        />
+      }
       description={description}
       status={stepStatus}
       hideConnector={hideConnector}

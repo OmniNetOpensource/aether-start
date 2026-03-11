@@ -39,10 +39,6 @@ export function ConversationPage() {
   }, [title]);
 
   useEffect(() => {
-    if (!conversationId) {
-      return;
-    }
-
     resetLastEventId();
 
     const ac = new AbortController();

@@ -2,11 +2,7 @@
 
 import * as React from "react";
 import { Bot, Check, ChevronDown } from "lucide-react";
-import {
-  selectAvailableRoles,
-  selectCurrentRole,
-  useChatRequestStore,
-} from "@/stores/zustand/useChatRequestStore";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import {
   Command,
   CommandDialog,
@@ -38,8 +34,8 @@ export function ModelSelector() {
   const [open, setOpen] = React.useState(false);
   const deviceType = useResponsive();
   const isMobile = deviceType === "mobile";
-  const currentRole = useChatRequestStore(selectCurrentRole);
-  const roles = useChatRequestStore(selectAvailableRoles);
+  const currentRole = useChatRequestStore((s) => s.currentRole);
+  const roles = useChatRequestStore((s) => s.availableRoles);
   const loadAvailableRoles = useChatRequestStore(
     (state) => state.loadAvailableRoles,
   );

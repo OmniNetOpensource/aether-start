@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/chat-config'
+import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/model-provider-config'
 import { log, logProviderCommunication } from './logger'
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import { getOpenAIClient } from './openai'

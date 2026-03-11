@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   buildSystemPrompt,
   type BackendConfig,
-} from "@/server/agents/services/chat-config";
+} from "@/server/agents/services/model-provider-config";
 import { log, logProviderCommunication } from "./logger";
 import { resolveAttachmentToBase64 } from './attachment-utils'
 import type {

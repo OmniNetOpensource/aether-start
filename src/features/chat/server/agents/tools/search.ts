@@ -1,8 +1,8 @@
 import { ChatTool, ToolDefinition, ToolHandler } from "./types";
 import { stringifySearchClientPayload, type SearchClientResult } from '@/lib/chat/search-result-payload'
-import { arrayBufferToBase64 } from '@/server/base64'
 import { log } from "@/server/agents/services/logger";
 import { getServerEnv } from '@/server/env'
+import { fetchFaviconDataUrl } from './favicon'
 
 type SearchArgs = {
   query: string;
@@ -73,62 +73,6 @@ const buildAiMarkdown = (results: NormalizedSearchResult[]): string => {
 };
 
 const MAX_FAVICON_RESULTS = 10
-const FAVICON_TIMEOUT_MS = 5_000
-
-const buildFaviconServiceUrl = (url: string): string | null => {
-  try {
-    const hostname = new URL(url).hostname
-    return `https://www.google.com/s2/favicons?domain=${hostname}&sz=16`
-  } catch {
-    return null
-  }
-}
-
-const fetchFaviconDataUrl = async (
-  url: string,
-  signal?: AbortSignal,
-): Promise<string | undefined> => {
-  const faviconUrl = buildFaviconServiceUrl(url)
-  if (!faviconUrl) {
-    return undefined
-  }
-
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), FAVICON_TIMEOUT_MS)
-  const linkedAbort = () => controller.abort()
-  signal?.addEventListener('abort', linkedAbort)
-
-  try {
-    const response = await fetch(faviconUrl, {
-      headers: {
-        Accept: 'image/*',
-      },
-      signal: controller.signal,
-    })
-
-    if (!response.ok) {
-      return undefined
-    }
-
-    const contentType = response.headers.get('content-type') || 'image/png'
-    if (!contentType.startsWith('image/')) {
-      return undefined
-    }
-
-    const arrayBuffer = await response.arrayBuffer()
-    if (arrayBuffer.byteLength === 0) {
-      return undefined
-    }
-
-    return `data:${contentType.split(';')[0].trim()};base64,${arrayBufferToBase64(arrayBuffer)}`
-  } catch {
-    return undefined
-  } finally {
-    signal?.removeEventListener('abort', linkedAbort)
-    clearTimeout(timeoutId)
-  }
-}
-
 const enrichClientResultsWithFavicons = async (
   results: SearchClientResult[],
   signal?: AbortSignal,

@@ -18,6 +18,11 @@ export type SearchClientPayload = {
   results: SearchClientResult[]
 }
 
+export type FetchClientPayload = {
+  type: 'fetch_result'
+  faviconDataUrl?: string
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null
 
@@ -85,6 +90,38 @@ export const stringifySearchClientPayload = (payload: SearchClientPayload): stri
     ),
   })
 
+export const parseFetchClientPayload = (raw: string): FetchClientPayload | null => {
+  try {
+    const parsed = JSON.parse(raw)
+    if (!isRecord(parsed) || parsed.type !== 'fetch_result') {
+      return null
+    }
+
+    const faviconDataUrl =
+      typeof parsed.faviconDataUrl === 'string' && parsed.faviconDataUrl.length > 0
+        ? parsed.faviconDataUrl
+        : undefined
+
+    return faviconDataUrl
+      ? { type: 'fetch_result', faviconDataUrl }
+      : { type: 'fetch_result' }
+  } catch {
+    return null
+  }
+}
+
+export const stringifyFetchClientPayload = (payload: FetchClientPayload): string =>
+  JSON.stringify(
+    payload.faviconDataUrl
+      ? {
+          type: 'fetch_result',
+          faviconDataUrl: payload.faviconDataUrl,
+        }
+      : {
+          type: 'fetch_result',
+        },
+  )
+
 export const stripTransientSearchClientPayload = (raw: string): string => {
   const parsed = parseSearchClientPayload(raw)
   if (!parsed) {
@@ -94,6 +131,31 @@ export const stripTransientSearchClientPayload = (raw: string): string => {
   return stringifySearchClientPayload({
     results: parsed.results.map(({ title, url }) => ({ title, url })),
   })
+}
+
+export const stripTransientFetchClientPayload = (raw: string): string => {
+  const parsedFetchPayload = parseFetchClientPayload(raw)
+  if (parsedFetchPayload) {
+    return stringifyFetchClientPayload({ type: 'fetch_result' })
+  }
+
+  try {
+    const parsed = JSON.parse(raw)
+    if (
+      !isRecord(parsed) ||
+      parsed.type !== 'image' ||
+      typeof parsed.data_url !== 'string' ||
+      typeof parsed.faviconDataUrl !== 'string'
+    ) {
+      return raw
+    }
+
+    const rest = { ...parsed }
+    delete rest.faviconDataUrl
+    return JSON.stringify(rest)
+  } catch {
+    return raw
+  }
 }
 
 const stripTransientSearchDataFromResearchItems = (
@@ -111,6 +173,12 @@ const stripTransientSearchDataFromResearchItems = (
       typeof tool.result.result === 'string'
     ) {
       tool.result.result = stripTransientSearchClientPayload(tool.result.result)
+    } else if (
+      tool.call.tool === 'fetch_url' &&
+      tool.result &&
+      typeof tool.result.result === 'string'
+    ) {
+      tool.result.result = stripTransientFetchClientPayload(tool.result.result)
     }
 
     return {

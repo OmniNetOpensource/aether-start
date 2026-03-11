@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import type {
   AssistantMessage,
   BranchInfo,
@@ -38,7 +39,7 @@ type MessageTreeActions = {
   navigateBranch: (
     messageId: number,
     depth: number,
-    direction: "prev" | "next"
+    direction: "prev" | "next",
   ) => void;
   clear: () => void;
   _getTreeState: () => TreeSnapshot;
@@ -46,17 +47,20 @@ type MessageTreeActions = {
   _addMessage: (
     role: Message["role"],
     blocks: ContentBlock[],
-    createdAt?: string
+    createdAt?: string,
   ) => ReturnType<typeof addMessage>;
   _editMessage: (
     depth: number,
     messageId: number,
-    blocks: ContentBlock[]
+    blocks: ContentBlock[],
   ) => ReturnType<typeof editMessage> | null;
 };
 
-export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>()(
-  (set, get) => ({
+export const useMessageTreeStore = create<
+  MessageTreeState & MessageTreeActions
+>()(
+  devtools(
+    (set, get) => ({
       ...createEmptyMessageState(),
       conversationId: null,
       setMessages: (messages) => {
@@ -66,14 +70,18 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
             role: message.role,
             blocks: message.blocks ?? [],
             createdAt: message.createdAt,
-          }))
+          })),
         );
-        set({
-          messages: linearState.messages,
-          currentPath: linearState.currentPath,
-          latestRootId: linearState.latestRootId,
-          nextId: linearState.nextId,
-        });
+        set(
+          {
+            messages: linearState.messages,
+            currentPath: linearState.currentPath,
+            latestRootId: linearState.latestRootId,
+            nextId: linearState.nextId,
+          },
+          false,
+          "setMessages",
+        );
       },
       initializeTree: (messages = [], currentPath = []) => {
         const normalizedMessages = normalizeMessageParentIds(messages);
@@ -92,19 +100,24 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
         const nextId =
           normalizedMessages.reduce(
             (maxId, message) => Math.max(maxId, message.id),
-            0
+            0,
           ) + 1;
 
-        set({
-          messages: normalizedMessages,
-          currentPath: nextPath,
-          latestRootId,
-          nextId,
-        });
+        set(
+          {
+            messages: normalizedMessages,
+            currentPath: nextPath,
+            latestRootId,
+            nextId,
+          },
+          false,
+          "initializeTree",
+        );
       },
       getMessagesFromPath: () =>
         computeMessagesFromPath(get().messages, get().currentPath),
-      setConversationId: (id) => set({ conversationId: id }),
+      setConversationId: (id) =>
+        set({ conversationId: id }, false, "setConversationId"),
       selectMessage: (messageId) => {
         const state = get();
         const targetPath: number[] = [];
@@ -116,7 +129,8 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
             return;
           }
 
-          const currentMessage: Message | undefined = state.messages[currentId - 1];
+          const currentMessage: Message | undefined =
+            state.messages[currentId - 1];
           if (!currentMessage) {
             return;
           }
@@ -133,18 +147,26 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
           nextState = switchBranch(nextState, index + 1, targetPath[index]);
         }
 
-        set({
-          messages: nextState.messages,
-          currentPath: nextState.currentPath,
-          latestRootId: nextState.latestRootId,
-          nextId: nextState.nextId,
-        });
+        set(
+          {
+            messages: nextState.messages,
+            currentPath: nextState.currentPath,
+            latestRootId: nextState.latestRootId,
+            nextId: nextState.nextId,
+          },
+          false,
+          "selectMessage",
+        );
       },
       clear: () => {
-        set({
-          ...createEmptyMessageState(),
-          conversationId: null,
-        });
+        set(
+          {
+            ...createEmptyMessageState(),
+            conversationId: null,
+          },
+          false,
+          "clear",
+        );
       },
       _getTreeState: () => {
         const state = get();
@@ -156,35 +178,57 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
         };
       },
       _setTreeState: (partial) =>
-        set((state) => ({
-          messages: partial.messages
-            ? normalizeMessageParentIds(partial.messages)
-            : state.messages,
-          currentPath: partial.currentPath ?? state.currentPath,
-          latestRootId: partial.latestRootId ?? state.latestRootId,
-          nextId: partial.nextId ?? state.nextId,
-        })),
+        set(
+          (state) => ({
+            messages: partial.messages
+              ? normalizeMessageParentIds(partial.messages)
+              : state.messages,
+            currentPath: partial.currentPath ?? state.currentPath,
+            latestRootId: partial.latestRootId ?? state.latestRootId,
+            nextId: partial.nextId ?? state.nextId,
+          }),
+          false,
+          "_setTreeState",
+        ),
       _addMessage: (role, blocks, createdAt) => {
-        const result = addMessage(get()._getTreeState(), role, blocks, createdAt);
-        set({
-          messages: result.messages,
-          currentPath: result.currentPath,
-          latestRootId: result.latestRootId,
-          nextId: result.nextId,
-        });
+        const result = addMessage(
+          get()._getTreeState(),
+          role,
+          blocks,
+          createdAt,
+        );
+        set(
+          {
+            messages: result.messages,
+            currentPath: result.currentPath,
+            latestRootId: result.latestRootId,
+            nextId: result.nextId,
+          },
+          false,
+          "_addMessage",
+        );
         return result;
       },
       _editMessage: (depth, messageId, blocks) => {
-        const result = editMessage(get()._getTreeState(), depth, messageId, blocks);
+        const result = editMessage(
+          get()._getTreeState(),
+          depth,
+          messageId,
+          blocks,
+        );
         if (!result) {
           return null;
         }
-        set({
-          messages: result.messages,
-          currentPath: result.currentPath,
-          latestRootId: result.latestRootId,
-          nextId: result.nextId,
-        });
+        set(
+          {
+            messages: result.messages,
+            currentPath: result.currentPath,
+            latestRootId: result.latestRootId,
+            nextId: result.nextId,
+          },
+          false,
+          "_editMessage",
+        );
         return result;
       },
       getBranchInfo: (messageId) => getBranchInfo(get().messages, messageId),
@@ -210,71 +254,86 @@ export const useMessageTreeStore = create<MessageTreeState & MessageTreeActions>
             nextId: state.nextId,
           },
           depth,
-          targetId
+          targetId,
         );
 
-        set({
-          messages: nextState.messages,
-          currentPath: nextState.currentPath,
-          latestRootId: nextState.latestRootId,
-          nextId: nextState.nextId,
-        });
+        set(
+          {
+            messages: nextState.messages,
+            currentPath: nextState.currentPath,
+            latestRootId: nextState.latestRootId,
+            nextId: nextState.nextId,
+          },
+          false,
+          "navigateBranch",
+        );
       },
       appendToAssistant: (addition) =>
-        set((state) => {
-          const currentPath = state.currentPath;
-          const lastId = currentPath[currentPath.length - 1] ?? null;
-          const lastMessage = lastId ? state.messages[lastId - 1] : null;
+        set(
+          (state) => {
+            const currentPath = state.currentPath;
+            const lastId = currentPath[currentPath.length - 1] ?? null;
+            const lastMessage = lastId ? state.messages[lastId - 1] : null;
 
-          let nextMessages = state.messages;
-          let nextPath = state.currentPath;
-          let nextLatestRootId = state.latestRootId;
-          let nextId = state.nextId;
-          let assistantId = lastId;
+            let nextMessages = state.messages;
+            let nextPath = state.currentPath;
+            let nextLatestRootId = state.latestRootId;
+            let nextId = state.nextId;
+            let assistantId = lastId;
 
-          if (!lastMessage || lastMessage.role !== "assistant") {
-            // Ensure we have a target assistant message to append streaming blocks.
-            const result = addMessage(
-              {
-                messages: state.messages,
-                currentPath: state.currentPath,
-                latestRootId: state.latestRootId,
-                nextId: state.nextId,
-              },
-              "assistant",
-              []
-            );
-            nextMessages = result.messages;
-            nextPath = result.currentPath;
-            nextLatestRootId = result.latestRootId;
-            nextId = result.nextId;
-            assistantId = result.addedMessage.id;
-          }
+            if (!lastMessage || lastMessage.role !== "assistant") {
+              // Ensure we have a target assistant message to append streaming blocks.
+              const result = addMessage(
+                {
+                  messages: state.messages,
+                  currentPath: state.currentPath,
+                  latestRootId: state.latestRootId,
+                  nextId: state.nextId,
+                },
+                "assistant",
+                [],
+              );
+              nextMessages = result.messages;
+              nextPath = result.currentPath;
+              nextLatestRootId = result.latestRootId;
+              nextId = result.nextId;
+              assistantId = result.addedMessage.id;
+            }
 
-          if (!assistantId || !nextMessages[assistantId - 1]) {
-            return state;
-          }
+            if (!assistantId || !nextMessages[assistantId - 1]) {
+              return state;
+            }
 
-          const targetMessage = nextMessages[assistantId - 1] as AssistantMessage;
-          const updatedMessage: AssistantMessage = {
-            ...targetMessage,
-            blocks: applyAssistantAddition(targetMessage.blocks ?? [], addition),
-          };
+            const targetMessage = nextMessages[
+              assistantId - 1
+            ] as AssistantMessage;
+            const updatedMessage: AssistantMessage = {
+              ...targetMessage,
+              blocks: applyAssistantAddition(
+                targetMessage.blocks ?? [],
+                addition,
+              ),
+            };
 
-          const updatedMessages = [...nextMessages];
-          updatedMessages[assistantId - 1] = updatedMessage;
+            const updatedMessages = [...nextMessages];
+            updatedMessages[assistantId - 1] = updatedMessage;
 
-          return {
-            messages: updatedMessages,
-            currentPath: nextPath,
-            latestRootId: nextLatestRootId,
-            nextId,
-          };
-        }),
-    })
+            return {
+              messages: updatedMessages,
+              currentPath: nextPath,
+              latestRootId: nextLatestRootId,
+              nextId,
+            };
+          },
+          false,
+          "appendToAssistant",
+        ),
+    }),
+    { name: "MessageTreeStore" },
+  ),
 );
 
 export const useIsNewChat = () =>
   useMessageTreeStore(
-    (state) => state.conversationId === null && state.messages.length === 0
+    (state) => state.conversationId === null && state.messages.length === 0,
   );

@@ -28,10 +28,6 @@ vi.mock('@/stores/zustand/useChatRequestStore', () => {
   }
   return {
     useChatRequestStore: store,
-    isChatRequestActive: (status: string) => status !== 'done',
-    selectActiveRequestId: (state: typeof store._state) => state.activeRequestId,
-    selectChatRequestStatus: (state: typeof store._state) => state.status,
-    selectCurrentRole: (state: typeof store._state) => state.currentRole,
   }
 })
 

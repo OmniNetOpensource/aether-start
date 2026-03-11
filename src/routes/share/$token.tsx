@@ -1,7 +1,7 @@
 import { Link, createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
-import { MessageList } from "@/features/chat/components/message/MessageList";
+import { ReadonlyMessageList } from "@/features/share/components/ReadonlyMessageList";
 import { getPublicConversationShareFn } from "@/features/share/server/shares";
 import type { Message } from "@/types/message";
 
@@ -54,7 +54,7 @@ function SharedConversationPage() {
   const { token } = Route.useParams();
   const [data, setData] = useState<PublicShareData | null>(null);
   const [loading, setLoading] = useState(true);
-  const readonlyMessages =
+  const readonlyMessages: Message[] =
     data?.status === "active"
       ? data.snapshot.messages.map(toReadonlyMessage)
       : [];
@@ -154,14 +154,7 @@ function SharedConversationPage() {
             该页面为只读分享内容
           </p>
         </div>
-        <MessageList
-          messages={readonlyMessages}
-          readonly
-          showConnectionStatus={false}
-          showSelectionToolbar={false}
-          usePageScroll
-          listClassName="!pb-12"
-        />
+        <ReadonlyMessageList messages={readonlyMessages} usePageScroll listClassName="!pb-12" />
       </div>
     </main>
   );

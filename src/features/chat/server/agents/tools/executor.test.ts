@@ -70,6 +70,7 @@ describe('executeToolsGen for search dual-channel result routing', () => {
     getServerEnvMock.mockReset()
     getServerEnvMock.mockReturnValue({
       SERP_API_KEY: 'test-serp-key',
+      JINA_API_KEY: 'test-jina-key',
     })
   })
 
@@ -152,5 +153,52 @@ describe('executeToolsGen for search dual-channel result routing', () => {
         result: 'search raw output',
       },
     ])
+  })
+
+  it('sends fetch favicon payload to the client and keeps raw result for the model', async () => {
+    fetchHandlerMock.mockResolvedValueOnce('Fetched markdown content')
+
+    const originalFetch = global.fetch
+    global.fetch = vi.fn().mockResolvedValue(
+      new Response('icon', {
+        headers: {
+          'content-type': 'image/png',
+        },
+      }),
+    ) as typeof fetch
+
+    try {
+      const toolCalls: PendingToolInvocation[] = [
+        {
+          id: 'call_3',
+          name: 'fetch_url',
+          args: {
+            url: 'https://example.com/article',
+            response_type: 'markdown',
+          },
+        },
+      ]
+
+      const { events, results } = await collectExecution(executeToolsGen(toolCalls))
+
+      expect(events).toHaveLength(2)
+      expect(events[1]).toEqual({
+        type: 'tool_result',
+        tool: 'fetch_url',
+        result: expect.stringMatching(
+          /^\{"type":"fetch_result","faviconDataUrl":"data:image\/png;base64,/,
+        ),
+        callId: 'call_3',
+      })
+      expect(results).toEqual([
+        {
+          id: 'call_3',
+          name: 'fetch_url',
+          result: 'Fetched markdown content',
+        },
+      ])
+    } finally {
+      global.fetch = originalFetch
+    }
   })
 })

@@ -28,17 +28,13 @@ import {
   waitForImages,
 } from '@/lib/chat/export-utils'
 import { cn } from '@/lib/utils'
+import { ReadonlyMessageList } from '@/features/share/components/ReadonlyMessageList'
 import {
   createConversationShareFn,
   getConversationShareFn,
   revokeConversationShareFn,
 } from '@/server/functions/shares'
-import { MessageList } from '@/features/chat/components/message/MessageList'
-import {
-  isChatRequestActive,
-  selectChatRequestStatus,
-  useChatRequestStore,
-} from '@/stores/zustand/useChatRequestStore'
+import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
 import { useConversationsStore } from '@/stores/zustand/useConversationsStore'
 import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
 import type { Message } from '@/types/message'
@@ -79,9 +75,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const messages = useMessageTreeStore((s) => s.messages)
   const currentPath = useMessageTreeStore((s) => s.currentPath)
   const conversationId = useMessageTreeStore((s) => s.conversationId)
-  const status = useChatRequestStore(selectChatRequestStatus)
+  const status = useChatRequestStore((s) => s.status)
   const conversations = useConversationsStore((s) => s.conversations)
-  const isBusy = isChatRequestActive(status)
+  const isBusy = status !== "done"
 
   const [step, setStep] = useState<ShareStep>('select')
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
@@ -492,11 +488,8 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
             className='rounded-2xl border border-border bg-background p-10 text-foreground'
             style={{ width: 960, fontFamily: EXPORT_FONT }}
           >
-            <MessageList
+            <ReadonlyMessageList
               messages={selectedPreviewMessages}
-              readonly
-              showConnectionStatus={false}
-              showSelectionToolbar={false}
               usePageScroll
               listClassName='pb-6'
             />

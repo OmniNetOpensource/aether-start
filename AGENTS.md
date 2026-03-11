@@ -1,6 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
+
 - `src/routes/` contains TanStack Start file-based routes. Dynamic segments use `$`. Important areas are `app/`, `auth/`, `share/`, and `api/`.
 - `src/routes/__root.tsx` wires the root shell, theme loader, Redux provider, responsive provider, tooltip provider, toast container, and Sentry boundary.
 - `src/routes/app/route.tsx` is the authenticated app shell. Keep its login redirect behavior intact when changing app routing.
@@ -15,6 +16,7 @@
 - `public/` stores static assets.
 
 ## Build, Test, and Development Commands
+
 Use `pnpm` for all tasks.
 
 - `pnpm install` - install dependencies
@@ -36,14 +38,16 @@ Use `pnpm` for all tasks.
 - `pnpm cf:sync-secrets` - sync env values to Cloudflare
 
 ## Architecture Notes
+
 - Chat requests flow through `src/features/chat/state/chatRequestCommands.ts` -> `src/lib/chat/api/chat-orchestrator.ts` -> `src/server/agents/chat-agent.ts`. Changes to chat lifecycle usually need all three layers checked together.
 - The root app state is intentionally split: Redux owns request/session-like chat state, while Zustand owns local UI and conversation tree state.
-- Model roles and backend selection live in `src/server/agents/services/chat-config.ts`. Current provider formats include Anthropic, OpenAI chat, OpenAI Responses, and Gemini. Current backend names include `rightcode-claude`, `rightcode-gemini`, `rightcode-openai`, `dmx`, and `ikun`.
+- Model roles and backend selection live in `src/features/chat/server/agents/services/model-provider-config.ts`. Current provider formats include Anthropic, OpenAI chat, OpenAI Responses, and Gemini. Current backend names include `rightcode-claude`, `rightcode-gemini`, `rightcode-openai`, `dmx`, and `ikun`.
 - Tool execution lives in `src/server/agents/tools/`. `search` is enabled by `SERP_API_KEY`; `fetch_url` is enabled by `JINA_API_KEY`.
 - DB access is in `src/server/db/`. Conversations are user-scoped, split across meta/body tables, searchable through FTS with a CJK-friendly fallback, and support pinning plus public-share snapshots.
 - Auth uses Better Auth with Drizzle on D1. App routes under `/app` require a session. The auth API entry is `src/routes/api/auth/$.ts`.
 
 ## Coding Style & Naming Conventions
+
 - TypeScript + React. Follow the existing file-local style; the repo is not perfectly uniform, but most actively edited files use 2-space indentation and single quotes.
 - Components use PascalCase, hooks use `useX`, stores use `*Store`.
 - Route file names mirror their paths, for example `index.tsx`, `route.tsx`, `$conversationId.tsx`.
@@ -52,11 +56,13 @@ Use `pnpm` for all tasks.
 - Keep changes ESLint-clean. Lint config lives in `eslint.config.mjs`.
 
 ## Testing Guidance
+
 - Unit and component tests use Vitest with `happy-dom`; config is in `vitest.config.ts`.
 - E2E tests use Playwright; config is in `playwright.config.ts`, tests live in `tests/e2e`.
 - When changing chat orchestration, tools, DB helpers, or stores, look for nearby `*.test.ts` or `*.test.tsx` files and update them with the behavior change.
 
 ## Configuration & Secrets
+
 - Local secrets typically live in `.env.local`.
 - App env loading is centralized in `src/server/env.ts`, which reads from Cloudflare bindings or `process.env`.
 - Common secrets include `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, `SERP_API_KEY`, `JINA_API_KEY`, `SUPADATA_API_KEY`, `DMX_APIKEY`, `DMX_BASEURL`, `ANTHROPIC_API_KEY_RIGHTCODE`, `ANTHROPIC_BASE_URL_RIGHTCODE`, `GEMINI_API_KEY_RIGHTCODE`, `GEMINI_BASE_URL_RIGHTCODE`, `OPENAI_API_KEY_RIGHTCODE`, `OPENAI_BASE_URL_RIGHTCODE`, `ANTHROPIC_API_KEY_IKUNCODE`, and `ANTHROPIC_BASE_URL_IKUNCODE`.
@@ -64,6 +70,13 @@ Use `pnpm` for all tasks.
 - Never commit real secrets.
 
 ## Generated Files
+
 - Do not edit `src/routeTree.gen.ts` manually.
 - Do not hand-edit generated Cloudflare typings unless you are intentionally regenerating them.
 - Treat Better Auth generated schema output as generated code unless the task is specifically about regeneration.
+
+# 用户偏好
+
+1.如果一个函数或者一个变量在文件里只被使用过一次，就不要单独写
+
+2.代码要简单优雅，变量名要直观，始终保持可读性

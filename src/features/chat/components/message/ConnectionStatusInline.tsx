@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Loader2, Wifi, WifiOff } from 'lucide-react'
-import {
-  selectConnectionState,
-  useChatRequestStore,
-} from '@/stores/zustand/useChatRequestStore'
+import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
 import { cn } from '@/lib/utils'
 
 const CONNECTED_VISIBLE_MS = 2000
@@ -16,7 +13,7 @@ type VisibleConnectionState =
   | 'disconnected'
 
 export function ConnectionStatusInline() {
-  const connectionState = useChatRequestStore(selectConnectionState)
+  const connectionState = useChatRequestStore((s) => s.connectionState)
   const [visibleState, setVisibleState] = useState<VisibleConnectionState>('idle')
   const [fadingOut, setFadingOut] = useState(false)
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)

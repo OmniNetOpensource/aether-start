@@ -1,11 +1,7 @@
 
 import { Share2 } from 'lucide-react'
 import { useState } from 'react'
-import {
-  isChatRequestActive,
-  selectChatRequestStatus,
-  useChatRequestStore,
-} from '@/stores/zustand/useChatRequestStore'
+import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
 import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
 import { ShareDialog } from './ShareDialog'
 import { Button } from '@/components/ui/button'
@@ -13,8 +9,8 @@ import { Button } from '@/components/ui/button'
 export function ShareButton() {
   const [open, setOpen] = useState(false)
   const currentPath = useMessageTreeStore((state) => state.currentPath)
-  const status = useChatRequestStore(selectChatRequestStatus)
-  const isBusy = isChatRequestActive(status)
+  const status = useChatRequestStore((s) => s.status)
+  const isBusy = status !== "done"
 
   if (currentPath.length === 0) {
     return null

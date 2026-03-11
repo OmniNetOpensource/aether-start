@@ -31,7 +31,7 @@ vi.mock('@/server/agents/tools/executor', () => ({
   executeToolsGen: vi.fn(),
 }))
 
-vi.mock('@/server/agents/services/chat-config', () => ({
+vi.mock('@/server/agents/services/model-provider-config', () => ({
   getDefaultModelConfig: vi.fn(),
   getModelConfig: vi.fn(),
   getPromptById: vi.fn(),

@@ -1,10 +1,6 @@
 import { create } from "zustand";
-import {
-  isChatRequestActive,
-  selectChatRequestStatus,
-  selectCurrentRole,
-  useChatRequestStore,
-} from "@/stores/zustand/useChatRequestStore";
+import { devtools } from "zustand/middleware";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { toast } from "@/hooks/useToast";
 import { startChatRequest, stopActiveChatRequest } from "@/lib/chat/api/chat-orchestrator";
 import {
@@ -45,7 +41,7 @@ type EditingStoreActions = {
 };
 
 export const useEditingStore = create<EditingStoreState & EditingStoreActions>()(
-  (set, get) => ({
+  devtools((set, get) => ({
       editingState: null,
       startEditing: (messageId) => {
         const messages = useMessageTreeStore.getState().messages;
@@ -60,58 +56,66 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           (attachment) => ({ ...attachment })
         );
 
-        set({
-          editingState: {
-            messageId,
-            originalBlocks,
-            editedContent,
-            editedAttachments,
+        set(
+          {
+            editingState: {
+              messageId,
+              originalBlocks,
+              editedContent,
+              editedAttachments,
+            },
           },
-        });
+          false,
+          "startEditing"
+        );
       },
       updateEditContent: (content) =>
-        set((state) => {
-          if (!state.editingState) {
-            return state;
-          }
-          return {
-            editingState: {
-              ...state.editingState,
-              editedContent: content,
-            },
-          };
-        }),
+        set(
+          (state) => {
+            if (!state.editingState) {
+              return state;
+            }
+            return {
+              editingState: {
+                ...state.editingState,
+                editedContent: content,
+              },
+            };
+          },
+          false,
+          "updateEditContent"
+        ),
       updateEditAttachments: (attachments) =>
-        set((state) => {
-          if (!state.editingState) {
-            return state;
-          }
+        set(
+          (state) => {
+            if (!state.editingState) {
+              return state;
+            }
 
-          return {
-            editingState: {
-              ...state.editingState,
-              editedAttachments: attachments,
-            },
-          };
-        }),
-      cancelEditing: () => set({ editingState: null }),
+            return {
+              editingState: {
+                ...state.editingState,
+                editedAttachments: attachments,
+              },
+            };
+          },
+          false,
+          "updateEditAttachments"
+        ),
+      cancelEditing: () => set({ editingState: null }, false, "cancelEditing"),
       submitEdit: async (depth) => {
         const editingState = get().editingState;
         if (!editingState) {
           return;
         }
 
-        const selectedRole = selectCurrentRole(useChatRequestStore.getState());
+        const selectedRole = useChatRequestStore.getState().currentRole;
         if (!selectedRole) {
           toast.warning("请先选择角色");
           return;
         }
 
-        if (
-          isChatRequestActive(
-            selectChatRequestStatus(useChatRequestStore.getState())
-          )
-        ) {
+        if (useChatRequestStore.getState().status !== "done") {
           stopActiveChatRequest();
         }
 
@@ -131,7 +135,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         );
 
         if (!result) {
-          set({ editingState: null });
+          set({ editingState: null }, false, "submitEdit/reset");
           return;
         }
 
@@ -141,7 +145,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           latestRootId: result.latestRootId,
           nextId: result.nextId,
         });
-        set({ editingState: null });
+        set({ editingState: null }, false, "submitEdit/success");
 
         const pathMessages = computeMessagesFromPath(
           result.messages,
@@ -161,17 +165,13 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        const selectedRole = selectCurrentRole(useChatRequestStore.getState());
+        const selectedRole = useChatRequestStore.getState().currentRole;
         if (!selectedRole) {
           toast.warning("请先选择角色");
           return;
         }
 
-        if (
-          isChatRequestActive(
-            selectChatRequestStatus(useChatRequestStore.getState())
-          )
-        ) {
+        if (useChatRequestStore.getState().status !== "done") {
           stopActiveChatRequest();
         }
 
@@ -193,7 +193,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
             latestRootId: result.latestRootId,
             nextId: result.nextId,
           });
-          set({ editingState: null });
+          set({ editingState: null }, false, "retryFromMessage/user");
 
           const pathMessages = computeMessagesFromPath(
             result.messages,
@@ -214,7 +214,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         treeStore._setTreeState({ currentPath: nextPath });
-        set({ editingState: null });
+        set({ editingState: null }, false, "retryFromMessage/assistant");
 
         const pathMessages = computeMessagesFromPath(treeState.messages, nextPath);
         const titleSource =
@@ -226,6 +226,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           titleSource,
         });
       },
-      clear: () => set({ editingState: null }),
-    })
+      clear: () => set({ editingState: null }, false, "clear"),
+    }),
+    { name: "EditingStore" })
 );

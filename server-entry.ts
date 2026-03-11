@@ -2,81 +2,74 @@ import {
   createStartHandler,
   defaultStreamHandler,
 } from "@tanstack/react-start/server";
-import { env as workerEnv } from "cloudflare:workers";
+import { env } from "cloudflare:workers";
 import { createServerEntry } from "@tanstack/react-start/server-entry";
 import { withSentry } from "@sentry/cloudflare";
 import type { RequestHandler } from "@tanstack/react-start/server";
 import type { Register } from "@tanstack/react-router";
-import { ChatAgent as _ChatAgent } from "@/features/chat/server/agents/chat-agent";
 import { getSessionFromRequest } from "@/features/auth/server/session";
 
-const startFetch = createStartHandler(defaultStreamHandler);
-
+// 所有发往聊天 Durable Object 的请求都约定挂在这个前缀下：
+// /agents/chat-agent/<conversation-or-instance-name>/...
+// 入口文件会先识别这个前缀，再决定是否把请求转发给 ChatAgent。
 const AGENT_PATH_PREFIX = "/agents/chat-agent/";
 
-const matchAgentRoute = (url: URL): string | null => {
-  if (!url.pathname.startsWith(AGENT_PATH_PREFIX)) {
-    return null;
-  }
-
-  const name = url.pathname.slice(AGENT_PATH_PREFIX.length).split("/")[0];
-  return name || null;
-};
-
-const routeToAgent = (
-  request: Request,
-  env: { ChatAgent: DurableObjectNamespace<_ChatAgent> },
-  name: string,
-) => {
-  const id = env.ChatAgent.idFromName(name);
-  const stub = env.ChatAgent.get(id);
-  return stub.fetch(request);
-};
-
-const withInjectedUserIdHeader = (request: Request, userId: string) => {
-  const headers = new Headers(request.headers);
-  headers.set("x-aether-user-id", userId);
-
-  return new Request(request, { headers });
-};
-
-const protectAgentRequest = async (request: Request) => {
-  const session = await getSessionFromRequest(request);
-  if (!session?.user?.id) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
-  return withInjectedUserIdHeader(request, session.user.id);
-};
-
+// 整个 Cloudflare Worker 的统一 fetch 入口。
+//
+// 这里做的事情其实就是“分流”：
+// - 如果命中 /agents/chat-agent/...，说明这是一个需要进入 Durable Object 的长生命周期请求
+// - 否则就是普通应用请求，交回 TanStack Start 默认处理器
+//
+// 之所以在最外层做这层分流，而不是把 agent 也塞进普通路由系统里，是因为
+// ChatAgent 依赖 Durable Object 的单实例状态、SSE 广播和长生命周期运行能力，
+// 这些和普通页面/接口请求的处理模型不是一回事。
 const fetch: RequestHandler<Register> = async (request, opts) => {
   const url = new URL(request.url);
-  const agentName = matchAgentRoute(url);
+  const agentName = url.pathname.startsWith(AGENT_PATH_PREFIX)
+    ? url.pathname.slice(AGENT_PATH_PREFIX.length).split("/")[0] || null
+    : null;
 
   if (agentName) {
-    const result = await protectAgentRequest(request);
-    if (result instanceof Response) {
-      return result;
+    // agent 请求必须先带上登录态。
+    // 通过后把 user id 注入一个内部 header，后面的 Durable Object 就不需要重复解析 session。
+    const session = await getSessionFromRequest(request);
+    if (!session?.user?.id) {
+      return new Response("Unauthorized", { status: 401 });
     }
 
-    return routeToAgent(result, workerEnv as unknown as { ChatAgent: DurableObjectNamespace<_ChatAgent> }, agentName);
+    const headers = new Headers(request.headers);
+    headers.set("x-aether-user-id", session.user.id);
+    const authedRequest = new Request(request, { headers });
+
+    // env 来自 cloudflare:workers 运行时，类型收窄后取 ChatAgent 绑定。
+    // 同一个 name 经过 idFromName(name) 后总会映射到同一实例。
+    const chatAgent = (env as Env).ChatAgent;
+    const id = chatAgent.idFromName(agentName);
+    const agentProxy = chatAgent.get(id);
+    return agentProxy.fetch(authedRequest);
   }
 
-  return startFetch(request, opts);
+  return createStartHandler(defaultStreamHandler)(request, opts);
 };
 
-const sentryOptions = (env: Record<string, string>) => ({
-  dsn: env.SENTRY_DSN,
-  tracesSampleRate: 1.0,
-});
+// 必须把 Durable Object 类从 worker 入口导出。
+// Cloudflare 会根据这个导出和 wrangler 配置来注册 ChatAgent 绑定。
+export { ChatAgent } from "@/features/chat/server/agents/chat-agent";
 
-export const ChatAgent = _ChatAgent;
-
+// createServerEntry 会把上面的 fetch 处理器包装成 TanStack Start 认识的 worker 入口对象。
 const serverEntry = createServerEntry({
   fetch,
 });
 
+// 最终导出给 Cloudflare 的默认入口。
+// withSentry 会在外层包一层监控逻辑，这样无论是普通 SSR 请求还是 agent 分流链路里的异常，
+// 只要冒泡到入口层，Sentry 都有机会捕获并上报。
 export default withSentry(
-  sentryOptions,
+  // Sentry 只需要拿到运行时环境里的 DSN 就能接管异常上报。
+  // tracesSampleRate 目前设为 1.0，表示把所有 transaction 都采样进 tracing。
+  (env: Record<string, string>) => ({
+    dsn: env.SENTRY_DSN,
+    tracesSampleRate: 1.0,
+  }),
   serverEntry as ExportedHandler,
 ) as typeof serverEntry;

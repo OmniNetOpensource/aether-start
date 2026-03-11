@@ -7,7 +7,8 @@ export type ChatBackend =
   | "rightcode-gemini"
   | "rightcode-openai"
   | "dmx"
-  | "ikun";
+  | "ikun"
+  | "ikun-gemini";
 
 export type BackendConfig = {
   apiKey: string;
@@ -223,6 +224,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "gemini",
     backend: "rightcode-gemini",
   },
+  gemini31ProIkun: {
+    id: "gemini31ProIkun",
+    name: "gemini-3.1-pro-preview+ikun",
+    model: "gemini-3.1-pro-preview",
+    format: "gemini",
+    backend: "ikun-gemini",
+  },
   gpt54Rightcode: {
     id: "gpt54Rightcode",
     name: "gpt-5.4+rightcode",
@@ -399,6 +407,18 @@ export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
         "User-Agent": "aether",
         "anthropic-beta": "interleaved-thinking-2025-05-14",
       },
+    };
+  }
+
+  if (backend === "ikun-gemini") {
+    const apiKey = env.GEMINI_API_KEY_IKUNCODE;
+    const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE;
+    if (!apiKey) throw new Error("Missing GEMINI_API_KEY_IKUNCODE");
+    if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_IKUNCODE");
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: { "User-Agent": "aether" },
     };
   }
 

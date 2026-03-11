@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { SerializedMessage } from '@/types/message'
 import {
+  parseFetchClientPayload,
   parseSearchClientPayload,
+  stripTransientFetchClientPayload,
   stripTransientSearchClientPayload,
   stripTransientSearchDataFromMessages,
 } from './search-result-payload'
@@ -47,6 +49,41 @@ describe('search-result-payload', () => {
     expect(stripped).toBe('{"results":[{"title":"Example","url":"https://example.com"}]}')
   })
 
+  it('parses optional faviconDataUrl for fetch client payloads', () => {
+    const parsed = parseFetchClientPayload(
+      JSON.stringify({
+        type: 'fetch_result',
+        faviconDataUrl: 'data:image/png;base64,abc123',
+      }),
+    )
+
+    expect(parsed).toEqual({
+      type: 'fetch_result',
+      faviconDataUrl: 'data:image/png;base64,abc123',
+    })
+  })
+
+  it('strips faviconDataUrl from persisted fetch payloads', () => {
+    expect(
+      stripTransientFetchClientPayload(
+        JSON.stringify({
+          type: 'fetch_result',
+          faviconDataUrl: 'data:image/png;base64,abc123',
+        }),
+      ),
+    ).toBe('{"type":"fetch_result"}')
+
+    expect(
+      stripTransientFetchClientPayload(
+        JSON.stringify({
+          type: 'image',
+          data_url: 'data:image/png;base64,xyz',
+          faviconDataUrl: 'data:image/png;base64,abc123',
+        }),
+      ),
+    ).toBe('{"type":"image","data_url":"data:image/png;base64,xyz"}')
+  })
+
   it('removes transient favicon data from search research items only', () => {
     const messages: SerializedMessage[] = [
       {
@@ -86,6 +123,7 @@ describe('search-result-payload', () => {
                     result: JSON.stringify({
                       type: 'image',
                       data_url: 'data:image/png;base64,xyz',
+                      faviconDataUrl: 'data:image/png;base64,abc123',
                     }),
                   },
                 },

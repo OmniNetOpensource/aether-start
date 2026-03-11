@@ -10,12 +10,7 @@ import { startChatRequest, stopActiveChatRequest } from "@/lib/chat/api/chat-orc
 import { buildUserBlocks } from "@/lib/conversation/tree/block-operations";
 import { computeMessagesFromPath } from "@/lib/conversation/tree/message-tree";
 import { useComposerStore } from '@/stores/zustand/useComposerStore'
-import {
-  isChatRequestActive,
-  selectChatRequestStatus,
-  selectCurrentRole,
-  useChatRequestStore,
-} from "@/stores/zustand/useChatRequestStore";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useIsNewChat, useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
 import { setComposerTextarea } from "@/lib/chat/composer-focus";
 import { ComposerToolbar } from "./ComposerToolbar";
@@ -26,17 +21,17 @@ import { useResponsive } from "@/components/ResponsiveContext";
 
 export function Composer() {
   const input = useComposerStore((state) => state.input);
-  const status = useChatRequestStore(selectChatRequestStatus);
+  const status = useChatRequestStore((s) => s.status);
   const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
   const uploadingAttachments = useComposerStore((state) => state.uploadingAttachments);
   const uploading = useComposerStore((state) => state.uploading);
-  const currentRole = useChatRequestStore(selectCurrentRole);
+  const currentRole = useChatRequestStore((s) => s.currentRole);
   const deviceType = useResponsive();
   const isDesktop = deviceType === "desktop";
   const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
-  const isBusy = isChatRequestActive(status);
+  const isBusy = status !== "done";
 
   const submitMessage = async () => {
     const trimmed = input.trim();

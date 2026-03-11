@@ -2,78 +2,56 @@
 import { useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
-import type { Message } from "@/types/message";
-import {
-  isChatRequestAnswering,
-  selectChatRequestStatus,
-  useChatRequestStore,
-} from "@/stores/zustand/useChatRequestStore";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { ConnectionStatusInline } from "./ConnectionStatusInline";
 
 type MessageListProps = {
-  messages?: Message[];
-  readonly?: boolean;
   className?: string;
   listClassName?: string;
-  showConnectionStatus?: boolean;
-  showSelectionToolbar?: boolean;
-  usePageScroll?: boolean;
 };
 
 export function MessageList({
-  messages,
-  readonly = false,
   className,
   listClassName,
-  showConnectionStatus = !readonly,
-  showSelectionToolbar = !readonly,
-  usePageScroll = false,
 }: MessageListProps = {}) {
   const currentPath = useMessageTreeStore((state) => state.currentPath);
-  const status = useChatRequestStore(selectChatRequestStatus);
+  const status = useChatRequestStore((s) => s.status);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
-  const renderedMessages =
-    messages ??
-    currentPath
-      .map((messageId) => useMessageTreeStore.getState().messages[messageId - 1])
-      .filter((message): message is Message => Boolean(message));
 
   return (
-    <div className={`relative w-full ${usePageScroll ? "" : "h-full"} ${className ?? ""}`.trim()}>
+    <div className={`relative w-full h-full ${className ?? ""}`.trim()}>
       <div
         ref={scrollRef}
-        className={`w-full ${usePageScroll ? "" : "h-full overflow-y-auto"}`.trim()}
+        className="w-full h-full overflow-y-auto"
       >
         <div
           role="log"
           aria-live="polite"
           className={`flex-1 min-h-0 flex flex-col mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-1 pb-40 md:pb-44 lg:pb-48 ${listClassName ?? ""}`.trim()}
         >
-          {renderedMessages.map((message, index) => {
-            const isLastMessage = index === renderedMessages.length - 1;
-            const isStreaming = !readonly && isLastMessage && isChatRequestAnswering(status);
+          {currentPath.map((messageId, index) => {
+            const isLastMessage = index === currentPath.length - 1;
+            const isStreaming = isLastMessage && status === "answering";
             const depth = index + 1;
 
             return (
               <MessageItem
-                key={message.id}
-                messageId={message.id}
+                key={messageId}
+                messageId={messageId}
                 index={index}
                 depth={depth}
                 isStreaming={isStreaming}
-                message={message}
-                readonly={readonly}
               />
             );
           })}
-          {showConnectionStatus && <ConnectionStatusInline />}
+          <ConnectionStatusInline />
 
         </div>
       </div>
 
-      {showSelectionToolbar && <SelectionToolbar containerRef={scrollRef} />}
+      <SelectionToolbar containerRef={scrollRef} />
     </div>
   );
 }

@@ -1,8 +1,4 @@
-import {
-  ChatTool,
-  ToolDefinition,
-  ToolHandler,
-} from "./types";
+import { ChatTool, ToolDefinition, ToolHandler } from "./types";
 import { log } from "@/server/agents/services/logger";
 import { Supadata } from "@supadata/js";
 import { getServerEnv } from "@/server/env";
@@ -118,7 +114,7 @@ type ImageResult = {
   source: "direct" | "screenshot";
 };
 
-const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_SCREENSHOT_SIZE_BYTES = 5 * 1024 * 1024;
 
 const fetchDirectImage = async (
   url: string,
@@ -142,19 +138,8 @@ const fetchDirectImage = async (
     }
 
     const contentType = response.headers.get("content-type") || "image/png";
-    const contentLength = response.headers.get("content-length");
-
-    if (contentLength && parseInt(contentLength) > MAX_IMAGE_SIZE_BYTES) {
-      const sizeMB = (parseInt(contentLength) / 1024 / 1024).toFixed(1);
-      return `Error: Image too large (${sizeMB}MB exceeds 5MB limit)`;
-    }
 
     const arrayBuffer = await response.arrayBuffer();
-
-    if (arrayBuffer.byteLength > MAX_IMAGE_SIZE_BYTES) {
-      const sizeMB = (arrayBuffer.byteLength / 1024 / 1024).toFixed(1);
-      return `Error: Image too large (${sizeMB}MB exceeds 5MB limit)`;
-    }
 
     const base64 = arrayBufferToBase64(arrayBuffer);
     const mimeType = contentType.split(";")[0].trim();
@@ -190,7 +175,6 @@ const fetchDirectImage = async (
 
 const fetchScreenshot = async (
   url: string,
-  apiKey: string,
   signal?: AbortSignal,
 ): Promise<string> => {
   const controller = new AbortController();
@@ -202,7 +186,6 @@ const fetchScreenshot = async (
     const response = await fetch("https://r.jina.ai/", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
         "X-Return-Format": "pageshot",
         "X-Engine": "browser",
@@ -222,7 +205,7 @@ const fetchScreenshot = async (
 
     const arrayBuffer = await response.arrayBuffer();
 
-    if (arrayBuffer.byteLength > MAX_IMAGE_SIZE_BYTES) {
+    if (arrayBuffer.byteLength > MAX_SCREENSHOT_SIZE_BYTES) {
       const sizeMB = (arrayBuffer.byteLength / 1024 / 1024).toFixed(1);
       return `Error: Screenshot too large (${sizeMB}MB exceeds 5MB limit)`;
     }
@@ -397,7 +380,7 @@ const fetchUrl: ToolHandler = async (args, signal) => {
       return enqueueFetchUrlCall(() => fetchDirectImage(url, signal));
     }
 
-    return enqueueFetchUrlCall(() => fetchScreenshot(url, apiKey, signal));
+    return enqueueFetchUrlCall(() => fetchScreenshot(url, signal));
   }
 
   return enqueueFetchUrlCall(() => performFetchUrl(url, signal));

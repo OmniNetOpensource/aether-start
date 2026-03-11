@@ -1,4 +1,4 @@
-import type { ChatFormat } from '@/server/agents/services/chat-config'
+import type { ChatFormat } from '@/server/agents/services/model-provider-config'
 import type { ChatProvider, ChatProviderConfig } from './provider-types'
 import { createAnthropicAdapter } from './anthropic'
 import { createOpenAIAdapter } from './openai'

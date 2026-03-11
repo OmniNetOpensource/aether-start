@@ -124,9 +124,9 @@ Provider adapters live in `src/server/agents/services/`:
 - `gemini.ts`
 - `provider-factory.ts`
 
-Role and backend selection live in `src/server/agents/services/chat-config.ts`.
+Role and backend selection live in `src/features/chat/server/agents/services/model-provider-config.ts`.
 
-`chat-config.ts` defines:
+`model-provider-config.ts` defines:
 
 - role id and display name
 - model name
@@ -143,7 +143,7 @@ Backend values currently include:
 - `ikun`
 
 If you add a role, update `ROLE_CONFIGS`.
-If you add a new backend or provider format, update both `chat-config.ts` and `provider-factory.ts`.
+If you add a new backend or provider format, update both `model-provider-config.ts` and `provider-factory.ts`.
 
 ### Tool Calling
 
@@ -335,3 +335,9 @@ When working on conversations, remember there are multiple linked concerns:
 When working on auth-gated app routes, preserve the redirect behavior in `src/routes/app/route.tsx`.
 
 When working on public share routes, preserve the read-only and noindex behavior.
+
+# 用户偏好
+
+1.如果一个函数或者一个变量在文件里只被使用过一次，就不要单独写
+
+2.代码要简单优雅，变量名要直观，始终保持可读性

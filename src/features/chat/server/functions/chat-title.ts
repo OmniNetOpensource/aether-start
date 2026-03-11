@@ -3,7 +3,7 @@ import {
   getModelConfig,
   getBackendConfig,
   TITLE_GENERATION_MODEL_ID,
-} from '@/server/agents/services/chat-config'
+} from '@/server/agents/services/model-provider-config'
 import { getOpenAIClient } from '@/server/agents/services/openai'
 import { log } from '@/server/agents/services/logger'
 

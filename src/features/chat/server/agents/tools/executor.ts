@@ -1,8 +1,10 @@
 import { fetchUrlTool } from './fetch'
 import {
+  stringifyFetchClientPayload,
   parseSearchClientPayload,
   stringifySearchClientPayload,
 } from '@/lib/chat/search-result-payload'
+import { fetchFaviconDataUrl } from './favicon'
 import { searchTool } from './search'
 import { getServerEnv } from '@/server/env'
 import { log } from '@/server/agents/services/logger'
@@ -98,7 +100,12 @@ const isFetchResultError = (result: string) => {
 }
 
 // Format tool result for client display
-const formatToolResultForClient = (toolName: string, result: string) => {
+const formatToolResultForClient = async (
+  toolName: string,
+  args: unknown,
+  result: string,
+  signal?: AbortSignal,
+) => {
   if (toolName !== 'fetch_url') {
     return result
   }
@@ -107,15 +114,40 @@ const formatToolResultForClient = (toolName: string, result: string) => {
     return 'Error: Fetch failed'
   }
 
+  const url =
+    args &&
+    typeof args === 'object' &&
+    'url' in args &&
+    typeof args.url === 'string'
+      ? args.url
+      : ''
+  const faviconDataUrl = url ? await fetchFaviconDataUrl(url, signal) : undefined
+
   // Pass through image results so the client can display them
   try {
     const parsed = JSON.parse(result)
     if (parsed.type === 'image' && parsed.data_url) {
-      return result
+      return JSON.stringify(
+        faviconDataUrl
+          ? {
+              ...parsed,
+              faviconDataUrl,
+            }
+          : parsed,
+      )
     }
   } catch { /* not JSON */ }
 
-  return 'Success'
+  return stringifyFetchClientPayload(
+    faviconDataUrl
+      ? {
+          type: 'fetch_result',
+          faviconDataUrl,
+        }
+      : {
+          type: 'fetch_result',
+        },
+  )
 }
 
 const parseSearchResultChannels = (result: string) => {
@@ -183,7 +215,12 @@ export async function* executeToolsGen(
       tc.name === 'search'
         ? splitSearchResultForChannels(normalizedResult)
         : {
-            clientResult: formatToolResultForClient(tc.name, normalizedResult),
+            clientResult: await formatToolResultForClient(
+              tc.name,
+              tc.args,
+              normalizedResult,
+              signal,
+            ),
             modelResult: normalizedResult,
           }
 

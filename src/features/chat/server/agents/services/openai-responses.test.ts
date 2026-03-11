@@ -16,7 +16,7 @@ vi.mock('./openai', () => ({
   getOpenAIClient: getOpenAIClientMock,
 }))
 
-vi.mock('@/server/agents/services/chat-config', () => ({
+vi.mock('@/server/agents/services/model-provider-config', () => ({
   buildSystemPrompt: () => 'BASE_SYSTEM_PROMPT',
 }))
 

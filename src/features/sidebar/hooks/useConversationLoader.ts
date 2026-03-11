@@ -1,10 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import {
-  selectAvailableRoles,
-  selectCurrentRole,
-  useChatRequestStore,
-} from '@/stores/zustand/useChatRequestStore'
+import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
 import { useComposerStore } from '@/stores/zustand/useComposerStore'
 import { useEditingStore } from '@/stores/zustand/useEditingStore'
 import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
@@ -132,8 +128,8 @@ export function useConversationLoader(conversationId: string | undefined) {
         const store = useChatRequestStore.getState()
         const roleId =
           conversation.role ??
-          selectCurrentRole(store) ??
-          selectAvailableRoles(store)[0]?.id ??
+          store.currentRole ??
+          store.availableRoles[0]?.id ??
           ''
         store.setCurrentRole(roleId)
       } catch (error) {

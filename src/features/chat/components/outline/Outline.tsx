@@ -5,11 +5,7 @@ import type { TreeLayout } from "./tree-layout";
 import { NODE_H, NODE_W } from "./tree-layout";
 import { buildOutlineTree } from "./build-outline-tree";
 import { computeTreeLayout } from "./tree-layout";
-import {
-  isChatRequestActive,
-  selectChatRequestStatus,
-  useChatRequestStore,
-} from "@/stores/zustand/useChatRequestStore";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -411,8 +407,8 @@ export function OutlineButton() {
   const currentPath = useMessageTreeStore((state) => state.currentPath);
   const latestRootId = useMessageTreeStore((state) => state.latestRootId);
   const selectMessage = useMessageTreeStore((state) => state.selectMessage);
-  const status = useChatRequestStore(selectChatRequestStatus);
-  const isBusy = isChatRequestActive(status);
+  const status = useChatRequestStore((s) => s.status);
+  const isBusy = status !== "done";
 
   const outline = (() => {
     if (!open) return null;

@@ -15,6 +15,7 @@ type ServerEnv = {
   OPENAI_BASE_URL_RIGHTCODE?: string
   ANTHROPIC_API_KEY_IKUNCODE?: string
   ANTHROPIC_BASE_URL_IKUNCODE?: string
+  GEMINI_API_KEY_IKUNCODE?: string
   DMX_APIKEY?: string
   DMX_BASEURL?: string
   JINA_API_KEY?: string
@@ -96,6 +97,9 @@ export const getServerEnv = (): ServerEnv => {
     ANTHROPIC_BASE_URL_IKUNCODE:
       readString(bindings.ANTHROPIC_BASE_URL_IKUNCODE) ??
       readStringFromProcess('ANTHROPIC_BASE_URL_IKUNCODE'),
+    GEMINI_API_KEY_IKUNCODE:
+      readString(bindings.GEMINI_API_KEY_IKUNCODE) ??
+      readStringFromProcess('GEMINI_API_KEY_IKUNCODE'),
     DMX_APIKEY:
       readString(bindings.DMX_APIKEY) ??
       readStringFromProcess('DMX_APIKEY'),

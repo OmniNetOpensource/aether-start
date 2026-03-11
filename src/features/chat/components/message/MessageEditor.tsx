@@ -8,12 +8,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/useToast";
 import { useResponsive } from "@/components/ResponsiveContext";
 import { useEditingStore } from '@/stores/zustand/useEditingStore'
-import {
-  isChatRequestActive,
-  selectChatRequestStatus,
-  selectCurrentRole,
-  useChatRequestStore,
-} from "@/stores/zustand/useChatRequestStore";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from '@/stores/zustand/useComposerStore'
 import {
   buildAttachmentsFromFiles,
@@ -36,9 +31,9 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const deviceType = useResponsive();
   const isDesktop = deviceType === "desktop";
   const uploading = useComposerStore((state) => state.uploading);
-  const status = useChatRequestStore(selectChatRequestStatus);
-  const currentRole = useChatRequestStore(selectCurrentRole);
-  const isBusy = isChatRequestActive(status);
+  const status = useChatRequestStore((s) => s.status);
+  const currentRole = useChatRequestStore((s) => s.currentRole);
+  const isBusy = status !== "done";
 
   const state =
     editingState?.messageId === messageId ? editingState : null;

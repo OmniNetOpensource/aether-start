@@ -17,11 +17,7 @@ import { Button } from "@/components/ui/button";
 import {
   useMessageTreeStore,
 } from '@/stores/zustand/useMessageTreeStore'
-import {
-  isChatRequestActive,
-  selectChatRequestStatus,
-  useChatRequestStore,
-} from "@/stores/zustand/useChatRequestStore";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useEditingStore } from '@/stores/zustand/useEditingStore'
 import { MessageEditor } from "./MessageEditor";
 import { BranchNavigator } from "./BranchNavigator";
@@ -98,8 +94,6 @@ type MessageItemProps = {
   index: number;
   depth: number;
   isStreaming: boolean;
-  message?: Message | null;
-  readonly?: boolean;
 };
 
 export function MessageItem({
@@ -107,32 +101,28 @@ export function MessageItem({
   index,
   depth,
   isStreaming,
-  message: messageProp,
-  readonly = false,
 }: MessageItemProps) {
   const messageFromStore = useMessageTreeStore(
     (state) => state.messages[messageId - 1]
   );
-  const status = useChatRequestStore(selectChatRequestStatus);
+  const status = useChatRequestStore((s) => s.status);
   const isEditing = useEditingStore(
     (state) => state.editingState?.messageId === messageId,
   );
   const startEditing = useEditingStore((state) => state.startEditing);
   const retryFromMessage = useEditingStore((state) => state.retryFromMessage);
   const navigateBranch = useMessageTreeStore((state) => state.navigateBranch);
-  const message = messageProp ?? messageFromStore;
+  const message = messageFromStore;
 
-  const branchInfo = readonly
-    ? null
-    : getBranchInfoFn(useMessageTreeStore.getState().messages, messageId);
-  const isBusy = isChatRequestActive(status);
+  const branchInfo = getBranchInfoFn(useMessageTreeStore.getState().messages, messageId);
+  const isBusy = status !== "done";
 
   const handleStartEditing = () => startEditing(messageId);
 
   const handleRetry = () => retryFromMessage(messageId, depth);
 
   const handleNavigate = (direction: "prev" | "next") => {
-    if (!isChatRequestActive(status)) {
+    if (status === "done") {
       navigateBranch(messageId, depth, direction);
     }
   };
@@ -149,13 +139,13 @@ export function MessageItem({
     (block) => block.type !== "attachments",
   );
   const shouldRenderBody =
-    (isEditing && !readonly) ||
+    isEditing ||
     !isUser ||
     contentBlocks.length > 0 ||
     attachmentBlocks.length > 0;
   const contentWidthClass = isUser ? "w-full max-w-[90%]" : "w-full";
 
-  const shouldShowToolbar = !readonly && !isEditing && (isUser || !isStreaming);
+  const shouldShowToolbar = !isEditing && (isUser || !isStreaming);
 
   return (
     <div
