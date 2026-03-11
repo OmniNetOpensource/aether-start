@@ -1,4 +1,4 @@
-import { Search, Link, Wrench } from "lucide-react";
+import { Search, Globe, Wrench } from "lucide-react";
 import { useState } from "react";
 import Markdown from "@/components/Markdown";
 import {
@@ -164,7 +164,7 @@ function SearchStep({
                 <Favicon
                   key={getFaviconUrl(r.url)}
                   url={r.url}
-                  fallback={<Link className="h-4 w-4" />}
+                  fallback={<Globe className="h-4 w-4" />}
                 />
               }
               url={r.url}
@@ -231,7 +231,7 @@ function FetchStep({
         <Favicon
           key={getFaviconUrl(url)}
           url={url}
-          fallback={<Link className="h-full w-full" />}
+          fallback={<Globe className="h-full w-full" />}
         />
       }
       description={description}

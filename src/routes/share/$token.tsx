@@ -150,11 +150,12 @@ function SharedConversationPage() {
           <h1 className="text-2xl font-semibold text-(--text-primary)">
             {data.title?.trim() || "Aether 分享"}
           </h1>
-          <p className="mt-2 text-sm text-(--text-secondary)">
-            该页面为只读分享内容
-          </p>
         </div>
-        <ReadonlyMessageList messages={readonlyMessages} usePageScroll listClassName="!pb-12" />
+        <ReadonlyMessageList
+          messages={readonlyMessages}
+          usePageScroll
+          listClassName="!pb-12"
+        />
       </div>
     </main>
   );

@@ -111,10 +111,7 @@ type ImageResult = {
   data_url: string;
   mime_type: string;
   size_bytes: number;
-  source: "direct" | "screenshot";
 };
-
-const MAX_SCREENSHOT_SIZE_BYTES = 5 * 1024 * 1024;
 
 const fetchDirectImage = async (
   url: string,
@@ -150,7 +147,6 @@ const fetchDirectImage = async (
       data_url: dataUrl,
       mime_type: mimeType,
       size_bytes: arrayBuffer.byteLength,
-      source: "direct",
     };
 
     return JSON.stringify(result);
@@ -166,76 +162,6 @@ const fetchDirectImage = async (
         ? (error as Error).message
         : String(error);
     log("FETCH", `Direct image error: ${message}`);
-    return `Error: ${message}`;
-  } finally {
-    signal?.removeEventListener("abort", linkedAbort);
-    clearTimeout(timeoutId);
-  }
-};
-
-const fetchScreenshot = async (
-  url: string,
-  signal?: AbortSignal,
-): Promise<string> => {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 60_000);
-  const linkedAbort = () => controller.abort();
-  signal?.addEventListener("abort", linkedAbort);
-
-  try {
-    const response = await fetch("https://r.jina.ai/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-Return-Format": "pageshot",
-        "X-Engine": "browser",
-        "X-Timeout": "20",
-      },
-      body: JSON.stringify({ url }),
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      log(
-        "FETCH",
-        `Screenshot HTTP error: ${response.status} ${response.statusText}`,
-      );
-      return `Error: Screenshot service returned HTTP ${response.status} ${response.statusText}`;
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-
-    if (arrayBuffer.byteLength > MAX_SCREENSHOT_SIZE_BYTES) {
-      const sizeMB = (arrayBuffer.byteLength / 1024 / 1024).toFixed(1);
-      return `Error: Screenshot too large (${sizeMB}MB exceeds 5MB limit)`;
-    }
-
-    const contentType = response.headers.get("content-type") || "image/png";
-    const base64 = arrayBufferToBase64(arrayBuffer);
-    const mimeType = contentType.split(";")[0].trim();
-    const dataUrl = `data:${mimeType};base64,${base64}`;
-
-    const result: ImageResult = {
-      type: "image",
-      data_url: dataUrl,
-      mime_type: mimeType,
-      size_bytes: arrayBuffer.byteLength,
-      source: "screenshot",
-    };
-
-    return JSON.stringify(result);
-  } catch (error) {
-    const isAbortError =
-      typeof error === "object" &&
-      error !== null &&
-      "name" in error &&
-      (error as { name?: string }).name === "AbortError";
-    const message = isAbortError
-      ? "Request timed out"
-      : typeof error === "object" && error !== null
-        ? (error as Error).message
-        : String(error);
-    log("FETCH", `Screenshot error: ${message}`);
     return `Error: ${message}`;
   } finally {
     signal?.removeEventListener("abort", linkedAbort);
@@ -368,19 +294,11 @@ const fetchUrl: ToolHandler = async (args, signal) => {
     return fetchYoutubeTranscript(url, signal);
   }
 
-  const { JINA_API_KEY: apiKey } = getServerEnv();
-
-  if (!apiKey) {
-    log("FETCH", "Missing JINA_API_KEY");
-    return "Error: JINA_API_KEY is not set";
-  }
-
   if (response_type === "image") {
-    if (isDirectImageUrl(url)) {
-      return enqueueFetchUrlCall(() => fetchDirectImage(url, signal));
+    if (!isDirectImageUrl(url)) {
+      return "Error: response_type 'image' only accepts direct image URLs (e.g. .jpg, .png, .gif, .webp)";
     }
-
-    return enqueueFetchUrlCall(() => fetchScreenshot(url, signal));
+    return enqueueFetchUrlCall(() => fetchDirectImage(url, signal));
   }
 
   return enqueueFetchUrlCall(() => performFetchUrl(url, signal));
@@ -391,7 +309,7 @@ const fetchUrlSpec: ChatTool = {
   function: {
     name: "fetch_url",
     description:
-      "Fetch content from a URL with three response modes: 'markdown' converts webpage content to readable text (useful for reading articles, documentation, or API responses); 'image' returns visual content as base64 - either fetches direct image URLs (jpg, png, gif, etc.) or captures a full-page screenshot of webpages; 'youtube' extracts transcript/subtitles from a YouTube video URL.",
+      "Fetch content from a URL with three response modes: 'markdown' converts webpage content to readable text (useful for reading articles, documentation, or API responses); 'image' fetches direct image URLs only ; 'youtube' extracts transcript/subtitles from a YouTube video URL.",
     parameters: {
       type: "object",
       additionalProperties: false,
@@ -404,7 +322,7 @@ const fetchUrlSpec: ChatTool = {
           type: "string",
           enum: ["markdown", "image", "youtube"],
           description:
-            "Response format: 'markdown' for text content (converts HTML to readable text), 'image' for visual content (fetches images directly or captures webpage screenshots), 'youtube' for extracting transcript/subtitles from YouTube videos",
+            "Response format: 'markdown' for text content (converts HTML to readable text), 'image' for direct image URLs only (jpg, png, gif, webp, etc.), 'youtube' for extracting transcript/subtitles from YouTube videos",
         },
       },
       required: ["url", "response_type"],

@@ -70,7 +70,6 @@ describe('executeToolsGen for search dual-channel result routing', () => {
     getServerEnvMock.mockReset()
     getServerEnvMock.mockReturnValue({
       SERP_API_KEY: 'test-serp-key',
-      JINA_API_KEY: 'test-jina-key',
     })
   })
 

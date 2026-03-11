@@ -266,6 +266,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "anthropic",
     backend: "ikun",
   },
+  claudeHaiku45Rightcode: {
+    id: "claudeHaiku45Rightcode",
+    name: "haiku-4-5+rightcode",
+    model: "claude-haiku-4-5-20251001",
+    format: "anthropic",
+    backend: "rightcode-claude",
+  },
   claudeSonnet46Rightcode: {
     id: "claudeSonnet46Rightcode",
     name: "sonnet-4-6+rightcode",
@@ -321,7 +328,7 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
 export const getDefaultPromptId = (): string => "aether";
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = "gemini3FlashIkun";
+export const TITLE_GENERATION_MODEL_ID = "claudeHaiku45Rightcode";
 
 export const buildSystemPrompt = () => {
   const now = new Date();

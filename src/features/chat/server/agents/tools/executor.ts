@@ -10,29 +10,11 @@ import { log } from '@/server/agents/services/logger'
 import type { ChatTool, ToolHandler } from './types'
 import type { PendingToolInvocation, ToolInvocationResult, ChatServerToClientEvent } from '@/types/chat-api'
 
-// Get tool handler by name (replaces registry)
-const getToolHandler = (name: string): ToolHandler | null => {
-  const env = getServerEnv()
-
-  if (name === 'fetch_url' && env.JINA_API_KEY) {
-    return fetchUrlTool.handler
-  }
-
-  if (name === 'search' && env.SERP_API_KEY) {
-    return searchTool.handler
-  }
-
-  return null
-}
-
-// Get available tool specs (used by chat-agent.ts)
 export const getAvailableTools = (): ChatTool[] => {
   const env = getServerEnv()
   const tools: ChatTool[] = []
 
-  if (env.JINA_API_KEY) {
-    tools.push(fetchUrlTool.spec)
-  }
+  tools.push(fetchUrlTool.spec)
 
   if (env.SERP_API_KEY) {
     tools.push(searchTool.spec)
@@ -43,165 +25,118 @@ export const getAvailableTools = (): ChatTool[] => {
   return tools
 }
 
-// Call tool by name with error handling
-const callToolByName = async (
-  name: string,
-  args: unknown,
-  signal?: AbortSignal,
-): Promise<string> => {
-  const handler = getToolHandler(name)
-  if (!handler) {
-    log('TOOLS', `Tool not available: ${name}`)
-    return `Error: Tool "${name}" is not available.`
-  }
-
-  try {
-    if (signal?.aborted) {
-      throw new DOMException('Aborted', 'AbortError')
-    }
-    return await handler(args, signal)
-  } catch (error) {
-    if (
-      (error instanceof DOMException && error.name === 'AbortError') ||
-      (error instanceof Error && error.name === 'AbortError') ||
-      signal?.aborted
-    ) {
-      return 'Error: Aborted'
-    }
-
-    log(
-      'TOOLS',
-      `Error calling tool "${name}"`,
-      typeof error === 'object' && error !== null
-        ? (error as Error).stack || (error as Error).message
-        : String(error)
-    )
-    return `Error executing ${name}: ${
-      typeof error === 'object' && error !== null
-        ? (error as Error).message
-        : String(error)
-    }`
-  }
-}
-
-// Helper to check if fetch result is an error
-const isFetchResultError = (result: string) => {
-  const text = result.trim()
-  if (!text) {
-    return false
-  }
-
-  const isSystemPromptTooLong =
-    text.startsWith('[绯荤粺鎻愮ず:') &&
-    (text.includes('鍐呭杩囬暱') || text.includes('宸茬渷鐣ヤ笉杩斿洖'))
-
-  return text.startsWith('Error') || isSystemPromptTooLong
-}
-
-// Format tool result for client display
-const formatToolResultForClient = async (
-  toolName: string,
-  result: string,
-) => {
-  if (toolName !== 'fetch_url') {
-    return result
-  }
-
-  if (isFetchResultError(result)) {
-    return 'Error: Fetch failed'
-  }
-
-  // Pass through image results so the client can display them
-  try {
-    const parsed = JSON.parse(result)
-    if (parsed.type === 'image' && parsed.data_url) {
-      return JSON.stringify(parsed)
-    }
-  } catch { /* not JSON */ }
-
-  return stringifyFetchClientPayload({ type: 'fetch_result' })
-}
-
-const parseSearchResultChannels = (result: string) => {
-  try {
-    const parsed = JSON.parse(result)
-    if (typeof parsed !== 'object' || parsed === null) {
-      return null
-    }
-
-    const clientPayload = parseSearchClientPayload(
-      JSON.stringify((parsed as { client?: unknown }).client ?? {}),
-    )
-    const ai = (parsed as { ai?: unknown }).ai
-
-    if (!clientPayload || typeof ai !== 'string') {
-      return null
-    }
-
-    return {
-      client: stringifySearchClientPayload(clientPayload),
-      ai,
-    }
-  } catch {
-    return null
-  }
-}
-
-export const splitSearchResultForChannels = (result: string) => {
-  const parsed = parseSearchResultChannels(result)
-  if (!parsed) {
-    return {
-      clientResult: result,
-      modelResult: result,
-    }
-  }
-
-  return {
-    clientResult: parsed.client,
-    modelResult: parsed.ai,
-  }
-}
-
-// Execute tools with generator (used by chat-agent.ts)
 export async function* executeToolsGen(
   toolCalls: PendingToolInvocation[],
   signal?: AbortSignal,
 ): AsyncGenerator<ChatServerToClientEvent, ToolInvocationResult[]> {
   const results: ToolInvocationResult[] = []
 
-  for (const tc of toolCalls) {
+  for (const toolcall of toolCalls) {
     if (signal?.aborted) {
       throw new DOMException('Aborted', 'AbortError')
     }
 
-    yield { type: 'tool_call', tool: tc.name, args: tc.args as Record<string, object | string | number | boolean>, callId: tc.id }
+    yield { type: 'tool_call', tool: toolcall.name, args: toolcall.args as Record<string, object | string | number | boolean>, callId: toolcall.id }
 
-    const result = await callToolByName(tc.name, tc.args, signal)
+    const env = getServerEnv()
+    const handleTool: ToolHandler | null =
+      toolcall.name === 'fetch_url'
+        ? fetchUrlTool.handler
+        : toolcall.name === 'search' && env.SERP_API_KEY
+          ? searchTool.handler
+          : null
+    let result: string
+    if (!handleTool) {
+      log('TOOLS', `Tool not available: ${toolcall.name}`)
+      result = `Error: Tool "${toolcall.name}" is not available.`
+    } else {
+      try {
+        if (signal?.aborted) {
+          throw new DOMException('Aborted', 'AbortError')
+        }
+        result = await handleTool(toolcall.args, signal)
+      } catch (error) {
+        if (
+          (error instanceof DOMException && error.name === 'AbortError') ||
+          (error instanceof Error && error.name === 'AbortError') ||
+          signal?.aborted
+        ) {
+          result = 'Error: Aborted'
+        } else {
+          log(
+            'TOOLS',
+            `Error calling tool "${toolcall.name}"`,
+            typeof error === 'object' && error !== null
+              ? (error as Error).stack || (error as Error).message
+              : String(error)
+          )
+          result = `Error executing ${toolcall.name}: ${
+            typeof error === 'object' && error !== null
+              ? (error as Error).message
+              : String(error)
+          }`
+        }
+      }
+    }
 
     if (signal?.aborted) {
       throw new DOMException('Aborted', 'AbortError')
     }
 
-    const normalizedResult = typeof result === 'string' ? result : JSON.stringify(result)
-    const resultForChannels =
-      tc.name === 'search'
-        ? splitSearchResultForChannels(normalizedResult)
-        : {
-            clientResult: await formatToolResultForClient(
-              tc.name,
-              normalizedResult,
-            ),
-            modelResult: normalizedResult,
+    let resultForChannels: { clientResult: string; modelResult: string }
+    if (toolcall.name === 'search') {
+      try {
+        const parsed = JSON.parse(result)
+        if (typeof parsed !== 'object' || parsed === null) {
+          resultForChannels = { clientResult: result, modelResult: result }
+        } else {
+          const clientPayload = parseSearchClientPayload(
+            JSON.stringify((parsed as { client?: unknown }).client ?? {}),
+          )
+          const ai = (parsed as { ai?: unknown }).ai
+          if (!clientPayload || typeof ai !== 'string') {
+            resultForChannels = { clientResult: result, modelResult: result }
+          } else {
+            resultForChannels = {
+              clientResult: stringifySearchClientPayload(clientPayload),
+              modelResult: ai,
+            }
           }
+        }
+      } catch {
+        resultForChannels = { clientResult: result, modelResult: result }
+      }
+    } else {
+      let clientResult = result
+      if (toolcall.name === 'fetch_url') {
+        const text = result.trim()
+        const isFetchError = text && text.startsWith('Error')
+        if (isFetchError) {
+          clientResult = 'Error: Fetch failed'
+        } else {
+          try {
+            const parsed = JSON.parse(result)
+            if (parsed.type === 'image' && parsed.data_url) {
+              clientResult = JSON.stringify(parsed)
+            } else {
+              clientResult = stringifyFetchClientPayload({ type: 'fetch_result' })
+            }
+          } catch {
+            clientResult = stringifyFetchClientPayload({ type: 'fetch_result' })
+          }
+        }
+      }
+      resultForChannels = { clientResult, modelResult: result }
+    }
 
     yield {
       type: 'tool_result',
-      tool: tc.name,
+      tool: toolcall.name,
       result: resultForChannels.clientResult,
-      callId: tc.id,
+      callId: toolcall.id,
     }
 
-    results.push({ id: tc.id, name: tc.name, result: resultForChannels.modelResult })
+    results.push({ id: toolcall.id, name: toolcall.name, result: resultForChannels.modelResult })
   }
 
   return results

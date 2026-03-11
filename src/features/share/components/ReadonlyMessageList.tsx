@@ -49,26 +49,26 @@ export function ReadonlyMessageList({
               >
                 <div className='w-full min-w-0 flex flex-col items-start text-left'>
                   <div className={isUser ? 'w-full max-w-[90%] ml-auto' : 'w-full'}>
-                    {isUser && attachmentBlocks.length > 0 && (
-                      <div className='mb-6 flex gap-3 overflow-x-auto'>
-                        {attachmentBlocks.flatMap((block) =>
-                          block.attachments.map((attachment) => (
-                            <ImagePreview
-                              key={attachment.id}
-                              url={attachment.url}
-                              previewUrl={getAttachmentPreviewUrl(attachment)}
-                              name={attachment.name}
-                              size={attachment.size}
-                              className='shrink-0'
-                            />
-                          )),
-                        )}
-                      </div>
-                    )}
-
                     {shouldRenderBody &&
                       (isUser ? (
-                        <div className='text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
+                        <div className='rounded-lg bg-(--surface-muted) px-4 py-3'>
+                          {attachmentBlocks.length > 0 && (
+                            <div className='mb-6 flex gap-3 overflow-x-auto'>
+                              {attachmentBlocks.flatMap((block) =>
+                                block.attachments.map((attachment) => (
+                                  <ImagePreview
+                                    key={attachment.id}
+                                    url={attachment.url}
+                                    previewUrl={getAttachmentPreviewUrl(attachment)}
+                                    name={attachment.name}
+                                    size={attachment.size}
+                                    className='shrink-0'
+                                  />
+                                )),
+                              )}
+                            </div>
+                          )}
+                          <div className='text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
                           {contentBlocks.map((block, blockIndex) =>
                             block.type === 'content' ? (
                               <Markdown
@@ -77,6 +77,7 @@ export function ReadonlyMessageList({
                               />
                             ) : null,
                           )}
+                          </div>
                         </div>
                       ) : (
                         <div className='flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>

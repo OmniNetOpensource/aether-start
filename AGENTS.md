@@ -42,7 +42,7 @@ Use `pnpm` for all tasks.
 - Chat requests flow through `src/features/chat/state/chatRequestCommands.ts` -> `src/lib/chat/api/chat-orchestrator.ts` -> `src/server/agents/chat-agent.ts`. Changes to chat lifecycle usually need all three layers checked together.
 - The root app state is intentionally split: Redux owns request/session-like chat state, while Zustand owns local UI and conversation tree state.
 - Model roles and backend selection live in `src/features/chat/server/agents/services/model-provider-config.ts`. Current provider formats include Anthropic, OpenAI chat, OpenAI Responses, and Gemini. Current backend names include `rightcode-claude`, `rightcode-gemini`, `rightcode-openai`, `dmx`, and `ikun`.
-- Tool execution lives in `src/server/agents/tools/`. `search` is enabled by `SERP_API_KEY`; `fetch_url` is enabled by `JINA_API_KEY`.
+- Tool execution lives in `src/server/agents/tools/`. `search` is enabled by `SERP_API_KEY`; `fetch_url` is always available.
 - DB access is in `src/server/db/`. Conversations are user-scoped, split across meta/body tables, searchable through FTS with a CJK-friendly fallback, and support pinning plus public-share snapshots.
 - Auth uses Better Auth with Drizzle on D1. App routes under `/app` require a session. The auth API entry is `src/routes/api/auth/$.ts`.
 
@@ -65,7 +65,7 @@ Use `pnpm` for all tasks.
 
 - Local secrets typically live in `.env.local`.
 - App env loading is centralized in `src/server/env.ts`, which reads from Cloudflare bindings or `process.env`.
-- Common secrets include `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, `SERP_API_KEY`, `JINA_API_KEY`, `SUPADATA_API_KEY`, `DMX_APIKEY`, `DMX_BASEURL`, `ANTHROPIC_API_KEY_RIGHTCODE`, `ANTHROPIC_BASE_URL_RIGHTCODE`, `GEMINI_API_KEY_RIGHTCODE`, `GEMINI_BASE_URL_RIGHTCODE`, `OPENAI_API_KEY_RIGHTCODE`, `OPENAI_BASE_URL_RIGHTCODE`, `ANTHROPIC_API_KEY_IKUNCODE`, and `ANTHROPIC_BASE_URL_IKUNCODE`.
+- Common secrets include `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, `RESEND_API_KEY`, `SERP_API_KEY`, `SUPADATA_API_KEY`, `DMX_APIKEY`, `DMX_BASEURL`, `ANTHROPIC_API_KEY_RIGHTCODE`, `ANTHROPIC_BASE_URL_RIGHTCODE`, `GEMINI_API_KEY_RIGHTCODE`, `GEMINI_BASE_URL_RIGHTCODE`, `OPENAI_API_KEY_RIGHTCODE`, `OPENAI_BASE_URL_RIGHTCODE`, `ANTHROPIC_API_KEY_IKUNCODE`, and `ANTHROPIC_BASE_URL_IKUNCODE`.
 - Cloudflare bindings are configured in `wrangler.jsonc`. Important bindings are `DB` for D1 and `CHAT_ASSETS` for R2.
 - Never commit real secrets.
 

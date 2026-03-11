@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { GitBranch } from "lucide-react";
 import type { Message } from "@/types/message";
 import type { TreeLayout } from "./tree-layout";
-import { NODE_H, NODE_W } from "./tree-layout";
+import { NODE_H, NODE_W, ROOT_R } from "./tree-layout";
 import { buildOutlineTree } from "./build-outline-tree";
+import { truncateTextByWidth } from "./preview-text";
 import { computeTreeLayout } from "./tree-layout";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
@@ -11,11 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
 const SCROLL_RETRY_FRAMES = 4;
-const CANVAS_PADDING = 24;
+const CANVAS_PADDING = 32;
 const MIN_CANVAS_WIDTH = 560;
 const EMPTY_HEIGHT = 240;
-const EDGE_CURVE_Y = 26;
-const PREVIEW_LIMIT = 18;
+const PREVIEW_LIMIT = 20;
 const MIN_ZOOM = 0.15;
 const MAX_ZOOM = 3;
 const ZOOM_WHEEL_FACTOR = 0.001;
@@ -27,11 +27,6 @@ const DEFAULT_CAMERA: Camera = { x: 0, y: 0, zoom: 1 };
 const roleLabelMap: Record<Message["role"], string> = {
   user: "用户",
   assistant: "助手",
-};
-
-const roleColorMap: Record<Message["role"], string> = {
-  user: "#3b82f6",
-  assistant: "#22c55e",
 };
 
 const scrollToMessage = (messageId: number) => {
@@ -51,17 +46,12 @@ const scrollToMessage = (messageId: number) => {
   requestAnimationFrame(tryScroll);
 };
 
-const trimPreview = (text: string) => {
-  const chars = Array.from(text);
-  return chars.length <= PREVIEW_LIMIT
-    ? text
-    : `${chars.slice(0, PREVIEW_LIMIT).join("")}…`;
-};
+const trimPreview = (text: string) =>
+  truncateTextByWidth(text, PREVIEW_LIMIT, "…");
 
 const buildCurvePath = (x1: number, y1: number, x2: number, y2: number) => {
-  const c1y = y1 + EDGE_CURVE_Y;
-  const c2y = y2 - EDGE_CURVE_Y;
-  return `M ${x1} ${y1} C ${x1} ${c1y}, ${x2} ${c2y}, ${x2} ${y2}`;
+  const midY = (y1 + y2) / 2;
+  return `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
 };
 
 const edgeKey = (fromId: number, toId: number) => `${fromId}:${toId}`;
@@ -84,6 +74,7 @@ function OutlineGraph({
   const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA);
   const [isPanning, setIsPanning] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
   const panStateRef = useRef<{
     startX: number;
     startY: number;
@@ -115,7 +106,7 @@ function OutlineGraph({
     : EMPTY_HEIGHT;
 
   const fitView = useCallback(
-    (targetNode?: { x: number; y: number }) => {
+    (targetNode?: { x: number; y: number; isVirtualRoot?: boolean }) => {
       const container = containerRef.current;
       if (!container || !layout) return;
 
@@ -127,10 +118,14 @@ function OutlineGraph({
         Math.min(cw / canvasWidth, ch / canvasHeight, 1.5),
       );
       const focusX = targetNode
-        ? targetNode.x + NODE_W / 2 + CANVAS_PADDING
+        ? targetNode.x +
+          (targetNode.isVirtualRoot ? ROOT_R : NODE_W / 2) +
+          CANVAS_PADDING
         : canvasWidth / 2;
       const focusY = targetNode
-        ? targetNode.y + NODE_H / 2 + CANVAS_PADDING
+        ? targetNode.y +
+          (targetNode.isVirtualRoot ? ROOT_R : NODE_H / 2) +
+          CANVAS_PADDING
         : canvasHeight / 2;
 
       setIsAnimating(true);
@@ -260,8 +255,14 @@ function OutlineGraph({
   return (
     <div
       ref={containerRef}
-      className="relative h-[70vh] overflow-hidden rounded-md border border-(--border-primary) bg-(--surface-primary)"
-      style={{ cursor: isPanning ? "grabbing" : "grab" }}
+      className="relative h-[70vh] overflow-hidden rounded-md border border-(--border-primary)"
+      style={{
+        cursor: isPanning ? "grabbing" : "grab",
+        backgroundColor: "var(--surface-primary)",
+        backgroundImage:
+          "radial-gradient(circle, var(--border-primary) 0.8px, transparent 0.8px)",
+        backgroundSize: "20px 20px",
+      }}
     >
       <svg
         width="100%"
@@ -281,6 +282,26 @@ function OutlineGraph({
           }}
         >
           <g transform={`translate(${CANVAS_PADDING} ${CANVAS_PADDING})`}>
+            {/* SVG defs for node shadow */}
+            <defs>
+              <filter
+                id="node-shadow"
+                x="-10%"
+                y="-10%"
+                width="120%"
+                height="130%"
+              >
+                <feDropShadow
+                  dx="0"
+                  dy="1"
+                  stdDeviation="2"
+                  floodColor="#000"
+                  floodOpacity="0.08"
+                />
+              </filter>
+            </defs>
+
+            {/* Edges */}
             {layout.edges.map((edge) => {
               const isCurrentPathEdge = currentEdgeSet.has(
                 edgeKey(edge.fromId, edge.toId),
@@ -295,14 +316,45 @@ function OutlineGraph({
                       ? "var(--interactive-primary)"
                       : "var(--border-primary)"
                   }
-                  strokeWidth={isCurrentPathEdge ? 2.4 : 1.4}
-                  strokeOpacity={isCurrentPathEdge ? 0.95 : 0.8}
+                  strokeWidth={isCurrentPathEdge ? 2 : 1.2}
+                  strokeOpacity={isCurrentPathEdge ? 1 : 0.5}
                 />
               );
             })}
+
+            {/* Nodes */}
             {layout.nodes.map((node) => {
+              if (node.isVirtualRoot) {
+                return (
+                  <g
+                    key="virtual-root"
+                    transform={`translate(${node.x} ${node.y})`}
+                  >
+                    <circle
+                      cx={ROOT_R}
+                      cy={ROOT_R}
+                      r={ROOT_R}
+                      fill="var(--text-tertiary)"
+                    />
+                  </g>
+                );
+              }
+
               const isCurrentPathNode = currentPathSet.has(node.messageId);
+              const isHoveredNode = hoveredNodeId === node.messageId;
               const roleLabel = roleLabelMap[node.role];
+              const nodeFill = isCurrentPathNode
+                ? "color-mix(in srgb, var(--interactive-primary) 12%, var(--surface-primary))"
+                : "var(--surface-secondary)";
+              const nodeHoverFill = isCurrentPathNode
+                ? "color-mix(in srgb, var(--interactive-primary) 16%, var(--surface-primary))"
+                : "color-mix(in srgb, var(--surface-secondary) 84%, white)";
+              const nodeMetaText = isCurrentPathNode
+                ? "color-mix(in srgb, var(--text-primary) 72%, var(--surface-primary))"
+                : "var(--text-tertiary)";
+              const nodePreviewText = isCurrentPathNode
+                ? "var(--text-primary)"
+                : "var(--text-secondary)";
               return (
                 <g
                   key={node.messageId}
@@ -313,84 +365,80 @@ function OutlineGraph({
                     cursor: disabled ? "not-allowed" : "pointer",
                     opacity: disabled ? 0.65 : 1,
                   }}
+                  onPointerEnter={() => {
+                    if (disabled) return;
+                    setHoveredNodeId(node.messageId);
+                  }}
+                  onPointerLeave={() => setHoveredNodeId((current) =>
+                    current === node.messageId ? null : current,
+                  )}
                   onClick={() => {
                     if (disabled || didPanRef.current) return;
                     onSelect(node.messageId);
                   }}
-                  onKeyDown={(event) => {
-                    if (disabled) return;
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      onSelect(node.messageId);
-                    }
-                  }}
                 >
                   <title>{`#${node.messageId} ${roleLabel} ${node.fullPreview}`}</title>
+
+                  {/* Node card */}
                   <rect
                     x={0}
                     y={0}
                     width={NODE_W}
                     height={NODE_H}
-                    rx={8}
-                    fill={
-                      isCurrentPathNode
-                        ? "var(--surface-muted)"
-                        : "var(--surface-primary)"
-                    }
-                    stroke={
-                      isCurrentPathNode
-                        ? "var(--interactive-primary)"
-                        : "var(--border-primary)"
-                    }
-                    strokeWidth={isCurrentPathNode ? 2 : 1}
+                    rx={10}
+                    fill={isHoveredNode ? nodeHoverFill : nodeFill}
+                    filter="url(#node-shadow)"
+                    style={{ transition: "fill 120ms ease-out" }}
                   />
-                  <circle
-                    cx={12}
-                    cy={14}
-                    r={4}
-                    fill={roleColorMap[node.role]}
-                  />
+
+                  {/* Role label */}
                   <text
-                    x={22}
-                    y={17}
-                    fill="var(--text-tertiary)"
+                    x={14}
+                    y={19}
+                    fill={nodeMetaText}
                     fontSize={10}
                     fontWeight={600}
+                    fontFamily="system-ui, sans-serif"
                   >
                     {roleLabel}
                   </text>
-                  <text
-                    x={12}
-                    y={36}
-                    fill="var(--text-secondary)"
-                    fontSize={11}
-                    fontWeight={500}
-                  >
-                    {trimPreview(node.preview)}
-                  </text>
+
+                  {/* Sibling badge */}
                   {node.siblingCount > 1 && (
                     <>
                       <rect
-                        x={NODE_W - 42}
-                        y={7}
-                        width={34}
-                        height={14}
-                        rx={7}
-                        fill="var(--surface-muted)"
-                        stroke="var(--border-primary)"
-                        strokeWidth={1}
+                        x={NODE_W - 44}
+                        y={8}
+                        width={36}
+                        height={16}
+                        rx={8}
+                        fill={isHoveredNode ? nodeHoverFill : nodeFill}
+                        style={{ transition: "fill 120ms ease-out" }}
                       />
                       <text
-                        x={NODE_W - 25}
-                        y={17}
-                        fill="var(--text-tertiary)"
+                        x={NODE_W - 26}
+                        y={19}
+                        fill={nodeMetaText}
                         fontSize={9}
                         textAnchor="middle"
+                        fontFamily="system-ui, sans-serif"
                       >
                         {node.siblingIndex}/{node.siblingCount}
                       </text>
                     </>
                   )}
+
+                  {/* Preview text */}
+                  <text
+                    x={14}
+                    y={40}
+                    fill={nodePreviewText}
+                    fontSize={11}
+                    fontWeight={500}
+                    fontFamily="system-ui, sans-serif"
+                  >
+                    {trimPreview(node.preview)}
+                  </text>
                 </g>
               );
             })}

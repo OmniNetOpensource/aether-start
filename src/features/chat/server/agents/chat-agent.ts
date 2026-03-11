@@ -51,7 +51,6 @@ type ChatAgentEnv = Cloudflare.Env & {
   ANTHROPIC_BASE_URL_IKUNCODE?: string
   DMX_APIKEY?: string
   DMX_BASEURL?: string
-  JINA_API_KEY?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
 }
@@ -479,15 +478,21 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     let finalStatus: Exclude<ChatAgentStatus, 'idle' | 'running'> = 'completed'
     // 服务端维护一份“随事件不断推进”的消息树快照，结束时直接按这份快照落库。
     let workingTree = cloneTreeSnapshot(message.treeSnapshot)
-    let hasErrorEvent = false
+    let errorEventCount = 0
 
     const emitEvent = async (event: ChatServerToClientEvent) => {
       // 服务端和前端都把事件流当成事实来源：每条事件都会先应用到树，再缓存并广播。
       workingTree = processEventToTree(workingTree, event)
       if (event.type === 'error') {
-        hasErrorEvent = true
+        errorEventCount += 1
       }
       this.persistAndBroadcastEvent(message.requestId, event)
+    }
+
+    const throwIfAborted = () => {
+      if (signal.aborted) {
+        throw new DOMException('Aborted', 'AbortError')
+      }
     }
 
     try {
@@ -546,16 +551,13 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       let workingMessages = await provider.convertMessages(normalizedHistory)
 
       while (iteration < MAX_ITERATIONS) {
-        if (signal.aborted) {
-          finalStatus = 'aborted'
-          break
-        }
-
+        throwIfAborted()
         iteration += 1
         // 一轮 run 代表“带着当前上下文让模型跑到一个暂停点”：
         // 要么自然结束，要么产出待执行的工具调用。
         const generator = provider.run(workingMessages, signal)
 
+        const errorEventCountBeforeRun = errorEventCount
         let pendingToolCalls: PendingToolInvocation[] = []
         let assistantText = ''
         let runResult: ProviderRunResult = { pendingToolCalls, thinkingBlocks: [] }
@@ -575,19 +577,22 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
           }
 
           await emitEvent(value)
-
-          if (signal.aborted) {
-            finalStatus = 'aborted'
-            break
-          }
+          throwIfAborted()
         }
 
-        if (signal.aborted) {
-          finalStatus = 'aborted'
+        const modelStopReason =
+          errorEventCount > errorEventCountBeforeRun
+            ? 'error'
+            : pendingToolCalls.length > 0
+              ? 'tool_calls'
+              : 'completed'
+
+        if (modelStopReason === 'error') {
+          finalStatus = 'error'
           break
         }
 
-        if (pendingToolCalls.length === 0) {
+        if (modelStopReason === 'completed') {
           break
         }
 
@@ -602,16 +607,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
           }
           // 工具执行过程本身也可能流式产出事件，例如开始、结果、报错。
           await emitEvent(toolGenResult.value)
-
-          if (signal.aborted) {
-            finalStatus = 'aborted'
-            break
-          }
-        }
-
-        if (signal.aborted) {
-          finalStatus = 'aborted'
-          break
+          throwIfAborted()
         }
 
         // provider 负责把“本轮输出 + 工具调用 + 工具结果”拼回消息格式，
@@ -637,9 +633,6 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
       // 有些失败会以 error 事件优雅地下发，而不是直接 throw。
       // 这时也要修正最终状态，避免前端误判为成功结束。
-      if (hasErrorEvent && finalStatus === 'completed') {
-        finalStatus = 'error'
-      }
     } catch (error) {
       const isAbortError =
         (error instanceof DOMException && error.name === 'AbortError') ||

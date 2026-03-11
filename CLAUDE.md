@@ -164,7 +164,7 @@ Important files:
 Tool availability is env-driven:
 
 - `SERP_API_KEY` enables `search`
-- `JINA_API_KEY` enables `fetch_url`
+- `fetch_url` is always available (markdown via Jina Reader, image, youtube)
 
 The agent can iterate model output and tool execution up to `MAX_ITERATIONS = 200`.
 
@@ -281,7 +281,6 @@ Common app secrets:
 - `BETTER_AUTH_URL`
 - `ADMIN_EMAIL_ALLOWLIST`
 - `RESEND_API_KEY`
-- `JINA_API_KEY`
 - `SERP_API_KEY`
 - `SUPADATA_API_KEY`
 - `MINIMAX_API_KEY`

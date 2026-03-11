@@ -41,6 +41,19 @@ describe('provider stream logging', () => {
     expect(shouldLogProviderCommunication('gemini')).toBe(false)
   })
 
+  it('skips log when serialized output exceeds max chars', () => {
+    getServerEnvMock.mockReturnValue({
+      LLM_STREAM_LOGGING: 'true',
+      LLM_STREAM_LOGGING_MAX_CHARS: '50',
+    })
+
+    logProviderCommunication('openai', 'Stream chunk', {
+      chunk: 'x'.repeat(100),
+    })
+
+    expect(consoleLogSpy).not.toHaveBeenCalled()
+  })
+
   it('redacts sensitive fields before printing logs', () => {
     getServerEnvMock.mockReturnValue({
       LLM_STREAM_LOGGING: 'true',

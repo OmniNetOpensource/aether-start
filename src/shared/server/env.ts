@@ -5,6 +5,7 @@ type ServerEnv = {
   BETTER_AUTH_URL?: string
   ADMIN_EMAIL_ALLOWLIST?: string
   LLM_STREAM_LOGGING?: string
+  LLM_STREAM_LOGGING_MAX_CHARS?: string
   ANTHROPIC_API_KEY_RIGHTCODE?: string
   ANTHROPIC_BASE_URL_RIGHTCODE?: string
   ANTHROPIC_API_KEY_RIGHTCODE_SALE?: string
@@ -18,7 +19,6 @@ type ServerEnv = {
   GEMINI_API_KEY_IKUNCODE?: string
   DMX_APIKEY?: string
   DMX_BASEURL?: string
-  JINA_API_KEY?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
   RESEND_API_KEY?: string
@@ -67,6 +67,9 @@ export const getServerEnv = (): ServerEnv => {
     LLM_STREAM_LOGGING:
       readString((bindings as Record<string, unknown>).LLM_STREAM_LOGGING) ??
       readStringFromProcess('LLM_STREAM_LOGGING'),
+    LLM_STREAM_LOGGING_MAX_CHARS:
+      readString((bindings as Record<string, unknown>).LLM_STREAM_LOGGING_MAX_CHARS) ??
+      readStringFromProcess('LLM_STREAM_LOGGING_MAX_CHARS'),
     ANTHROPIC_API_KEY_RIGHTCODE:
       readString(bindings.ANTHROPIC_API_KEY_RIGHTCODE) ??
       readStringFromProcess('ANTHROPIC_API_KEY_RIGHTCODE'),
@@ -106,8 +109,6 @@ export const getServerEnv = (): ServerEnv => {
     DMX_BASEURL:
       readString(bindings.DMX_BASEURL) ??
       readStringFromProcess('DMX_BASEURL'),
-    JINA_API_KEY:
-      readString(bindings.JINA_API_KEY) ?? readStringFromProcess('JINA_API_KEY'),
     SERP_API_KEY:
       readString(bindings.SERP_API_KEY) ?? readStringFromProcess('SERP_API_KEY'),
     SUPADATA_API_KEY:
