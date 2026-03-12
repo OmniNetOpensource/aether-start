@@ -179,13 +179,19 @@ const performFetchUrl = async (
   const linkedAbort = () => controller.abort();
   signal?.addEventListener("abort", linkedAbort);
 
+  const { JINA_API_KEY } = getServerEnv();
+  const headers: Record<string, string> = {
+    "X-Token-Budget": "200000",
+    "X-Engine": "browser",
+    "X-Timeout": "30",
+  };
+  if (JINA_API_KEY) {
+    headers["Authorization"] = `Bearer ${JINA_API_KEY}`;
+  }
+
   try {
     const jinaResponse = await fetch(jinaUrl, {
-      headers: {
-        "X-Token-Budget": "200000",
-        "X-Engine": "browser",
-        "X-Timeout": "30",
-      },
+      headers,
       signal: controller.signal,
     });
 

@@ -1,5 +1,4 @@
 import { Search, Globe, Wrench } from "lucide-react";
-import { useState } from "react";
 import Markdown from "@/components/Markdown";
 import {
   parseSearchClientPayload,
@@ -73,37 +72,6 @@ function getStatusText(
   return "完成";
 }
 
-// Favicon image component with fallback
-function getFaviconUrl(url: string): string {
-  try {
-    const domain = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
-  } catch {
-    return "";
-  }
-}
-
-function Favicon({
-  url,
-  fallback,
-}: {
-  url: string;
-  fallback?: React.ReactNode;
-}) {
-  const [hasError, setHasError] = useState(false);
-  const faviconSrc = getFaviconUrl(url);
-
-  if (!faviconSrc || hasError) return <>{fallback}</>;
-  return (
-    <img
-      src={faviconSrc}
-      alt=""
-      className="h-4 w-4 rounded-sm"
-      onError={() => setHasError(true)}
-    />
-  );
-}
-
 // Render a thinking step
 function ThinkingStep({
   text,
@@ -160,13 +128,6 @@ function SearchStep({
             <ChainOfThoughtSearchResult
               key={`${stepKey}-result-${i}`}
               href={r.url}
-              icon={
-                <Favicon
-                  key={getFaviconUrl(r.url)}
-                  url={r.url}
-                  fallback={<Globe className="h-4 w-4" />}
-                />
-              }
               url={r.url}
             >
               {r.title}
@@ -227,13 +188,7 @@ function FetchStep({
 
   return (
     <ChainOfThoughtStep
-      icon={
-        <Favicon
-          key={getFaviconUrl(url)}
-          url={url}
-          fallback={<Globe className="h-full w-full" />}
-        />
-      }
+      icon={<Globe className="h-full w-full" />}
       description={description}
       status={stepStatus}
       hideConnector={hideConnector}

@@ -21,6 +21,7 @@ type ServerEnv = {
   DMX_BASEURL?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
+  JINA_API_KEY?: string
   RESEND_API_KEY?: string
   MINIMAX_API_KEY?: string
   DB?: D1Database
@@ -114,6 +115,9 @@ export const getServerEnv = (): ServerEnv => {
     SUPADATA_API_KEY:
       readString(bindings.SUPADATA_API_KEY) ??
       readStringFromProcess('SUPADATA_API_KEY'),
+    JINA_API_KEY:
+      readString((bindings as Record<string, unknown>).JINA_API_KEY) ??
+      readStringFromProcess('JINA_API_KEY'),
     RESEND_API_KEY:
       readString(bindings.RESEND_API_KEY) ??
       readStringFromProcess('RESEND_API_KEY'),
