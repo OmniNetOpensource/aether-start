@@ -1,4 +1,3 @@
-
 import {
   ClipboardEvent,
   KeyboardEvent,
@@ -6,12 +5,18 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { startChatRequest, stopActiveChatRequest } from "@/lib/chat/api/chat-orchestrator";
+import {
+  startChatRequest,
+  stopActiveChatRequest,
+} from "@/lib/chat/api/chat-orchestrator";
 import { buildUserBlocks } from "@/lib/conversation/tree/block-operations";
 import { computeMessagesFromPath } from "@/lib/conversation/tree/message-tree";
-import { useComposerStore } from '@/stores/zustand/useComposerStore'
+import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useIsNewChat, useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import {
+  useIsNewChat,
+  useMessageTreeStore,
+} from "@/stores/zustand/useMessageTreeStore";
 import { setComposerTextarea } from "@/lib/chat/composer-focus";
 import { ComposerToolbar } from "./ComposerToolbar";
 import { PeekingAttachments } from "./PeekingAttachments";
@@ -22,8 +27,12 @@ import { useResponsive } from "@/components/ResponsiveContext";
 export function Composer() {
   const input = useComposerStore((state) => state.input);
   const status = useChatRequestStore((s) => s.status);
-  const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
-  const uploadingAttachments = useComposerStore((state) => state.uploadingAttachments);
+  const pendingAttachments = useComposerStore(
+    (state) => state.pendingAttachments,
+  );
+  const uploadingAttachments = useComposerStore(
+    (state) => state.uploadingAttachments,
+  );
   const uploading = useComposerStore((state) => state.uploading);
   const currentRole = useChatRequestStore((s) => s.currentRole);
   const deviceType = useResponsive();
@@ -48,7 +57,7 @@ export function Composer() {
 
     const treeStore = useMessageTreeStore.getState();
     const result = treeStore._addMessage(
-      'user',
+      "user",
       buildUserBlocks(input, pendingAttachments),
     );
     const pathMessages = computeMessagesFromPath(
@@ -60,7 +69,7 @@ export function Composer() {
 
     await startChatRequest({
       messages: pathMessages,
-      titleSource: { role: 'user', blocks: result.addedMessage.blocks },
+      titleSource: { role: "user", blocks: result.addedMessage.blocks },
     });
   };
 
@@ -73,21 +82,26 @@ export function Composer() {
 
   useEffect(() => {
     const handleGlobalKeyDown = (e: globalThis.KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return
-      if (e.key.length !== 1) return
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key.length !== 1) return;
 
-      const tag = (e.target as HTMLElement)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-      if ((e.target as HTMLElement)?.isContentEditable) return
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      if ((e.target as HTMLElement)?.isContentEditable) return;
 
-      textareaRef.current?.focus()
-    }
-    document.addEventListener('keydown', handleGlobalKeyDown)
-    return () => document.removeEventListener('keydown', handleGlobalKeyDown)
-  }, [])
+      textareaRef.current?.focus();
+    };
+    document.addEventListener("keydown", handleGlobalKeyDown);
+    return () => document.removeEventListener("keydown", handleGlobalKeyDown);
+  }, []);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Tab" && event.shiftKey && !event.ctrlKey && !event.metaKey) {
+    if (
+      event.key === "Tab" &&
+      event.shiftKey &&
+      !event.ctrlKey &&
+      !event.metaKey
+    ) {
       event.preventDefault();
       useChatRequestStore.getState().cyclePrompt();
       return;
@@ -99,7 +113,6 @@ export function Composer() {
       void submitMessage();
     }
   };
-
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
     const clipboardData = event.clipboardData;
@@ -150,9 +163,7 @@ export function Composer() {
   const hasRole = !!currentRole;
   const sendDisabled = isBusy
     ? false
-    : (!hasText && !hasAttachments) ||
-      !hasRole ||
-      uploading;
+    : (!hasText && !hasAttachments) || !hasRole || uploading;
   const isNewchat = useIsNewChat();
 
   if (isNewchat) {
@@ -160,8 +171,8 @@ export function Composer() {
       <form
         key="form-initial"
         onSubmit={(e) => {
-          e.preventDefault()
-          void submitMessage()
+          e.preventDefault();
+          void submitMessage();
         }}
         className="flex flex-col flex-1 items-center justify-center py-12 w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
@@ -191,7 +202,6 @@ export function Composer() {
               enterKeyHint={isDesktop ? undefined : "enter"}
               className="min-h-10 max-h-50 overflow-y-auto flex-1 resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
             />
-
           </div>
 
           <ComposerToolbar
@@ -209,18 +219,11 @@ export function Composer() {
       key="composer-wrapper"
       className="absolute inset-x-0 bottom-0 z-(--z-composer) pb-4 md:pb-6"
     >
-      <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-40"
-        style={{
-          background:
-            "linear-gradient(to top, var(--surface-primary) 0%, color-mix(in srgb, var(--surface-primary) 90%, transparent) 60%, transparent 100%)",
-        }}
-      />
       <form
         key="form-bottom"
         onSubmit={(e) => {
-          e.preventDefault()
-          void submitMessage()
+          e.preventDefault();
+          void submitMessage();
         }}
         className="relative flex flex-col w-[90%] md:w-[70%] lg:w-[50%] mx-auto gap-3"
       >
@@ -234,32 +237,30 @@ export function Composer() {
           </div>
         )}
         <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-sidebar p-2 transition-all">
+          <div className="flex w-full items-end gap-2">
+            <Textarea
+              ref={textareaRef}
+              id="message-input"
+              name="message"
+              value={input}
+              onChange={(event) => {
+                setInput(event.target.value);
+              }}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              rows={1}
+              placeholder="输入您的消息..."
+              enterKeyHint={isDesktop ? undefined : "enter"}
+              className="min-h-10 max-h-50 overflow-y-auto flex-1 resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
+            />
+          </div>
 
-        <div className="flex w-full items-end gap-2">
-          <Textarea
-            ref={textareaRef}
-            id="message-input"
-            name="message"
-            value={input}
-            onChange={(event) => {
-              setInput(event.target.value);
-            }}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
-            rows={1}
-            placeholder="输入您的消息..."
-            enterKeyHint={isDesktop ? undefined : "enter"}
-            className="min-h-10 max-h-50 overflow-y-auto flex-1 resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
+          <ComposerToolbar
+            status={status}
+            sendDisabled={sendDisabled}
+            onSendButtonClick={handleSendButtonClick}
           />
-
         </div>
-
-        <ComposerToolbar
-          status={status}
-          sendDisabled={sendDisabled}
-          onSendButtonClick={handleSendButtonClick}
-        />
-      </div>
       </form>
     </div>
   );

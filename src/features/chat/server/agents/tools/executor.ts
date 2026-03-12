@@ -45,23 +45,23 @@ export async function* executeToolsGen(
         : toolcall.name === 'search' && env.SERP_API_KEY
           ? searchTool.handler
           : null
-    let result: string
+    let rawResult: string
     if (!handleTool) {
       log('TOOLS', `Tool not available: ${toolcall.name}`)
-      result = `Error: Tool "${toolcall.name}" is not available.`
+      rawResult = `Error: Tool "${toolcall.name}" is not available.`
     } else {
       try {
         if (signal?.aborted) {
           throw new DOMException('Aborted', 'AbortError')
         }
-        result = await handleTool(toolcall.args, signal)
+        rawResult = await handleTool(toolcall.args, signal)
       } catch (error) {
         if (
           (error instanceof DOMException && error.name === 'AbortError') ||
           (error instanceof Error && error.name === 'AbortError') ||
           signal?.aborted
         ) {
-          result = 'Error: Aborted'
+          rawResult = 'Error: Aborted'
         } else {
           log(
             'TOOLS',
@@ -70,7 +70,7 @@ export async function* executeToolsGen(
               ? (error as Error).stack || (error as Error).message
               : String(error)
           )
-          result = `Error executing ${toolcall.name}: ${
+          rawResult = `Error executing ${toolcall.name}: ${
             typeof error === 'object' && error !== null
               ? (error as Error).message
               : String(error)
@@ -83,39 +83,39 @@ export async function* executeToolsGen(
       throw new DOMException('Aborted', 'AbortError')
     }
 
-    let resultForChannels: { clientResult: string; modelResult: string }
+    let toolResult: { client: string; model: string }
     if (toolcall.name === 'search') {
       try {
-        const parsed = JSON.parse(result)
+        const parsed = JSON.parse(rawResult)
         if (typeof parsed !== 'object' || parsed === null) {
-          resultForChannels = { clientResult: result, modelResult: result }
+          toolResult = { client: rawResult, model: rawResult }
         } else {
           const clientPayload = parseSearchClientPayload(
             JSON.stringify((parsed as { client?: unknown }).client ?? {}),
           )
           const ai = (parsed as { ai?: unknown }).ai
           if (!clientPayload || typeof ai !== 'string') {
-            resultForChannels = { clientResult: result, modelResult: result }
+            toolResult = { client: rawResult, model: rawResult }
           } else {
-            resultForChannels = {
-              clientResult: stringifySearchClientPayload(clientPayload),
-              modelResult: ai,
+            toolResult = {
+              client: stringifySearchClientPayload(clientPayload),
+              model: ai,
             }
           }
         }
       } catch {
-        resultForChannels = { clientResult: result, modelResult: result }
+        toolResult = { client: rawResult, model: rawResult }
       }
     } else {
-      let clientResult = result
+      let clientResult = rawResult
       if (toolcall.name === 'fetch_url') {
-        const text = result.trim()
+        const text = rawResult.trim()
         const isFetchError = text && text.startsWith('Error')
         if (isFetchError) {
           clientResult = 'Error: Fetch failed'
         } else {
           try {
-            const parsed = JSON.parse(result)
+            const parsed = JSON.parse(rawResult)
             if (parsed.type === 'image' && parsed.data_url) {
               clientResult = JSON.stringify(parsed)
             } else {
@@ -126,17 +126,17 @@ export async function* executeToolsGen(
           }
         }
       }
-      resultForChannels = { clientResult, modelResult: result }
+      toolResult = { client: clientResult, model: rawResult }
     }
 
     yield {
       type: 'tool_result',
       tool: toolcall.name,
-      result: resultForChannels.clientResult,
+      result: toolResult.client,
       callId: toolcall.id,
     }
 
-    results.push({ id: toolcall.id, name: toolcall.name, result: resultForChannels.modelResult })
+    results.push({ id: toolcall.id, name: toolcall.name, result: toolResult.model })
   }
 
   return results
