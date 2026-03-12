@@ -309,6 +309,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "openai",
     backend: "openrouter",
   },
+  gpt5NanoOpenrouter: {
+    id: "gpt5NanoOpenrouter",
+    name: "gpt-5-nano+openrouter",
+    model: "openai/gpt-5-nano",
+    format: "openai",
+    backend: "openrouter",
+  },
 };
 
 export const getAvailableModels = (): { id: string; name: string }[] =>
@@ -350,7 +357,7 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
 export const getDefaultPromptId = (): string => "aether";
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = "claudeHaiku45Rightcode";
+export const TITLE_GENERATION_MODEL_ID = "gpt5NanoOpenrouter";
 
 export const buildSystemPrompt = () => {
   const now = new Date();

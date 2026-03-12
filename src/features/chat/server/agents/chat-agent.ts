@@ -31,7 +31,6 @@ import type { Message, SerializedMessage } from '@/types/message'
 // 前端恢复连接、轮询状态、发起中断时，都会依赖这里的信息判断该怎么继续。
 type ChatAgentState = {
   status: ChatAgentStatus
-  currentRequestId: string | null
   conversationId: string | null
   ownerUserId: string | null
   updatedAt: number
@@ -110,7 +109,7 @@ const toEventError = (message: string): ChatServerToClientEvent => ({
 // 1. conversationHistory：给模型推理用的线性消息历史
 // 2. treeSnapshot：给服务端维护消息树和最终落库用的完整快照
 type ChatRequestBody = {
-  requestId: string
+  idempotencyKey: string
   conversationId: string
   role: string
   promptId?: string
@@ -122,7 +121,7 @@ type ChatRequestBody = {
 const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   if (!isObject(body)) return null
 
-  const requestId = asString(body.requestId)
+  const idempotencyKey = asString(body.idempotencyKey)
   const conversationId = asString(body.conversationId)
   const role = asString(body.role)
   const promptId = asString(body.promptId) ?? undefined
@@ -148,7 +147,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
     treeSnapshot && typeof treeSnapshot.nextId === 'number' ? treeSnapshot.nextId : null
 
   if (
-    !requestId ||
+    !idempotencyKey ||
     !conversationId ||
     !role ||
     !conversationHistory ||
@@ -160,7 +159,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   }
 
   return {
-    requestId,
+    idempotencyKey,
     conversationId,
     role,
     promptId,
@@ -186,10 +185,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   // eventCache 用来支持断线重连。前端带上 lastEventId 后，可以从这里补拉遗漏事件。
   private eventCache: PersistedChatEvent[] = []
   private nextEventId = 1
-  private eventCacheClearTimer: ReturnType<typeof setTimeout> | null = null
   private runtimeState: ChatAgentState = {
     status: 'idle',
-    currentRequestId: null,
     conversationId: null,
     ownerUserId: null,
     updatedAt: Date.now(),
@@ -245,10 +242,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
     // 空子路径只返回轻量状态，给前端恢复页面时探测“这个会话是不是还在跑”。
     if (request.method === 'GET' && sub === '') {
-      return Response.json({
-        status: this.runtimeState.status,
-        requestId: this.runtimeState.currentRequestId ?? undefined,
-      })
+      return Response.json({ status: this.runtimeState.status })
     }
 
     return new Response('Not found', { status: 404 })
@@ -281,12 +275,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     }
 
     // 同一个会话实例一次只允许一个请求运行。
-    // 如果前端重复提交，把当前 requestId 回给它，让它改走同步/恢复逻辑。
-    if (this.runtimeState.status === 'running' && this.runtimeState.currentRequestId) {
-      return Response.json(
-        { type: 'busy', currentRequestId: this.runtimeState.currentRequestId },
-        { status: 409 },
-      )
+    if (this.runtimeState.status === 'running') {
+      return Response.json({ type: 'busy' }, { status: 409 })
     }
 
     // URL 定位到的 Durable Object 实例和 body 里声明的 conversationId 必须一致。
@@ -307,14 +297,13 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     }
 
     // 新请求开始后，旧请求的事件缓存已经没有意义，先清掉避免重连时串事件。
-    this.cancelEventCacheClear()
     this.eventCache = []
 
     // quota 在请求被“正式接受”时扣减，避免并发提交时出现重复接受。
     const consumeResult = await consumePromptQuotaOnAccept(
       this.env.DB,
       userId,
-      message.requestId,
+      message.idempotencyKey,
     )
     if (!consumeResult.ok) {
       let errorMessage: string
@@ -332,7 +321,6 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     // 进入 running 状态后，状态探测和 /events 补连都会把这个会话视为仍在生成中。
     this.runtimeState = {
       status: 'running',
-      currentRequestId: message.requestId,
       conversationId: message.conversationId,
       ownerUserId: this.runtimeState.ownerUserId ?? userId,
       updatedAt: Date.now(),
@@ -343,7 +331,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     const writer = writable.getWriter()
     this.writers.add(writer)
 
-    this.broadcast('chat_started', { requestId: message.requestId })
+    this.broadcast('chat_started', {})
 
     // 在模型真正开始跑之前先把用户刚发出的消息落库。
     // 这样哪怕后续 provider 初始化失败，用户输入也不会丢。
@@ -424,7 +412,6 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     const events = this.listEvents(lastEventId)
     this.sendSSE(writer, 'sync_response', {
       status: this.runtimeState.status,
-      requestId: this.runtimeState.currentRequestId ?? undefined,
       events,
     })
 
@@ -455,14 +442,9 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     }
 
     const body = await request.json().catch(() => ({})) as Record<string, unknown>
-    const requestId = asString(body.requestId) ?? undefined
+    void body
 
     if (this.runtimeState.status !== 'running' || !this.abortController) {
-      return Response.json({ ok: true })
-    }
-
-    // 如果前端带了 requestId，就只中断对应那一次请求，避免误伤新的运行。
-    if (requestId && this.runtimeState.currentRequestId && requestId !== this.runtimeState.currentRequestId) {
       return Response.json({ ok: true })
     }
 
@@ -488,7 +470,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       if (event.type === 'error') {
         errorEventCount += 1
       }
-      this.persistAndBroadcastEvent(message.requestId, event)
+      this.persistAndBroadcastEvent(event)
     }
 
     const throwIfAborted = () => {
@@ -663,10 +645,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         })
       }
 
-      this.broadcast('chat_finished', {
-        requestId: message.requestId,
-        status: finalStatus,
-      })
+      this.broadcast('chat_finished', { status: finalStatus })
 
       this.runtimeState = {
         ...this.runtimeState,
@@ -674,55 +653,22 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         updatedAt: Date.now(),
       }
 
-      // 会话结束后保留一小段时间缓存，给刷新页面或断线重连补拉尾部事件。
-      this.scheduleEventCacheClear(message.requestId)
+      this.eventCache = []
     }
   }
 
   // ── Event cache ──────────────────────────────────────────────────────
 
   private listEvents(lastEventId: number): PersistedChatEvent[] {
-    // 这里直接做 eventId > lastEventId 过滤，所以负数会自然回放全部缓存。
     return this.eventCache.filter((e) => e.eventId > lastEventId)
   }
 
-  private persistAndBroadcastEvent(requestId: string, event: ChatServerToClientEvent) {
+  private persistAndBroadcastEvent(event: ChatServerToClientEvent) {
     const eventId = this.nextEventId++
     const createdAt = Date.now()
 
-    // eventCache 是断线补拉来源，broadcast 是实时来源，两边必须写入同一条事件。
-    this.eventCache.push({ eventId, requestId, event, createdAt })
-
-    this.broadcast('chat_event', { eventId, requestId, event })
-  }
-
-  private cancelEventCacheClear() {
-    if (!this.eventCacheClearTimer) {
-      return
-    }
-
-    clearTimeout(this.eventCacheClearTimer)
-    this.eventCacheClearTimer = null
-  }
-
-  private scheduleEventCacheClear(requestId: string) {
-    this.cancelEventCacheClear()
-
-    this.eventCacheClearTimer = setTimeout(() => {
-      this.eventCacheClearTimer = null
-
-      // 如果期间已经开始了新请求，就不能误删新请求的缓存。
-      if (this.runtimeState.currentRequestId !== requestId) {
-        return
-      }
-
-      // 运行中的请求还需要缓存给 /events 做重连补拉。
-      if (this.runtimeState.status === 'running') {
-        return
-      }
-
-      this.eventCache = []
-    }, 30_000)
+    this.eventCache.push({ eventId, event, createdAt })
+    this.broadcast('chat_event', { eventId, event })
   }
 
   // ── Persistence ──────────────────────────────────────────────────────

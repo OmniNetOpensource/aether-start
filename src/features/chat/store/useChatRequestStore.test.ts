@@ -13,7 +13,6 @@ describe('useChatRequestStore', () => {
   it('starts with the expected initial state', () => {
     expect(useChatRequestStore.getState()).toMatchObject({
       requestPhase: 'done',
-      activeRequestId: null,
       connectionState: 'idle',
     })
   })
@@ -22,12 +21,10 @@ describe('useChatRequestStore', () => {
     const store = useChatRequestStore.getState()
 
     store.setRequestPhase('sending')
-    store.setActiveRequestId('req-1')
     store.setConnectionState('connecting')
 
     expect(useChatRequestStore.getState()).toMatchObject({
       requestPhase: 'sending',
-      activeRequestId: 'req-1',
       connectionState: 'connecting',
     })
   })
@@ -37,13 +34,11 @@ describe('useChatRequestStore', () => {
 
     store.setConnectionState('connected')
     store.setRequestPhase('answering')
-    store.setActiveRequestId('req-9')
     store.clearRequestState()
 
     expect(useChatRequestStore.getState()).toMatchObject({
       connectionState: 'connected',
       requestPhase: 'done',
-      activeRequestId: null,
     })
   })
 })

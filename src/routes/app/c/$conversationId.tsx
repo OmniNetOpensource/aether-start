@@ -1,145 +1,87 @@
-import { useEffect } from 'react'
-import { createFileRoute } from '@tanstack/react-router'
-import { Composer } from '@/features/chat/components/composer/Composer'
-import { MessageList } from '@/features/chat/components/message/MessageList'
+import { useEffect } from "react";
+import { createFileRoute } from "@tanstack/react-router";
+import { Composer } from "@/features/chat/components/composer/Composer";
+import { MessageList } from "@/features/chat/components/message/MessageList";
 import {
   resetLastEventId,
   resumeRunningConversation,
-} from '@/features/chat/lib/api/chat-orchestrator'
-import { useChatRequestStore } from '@/features/chat/store/useChatRequestStore'
-import { useConversationLoader } from '@/features/sidebar/hooks/useConversationLoader'
-import { useChatSessionStore } from '@/features/sidebar/store/useChatSessionStore'
+} from "@/features/chat/lib/api/chat-orchestrator";
+import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
+import { useConversationLoader } from "@/features/sidebar/hooks/useConversationLoader";
+import { useChatSessionStore } from "@/features/sidebar/store/useChatSessionStore";
 
-export const Route = createFileRoute('/app/c/$conversationId')({
+export const Route = createFileRoute("/app/c/$conversationId")({
   component: ConversationPage,
-})
-
-const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 15000]
+});
 
 export function ConversationPage() {
-  const { conversationId } = Route.useParams()
-  const { isLoading } = useConversationLoader(conversationId)
-  const conversations = useChatSessionStore((state) => state.conversations)
-  const title = conversations.find((item) => item.id === conversationId)?.title
+  const { conversationId } = Route.useParams();
+  const { isLoading } = useConversationLoader(conversationId);
+  const conversations = useChatSessionStore((state) => state.conversations);
+  const title = conversations.find((item) => item.id === conversationId)?.title;
 
   useEffect(() => {
-    const defaultTitle = 'Aether'
+    const defaultTitle = "Aether";
 
     if (title) {
       const truncatedTitle =
-        title.length > 50 ? `${title.slice(0, 50)}...` : title
-      document.title = `${truncatedTitle} - Aether`
+        title.length > 50 ? `${title.slice(0, 50)}...` : title;
+      document.title = `${truncatedTitle} - Aether`;
     } else {
-      document.title = defaultTitle
+      document.title = defaultTitle;
     }
 
     return () => {
-      document.title = defaultTitle
-    }
-  }, [title])
+      document.title = defaultTitle;
+    };
+  }, [title]);
 
   useEffect(() => {
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null
-    let reconnectAttempt = 0
-    const abortController = new AbortController()
+    const abortController = new AbortController();
 
-    const clearReconnectTimer = () => {
-      if (reconnectTimer) {
-        clearTimeout(reconnectTimer)
-        reconnectTimer = null
+    const connectSseStream = () => {
+      if (useChatRequestStore.getState().connectionState === "connecting") {
+        return;
       }
-    }
-
-    const connectSseStream = (markConnecting = false) => {
-      const { connectionState, setConnectionState } =
-        useChatRequestStore.getState()
-
-      if (abortController.signal.aborted || connectionState === 'connecting') {
-        return
-      }
-
-      if (markConnecting) {
-        setConnectionState('connecting')
-      }
+      useChatRequestStore.getState().setConnectionState("connecting");
 
       resumeRunningConversation(conversationId, abortController.signal).catch(
         () => {},
-      )
-    }
-
-    const syncReconnect = () => {
-      clearReconnectTimer()
-
-      const { connectionState, requestPhase } = useChatRequestStore.getState()
-      if (
-        requestPhase === 'done' ||
-        connectionState === 'idle' ||
-        connectionState === 'connected'
-      ) {
-        reconnectAttempt = 0
-        return
-      }
-
-      if (connectionState !== 'disconnected') {
-        return
-      }
-
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        return
-      }
-
-      const delay =
-        RECONNECT_DELAYS_MS[
-          Math.min(reconnectAttempt, RECONNECT_DELAYS_MS.length - 1)
-        ]
-
-      reconnectTimer = setTimeout(() => {
-        reconnectTimer = null
-        reconnectAttempt += 1
-        connectSseStream(true)
-      }, delay)
-    }
+      );
+    };
 
     const handleOffline = () => {
-      clearReconnectTimer()
-      const { requestPhase, setConnectionState } =
-        useChatRequestStore.getState()
-      if (requestPhase === 'done') {
-        return
+      const { requestPhase } = useChatRequestStore.getState();
+      if (requestPhase === "done") {
+        return;
       }
-      setConnectionState('disconnected')
-    }
+      useChatRequestStore.getState().setConnectionState("disconnected");
+    };
 
     const handleOnline = () => {
-      clearReconnectTimer()
-      const { connectionState, requestPhase } = useChatRequestStore.getState()
-      if (requestPhase === 'done' || connectionState === 'connecting') {
-        return
+      const { requestPhase } = useChatRequestStore.getState();
+      if (requestPhase === "done") {
+        return;
       }
-      connectSseStream(true)
-    }
 
-    const unsubscribeRequestState = useChatRequestStore.subscribe(syncReconnect)
+      connectSseStream();
+    };
 
-    syncReconnect()
-    window.addEventListener('offline', handleOffline)
-    window.addEventListener('online', handleOnline)
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
 
     return () => {
-      unsubscribeRequestState()
-      clearReconnectTimer()
-      reconnectAttempt = 0
-      window.removeEventListener('offline', handleOffline)
-      window.removeEventListener('online', handleOnline)
-      abortController.abort()
-      resetLastEventId()
-      useChatRequestStore.getState().clearRequestState()
-      useChatRequestStore.getState().setConnectionState('idle')
-    }
-  }, [conversationId])
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
+      abortController.abort();
+      resetLastEventId();
+      useChatRequestStore.getState().clearRequestState();
+      useChatRequestStore.getState().setConnectionState("idle");
+    };
+  }, [conversationId]);
 
   if (isLoading) {
-    return null
+    return null;
   }
 
   return (
@@ -151,5 +93,5 @@ export function ConversationPage() {
         </div>
       </main>
     </div>
-  )
+  );
 }

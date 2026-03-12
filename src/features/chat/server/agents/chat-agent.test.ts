@@ -70,12 +70,11 @@ import { ChatAgent } from './chat-agent'
 type TestChatAgent = {
   runtimeState: {
     status: 'running'
-    currentRequestId: string
     conversationId: string
     ownerUserId: string
     updatedAt: number
   }
-  persistAndBroadcastEvent: (requestId: string, event: { type: 'content'; content: string }) => void
+  persistAndBroadcastEvent: (event: { type: 'content'; content: string }) => void
   persistConversationSnapshot: (
     conversationId: string,
     userId: string,
@@ -106,7 +105,6 @@ const createAgent = (status: 'running' | 'completed' = 'running') => {
   agent.ensureInitialized('conv-1')
   agent.runtimeState = {
     status,
-    currentRequestId: 'req-2',
     conversationId: 'conv-1',
     ownerUserId: 'user-1',
     updatedAt: Date.now(),
@@ -144,15 +142,15 @@ describe('ChatAgent sync replay via GET /events', () => {
   it('returns only the events newer than the client lastEventId', async () => {
     const agent = createAgent('completed')
 
-    agent.persistAndBroadcastEvent('req-1', {
+    agent.persistAndBroadcastEvent({
       type: 'content',
       content: 'one',
     })
-    agent.persistAndBroadcastEvent('req-1', {
+    agent.persistAndBroadcastEvent({
       type: 'content',
       content: 'two',
     })
-    agent.persistAndBroadcastEvent('req-2', {
+    agent.persistAndBroadcastEvent({
       type: 'content',
       content: 'three',
     })
@@ -174,11 +172,9 @@ describe('ChatAgent sync replay via GET /events', () => {
 
     const syncData = events[0].data as {
       status: string
-      requestId: string
       events: Array<{ eventId: number; event: { content: string } }>
     }
     expect(syncData.status).toBe('completed')
-    expect(syncData.requestId).toBe('req-2')
     expect(syncData.events).toHaveLength(2)
     expect(syncData.events.map((e) => e.eventId)).toEqual([2, 3])
     expect(syncData.events.map((e) => e.event.content)).toEqual(['two', 'three'])
@@ -187,11 +183,11 @@ describe('ChatAgent sync replay via GET /events', () => {
   it('treats negative lastEventId as 0 and replays the whole cache', async () => {
     const agent = createAgent('completed')
 
-    agent.persistAndBroadcastEvent('req-1', {
+    agent.persistAndBroadcastEvent({
       type: 'content',
       content: 'one',
     })
-    agent.persistAndBroadcastEvent('req-1', {
+    agent.persistAndBroadcastEvent({
       type: 'content',
       content: 'two',
     })
@@ -214,11 +210,11 @@ describe('ChatAgent sync replay via GET /events', () => {
   it('returns an empty replay when the client already has the latest event', async () => {
     const agent = createAgent('completed')
 
-    agent.persistAndBroadcastEvent('req-1', {
+    agent.persistAndBroadcastEvent({
       type: 'content',
       content: 'one',
     })
-    agent.persistAndBroadcastEvent('req-1', {
+    agent.persistAndBroadcastEvent({
       type: 'content',
       content: 'two',
     })

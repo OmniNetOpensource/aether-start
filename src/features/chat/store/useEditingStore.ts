@@ -111,7 +111,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
 
         const selectedRole = useChatSessionStore.getState().currentRole;
         if (!selectedRole) {
-          toast.warning("璇峰厛閫夋嫨瑙掕壊");
+          toast.warning('请先选择角色');
           return;
         }
 
@@ -122,7 +122,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         const trimmed = editingState.editedContent.trim();
         const attachments = editingState.editedAttachments;
         if (!trimmed && attachments.length === 0) {
-          toast.warning("璇疯緭鍏ュ唴瀹规垨娣诲姞闄勪欢");
+          toast.warning('请输入内容或添加附件');
           return;
         }
 
@@ -167,7 +167,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
 
         const selectedRole = useChatSessionStore.getState().currentRole;
         if (!selectedRole) {
-          toast.warning("璇峰厛閫夋嫨瑙掕壊");
+          toast.warning('请先选择角色');
           return;
         }
 

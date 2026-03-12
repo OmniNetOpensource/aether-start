@@ -72,7 +72,6 @@ describe('useConversationLoader', () => {
     useChatRequestStore.setState(initialChatRequestState)
     const store = useChatRequestStore.getState()
     store.setRequestPhase('done')
-    store.setActiveRequestId(null)
     store.setConnectionState('idle')
     const messageTreeStore = useChatSessionStore.getState()
     messageTreeStore.setCurrentRole('aether')

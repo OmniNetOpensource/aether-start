@@ -64,6 +64,61 @@ const buildCurvePath = (x1: number, y1: number, x2: number, y2: number) => {
 
 const edgeKey = (fromId: number, toId: number) => `${fromId}:${toId}`
 const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
+const toWorldPoint = ({
+  screenX,
+  screenY,
+  camera,
+  width,
+  height,
+}: {
+  screenX: number
+  screenY: number
+  camera: Camera
+  width: number
+  height: number
+}) => {
+  const translateX = width / 2 - camera.x * camera.zoom
+  const translateY = height / 2 - camera.y * camera.zoom
+
+  return {
+    x: (screenX - translateX) / camera.zoom,
+    y: (screenY - translateY) / camera.zoom,
+  }
+}
+
+const toCameraPoint = ({
+  screenX,
+  screenY,
+  worldX,
+  worldY,
+  zoom,
+  width,
+  height,
+}: {
+  screenX: number
+  screenY: number
+  worldX: number
+  worldY: number
+  zoom: number
+  width: number
+  height: number
+}) => ({
+  x: (width / 2 - screenX) / zoom + worldX,
+  y: (height / 2 - screenY) / zoom + worldY,
+})
+
+const getPointerMetrics = (
+  first: { x: number; y: number },
+  second: { x: number; y: number },
+) => {
+  const dx = second.x - first.x
+  const dy = second.y - first.y
+  return {
+    midpointX: (first.x + second.x) / 2,
+    midpointY: (first.y + second.y) / 2,
+    distance: Math.hypot(dx, dy),
+  }
+}
 
 function OutlineGraph({
   open,
@@ -83,12 +138,28 @@ function OutlineGraph({
   const [isPanning, setIsPanning] = useState(false)
   const [isAnimating, setIsAnimating] = useState(false)
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null)
-  const panStateRef = useRef<{
-    startX: number
-    startY: number
-    originX: number
-    originY: number
-  } | null>(null)
+  const activePointersRef = useRef(
+    new Map<number, { x: number; y: number }>(),
+  )
+  const gestureStateRef = useRef<
+    | {
+        type: 'pan'
+        pointerId: number
+        startX: number
+        startY: number
+        originX: number
+        originY: number
+      }
+    | {
+        type: 'pinch'
+        pointerIds: [number, number]
+        originZoom: number
+        startDistance: number
+        anchorX: number
+        anchorY: number
+      }
+    | null
+  >(null)
   const didPanRef = useRef(false)
   const cameraRef = useRef(camera)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
@@ -140,7 +211,8 @@ function OutlineGraph({
       return
     }
 
-    panStateRef.current = null
+    activePointersRef.current.clear()
+    gestureStateRef.current = null
     didPanRef.current = false
 
     const nodeById = new Map<number, TreeLayout['nodes'][number]>()
@@ -201,69 +273,225 @@ function OutlineGraph({
       const currentCamera = cameraRef.current
       const width = container.clientWidth
       const height = container.clientHeight
-      const translateX = width / 2 - currentCamera.x * currentCamera.zoom
-      const translateY = height / 2 - currentCamera.y * currentCamera.zoom
-      const svgX = (cursorX - translateX) / currentCamera.zoom
-      const svgY = (cursorY - translateY) / currentCamera.zoom
+      const { x: worldX, y: worldY } = toWorldPoint({
+        screenX: cursorX,
+        screenY: cursorY,
+        camera: currentCamera,
+        width,
+        height,
+      })
       const delta = -event.deltaY * ZOOM_WHEEL_FACTOR
       const newZoom = clampZoom(currentCamera.zoom * (1 + delta))
-      const newCameraX = (width / 2 - cursorX) / newZoom + svgX
-      const newCameraY = (height / 2 - cursorY) / newZoom + svgY
-      setCamera({ x: newCameraX, y: newCameraY, zoom: newZoom })
+      setCamera({
+        ...toCameraPoint({
+          screenX: cursorX,
+          screenY: cursorY,
+          worldX,
+          worldY,
+          zoom: newZoom,
+          width,
+          height,
+        }),
+        zoom: newZoom,
+      })
     }
 
     container.addEventListener('wheel', handleWheel, { passive: false })
     return () => container.removeEventListener('wheel', handleWheel)
   }, [open])
 
+  const startPinch = () => {
+    const container = containerRef.current
+    if (!container) {
+      return
+    }
+
+    const pointers = Array.from(activePointersRef.current.entries())
+    if (pointers.length < 2) {
+      return
+    }
+
+    const [[firstPointerId, first], [secondPointerId, second]] = pointers
+    const width = container.clientWidth
+    const height = container.clientHeight
+    if (width === 0 || height === 0) {
+      return
+    }
+
+    const { midpointX, midpointY, distance } = getPointerMetrics(first, second)
+    const currentCamera = cameraRef.current
+    const { x: anchorX, y: anchorY } = toWorldPoint({
+      screenX: midpointX,
+      screenY: midpointY,
+      camera: currentCamera,
+      width,
+      height,
+    })
+
+    didPanRef.current = true
+    setIsPanning(true)
+    gestureStateRef.current = {
+      type: 'pinch',
+      pointerIds: [firstPointerId, secondPointerId],
+      originZoom: currentCamera.zoom,
+      startDistance: Math.max(distance, 1),
+      anchorX,
+      anchorY,
+    }
+  }
+
   const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-    if ((event.target as Element).closest("[role='button']")) {
+    const startedOnNode = Boolean(
+      (event.target as Element).closest("[role='button']"),
+    )
+    if (startedOnNode && event.pointerType !== 'touch') {
       return
     }
 
     event.currentTarget.setPointerCapture(event.pointerId)
+    activePointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    })
+
+    if (activePointersRef.current.size >= 2) {
+      startPinch()
+      return
+    }
+
     setIsPanning(true)
     didPanRef.current = false
-    panStateRef.current = {
+    gestureStateRef.current = {
+      type: 'pan',
+      pointerId: event.pointerId,
       startX: event.clientX,
       startY: event.clientY,
-      originX: camera.x,
-      originY: camera.y,
+      originX: cameraRef.current.x,
+      originY: cameraRef.current.y,
     }
   }
 
   const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
-    const pan = panStateRef.current
-    if (!pan) {
+    if (!activePointersRef.current.has(event.pointerId)) {
       return
     }
 
-    const dx = event.clientX - pan.startX
-    const dy = event.clientY - pan.startY
-    if (
-      !didPanRef.current &&
-      Math.abs(dx) < PAN_THRESHOLD &&
-      Math.abs(dy) < PAN_THRESHOLD
-    ) {
+    activePointersRef.current.set(event.pointerId, {
+      x: event.clientX,
+      y: event.clientY,
+    })
+
+    const gesture = gestureStateRef.current
+    if (!gesture) {
       return
     }
 
-    didPanRef.current = true
-    setCamera((current) => ({
-      ...current,
-      x: pan.originX - dx / current.zoom,
-      y: pan.originY - dy / current.zoom,
-    }))
+    if (gesture.type === 'pan') {
+      if (gesture.pointerId !== event.pointerId) {
+        return
+      }
+
+      const dx = event.clientX - gesture.startX
+      const dy = event.clientY - gesture.startY
+      if (
+        !didPanRef.current &&
+        Math.abs(dx) < PAN_THRESHOLD &&
+        Math.abs(dy) < PAN_THRESHOLD
+      ) {
+        return
+      }
+
+      didPanRef.current = true
+      setCamera((current) => ({
+        ...current,
+        x: gesture.originX - dx / current.zoom,
+        y: gesture.originY - dy / current.zoom,
+      }))
+      return
+    }
+
+    const first = activePointersRef.current.get(gesture.pointerIds[0])
+    const second = activePointersRef.current.get(gesture.pointerIds[1])
+    const container = containerRef.current
+    if (!first || !second || !container) {
+      return
+    }
+
+    const width = container.clientWidth
+    const height = container.clientHeight
+    if (width === 0 || height === 0) {
+      return
+    }
+
+    const { midpointX, midpointY, distance } = getPointerMetrics(first, second)
+    const nextZoom = clampZoom(
+      gesture.originZoom * (Math.max(distance, 1) / gesture.startDistance),
+    )
+    setCamera({
+      ...toCameraPoint({
+        screenX: midpointX,
+        screenY: midpointY,
+        worldX: gesture.anchorX,
+        worldY: gesture.anchorY,
+        zoom: nextZoom,
+        width,
+        height,
+      }),
+      zoom: nextZoom,
+    })
   }
 
-  const handlePointerUp = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (!panStateRef.current) {
+  const handlePointerEnd = (event: React.PointerEvent<SVGSVGElement>) => {
+    if (!activePointersRef.current.has(event.pointerId)) {
       return
     }
 
-    event.currentTarget.releasePointerCapture(event.pointerId)
-    panStateRef.current = null
-    setIsPanning(false)
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId)
+    }
+
+    activePointersRef.current.delete(event.pointerId)
+
+    const gesture = gestureStateRef.current
+    if (!gesture) {
+      setIsPanning(activePointersRef.current.size > 0)
+      return
+    }
+
+    if (
+      gesture.type === 'pan' &&
+      gesture.pointerId === event.pointerId &&
+      activePointersRef.current.size === 0
+    ) {
+      gestureStateRef.current = null
+      setIsPanning(false)
+      return
+    }
+
+    if (activePointersRef.current.size >= 2) {
+      startPinch()
+      return
+    }
+
+    const [nextPointerId, nextPointer] = Array.from(
+      activePointersRef.current.entries(),
+    )[0] ?? [null, null]
+
+    if (nextPointerId === null || nextPointer === null) {
+      gestureStateRef.current = null
+      setIsPanning(false)
+      return
+    }
+
+    gestureStateRef.current = {
+      type: 'pan',
+      pointerId: nextPointerId,
+      startX: nextPointer.x,
+      startY: nextPointer.y,
+      originX: cameraRef.current.x,
+      originY: cameraRef.current.y,
+    }
+    setIsPanning(true)
   }
 
   if (!layout || layout.nodes.length === 0) {
@@ -301,7 +529,8 @@ function OutlineGraph({
         style={{ touchAction: 'none' }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
+        onPointerUp={handlePointerEnd}
+        onPointerCancel={handlePointerEnd}
       >
         <g
           transform={`translate(${translateX} ${translateY}) scale(${camera.zoom})`}

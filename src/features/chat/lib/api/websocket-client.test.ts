@@ -14,13 +14,11 @@ vi.mock('@/stores/zustand/useChatRequestStore', () => {
     getState: () => store._state,
     _state: {
       requestPhase: 'done' as string,
-      activeRequestId: null as string | null,
       connectionState: 'idle' as string,
       currentRole: 'aether',
       availableRoles: [],
       rolesLoading: false,
       setRequestPhase: vi.fn(),
-      setActiveRequestId: vi.fn(),
       setConnectionState: vi.fn(),
       clearRequestState: vi.fn(),
       setCurrentRole: vi.fn(),
@@ -80,15 +78,15 @@ describe('SSE orchestrator', () => {
       expect(result).toEqual({ status: 'idle' })
     })
 
-    it('returns running status with requestId', async () => {
+    it('returns running status', async () => {
       fetchMock.mockResolvedValueOnce({
         status: 200,
         ok: true,
-        json: async () => ({ status: 'running', requestId: 'req-1' }),
+        json: async () => ({ status: 'running' }),
       })
 
       const result = await checkAgentStatus('conv-a')
-      expect(result).toEqual({ status: 'running', requestId: 'req-1' })
+      expect(result).toEqual({ status: 'running' })
     })
 
     it('throws on non-ok non-404 response', async () => {

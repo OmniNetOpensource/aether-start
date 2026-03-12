@@ -42,7 +42,7 @@ export function PromptSelector() {
           type="button"
           variant="ghost"
           size="sm"
-          aria-label={`閫夋嫨鎻愮ず璇嶏紝褰撳墠涓?${currentPromptName}`}
+          aria-label={`选择提示词，当前为 ${currentPromptName}`}
           title={currentPromptName}
           className={cn(
             toolButtonBaseClass,

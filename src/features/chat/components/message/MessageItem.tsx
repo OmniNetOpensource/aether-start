@@ -43,7 +43,7 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
       size="sm"
       onClick={handleCopy}
       className="text-2xs text-neutral-500 dark:text-neutral-400"
-      title="澶嶅埗鍐呭"
+      title="复制内容"
     >
       {isCopied ? (
         <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -238,13 +238,13 @@ export function MessageItem({
                   <ActionButton
                     onClick={handleStartEditing}
                     disabled={isBusy}
-                    title="缂栬緫娑堟伅"
+                    title="编辑消息"
                     icon={<Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />}
                   />
                   <ActionButton
                     onClick={handleRetry}
                     disabled={isBusy}
-                    title="閲嶈瘯鐢熸垚"
+                    title="重试生成"
                     icon={
                       <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.5} />
                     }
@@ -256,7 +256,7 @@ export function MessageItem({
                 <ActionButton
                   onClick={handleRetry}
                   disabled={isBusy}
-                  title="閲嶈瘯鐢熸垚"
+                  title="重试生成"
                   icon={<RotateCcw className="h-3.5 w-3.5" />}
                 />
               )}

@@ -135,18 +135,17 @@ describe('chat-orchestrator SSE model', () => {
       ok: true,
       status: 200,
       body: sseStream([
-        { event: 'chat_started', data: { requestId: 'req-1' } },
+        { event: 'chat_started', data: {} },
         {
           event: 'chat_event',
           data: {
             eventId: 1,
-            requestId: 'req-1',
             event: { type: 'content', content: 'hello' },
           },
         },
         {
           event: 'chat_finished',
-          data: { requestId: 'req-1', status: 'completed' },
+          data: { status: 'completed' },
         },
       ]),
     })
@@ -177,7 +176,7 @@ describe('chat-orchestrator SSE model', () => {
       body: sseStream([
         {
           event: 'chat_finished',
-          data: { requestId: 'req-1', status: 'completed' },
+          data: { status: 'completed' },
         },
       ]),
     })
@@ -200,21 +199,20 @@ describe('chat-orchestrator SSE model', () => {
       status: 200,
       body: sseStream(
         [
-          { event: 'chat_started', data: { requestId: 'req-crlf' } },
+          { event: 'chat_started', data: {} },
           {
             event: 'chat_event',
             data: {
-              eventId: 1,
-              requestId: 'req-crlf',
+              eventId: 99,
               event: { type: 'content', content: 'hello crlf' },
             },
           },
           {
             event: 'chat_finished',
-            data: { requestId: 'req-crlf', status: 'completed' },
+            data: { status: 'completed' },
           },
         ],
-        { lineEnding: '\r\n', chunkSize: 17 },
+        { lineEnding: '\r\n', chunkSize: 64 },
       ),
     })
 
@@ -233,7 +231,7 @@ describe('chat-orchestrator SSE model', () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
       status: 409,
-      json: async () => ({ currentRequestId: 'req-busy' }),
+      json: async () => ({ type: 'busy' }),
     })
 
     const orchestrator = await import('./chat-orchestrator')
@@ -241,9 +239,7 @@ describe('chat-orchestrator SSE model', () => {
       messages: [{ role: 'user', blocks: [] } as never],
     })
 
-    // Should set to answering with the busy request's ID
     expect(useChatRequestStore.getState().requestPhase).toBe('answering')
-    expect(useChatRequestStore.getState().activeRequestId).toBe('req-busy')
     expect(useChatRequestStore.getState().connectionState).toBe('connected')
   })
 
@@ -260,7 +256,6 @@ describe('chat-orchestrator SSE model', () => {
     })
 
     expect(useChatRequestStore.getState().requestPhase).toBe('answering')
-    expect(useChatRequestStore.getState().activeRequestId).toBeTruthy()
     expect(useChatRequestStore.getState().connectionState).toBe('disconnected')
   })
 
@@ -296,29 +291,23 @@ describe('chat-orchestrator SSE model', () => {
   })
 
   it('resumeRunningConversation connects to events stream when agent is running', async () => {
-    // First call: status probe
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
-      json: async () => ({ status: 'running', requestId: 'req-remote' }),
+      json: async () => ({ status: 'running' }),
     })
 
-    // Second call: events stream
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
       body: sseStream([
         {
           event: 'sync_response',
-          data: {
-            status: 'running',
-            requestId: 'req-remote',
-            events: [],
-          },
+          data: { status: 'running', events: [] },
         },
         {
           event: 'chat_finished',
-          data: { requestId: 'req-remote', status: 'completed' },
+          data: { status: 'completed' },
         },
       ]),
     })
@@ -337,7 +326,6 @@ describe('chat-orchestrator SSE model', () => {
 
   it('resumeRunningConversation resets request state when agent is idle', async () => {
     useChatRequestStore.getState().setRequestPhase('answering')
-    useChatRequestStore.getState().setActiveRequestId('req-stale')
     useChatRequestStore.getState().setConnectionState('disconnected')
 
     fetchMock.mockResolvedValueOnce({
@@ -352,13 +340,26 @@ describe('chat-orchestrator SSE model', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(useChatRequestStore.getState().requestPhase).toBe('done')
-    expect(useChatRequestStore.getState().activeRequestId).toBeNull()
     expect(useChatRequestStore.getState().connectionState).toBe('idle')
+  })
+
+  it('resumeRunningConversation exits immediately when the signal is already aborted', async () => {
+    useChatRequestStore.getState().setRequestPhase('answering')
+    useChatRequestStore.getState().setConnectionState('disconnected')
+
+    const orchestrator = await import('./chat-orchestrator')
+    const ac = new AbortController()
+    ac.abort()
+
+    await orchestrator.resumeRunningConversation('conv-1', ac.signal)
+
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(useChatRequestStore.getState().requestPhase).toBe('answering')
+    expect(useChatRequestStore.getState().connectionState).toBe('disconnected')
   })
 
   it('clears stale request state when recovery finds no running agent', async () => {
     useChatRequestStore.getState().setRequestPhase('answering')
-    useChatRequestStore.getState().setActiveRequestId('req-stale')
     useChatRequestStore.getState().setConnectionState('disconnected')
 
     fetchMock.mockResolvedValueOnce({
@@ -372,7 +373,6 @@ describe('chat-orchestrator SSE model', () => {
     await orchestrator.resumeRunningConversation('conv-1', ac.signal)
 
     expect(useChatRequestStore.getState().requestPhase).toBe('done')
-    expect(useChatRequestStore.getState().activeRequestId).toBeNull()
     expect(useChatRequestStore.getState().connectionState).toBe('idle')
   })
 })

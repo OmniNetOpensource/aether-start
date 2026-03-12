@@ -31,7 +31,6 @@ export type MessageTreeSnapshot = {
 
 export type PersistedChatEvent = {
   eventId: number
-  requestId: string
   event: ChatServerToClientEvent
   createdAt: number
 }

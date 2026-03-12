@@ -16,18 +16,18 @@ import { cn } from "@/lib/utils";
 import { useResponsive } from "@/components/ResponsiveContext";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 
-/** 浠?role id/name 鎺ㄦ柇 provider锛岀敤浜庡垎缁?*/
+/** 根据 role id/name 推断 provider，用于分组 */
 function getProviderFromRole(roleId: string, roleName: string): string {
   const lower = (roleId + roleName).toLowerCase();
   if (lower.includes("claude")) return "Anthropic";
   if (lower.includes("gemini")) return "Gemini";
-  if (lower.includes("qwen")) return "鍗冮棶";
-  if (lower.includes("glm")) return "鏅鸿氨";
+  if (lower.includes("qwen")) return "千问";
+  if (lower.includes("glm")) return "智谱";
   if (lower.includes("minimax")) return "MiniMax";
-  if (lower.includes("doubao")) return "璞嗗寘";
+  if (lower.includes("doubao")) return "豆包";
   if (lower.includes("kimi")) return "Kimi";
   if (lower.includes("deepseek")) return "DeepSeek";
-  return "鍏朵粬";
+  return "其他";
 }
 
 export function ModelSelector() {
@@ -48,7 +48,7 @@ export function ModelSelector() {
   const currentRoleName =
     roles.find((role) => role.id === currentRole)?.name ?? "";
 
-  // 鎸?provider 鍒嗙粍
+  // 按 provider 分组
   const grouped = (() => {
     const map = new Map<string, { id: string; name: string }[]>();
     for (const role of roles) {
@@ -58,7 +58,7 @@ export function ModelSelector() {
       map.set(provider, list);
     }
     return Array.from(map.entries()).sort(([a], [b]) =>
-      a === "鍏朵粬" ? 1 : b === "鍏朵粬" ? -1 : a.localeCompare(b),
+      a === "其他" ? 1 : b === "其他" ? -1 : a.localeCompare(b),
     );
   })();
 
@@ -72,8 +72,8 @@ export function ModelSelector() {
         variant="ghost"
         size="sm"
         onClick={() => setOpen(true)}
-        aria-label={currentRoleName ? `閫夋嫨妯″瀷锛屽綋鍓嶄负 ${currentRoleName}` : "閫夋嫨妯″瀷"}
-        title={currentRoleName || "閫夋嫨妯″瀷"}
+        aria-label={currentRoleName ? `选择模型，当前为 ${currentRoleName}` : '选择模型'}
+        title={currentRoleName || '选择模型'}
         className={cn(
           toolButtonBaseClass,
           isMobile
@@ -90,11 +90,11 @@ export function ModelSelector() {
           </>
         )}
       </Button>
-      <CommandDialog open={open} onOpenChange={setOpen} label="閫夋嫨妯″瀷">
+      <CommandDialog open={open} onOpenChange={setOpen} label="选择模型">
         <Command className="rounded-lg border-0" loop>
-          <CommandInput placeholder="鎼滅储妯″瀷..." autoFocus={!isMobile} />
+          <CommandInput placeholder="搜索模型..." autoFocus={!isMobile} />
           <CommandList>
-            <CommandEmpty>鏈壘鍒板尮閰嶇殑妯″瀷</CommandEmpty>
+            <CommandEmpty>未找到匹配的模型</CommandEmpty>
             {grouped.map(([provider, items]) => (
               <CommandGroup key={provider} heading={provider}>
                 {items.map((role) => (

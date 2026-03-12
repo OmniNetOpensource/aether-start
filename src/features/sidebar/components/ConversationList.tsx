@@ -68,7 +68,7 @@ export function ConversationList({
     return (
       <div className="flex items-center justify-center py-6 text-(--text-tertiary)">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="ml-2 text-xs">鍔犺浇浼氳瘽涓?..</span>
+        <span className="ml-2 text-xs">加载会话中...</span>
       </div>
     );
   }
@@ -121,7 +121,7 @@ export function ConversationList({
               ))}
               {isEmpty ? (
                 <p className="px-1 py-8 text-center text-sm text-(--text-tertiary)">
-                  寮€濮嬩竴娆℃柊瀵硅瘽
+                  开始一次新对话
                 </p>
               ) : null}
               {hasMore || loadingMore ? (
@@ -132,10 +132,10 @@ export function ConversationList({
                   {loadingMore ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="ml-2 text-xs">鍔犺浇鏇村...</span>
+                      <span className="ml-2 text-xs">加载更多...</span>
                     </>
                   ) : (
-                    <span className="text-xs">婊氬姩鍔犺浇鏇村...</span>
+                    <span className="text-xs">滚动加载更多...</span>
                   )}
                 </div>
               ) : null}

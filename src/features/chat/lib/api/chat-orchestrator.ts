@@ -16,7 +16,6 @@ type FinishedChatStatus = 'completed' | 'aborted' | 'error'
 
 export type AgentStatusResponse = {
   status: ChatAgentStatus
-  requestId?: string
 }
 
 type StartRequestPayload = {
@@ -26,10 +25,10 @@ type StartRequestPayload = {
 }
 
 type ChatStatusEvent =
-  | { type: 'sync'; status: ChatAgentStatus; requestId?: string }
-  | { type: 'started'; requestId: string }
-  | { type: 'finished'; requestId: string; status: FinishedChatStatus }
-  | { type: 'busy'; currentRequestId: string }
+  | { type: 'sync'; status: ChatAgentStatus }
+  | { type: 'started' }
+  | { type: 'finished'; status: FinishedChatStatus }
+  | { type: 'busy' }
 
 const eventCursor = (() => {
   let value = 0
@@ -89,7 +88,9 @@ const replaceActiveAbortController = (linkedSignal?: AbortSignal) => {
   activeAbortController = controller
 
   const handleLinkedAbort = () => controller.abort()
-  if (linkedSignal) {
+  if (linkedSignal?.aborted) {
+    controller.abort()
+  } else if (linkedSignal) {
     linkedSignal.addEventListener('abort', handleLinkedAbort)
   }
 
@@ -194,16 +195,8 @@ const resetRequestState = () => {
   store.setConnectionState('idle')
 }
 
-const markRequestDisconnected = (requestId?: string | null) => {
+const markRequestDisconnected = () => {
   const store = useChatRequestStore.getState()
-
-  if (
-    requestId &&
-    store.activeRequestId &&
-    store.activeRequestId !== requestId
-  ) {
-    return
-  }
 
   if (store.requestPhase === 'done') {
     return
@@ -213,22 +206,11 @@ const markRequestDisconnected = (requestId?: string | null) => {
   store.setConnectionState('disconnected')
 }
 
-const handleChatEvent = (event: ChatServerToClientEvent, requestId: string) => {
+const handleChatEvent = (event: ChatServerToClientEvent) => {
   const store = useChatRequestStore.getState()
   const isConversationUpdate = event.type === 'conversation_updated'
 
-  if (
-    !isConversationUpdate &&
-    store.activeRequestId &&
-    store.activeRequestId !== requestId
-  ) {
-    return
-  }
-
-  if (
-    !isConversationUpdate &&
-    (store.activeRequestId === requestId || store.requestPhase !== 'done')
-  ) {
+  if (!isConversationUpdate && store.requestPhase !== 'done') {
     store.setRequestPhase('answering')
   }
 
@@ -237,17 +219,16 @@ const handleChatEvent = (event: ChatServerToClientEvent, requestId: string) => {
 
 const consumeEvent = (item: Record<string, unknown>) => {
   const eventId = typeof item.eventId === 'number' ? item.eventId : null
-  const requestId = typeof item.requestId === 'string' ? item.requestId : null
   const event = isRecord(item.event)
     ? (item.event as ChatServerToClientEvent)
     : null
 
-  if (!eventId || !requestId || !event || !eventCursor.shouldConsume(eventId)) {
+  if (!eventId || !event || !eventCursor.shouldConsume(eventId)) {
     return
   }
 
   eventCursor.mark(eventId)
-  handleChatEvent(event, requestId)
+  handleChatEvent(event)
 }
 
 const handleChatStatus = (statusEvent: ChatStatusEvent) => {
@@ -257,7 +238,6 @@ const handleChatStatus = (statusEvent: ChatStatusEvent) => {
     case 'busy':
       toast.warning(BUSY_WARNING)
       store.setRequestPhase('answering')
-      store.setActiveRequestId(statusEvent.currentRequestId)
       store.setConnectionState('connected')
       return
 
@@ -265,14 +245,12 @@ const handleChatStatus = (statusEvent: ChatStatusEvent) => {
       store.setRequestPhase(
         store.requestPhase === 'answering' ? 'answering' : 'sending',
       )
-      store.setActiveRequestId(statusEvent.requestId)
       store.setConnectionState('connected')
       return
 
     case 'sync':
       if (statusEvent.status === 'running') {
         store.setRequestPhase('answering')
-        store.setActiveRequestId(statusEvent.requestId ?? store.activeRequestId)
         store.setConnectionState('connected')
         return
       }
@@ -283,19 +261,10 @@ const handleChatStatus = (statusEvent: ChatStatusEvent) => {
       }
 
       store.setRequestPhase('done')
-      store.setActiveRequestId(null)
       return
 
     case 'finished':
-      if (
-        store.activeRequestId &&
-        store.activeRequestId !== statusEvent.requestId
-      ) {
-        return
-      }
-
       store.setRequestPhase('done')
-      store.setActiveRequestId(null)
       store.setConnectionState('connected')
   }
 }
@@ -319,19 +288,12 @@ const dispatchSSE = (event: string, raw: string) => {
       return
 
     case 'chat_started':
-      if (typeof payload.requestId === 'string') {
-        handleChatStatus({ type: 'started', requestId: payload.requestId })
-      }
+      handleChatStatus({ type: 'started' })
       return
 
     case 'chat_finished':
-      if (typeof payload.requestId !== 'string') {
-        return
-      }
-
       handleChatStatus({
         type: 'finished',
-        requestId: payload.requestId,
         status:
           payload.status === 'completed' ||
           payload.status === 'aborted' ||
@@ -345,8 +307,6 @@ const dispatchSSE = (event: string, raw: string) => {
       handleChatStatus({
         type: 'sync',
         status: isChatAgentStatus(payload.status) ? payload.status : 'idle',
-        requestId:
-          typeof payload.requestId === 'string' ? payload.requestId : undefined,
       })
 
       if (!Array.isArray(payload.events)) {
@@ -361,12 +321,7 @@ const dispatchSSE = (event: string, raw: string) => {
       return
 
     case 'busy':
-      if (typeof payload.currentRequestId === 'string') {
-        handleChatStatus({
-          type: 'busy',
-          currentRequestId: payload.currentRequestId,
-        })
-      }
+      handleChatStatus({ type: 'busy' })
       return
 
     case 'conversation_update':
@@ -400,7 +355,7 @@ const buildPreparedRequest = (
   conversationId: string,
   role: string,
   promptId: string | undefined,
-  requestId: string,
+  idempotencyKey: string,
   messages: Message[],
 ) => {
   const rawTreeSnapshot: MessageTreeSnapshot = useChatSessionStore
@@ -420,7 +375,7 @@ const buildPreparedRequest = (
   )
 
   return {
-    requestId,
+    idempotencyKey,
     role,
     promptId,
     conversationId,
@@ -449,7 +404,6 @@ export const checkAgentStatus = async (
 
   return {
     status: isChatAgentStatus(data.status) ? data.status : 'idle',
-    requestId: typeof data.requestId === 'string' ? data.requestId : undefined,
   }
 }
 
@@ -469,7 +423,7 @@ export const startChatRequest = async ({
   }
 
   let conversationId = sessionStore.conversationId
-  const requestId = generateId('msg')
+  const idempotencyKey = generateId('msg')
 
   if (!conversationId) {
     conversationId = generateId('conv')
@@ -492,13 +446,12 @@ export const startChatRequest = async ({
     conversationId,
     sessionStore.currentRole,
     sessionStore.currentPrompt || undefined,
-    requestId,
+    idempotencyKey,
     messages,
   )
 
   const { signal, release } = replaceActiveAbortController()
   requestStore.setRequestPhase('sending')
-  requestStore.setActiveRequestId(requestId)
   requestStore.setConnectionState('connecting')
 
   try {
@@ -511,13 +464,8 @@ export const startChatRequest = async ({
     })
 
     if (response.status === 409) {
-      const data = (await response.json()) as Record<string, unknown>
-      if (typeof data.currentRequestId === 'string') {
-        handleChatStatus({
-          type: 'busy',
-          currentRequestId: data.currentRequestId,
-        })
-      }
+      await response.json().catch(() => ({}))
+      handleChatStatus({ type: 'busy' })
       return
     }
 
@@ -537,16 +485,14 @@ export const startChatRequest = async ({
     requestStore.setConnectionState('connected')
     await consumeStreamResponse(response, signal)
 
-    if (useChatRequestStore.getState().activeRequestId === requestId) {
-      markRequestDisconnected(requestId)
-    }
+    markRequestDisconnected()
   } catch (error) {
     if (isAbortError(error)) {
       return
     }
 
     if (isRecoverableStreamError(error)) {
-      markRequestDisconnected(requestId)
+      markRequestDisconnected()
       return
     }
 
@@ -558,7 +504,6 @@ export const startChatRequest = async ({
 
 export const stopActiveChatRequest = () => {
   const conversationId = useChatSessionStore.getState().conversationId
-  const requestId = useChatRequestStore.getState().activeRequestId
 
   activeAbortController?.abort()
   activeAbortController = null
@@ -568,7 +513,7 @@ export const stopActiveChatRequest = () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
-      body: JSON.stringify({ requestId }),
+      body: JSON.stringify({}),
     }).catch(() => {})
   }
 
@@ -579,7 +524,7 @@ export const resumeRunningConversation = async (
   conversationId: string,
   signal: AbortSignal,
 ) => {
-  if (!conversationId) {
+  if (!conversationId || signal.aborted) {
     return
   }
 
@@ -589,7 +534,7 @@ export const resumeRunningConversation = async (
     agentStatus = await checkAgentStatus(conversationId)
   } catch {
     if (!signal.aborted) {
-      markRequestDisconnected(useChatRequestStore.getState().activeRequestId)
+      markRequestDisconnected()
     }
     return
   }
@@ -601,7 +546,6 @@ export const resumeRunningConversation = async (
 
   const requestStore = useChatRequestStore.getState()
   requestStore.setRequestPhase('answering')
-  requestStore.setActiveRequestId(agentStatus.requestId ?? null)
   requestStore.setConnectionState('connecting')
 
   const activeRequest = replaceActiveAbortController(signal)
@@ -618,19 +562,14 @@ export const resumeRunningConversation = async (
     requestStore.setConnectionState('connected')
     await consumeStreamResponse(response, activeRequest.signal)
 
-    if (
-      agentStatus.requestId &&
-      useChatRequestStore.getState().activeRequestId === agentStatus.requestId
-    ) {
-      markRequestDisconnected(agentStatus.requestId)
-    }
+    markRequestDisconnected()
   } catch (error) {
     if (isAbortError(error)) {
       return
     }
 
     if (isRecoverableStreamError(error)) {
-      markRequestDisconnected(agentStatus.requestId)
+      markRequestDisconnected()
       return
     }
 

@@ -105,7 +105,7 @@ export type ConsumeResult =
 export const consumePromptQuotaOnAccept = async (
   db: D1Database,
   userId: string,
-  requestId: string,
+  idempotencyKey: string,
 ): Promise<ConsumeResult> => {
   const consumptionId = generateId()
 
@@ -114,7 +114,7 @@ export const consumePromptQuotaOnAccept = async (
       .prepare(
         'SELECT 1 FROM prompt_quota_consumptions WHERE user_id = ?1 AND request_id = ?2 LIMIT 1',
       )
-      .bind(userId, requestId)
+      .bind(userId, idempotencyKey)
       .first()
 
     if (existing) {
@@ -136,7 +136,7 @@ export const consumePromptQuotaOnAccept = async (
         .prepare(
           'INSERT INTO prompt_quota_consumptions (id, user_id, request_id) VALUES (?1, ?2, ?3)',
         )
-        .bind(consumptionId, userId, requestId),
+        .bind(consumptionId, userId, idempotencyKey),
       db
         .prepare(
           'UPDATE user_prompt_quota SET balance = balance - 1, updated_at = ?1 WHERE user_id = ?2 AND balance >= 1',
@@ -151,7 +151,7 @@ export const consumePromptQuotaOnAccept = async (
     if (changes === 0) {
       await db
         .prepare('DELETE FROM prompt_quota_consumptions WHERE user_id = ?1 AND request_id = ?2')
-        .bind(userId, requestId)
+        .bind(userId, idempotencyKey)
         .run()
       return { ok: false, reason: 'insufficient' }
     }

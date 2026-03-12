@@ -74,7 +74,6 @@ describe('useEditingStore', () => {
     useChatRequestStore.setState(initialChatRequestState)
     const store = useChatRequestStore.getState()
     store.setRequestPhase('done')
-    store.setActiveRequestId(null)
     store.setConnectionState('idle')
     useChatSessionStore.getState().setCurrentRole('aether')
     useChatSessionStore.getState().setAvailableRoles([])
@@ -122,7 +121,7 @@ describe('useEditingStore', () => {
 
     await useEditingStore.getState().submitEdit(1)
 
-    expect(warningMock).toHaveBeenCalledWith('璇峰厛閫夋嫨瑙掕壊')
+    expect(warningMock).toHaveBeenCalledWith('请先选择角色')
     expect(startChatRequestMock).not.toHaveBeenCalled()
     expect(useEditingStore.getState().editingState).not.toBeNull()
   })
