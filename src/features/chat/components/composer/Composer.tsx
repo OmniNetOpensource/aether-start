@@ -68,10 +68,7 @@ export function Composer() {
 
     useComposerStore.getState().clear()
 
-    await startChatRequest({
-      messages: pathMessages,
-      titleSource: { role: 'user', blocks: result.addedMessage.blocks },
-    })
+    await startChatRequest({ messages: pathMessages })
   }
 
   const textareaCallbackRef = (element: HTMLTextAreaElement | null) => {

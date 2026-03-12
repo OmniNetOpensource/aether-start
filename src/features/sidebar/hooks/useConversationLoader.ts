@@ -65,7 +65,9 @@ const hydrateMessage = (msg: Message): Message =>
     createdAt: msg.createdAt ?? new Date().toISOString(),
   }) as Message;
 
-export function useConversationLoader(loadingConversationId: string | undefined) {
+export function useConversationLoader(
+  loadingConversationId: string | undefined,
+) {
   const navigate = useNavigate();
   const currentConversationId = useChatSessionStore(
     (state) => state.conversationId,
@@ -76,7 +78,10 @@ export function useConversationLoader(loadingConversationId: string | undefined)
   );
 
   useEffect(() => {
-    if (!loadingConversationId || currentConversationId === loadingConversationId) {
+    if (
+      !loadingConversationId ||
+      currentConversationId === loadingConversationId
+    ) {
       return;
     }
 
@@ -163,7 +168,10 @@ export function useConversationLoader(loadingConversationId: string | undefined)
   ]);
 
   useEffect(() => {
-    if (!loadingConversationId || currentConversationId !== loadingConversationId) {
+    if (
+      !loadingConversationId ||
+      currentConversationId !== loadingConversationId
+    ) {
       return;
     }
 

@@ -134,7 +134,7 @@ const consumeSSEResponse = async (response: Response) => {
   return events
 }
 
-describe('ChatAgent sync replay via GET /events', () => {
+describe('ChatAgent sync replay via POST /events', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
@@ -156,10 +156,14 @@ describe('ChatAgent sync replay via GET /events', () => {
     })
 
     const request = new Request(
-      'http://localhost/agents/chat-agent/conv-1/events?lastEventId=1',
+      'http://localhost/agents/chat-agent/conv-1/events',
       {
-        method: 'GET',
-        headers: { 'x-aether-user-id': 'user-1' },
+        method: 'POST',
+        headers: {
+          'x-aether-user-id': 'user-1',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ lastEventId: 1 }),
       },
     )
 
@@ -193,10 +197,14 @@ describe('ChatAgent sync replay via GET /events', () => {
     })
 
     const request = new Request(
-      'http://localhost/agents/chat-agent/conv-1/events?lastEventId=-999',
+      'http://localhost/agents/chat-agent/conv-1/events',
       {
-        method: 'GET',
-        headers: { 'x-aether-user-id': 'user-1' },
+        method: 'POST',
+        headers: {
+          'x-aether-user-id': 'user-1',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ lastEventId: -999 }),
       },
     )
 
@@ -220,10 +228,14 @@ describe('ChatAgent sync replay via GET /events', () => {
     })
 
     const request = new Request(
-      'http://localhost/agents/chat-agent/conv-1/events?lastEventId=2',
+      'http://localhost/agents/chat-agent/conv-1/events',
       {
-        method: 'GET',
-        headers: { 'x-aether-user-id': 'user-1' },
+        method: 'POST',
+        headers: {
+          'x-aether-user-id': 'user-1',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ lastEventId: 2 }),
       },
     )
 

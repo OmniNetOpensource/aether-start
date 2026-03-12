@@ -1,183 +1,183 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { Ban, Gift, Loader2, LogOut, Plus } from 'lucide-react'
-import { authClient } from '@/features/auth/client/auth-client'
-import { getSessionStateFn } from '@/features/auth/server/session-state'
-import { resetLastEventId } from '@/features/chat/lib/api/chat-orchestrator'
-import { useChatRequestStore } from '@/features/chat/store/useChatRequestStore'
-import { useComposerStore } from '@/features/chat/store/useComposerStore'
-import { useEditingStore } from '@/features/chat/store/useEditingStore'
-import { useNotesStore } from '@/features/notes/store/useNotesStore'
-import { useChatSessionStore } from '@/features/sidebar/store/useChatSessionStore'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { Ban, Gift, Loader2, LogOut, Plus } from "lucide-react";
+import { authClient } from "@/features/auth/client/auth-client";
+import { getSessionStateFn } from "@/features/auth/server/session-state";
+import { resetLastEventId } from "@/features/chat/lib/api/chat-orchestrator";
+import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
+import { useComposerStore } from "@/features/chat/store/useComposerStore";
+import { useEditingStore } from "@/features/chat/store/useEditingStore";
+import { useNotesStore } from "@/features/notes/store/useNotesStore";
+import { useChatSessionStore } from "@/features/sidebar/store/useChatSessionStore";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { toast } from '@/hooks/useToast'
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { toast } from "@/hooks/useToast";
 import {
   adminCreateRedeemCodeFn,
   adminDeactivateRedeemCodeFn,
   adminListRedeemCodesFn,
-} from '@/server/functions/admin/redeem-codes'
-import { getQuotaFn, redeemCodeFn } from '@/server/functions/quota'
+} from "@/server/functions/admin/redeem-codes";
+import { getQuotaFn, redeemCodeFn } from "@/server/functions/quota";
 
 type SettingsModalProps = {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-}
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+};
 
 type AdminCode = {
-  id: string
-  code: string
-  amount: number
-  is_active: boolean
-  used_at: string | null
-  created_at: string
-}
+  id: string;
+  code: string;
+  amount: number;
+  is_active: boolean;
+  used_at: string | null;
+  created_at: string;
+};
 
 export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
-  const navigate = useNavigate()
-  const [balance, setBalance] = useState<number | null>(null)
-  const [isSigningOut, setIsSigningOut] = useState(false)
-  const [quotaLoading, setQuotaLoading] = useState(false)
-  const [redeemCode, setRedeemCode] = useState('')
-  const [redeemLoading, setRedeemLoading] = useState(false)
-  const [isAdmin, setIsAdmin] = useState(false)
-  const [adminCodes, setAdminCodes] = useState<AdminCode[]>([])
-  const [adminCodesLoading, setAdminCodesLoading] = useState(false)
-  const [createCode, setCreateCode] = useState({ code: '', amount: 50 })
-  const [createLoading, setCreateLoading] = useState(false)
+  const navigate = useNavigate();
+  const [balance, setBalance] = useState<number | null>(null);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [quotaLoading, setQuotaLoading] = useState(false);
+  const [redeemCode, setRedeemCode] = useState("");
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminCodes, setAdminCodes] = useState<AdminCode[]>([]);
+  const [adminCodesLoading, setAdminCodesLoading] = useState(false);
+  const [createCode, setCreateCode] = useState({ code: "", amount: 50 });
+  const [createLoading, setCreateLoading] = useState(false);
 
   useEffect(() => {
     if (!open) {
-      return
+      return;
     }
 
     const load = async () => {
-      setQuotaLoading(true)
+      setQuotaLoading(true);
       try {
         const [quotaRes, sessionRes] = await Promise.all([
           getQuotaFn(),
           getSessionStateFn(),
-        ])
-        setBalance(quotaRes.balance)
-        setIsAdmin(sessionRes.isAdmin ?? false)
+        ]);
+        setBalance(quotaRes.balance);
+        setIsAdmin(sessionRes.isAdmin ?? false);
       } catch {
-        setBalance(0)
+        setBalance(0);
       } finally {
-        setQuotaLoading(false)
+        setQuotaLoading(false);
       }
-    }
+    };
 
-    void load()
-  }, [open])
+    void load();
+  }, [open]);
 
   useEffect(() => {
     if (!open || !isAdmin) {
-      return
+      return;
     }
 
     const loadCodes = async () => {
-      setAdminCodesLoading(true)
+      setAdminCodesLoading(true);
       try {
         const res = await adminListRedeemCodesFn({
           data: { limit: 20, cursor: null },
-        })
-        setAdminCodes(res.items)
+        });
+        setAdminCodes(res.items);
       } catch {
-        setAdminCodes([])
+        setAdminCodes([]);
       } finally {
-        setAdminCodesLoading(false)
+        setAdminCodesLoading(false);
       }
-    }
+    };
 
-    void loadCodes()
-  }, [open, isAdmin])
+    void loadCodes();
+  }, [open, isAdmin]);
 
   const reloadAdminCodes = async () => {
     const res = await adminListRedeemCodesFn({
       data: { limit: 20, cursor: null },
-    })
-    setAdminCodes(res.items)
-  }
+    });
+    setAdminCodes(res.items);
+  };
 
   const handleSignOut = async () => {
     if (isSigningOut) {
-      return
+      return;
     }
 
-    setIsSigningOut(true)
+    setIsSigningOut(true);
     try {
-      await authClient.signOut()
+      await authClient.signOut();
     } finally {
-      useChatRequestStore.getState().clearRequestState()
-      useComposerStore.getState().clear()
-      useEditingStore.getState().clear()
-      useChatSessionStore.getState().clearSession()
-      useChatSessionStore.getState().resetConversations()
-      useNotesStore.getState().reset()
-      resetLastEventId()
-      await navigate({ href: '/auth/login', replace: true })
-      setIsSigningOut(false)
+      useChatRequestStore.getState().clearRequestState();
+      useComposerStore.getState().clear();
+      useEditingStore.getState().clear();
+      useChatSessionStore.getState().clearSession();
+      useChatSessionStore.getState().resetConversations();
+      useNotesStore.getState().reset();
+      resetLastEventId();
+      await navigate({ href: "/auth/login", replace: true });
+      setIsSigningOut(false);
     }
-  }
+  };
 
   const handleRedeem = async () => {
-    const code = redeemCode.trim()
+    const code = redeemCode.trim();
     if (!code || redeemLoading) {
-      return
+      return;
     }
 
-    setRedeemLoading(true)
+    setRedeemLoading(true);
     try {
-      const res = await redeemCodeFn({ data: { code } })
-      setBalance(res.balance)
-      setRedeemCode('')
-      toast.success(`Redeemed successfully. Added ${res.added} credits.`)
+      const res = await redeemCodeFn({ data: { code } });
+      setBalance(res.balance);
+      setRedeemCode("");
+      toast.success(`Redeemed successfully. Added ${res.added} credits.`);
       if (isAdmin) {
-        await reloadAdminCodes()
+        await reloadAdminCodes();
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Redeem failed')
+      toast.error(error instanceof Error ? error.message : "Redeem failed");
     } finally {
-      setRedeemLoading(false)
+      setRedeemLoading(false);
     }
-  }
+  };
 
   const handleCreateCode = async () => {
-    const { code, amount } = createCode
+    const { code, amount } = createCode;
     if (!code.trim() || amount < 1 || createLoading) {
-      return
+      return;
     }
 
-    setCreateLoading(true)
+    setCreateLoading(true);
     try {
       await adminCreateRedeemCodeFn({
         data: { code: code.trim().toUpperCase(), amount, expiresAt: null },
-      })
-      setCreateCode({ code: '', amount: 50 })
-      toast.success('Redeem code created')
-      await reloadAdminCodes()
+      });
+      setCreateCode({ code: "", amount: 50 });
+      toast.success("Redeem code created");
+      await reloadAdminCodes();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Create failed')
+      toast.error(error instanceof Error ? error.message : "Create failed");
     } finally {
-      setCreateLoading(false)
+      setCreateLoading(false);
     }
-  }
+  };
 
   const handleDeactivate = async (id: string) => {
     try {
-      await adminDeactivateRedeemCodeFn({ data: { id } })
-      toast.success('Code deactivated')
-      await reloadAdminCodes()
+      await adminDeactivateRedeemCodeFn({ data: { id } });
+      toast.success("Code deactivated");
+      await reloadAdminCodes();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Action failed')
+      toast.error(error instanceof Error ? error.message : "Action failed");
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -188,9 +188,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
         <div className="flex flex-col gap-6">
           <div className="space-y-3">
-            <h3 className="text-sm font-medium text-muted-foreground">
-              Quota
-            </h3>
+            <h3 className="text-sm font-medium text-muted-foreground">Quota</h3>
             <div className="space-y-3 rounded-lg border bg-(--surface-muted)/30 p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
@@ -246,7 +244,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                 ) : (
                   <LogOut className="h-4 w-4" />
                 )}
-                {isSigningOut ? 'Signing out...' : 'Sign out'}
+                {isSigningOut ? "Signing out..." : "Sign out"}
               </Button>
             </div>
           </div>
@@ -274,7 +272,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                     type="number"
                     min={1}
                     placeholder="Amount"
-                    value={createCode.amount || ''}
+                    value={createCode.amount || ""}
                     onChange={(event) =>
                       setCreateCode((current) => ({
                         ...current,
@@ -318,7 +316,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                         <span>
                           <code className="rounded bg-muted px-1">
                             {code.code}
-                          </code>{' '}
+                          </code>{" "}
                           +{code.amount} credits
                           {code.used_at ? (
                             <span className="ml-1 text-muted-foreground">
@@ -364,5 +362,5 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

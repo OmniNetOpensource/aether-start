@@ -152,10 +152,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           result.currentPath
         );
 
-        await startChatRequest({
-          messages: pathMessages,
-          titleSource: { role: "user", blocks: result.addedMessage.blocks },
-        });
+        await startChatRequest({ messages: pathMessages });
       },
       retryFromMessage: async (messageId, depth) => {
         const treeStore = useChatSessionStore.getState();
@@ -200,10 +197,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
             result.currentPath
           );
 
-          await startChatRequest({
-            messages: pathMessages,
-            titleSource: { role: "user", blocks: result.addedMessage.blocks },
-          });
+          await startChatRequest({ messages: pathMessages });
           return;
         }
 
@@ -217,14 +211,8 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         set({ editingState: null }, false, "retryFromMessage/assistant");
 
         const pathMessages = computeMessagesFromPath(treeState.messages, nextPath);
-        const titleSource =
-          [...pathMessages].reverse().find((message) => message.role === "user") ??
-          pathMessages[0];
 
-        await startChatRequest({
-          messages: pathMessages,
-          titleSource,
-        });
+        await startChatRequest({ messages: pathMessages });
       },
       clear: () => set({ editingState: null }, false, "clear"),
     }),

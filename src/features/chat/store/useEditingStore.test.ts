@@ -138,7 +138,7 @@ describe('useEditingStore', () => {
 
     const requestArg = startChatRequestMock.mock.calls[0][0]
     expect(requestArg.messages).toHaveLength(1)
-    expect(requestArg.titleSource.role).toBe('user')
+    expect(requestArg.messages[0].role).toBe('user')
     expect(useChatSessionStore.getState().currentPath[0]).toBe(3)
   })
 

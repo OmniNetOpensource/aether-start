@@ -1,8 +1,9 @@
-import { createRoot } from 'react-dom/client'
-import { act } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
-;(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+import { createRoot } from "react-dom/client";
+import { act } from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+(
+  globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
+).IS_REACT_ACT_ENVIRONMENT = true;
 
 const {
   resetLastEventIdMock,
@@ -14,53 +15,63 @@ const {
   subscribeRequestStateMock,
   requestState,
 } = vi.hoisted(() => {
-  const requestListeners = new Set<() => void>()
+  const requestListeners = new Set<() => void>();
   const requestState = {
-    requestPhase: 'done' as 'sending' | 'answering' | 'done',
-    connectionState: 'idle' as 'idle' | 'connecting' | 'connected' | 'disconnected',
-  }
+    requestPhase: "done" as "sending" | "answering" | "done",
+    connectionState: "idle" as
+      | "idle"
+      | "connecting"
+      | "connected"
+      | "disconnected",
+  };
 
   return {
     resetLastEventIdMock: vi.fn(),
     resumeRunningConversationMock: vi.fn().mockResolvedValue(undefined),
     useConversationLoaderMock: vi.fn(),
     clearRequestStateMock: vi.fn(),
-    setConnectionStateMock: vi.fn((connectionState: 'idle' | 'connecting' | 'connected' | 'disconnected') => {
-      requestState.connectionState = connectionState
-      requestListeners.forEach((listener) => listener())
-    }),
+    setConnectionStateMock: vi.fn(
+      (
+        connectionState: "idle" | "connecting" | "connected" | "disconnected",
+      ) => {
+        requestState.connectionState = connectionState;
+        requestListeners.forEach((listener) => listener());
+      },
+    ),
     resetRequestListeners: () => requestListeners.clear(),
     subscribeRequestStateMock: vi.fn((listener: () => void) => {
-      requestListeners.add(listener)
+      requestListeners.add(listener);
       return () => {
-        requestListeners.delete(listener)
-      }
+        requestListeners.delete(listener);
+      };
     }),
     requestState,
-  }
-})
+  };
+});
 
-vi.mock('@tanstack/react-router', () => ({
+vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => () => ({
-    useParams: () => ({ conversationId: 'conv-1' }),
+    useParams: () => ({ conversationId: "conv-1" }),
   }),
-}))
+}));
 
-vi.mock('@/features/sidebar/hooks/useConversationLoader', () => ({
+vi.mock("@/features/sidebar/hooks/useConversationLoader", () => ({
   useConversationLoader: useConversationLoaderMock,
-}))
+}));
 
-vi.mock('@/features/chat/lib/api/chat-orchestrator', () => ({
+vi.mock("@/features/chat/lib/api/chat-orchestrator", () => ({
   resetLastEventId: resetLastEventIdMock,
   resumeRunningConversation: resumeRunningConversationMock,
-}))
+}));
 
-vi.mock('@/features/chat/store/useChatRequestStore', () => ({
+vi.mock("@/features/chat/store/useChatRequestStore", () => ({
   useChatRequestStore: Object.assign(
-    (selector: (state: {
-      requestPhase: typeof requestState.requestPhase
-      connectionState: typeof requestState.connectionState
-    }) => unknown) =>
+    (
+      selector: (state: {
+        requestPhase: typeof requestState.requestPhase;
+        connectionState: typeof requestState.connectionState;
+      }) => unknown,
+    ) =>
       selector({
         requestPhase: requestState.requestPhase,
         connectionState: requestState.connectionState,
@@ -75,193 +86,197 @@ vi.mock('@/features/chat/store/useChatRequestStore', () => ({
       subscribe: subscribeRequestStateMock,
     },
   ),
-}))
+}));
 
-vi.mock('@/features/sidebar/store/useChatSessionStore', () => ({
-  useChatSessionStore: (selector: (state: { conversations: Array<{ id: string; title: string }> }) => unknown) =>
+vi.mock("@/features/sidebar/store/useChatSessionStore", () => ({
+  useChatSessionStore: (
+    selector: (state: {
+      conversations: Array<{ id: string; title: string }>;
+    }) => unknown,
+  ) =>
     selector({
-      conversations: [{ id: 'conv-1', title: 'Conversation' }],
+      conversations: [{ id: "conv-1", title: "Conversation" }],
     }),
-}))
+}));
 
-vi.mock('@/features/chat/components/composer/Composer', () => ({
+vi.mock("@/features/chat/components/composer/Composer", () => ({
   Composer: () => <div>Composer</div>,
-}))
+}));
 
-vi.mock('@/features/chat/components/message/MessageList', () => ({
+vi.mock("@/features/chat/components/message/MessageList", () => ({
   MessageList: () => <div>MessageList</div>,
-}))
+}));
 
-import { ConversationPage } from './$conversationId'
+import { ConversationPage } from "./$conversationId";
 
 const flush = async () => {
-  await Promise.resolve()
-  await Promise.resolve()
-}
+  await Promise.resolve();
+  await Promise.resolve();
+};
 
-describe('ConversationPage SSE lifecycle', () => {
+describe("ConversationPage SSE lifecycle", () => {
   beforeEach(() => {
-    resetLastEventIdMock.mockReset()
-    resumeRunningConversationMock.mockReset()
-    resumeRunningConversationMock.mockResolvedValue(undefined)
-    clearRequestStateMock.mockReset()
-    setConnectionStateMock.mockReset()
-    subscribeRequestStateMock.mockClear()
-    resetRequestListeners()
-    requestState.requestPhase = 'done'
-    requestState.connectionState = 'idle'
-    useConversationLoaderMock.mockReturnValue({ isLoading: false })
-  })
+    resetLastEventIdMock.mockReset();
+    resumeRunningConversationMock.mockReset();
+    resumeRunningConversationMock.mockResolvedValue(undefined);
+    clearRequestStateMock.mockReset();
+    setConnectionStateMock.mockReset();
+    subscribeRequestStateMock.mockClear();
+    resetRequestListeners();
+    requestState.requestPhase = "done";
+    requestState.connectionState = "idle";
+    useConversationLoaderMock.mockReturnValue({ isLoading: false });
+  });
 
   afterEach(() => {
-    vi.useRealTimers()
-  })
+    vi.useRealTimers();
+  });
 
-  it('does not start recovery directly from the route on mount', async () => {
-    const container = document.createElement('div')
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(<ConversationPage />)
-      await flush()
-    })
-
-    expect(resumeRunningConversationMock).not.toHaveBeenCalled()
+  it("does not start recovery directly from the route on mount", async () => {
+    const container = document.createElement("div");
+    const root = createRoot(container);
 
     await act(async () => {
-      root.unmount()
-      await flush()
-    })
-  })
+      root.render(<ConversationPage />);
+      await flush();
+    });
 
-  it('clears request state on unmount', async () => {
-    const container = document.createElement('div')
-    const root = createRoot(container)
+    expect(resumeRunningConversationMock).not.toHaveBeenCalled();
 
     await act(async () => {
-      root.render(<ConversationPage />)
-      await flush()
-    })
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it("clears request state on unmount", async () => {
+    const container = document.createElement("div");
+    const root = createRoot(container);
 
     await act(async () => {
-      root.unmount()
-      await flush()
-    })
-
-    expect(clearRequestStateMock).toHaveBeenCalled()
-    expect(setConnectionStateMock).toHaveBeenCalledWith('idle')
-  })
-
-  it('marks the connection as disconnected when the browser goes offline mid-stream', async () => {
-    requestState.requestPhase = 'answering'
-    requestState.connectionState = 'connected'
-
-    const container = document.createElement('div')
-    const root = createRoot(container)
+      root.render(<ConversationPage />);
+      await flush();
+    });
 
     await act(async () => {
-      root.render(<ConversationPage />)
-      await flush()
-    })
+      root.unmount();
+      await flush();
+    });
 
-    setConnectionStateMock.mockClear()
+    expect(clearRequestStateMock).toHaveBeenCalled();
+    expect(setConnectionStateMock).toHaveBeenCalledWith("idle");
+  });
 
-    await act(async () => {
-      window.dispatchEvent(new Event('offline'))
-      await flush()
-    })
+  it("marks the connection as disconnected when the browser goes offline mid-stream", async () => {
+    requestState.requestPhase = "answering";
+    requestState.connectionState = "connected";
 
-    expect(setConnectionStateMock).toHaveBeenCalledWith('disconnected')
-
-    await act(async () => {
-      root.unmount()
-      await flush()
-    })
-  })
-
-  it('tries to resume the running conversation when the browser comes back online', async () => {
-    requestState.requestPhase = 'answering'
-    requestState.connectionState = 'disconnected'
-
-    const container = document.createElement('div')
-    const root = createRoot(container)
+    const container = document.createElement("div");
+    const root = createRoot(container);
 
     await act(async () => {
-      root.render(<ConversationPage />)
-      await flush()
-    })
+      root.render(<ConversationPage />);
+      await flush();
+    });
 
-    resumeRunningConversationMock.mockClear()
+    setConnectionStateMock.mockClear();
 
     await act(async () => {
-      window.dispatchEvent(new Event('online'))
-      await flush()
-    })
+      window.dispatchEvent(new Event("offline"));
+      await flush();
+    });
+
+    expect(setConnectionStateMock).toHaveBeenCalledWith("disconnected");
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
+
+  it("tries to resume the running conversation when the browser comes back online", async () => {
+    requestState.requestPhase = "answering";
+    requestState.connectionState = "disconnected";
+
+    const container = document.createElement("div");
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<ConversationPage />);
+      await flush();
+    });
+
+    resumeRunningConversationMock.mockClear();
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+      await flush();
+    });
 
     expect(resumeRunningConversationMock).toHaveBeenCalledWith(
-      'conv-1',
+      "conv-1",
       expect.any(AbortSignal),
-    )
+    );
 
     await act(async () => {
-      root.unmount()
-      await flush()
-    })
-  })
+      root.unmount();
+      await flush();
+    });
+  });
 
-  it.skip('retries with backoff when the stream is disconnected without an offline event', async () => {
-    vi.useFakeTimers()
+  it.skip("retries with backoff when the stream is disconnected without an offline event", async () => {
+    vi.useFakeTimers();
 
-    requestState.requestPhase = 'answering'
-    requestState.connectionState = 'disconnected'
+    requestState.requestPhase = "answering";
+    requestState.connectionState = "disconnected";
 
-    const container = document.createElement('div')
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(<ConversationPage />)
-      await flush()
-    })
-
-    resumeRunningConversationMock.mockClear()
+    const container = document.createElement("div");
+    const root = createRoot(container);
 
     await act(async () => {
-      vi.advanceTimersByTime(999)
-      await flush()
-    })
+      root.render(<ConversationPage />);
+      await flush();
+    });
 
-    expect(resumeRunningConversationMock).not.toHaveBeenCalled()
+    resumeRunningConversationMock.mockClear();
 
     await act(async () => {
-      vi.advanceTimersByTime(1)
-      await flush()
-    })
+      vi.advanceTimersByTime(999);
+      await flush();
+    });
+
+    expect(resumeRunningConversationMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      vi.advanceTimersByTime(1);
+      await flush();
+    });
 
     expect(resumeRunningConversationMock).toHaveBeenCalledWith(
-      'conv-1',
+      "conv-1",
       expect.any(AbortSignal),
-    )
+    );
 
     await act(async () => {
-      root.unmount()
-      await flush()
-    })
-  })
+      root.unmount();
+      await flush();
+    });
+  });
 
-  it('resets event cursor on unmount', async () => {
-    const container = document.createElement('div')
-    const root = createRoot(container)
-
-    await act(async () => {
-      root.render(<ConversationPage />)
-      await flush()
-    })
+  it("resets event cursor on unmount", async () => {
+    const container = document.createElement("div");
+    const root = createRoot(container);
 
     await act(async () => {
-      root.unmount()
-      await flush()
-    })
+      root.render(<ConversationPage />);
+      await flush();
+    });
 
-    expect(resetLastEventIdMock).toHaveBeenCalledTimes(1)
-  })
-})
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+
+    expect(resetLastEventIdMock).toHaveBeenCalledTimes(1);
+  });
+});

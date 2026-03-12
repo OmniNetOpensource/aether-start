@@ -230,7 +230,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       return this.handleChat(request, userId)
     }
 
-    if (request.method === 'GET' && sub === 'events') {
+    if (request.method === 'POST' && sub === 'events') {
       if (!userId) return new Response('Unauthorized', { status: 401 })
       return this.handleEvents(request, userId)
     }
@@ -389,13 +389,13 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     })
   }
 
-  // ── GET /events ──────────────────────────────────────────────────────
+  // ── POST /events ─────────────────────────────────────────────────────
 
   // 给断线重连或页面恢复用的事件补拉入口。
   // 先回放 lastEventId 之后的缓存事件，再按当前状态决定是否继续挂长连接。
-  private handleEvents(request: Request, userId: string): Response {
-    const url = new URL(request.url)
-    const lastEventId = Number(url.searchParams.get('lastEventId') ?? 0)
+  private async handleEvents(request: Request, userId: string): Promise<Response> {
+    const body = await request.json().catch(() => ({})) as Record<string, unknown>
+    const lastEventId = Number(body.lastEventId ?? 0)
 
     // /events 虽然是只读补拉，但仍然只能由会话拥有者访问。
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
