@@ -3,6 +3,7 @@ import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/
 import { log, logProviderCommunication } from './logger'
 import { buildProviderErrorEvent } from './provider-error'
 import { resolveAttachmentToBase64 } from './attachment-utils'
+import { parseToolResultImage } from './tool-result-images'
 import { getOpenAIClient } from './openai'
 import type {
   PendingToolInvocation,
@@ -163,7 +164,35 @@ export function formatOpenAIResponsesToolContinuation(
       output: toolResult.result,
     }))
 
-  return [...assistantMessages, ...functionCallItems, ...functionCallOutputItems]
+  const toolResultImageContent: OpenAI.Responses.ResponseInputContent[] = toolResults.flatMap((toolResult) => {
+    const image = parseToolResultImage(toolResult.result)
+    if (!image) {
+      return []
+    }
+
+    return [
+      {
+        type: 'input_text',
+        text: `Image returned by tool ${toolResult.name}. Use it when answering.`,
+      },
+      {
+        type: 'input_image',
+        detail: 'auto',
+        image_url: image.dataUrl,
+      },
+    ]
+  })
+
+  const imageMessage: OpenAI.Responses.EasyInputMessage[] =
+    toolResultImageContent.length > 0
+      ? [{
+          type: 'message',
+          role: 'user',
+          content: toolResultImageContent,
+        }]
+      : []
+
+  return [...assistantMessages, ...functionCallItems, ...functionCallOutputItems, ...imageMessage]
 }
 
 export class OpenAIResponsesChatProvider {

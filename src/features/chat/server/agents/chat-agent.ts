@@ -49,6 +49,8 @@ type ChatAgentEnv = Cloudflare.Env & {
   ANTHROPIC_BASE_URL_RIGHTCODE_SALE?: string
   ANTHROPIC_API_KEY_IKUNCODE?: string
   ANTHROPIC_BASE_URL_IKUNCODE?: string
+  GEMINI_API_KEY_IKUNCODE?: string
+  GEMINI_BASE_URL_IKUNCODE?: string
   DMX_APIKEY?: string
   DMX_BASEURL?: string
   SERP_API_KEY?: string

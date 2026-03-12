@@ -151,6 +151,61 @@ describe('openai-responses provider', () => {
     ])
   })
 
+  it('adds a native input_image message when a tool result contains an image data URL', () => {
+    const continuation = formatOpenAIResponsesToolContinuation(
+      '',
+      [
+        {
+          id: 'call_1',
+          name: 'fetch_url',
+          args: { url: 'https://example.com/image.png' },
+        },
+      ],
+      [
+        {
+          id: 'call_1',
+          name: 'fetch_url',
+          result: JSON.stringify({
+            type: 'image',
+            data_url: 'data:image/png;base64,abc123',
+            mime_type: 'image/png',
+            size_bytes: 123,
+          }),
+        },
+      ],
+    )
+
+    expect(continuation).toEqual([
+      {
+        type: 'function_call',
+        call_id: 'call_1',
+        name: 'fetch_url',
+        arguments: '{"url":"https://example.com/image.png"}',
+      },
+      {
+        type: 'function_call_output',
+        call_id: 'call_1',
+        output:
+          '{"type":"image","data_url":"data:image/png;base64,abc123","mime_type":"image/png","size_bytes":123}',
+      },
+      {
+        type: 'message',
+        role: 'user',
+        content: [
+          {
+            type: 'input_text',
+            text: 'Image returned by tool fetch_url. Use it when answering.',
+          },
+          {
+            type: 'input_image',
+            detail: 'auto',
+            image_url: 'data:image/png;base64,abc123',
+          },
+        ],
+      },
+    ])
+  })
+
   it('streams content and thinking, then returns parsed pending tool calls', async () => {
     const streamEvents: OpenAI.Responses.ResponseStreamEvent[] = [
       {

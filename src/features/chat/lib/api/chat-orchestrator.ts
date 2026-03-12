@@ -27,6 +27,10 @@ type StartRequestPayload = {
   preferLocalTitle?: boolean
 }
 
+type ResumeRunningConversationOptions = {
+  clearRequestStateWhenNotRunning?: boolean
+}
+
 type ChatStatusEvent =
   | { type: 'sync'; status: ChatAgentStatus; requestId?: string }
   | { type: 'started'; requestId: string }
@@ -167,6 +171,51 @@ const consumeSSE = async (
   }
 }
 
+const isAbortError = (error: unknown) =>
+  (error instanceof DOMException && error.name === 'AbortError') ||
+  (error instanceof Error && error.name === 'AbortError')
+
+const isRecoverableStreamError = (error: unknown) => {
+  if (isAbortError(error) || !(error instanceof Error)) {
+    return false
+  }
+
+  if (error.message.startsWith('Chat request failed:')) {
+    return false
+  }
+
+  const message = error.message.toLowerCase()
+
+  return (
+    error instanceof TypeError ||
+    message.includes('network') ||
+    message.includes('fetch') ||
+    message.includes('stream') ||
+    message.includes('load failed')
+  )
+}
+
+const resetRequestState = () => {
+  const store = useChatRequestStore.getState()
+  store.clearRequestState()
+  store.setConnectionState('idle')
+}
+
+const markRequestDisconnected = (requestId?: string | null) => {
+  const store = useChatRequestStore.getState()
+
+  if (requestId && store.activeRequestId && store.activeRequestId !== requestId) {
+    return
+  }
+
+  if (store.status === 'done') {
+    return
+  }
+
+  store.setStatus('answering')
+  store.setConnectionState('disconnected')
+}
+
 const handleChatEvent = (
   event: ChatServerToClientEvent,
   requestId: string,
@@ -215,17 +264,20 @@ const handleChatStatus = (statusEvent: ChatStatusEvent) => {
       toast.warning(BUSY_WARNING)
       store.setStatus('answering')
       store.setActiveRequestId(statusEvent.currentRequestId)
+      store.setConnectionState('connected')
       return
 
     case 'started':
       store.setStatus(store.status === 'answering' ? 'answering' : 'sending')
       store.setActiveRequestId(statusEvent.requestId)
+      store.setConnectionState('connected')
       return
 
     case 'sync':
       if (statusEvent.status === 'running') {
         store.setStatus('answering')
         store.setActiveRequestId(statusEvent.requestId ?? store.activeRequestId)
+        store.setConnectionState('connected')
         return
       }
 
@@ -443,7 +495,7 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
   const { signal, release } = replaceActiveAbortController()
   requestStore.setStatus('sending')
   requestStore.setActiveRequestId(requestId)
-  requestStore.setConnectionState('connected')
+  requestStore.setConnectionState('connecting')
 
   try {
     const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/chat`, {
@@ -474,17 +526,27 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
             ? data.message
             : QUOTA_EXCEEDED_MESSAGE,
       })
-      useChatRequestStore.getState().clearRequestState()
+      resetRequestState()
       return
     }
 
+    requestStore.setConnectionState('connected')
     await consumeStreamResponse(response, signal)
+
+    if (useChatRequestStore.getState().activeRequestId === requestId) {
+      markRequestDisconnected(requestId)
+    }
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
+    if (isAbortError(error)) {
       return
     }
 
-    useChatRequestStore.getState().clearRequestState()
+    if (isRecoverableStreamError(error)) {
+      markRequestDisconnected(requestId)
+      return
+    }
+
+    resetRequestState()
   } finally {
     release()
   }
@@ -506,12 +568,13 @@ export const stopActiveChatRequest = () => {
     }).catch(() => {})
   }
 
-  useChatRequestStore.getState().clearRequestState()
+  resetRequestState()
 }
 
 export const resumeRunningConversation = async (
   conversationId: string,
   signal: AbortSignal,
+  options?: ResumeRunningConversationOptions,
 ) => {
   if (!conversationId) {
     return
@@ -522,17 +585,23 @@ export const resumeRunningConversation = async (
   try {
     agentStatus = await checkAgentStatus(conversationId)
   } catch {
+    if (!signal.aborted) {
+      markRequestDisconnected(useChatRequestStore.getState().activeRequestId)
+    }
     return
   }
 
   if (agentStatus.status !== 'running') {
+    if (options?.clearRequestStateWhenNotRunning) {
+      resetRequestState()
+    }
     return
   }
 
   const requestStore = useChatRequestStore.getState()
   requestStore.setStatus('answering')
   requestStore.setActiveRequestId(agentStatus.requestId ?? null)
-  requestStore.setConnectionState('connected')
+  requestStore.setConnectionState('connecting')
 
   const activeRequest = replaceActiveAbortController(signal)
 
@@ -545,11 +614,26 @@ export const resumeRunningConversation = async (
       },
     )
 
+    requestStore.setConnectionState('connected')
     await consumeStreamResponse(response, activeRequest.signal)
-  } catch (error) {
-    if (!(error instanceof DOMException && error.name === 'AbortError')) {
-      useChatRequestStore.getState().clearRequestState()
+
+    if (
+      agentStatus.requestId &&
+      useChatRequestStore.getState().activeRequestId === agentStatus.requestId
+    ) {
+      markRequestDisconnected(agentStatus.requestId)
     }
+  } catch (error) {
+    if (isAbortError(error)) {
+      return
+    }
+
+    if (isRecoverableStreamError(error)) {
+      markRequestDisconnected(agentStatus.requestId)
+      return
+    }
+
+    resetRequestState()
   } finally {
     activeRequest.release()
   }

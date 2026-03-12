@@ -21,6 +21,17 @@ type AnthropicImageSource = {
   data: string;
 };
 
+type AnthropicToolResultContentItem =
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: AnthropicImageSource }
+
+const SUPPORTED_TOOL_RESULT_IMAGE_MEDIA_TYPES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+])
+
 export type ThinkingBlockData =
   | { type: 'thinking'; thinking: string; signature: string }
   | { type: 'redacted_thinking'; data: string }
@@ -29,7 +40,12 @@ export type AnthropicContentBlock =
   | { type: "text"; text: string }
   | { type: "image"; source: AnthropicImageSource }
   | { type: "tool_use"; id: string; name: string; input: Record<string, unknown> }
-  | { type: "tool_result"; tool_use_id: string; content: string }
+  | {
+      type: "tool_result"
+      tool_use_id: string
+      content: string | AnthropicToolResultContentItem[]
+      is_error?: boolean
+    }
   | ThinkingBlockData;
 
 export type AnthropicMessage = {
@@ -188,6 +204,11 @@ async function* streamAnthropicCompletion(requestParams: {
     ...thinkingParams,
   };
 
+  logProviderCommunication('anthropic', 'Messages request', {
+    model: requestParams.model,
+    body: streamParams,
+  })
+
   const stream = client.messages.stream(streamParams, {
     signal: requestParams.signal,
   });
@@ -268,20 +289,34 @@ export function formatToolContinuation(
     })
   }
 
-  type ToolResultContentItem =
-    | { type: 'text'; text: string }
-    | { type: 'image'; source: AnthropicImageSource }
-
   const toolResultContent: Array<{
     type: 'tool_result'
     tool_use_id: string
-    content: string | ToolResultContentItem[]
+    content: string | AnthropicToolResultContentItem[]
+    is_error?: boolean
   }> = toolResults.map((toolResult) => {
     try {
       const parsed = JSON.parse(toolResult.result)
       if (parsed.type === 'image' && parsed.data_url) {
         const base64Match = parsed.data_url.match(/^data:([^;]+);base64,(.+)$/)
         if (base64Match) {
+          const mediaType = base64Match[1]
+          if (!SUPPORTED_TOOL_RESULT_IMAGE_MEDIA_TYPES.has(mediaType)) {
+            log('ANTHROPIC', 'Skipping unsupported tool_result image media type', {
+              toolUseId: toolResult.id,
+              mediaType,
+              toolName: toolResult.name,
+            })
+            return {
+              type: 'tool_result' as const,
+              tool_use_id: toolResult.id,
+              is_error: true,
+              content:
+                `Unsupported image format for Anthropic tool_result: ${mediaType}. ` +
+                'Anthropic supports image/jpeg, image/png, image/gif, and image/webp.',
+            }
+          }
+
           return {
             type: 'tool_result' as const,
             tool_use_id: toolResult.id,
@@ -290,7 +325,7 @@ export function formatToolContinuation(
                 type: 'image' as const,
                 source: {
                   type: 'base64' as const,
-                  media_type: base64Match[1],
+                  media_type: mediaType,
                   data: base64Match[2],
                 },
               },

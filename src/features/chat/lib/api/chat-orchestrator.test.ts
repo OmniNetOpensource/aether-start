@@ -71,6 +71,13 @@ const emptyStream = () =>
     },
   })
 
+const errorStream = (error: Error) =>
+  new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.error(error)
+    },
+  })
+
 // Helper: create an SSE stream from events
 const sseStream = (
   events: Array<{ event: string; data: unknown }>,
@@ -236,6 +243,24 @@ describe('chat-orchestrator SSE model', () => {
     // Should set to answering with the busy request's ID
     expect(useChatRequestStore.getState().status).toBe('answering')
     expect(useChatRequestStore.getState().activeRequestId).toBe('req-busy')
+    expect(useChatRequestStore.getState().connectionState).toBe('connected')
+  })
+
+  it('marks the request as disconnected when the stream breaks mid-response', async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: errorStream(new TypeError('network down')),
+    })
+
+    const orchestrator = await import('./chat-orchestrator')
+    await orchestrator.startChatRequest({
+      messages: [{ role: 'user', blocks: [] } as never],
+    })
+
+    expect(useChatRequestStore.getState().status).toBe('answering')
+    expect(useChatRequestStore.getState().activeRequestId).toBeTruthy()
+    expect(useChatRequestStore.getState().connectionState).toBe('disconnected')
   })
 
   it('stopActiveChatRequest aborts and sends abort to server', async () => {
@@ -322,5 +347,27 @@ describe('chat-orchestrator SSE model', () => {
 
     // Only the status probe should have been called
     expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('clears stale request state when recovery finds no running agent', async () => {
+    useChatRequestStore.getState().setStatus('answering')
+    useChatRequestStore.getState().setActiveRequestId('req-stale')
+    useChatRequestStore.getState().setConnectionState('disconnected')
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: 'idle' }),
+    })
+
+    const orchestrator = await import('./chat-orchestrator')
+    const ac = new AbortController()
+    await orchestrator.resumeRunningConversation('conv-1', ac.signal, {
+      clearRequestStateWhenNotRunning: true,
+    })
+
+    expect(useChatRequestStore.getState().status).toBe('done')
+    expect(useChatRequestStore.getState().activeRequestId).toBeNull()
+    expect(useChatRequestStore.getState().connectionState).toBe('idle')
   })
 })

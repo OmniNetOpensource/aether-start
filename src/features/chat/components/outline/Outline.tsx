@@ -29,6 +29,8 @@ const roleLabelMap: Record<Message["role"], string> = {
   assistant: "助手",
 };
 
+// The message list may still be re-rendering after the dialog closes.
+// Retry a few frames so selecting a node still scrolls to the right message.
 const scrollToMessage = (messageId: number) => {
   let attempts = 0;
   const tryScroll = () => {
@@ -49,6 +51,7 @@ const scrollToMessage = (messageId: number) => {
 const trimPreview = (text: string) =>
   truncateTextByWidth(text, PREVIEW_LIMIT, "…");
 
+// Use a smooth cubic curve so parent/child links stay readable in dense trees.
 const buildCurvePath = (x1: number, y1: number, x2: number, y2: number) => {
   const midY = (y1 + y2) / 2;
   return `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`;
@@ -71,17 +74,24 @@ function OutlineGraph({
   disabled: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // camera.x / camera.y describe which canvas point should sit at the center
+  // of the viewport. The actual SVG translate is derived from it later.
   const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA);
   const [isPanning, setIsPanning] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null);
+  // Snapshot the drag start so every pointer move can be measured from a
+  // stable origin instead of accumulating errors frame by frame.
   const panStateRef = useRef<{
     startX: number;
     startY: number;
     originX: number;
     originY: number;
   } | null>(null);
+  // Click and pan share pointer events. Once a real drag happened, node clicks
+  // should be ignored until the pointer is released.
   const didPanRef = useRef(false);
+  // Native wheel listeners keep old closures, so keep the latest camera in a ref.
   const cameraRef = useRef(camera);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
 
@@ -89,6 +99,8 @@ function OutlineGraph({
     cameraRef.current = camera;
   }, [camera]);
 
+  // Highlight checks happen for every rendered node and edge, so Set lookups
+  // keep the render path simple and cheap.
   const currentPathSet = new Set(currentPath);
   const currentEdgeSet = (() => {
     const next = new Set<string>();
@@ -114,9 +126,13 @@ function OutlineGraph({
       const ch = container.clientHeight;
       if (cw === 0 || ch === 0) return;
 
+      // Fit the whole layout into view, but cap the zoom so small trees are not
+      // blown up too aggressively.
       const fitZoom = clampZoom(
         Math.min(cw / canvasWidth, ch / canvasHeight, 1.5),
       );
+      // Layout coordinates are stored from the top-left corner. Convert them to
+      // visual center points before moving the camera.
       const focusX = targetNode
         ? targetNode.x +
           (targetNode.isVirtualRoot ? ROOT_R : NODE_W / 2) +
@@ -139,6 +155,8 @@ function OutlineGraph({
     const container = containerRef.current;
     if (!container || !open) return;
 
+    // Container size directly affects camera math, especially after the dialog
+    // opens or the viewport changes.
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (entry) {
@@ -165,6 +183,8 @@ function OutlineGraph({
     const lastId = currentPath[currentPath.length - 1];
     const targetNode = nodeById.get(lastId);
 
+    // Wait for the dialog and SVG to finish their initial layout before fitting
+    // the current branch into view.
     const frame1 = requestAnimationFrame(() => {
       requestAnimationFrame(() => fitView(targetNode ?? undefined));
     });
@@ -175,6 +195,8 @@ function OutlineGraph({
     const container = containerRef.current;
     if (!container || !open) return;
 
+    // Zoom around the cursor position instead of the canvas center, which makes
+    // the interaction feel much more like a map.
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
       const rect = container.getBoundingClientRect();
@@ -198,6 +220,7 @@ function OutlineGraph({
   }, [open]);
 
   const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
+    // A node click should stay a node click. Only start panning from empty space.
     if ((event.target as Element).closest("[role='button']")) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     setIsPanning(true);
@@ -215,6 +238,7 @@ function OutlineGraph({
     if (!pan) return;
     const dx = event.clientX - pan.startX;
     const dy = event.clientY - pan.startY;
+    // Tiny movement is usually just hand jitter while clicking.
     if (
       !didPanRef.current &&
       Math.abs(dx) < PAN_THRESHOLD &&
@@ -248,6 +272,8 @@ function OutlineGraph({
     );
   }
 
+  // Convert the camera center into the actual SVG translation needed to place
+  // that point in the middle of the container.
   const tx = containerSize.width / 2 - camera.x * camera.zoom;
   const ty = containerSize.height / 2 - camera.y * camera.zoom;
   const useTransition = isAnimating && !isPanning;
@@ -278,6 +304,7 @@ function OutlineGraph({
         <g
           transform={`translate(${tx} ${ty}) scale(${camera.zoom})`}
           style={{
+            // Animate programmatic refocus, but never animate live dragging.
             transition: useTransition ? "transform 200ms ease-out" : "none",
           }}
         >
@@ -343,6 +370,8 @@ function OutlineGraph({
               const isCurrentPathNode = currentPathSet.has(node.messageId);
               const isHoveredNode = hoveredNodeId === node.messageId;
               const roleLabel = roleLabelMap[node.role];
+              // Active-path nodes get a stronger tint so the currently selected
+              // branch stands out without overpowering the text.
               const nodeFill = isCurrentPathNode
                 ? "color-mix(in srgb, var(--interactive-primary) 12%, var(--surface-primary))"
                 : "var(--surface-secondary)";
@@ -403,7 +432,7 @@ function OutlineGraph({
                     {roleLabel}
                   </text>
 
-                  {/* Sibling badge */}
+                  {/* Show branch order only when this parent actually has siblings. */}
                   {node.siblingCount > 1 && (
                     <>
                       <rect
@@ -459,6 +488,7 @@ export function OutlineButton() {
   const isBusy = status !== "done";
 
   const outline = (() => {
+    // Tree building and layout are only needed while the dialog is visible.
     if (!open) return null;
     const nextOutline = buildOutlineTree(messages, latestRootId);
     return {
@@ -468,6 +498,7 @@ export function OutlineButton() {
   })();
 
   const handleSelect = (targetMessageId: number) => {
+    // Avoid a redundant store update when the target is already on the current path.
     if (!currentPath.includes(targetMessageId)) {
       selectMessage(targetMessageId);
     }

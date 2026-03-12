@@ -27,6 +27,14 @@ export default function Sidebar() {
     document.body.style.overflow = "hidden";
   };
 
+  const handleSidebarTriggerClick = (
+    event: ReactMouseEvent<HTMLDivElement>,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    openSidebar();
+  };
+
   const closeSidebar = () => {
     openDropdownRef.current = false;
     sidebarRef.current?.classList.add("-translate-x-full");
@@ -107,7 +115,8 @@ export default function Sidebar() {
     <div className="relative z-(--z-sidebar) h-full w-0 shrink-0 group/sidebar-trigger">
       <div
         className="absolute left-0 top-0 z-(--z-sidebar) h-full w-4"
-        onMouseEnter={openSidebar}
+        onClick={isMobile ? handleSidebarTriggerClick : undefined}
+        onMouseEnter={isMobile ? undefined : openSidebar}
         aria-label="展开侧边栏"
       />
       <div className="pointer-events-none absolute left-0 top-1/2 z-(--z-sidebar) h-24 w-1.5 -translate-y-1/2 rounded-r-md bg-border/40 transition-all duration-300 group-hover/sidebar-trigger:w-2 group-hover/sidebar-trigger:bg-border/70" />
@@ -115,7 +124,7 @@ export default function Sidebar() {
       <aside
         ref={sidebarRef}
         className="absolute left-0 top-0 z-(--z-sidebar) flex h-full w-64 -translate-x-full flex-col overflow-hidden bg-(--sidebar-surface) shadow-[2px_0_8px_-2px_rgba(0,0,0,0.04)] transition-transform duration-300 ease-[var(--transition-smooth)] dark:shadow-[2px_0_8px_-2px_rgba(0,0,0,0.2)] md:w-[22vw] md:min-w-65 md:max-w-90"
-        onMouseLeave={handleMouseLeave}
+        onMouseLeave={isMobile ? undefined : handleMouseLeave}
       >
         <div className="flex h-20 shrink-0 items-center px-6">
           <AetherLogo className="h-5 text-foreground/90" />

@@ -1,9 +1,14 @@
-import { GoogleGenAI, createPartFromFunctionResponse } from '@google/genai'
+import {
+  GoogleGenAI,
+  createFunctionResponsePartFromBase64,
+  createPartFromFunctionResponse,
+} from '@google/genai'
 import type * as genai from '@google/genai'
 import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/model-provider-config'
 import { log, logProviderCommunication } from './logger'
 import { buildProviderErrorEvent } from './provider-error'
 import { resolveAttachmentToBase64 } from './attachment-utils'
+import { parseToolResultImage } from './tool-result-images'
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
@@ -111,6 +116,21 @@ export function formatGeminiToolContinuation(
   }
 
   const userParts: genai.Part[] = toolResults.map((result) => {
+    const image = parseToolResultImage(result.result)
+    if (image) {
+      return createPartFromFunctionResponse(
+        result.id,
+        result.name,
+        {
+          output: {
+            type: 'image',
+            mime_type: image.mediaType,
+          },
+        },
+        [createFunctionResponsePartFromBase64(image.base64, image.mediaType)],
+      )
+    }
+
     let response: Record<string, unknown>
     try {
       response = { output: JSON.parse(result.result) }

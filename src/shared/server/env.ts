@@ -17,6 +17,7 @@ type ServerEnv = {
   ANTHROPIC_API_KEY_IKUNCODE?: string
   ANTHROPIC_BASE_URL_IKUNCODE?: string
   GEMINI_API_KEY_IKUNCODE?: string
+  GEMINI_BASE_URL_IKUNCODE?: string
   DMX_APIKEY?: string
   DMX_BASEURL?: string
   SERP_API_KEY?: string
@@ -104,6 +105,9 @@ export const getServerEnv = (): ServerEnv => {
     GEMINI_API_KEY_IKUNCODE:
       readString(bindings.GEMINI_API_KEY_IKUNCODE) ??
       readStringFromProcess('GEMINI_API_KEY_IKUNCODE'),
+    GEMINI_BASE_URL_IKUNCODE:
+      readString((bindings as Record<string, unknown>).GEMINI_BASE_URL_IKUNCODE) ??
+      readStringFromProcess('GEMINI_BASE_URL_IKUNCODE'),
     DMX_APIKEY:
       readString(bindings.DMX_APIKEY) ??
       readStringFromProcess('DMX_APIKEY'),

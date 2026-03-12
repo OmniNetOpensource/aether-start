@@ -426,9 +426,9 @@ export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
 
   if (backend === "ikun-gemini") {
     const apiKey = env.GEMINI_API_KEY_IKUNCODE;
-    const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE;
+    const baseURL = env.GEMINI_BASE_URL_IKUNCODE;
     if (!apiKey) throw new Error("Missing GEMINI_API_KEY_IKUNCODE");
-    if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_IKUNCODE");
+    if (!baseURL) throw new Error("Missing GEMINI_BASE_URL_IKUNCODE");
     return {
       apiKey,
       baseURL,

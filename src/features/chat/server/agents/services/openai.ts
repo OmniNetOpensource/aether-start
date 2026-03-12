@@ -3,6 +3,7 @@ import { buildSystemPrompt, type BackendConfig } from '@/server/agents/services/
 import { log, logProviderCommunication, shouldLogProviderCommunication } from './logger'
 import { buildProviderErrorEvent } from './provider-error'
 import { resolveAttachmentToBase64 } from './attachment-utils'
+import { parseToolResultImage } from './tool-result-images'
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
@@ -239,7 +240,35 @@ export function formatOpenAIToolContinuation(
     content: toolResult.result,
   }))
 
-  return [assistantMessage, ...toolMessages]
+  const toolResultImageParts: OpenAIContentPart[] = toolResults.flatMap((toolResult) => {
+    const image = parseToolResultImage(toolResult.result)
+    if (!image) {
+      return []
+    }
+
+    return [
+      {
+        type: 'text',
+        text: `Image returned by tool ${toolResult.name}. Use it when answering.`,
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: image.dataUrl,
+        },
+      },
+    ]
+  })
+
+  const imageMessage: OpenAIMessage[] =
+    toolResultImageParts.length > 0
+      ? [{
+          role: 'user',
+          content: toolResultImageParts,
+        }]
+      : []
+
+  return [assistantMessage, ...toolMessages, ...imageMessage]
 }
 
 export class OpenAIChatProvider {

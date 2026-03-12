@@ -1,4 +1,3 @@
-
 import { useState, type ReactNode } from "react";
 import Markdown from "@/components/Markdown";
 import { ImagePreview } from "@/components/ImagePreview";
@@ -6,19 +5,11 @@ import { Message } from "@/types/message";
 import { getAttachmentPreviewUrl } from "@/lib/chat/attachments";
 import { getBranchInfo as getBranchInfoFn } from "@/lib/conversation/tree/message-tree";
 import { ResearchBlock } from "../research/ResearchBlock";
-import {
-  Copy,
-  Check,
-  AlertCircle,
-  Pencil,
-  RotateCcw,
-} from "lucide-react";
+import { Copy, Check, AlertCircle, Pencil, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  useMessageTreeStore,
-} from '@/stores/zustand/useMessageTreeStore'
+import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useEditingStore } from '@/stores/zustand/useEditingStore'
+import { useEditingStore } from "@/stores/zustand/useEditingStore";
 import { MessageEditor } from "./MessageEditor";
 import { BranchNavigator } from "./BranchNavigator";
 
@@ -103,7 +94,7 @@ export function MessageItem({
   isStreaming,
 }: MessageItemProps) {
   const messageFromStore = useMessageTreeStore(
-    (state) => state.messages[messageId - 1]
+    (state) => state.messages[messageId - 1],
   );
   const status = useChatRequestStore((s) => s.status);
   const isEditing = useEditingStore(
@@ -114,7 +105,10 @@ export function MessageItem({
   const navigateBranch = useMessageTreeStore((state) => state.navigateBranch);
   const message = messageFromStore;
 
-  const branchInfo = getBranchInfoFn(useMessageTreeStore.getState().messages, messageId);
+  const branchInfo = getBranchInfoFn(
+    useMessageTreeStore.getState().messages,
+    messageId,
+  );
   const isBusy = status !== "done";
 
   const handleStartEditing = () => startEditing(messageId);
@@ -155,9 +149,7 @@ export function MessageItem({
       className="w-full py-10"
     >
       <div className="w-full min-w-0 flex flex-col items-start text-left">
-        <div
-          className={`${contentWidthClass} ${isUser ? "ml-auto" : ""}`}
-        >
+        <div className={`${contentWidthClass} ${isUser ? "ml-auto" : ""}`}>
           {shouldRenderBody && (
             <>
               {isEditing ? (
@@ -181,21 +173,21 @@ export function MessageItem({
                     </div>
                   )}
                   <div className="text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
-                  {contentBlocks.map((block, blockIndex) => {
-                    const blockKey = `${index}-${blockIndex}`;
+                    {contentBlocks.map((block, blockIndex) => {
+                      const blockKey = `${index}-${blockIndex}`;
 
-                    if (block.type === "content") {
-                      return <Markdown key={blockKey} content={block.content} />;
-                    }
+                      if (block.type === "content") {
+                        return (
+                          <Markdown key={blockKey} content={block.content} />
+                        );
+                      }
 
-                    return null;
-                  })}
+                      return null;
+                    })}
                   </div>
                 </div>
               ) : (
-                <div
-                  className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal"
-                >
+                <div className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
                   {contentBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;
                     if (block.type === "research") {
@@ -229,8 +221,7 @@ export function MessageItem({
                         key={blockKey}
                         content={block.content}
                         isAnimating={
-                          isStreaming &&
-                          blockIndex === contentBlocks.length - 1
+                          isStreaming && blockIndex === contentBlocks.length - 1
                         }
                       />
                     );
@@ -241,9 +232,7 @@ export function MessageItem({
           )}
 
           {shouldShowToolbar && (
-            <div
-              className="mt-4 flex items-center transition-opacity duration-150 opacity-100 pointer-events-auto"
-            >
+            <div className="mt-4 flex items-center transition-opacity duration-150 opacity-100 pointer-events-auto">
               {isUser && (
                 <>
                   <ActionButton
@@ -256,7 +245,9 @@ export function MessageItem({
                     onClick={handleRetry}
                     disabled={isBusy}
                     title="重试生成"
-                    icon={<RotateCcw className="h-3.5 w-3.5" strokeWidth={2.5} />}
+                    icon={
+                      <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.5} />
+                    }
                   />
                 </>
               )}
@@ -272,9 +263,7 @@ export function MessageItem({
             </div>
           )}
           {branchInfo && !isEditing && (
-            <div
-              className="mt-2 flex items-center transition-opacity duration-150 pointer-events-auto"
-            >
+            <div className="mt-2 flex items-center transition-opacity duration-150 pointer-events-auto">
               <BranchNavigator
                 branchInfo={branchInfo}
                 onNavigate={handleNavigate}
