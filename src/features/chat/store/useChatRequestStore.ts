@@ -10,7 +10,7 @@ export type RoleInfo = { id: string; name: string };
 
 export type PromptInfo = { id: string; name: string };
 
-export type ChatRequestStatus = "sending" | "answering" | "done";
+export type ChatRequestPhase = "sending" | "answering" | "done";
 
 const MODEL_STORAGE_KEY = "aether_current_role";
 const PROMPT_STORAGE_KEY = "aether_current_prompt";
@@ -56,7 +56,7 @@ function setStoredPrompt(prompt: string): void {
 }
 
 export type ChatRequestState = {
-  status: ChatRequestStatus;
+  requestPhase: ChatRequestPhase;
   activeRequestId: string | null;
   connectionState: "idle" | ChatConnectionState;
   currentRole: string;
@@ -68,7 +68,7 @@ export type ChatRequestState = {
 };
 
 type ChatRequestActions = {
-  setStatus: (status: ChatRequestStatus) => void;
+  setRequestPhase: (phase: ChatRequestPhase) => void;
   setActiveRequestId: (requestId: string | null) => void;
   setConnectionState: (connectionState: "idle" | ChatConnectionState) => void;
   setCurrentRole: (role: string) => void;
@@ -86,7 +86,7 @@ type ChatRequestActions = {
 export type ChatRequestStore = ChatRequestState & ChatRequestActions;
 
 export const initialChatRequestState: ChatRequestState = {
-  status: "done",
+  requestPhase: "done",
   activeRequestId: null,
   connectionState: "idle",
   currentRole: "",
@@ -99,7 +99,7 @@ export const initialChatRequestState: ChatRequestState = {
 
 export const useChatRequestStore = create<ChatRequestStore>()((set, get) => ({
   ...initialChatRequestState,
-  setStatus: (status) => set({ status }),
+  setRequestPhase: (phase) => set({ requestPhase: phase }),
   setActiveRequestId: (activeRequestId) => set({ activeRequestId }),
   setConnectionState: (connectionState) => set({ connectionState }),
   setCurrentRole: (currentRole) => {
@@ -184,7 +184,7 @@ export const useChatRequestStore = create<ChatRequestStore>()((set, get) => ({
   },
   clearRequestState: () =>
     set((state) => ({
-      status: "done",
+      requestPhase: "done",
       activeRequestId: null,
       connectionState: state.connectionState,
       currentRole: state.currentRole,

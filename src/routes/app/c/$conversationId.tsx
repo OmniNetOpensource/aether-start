@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Composer } from "@/features/chat/components/composer/Composer";
 import { MessageList } from "@/features/chat/components/message/MessageList";
@@ -19,18 +19,12 @@ const RECONNECT_DELAYS_MS = [1000, 2000, 4000, 8000, 15000];
 export function ConversationPage() {
   const { conversationId } = Route.useParams();
   const { isLoading } = useConversationLoader(conversationId);
-  const status = useChatRequestStore((state) => state.status);
-  const connectionState = useChatRequestStore((state) => state.connectionState);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reconnectAttemptRef = useRef(0);
-  const resumeConversationRef = useRef<
-    ((clearRequestStateWhenNotRunning?: boolean) => void) | null
-  >(null);
 
-  const title = useConversationsStore(
-    (state) => state.conversations.find((c) => c.id === conversationId)?.title,
-  );
+  const conversations = useConversationsStore((state) => state.conversations);
+  const title = conversations.find((c) => c.id === conversationId)?.title;
 
+
+  // 根据当前会话标题同步浏览器标签页标题，离开时恢复默认
   useEffect(() => {
     const defaultTitle = "Aether";
 
@@ -48,120 +42,118 @@ export function ConversationPage() {
   }, [title]);
 
   useEffect(() => {
-    resetLastEventId();
-
-    const ac = new AbortController();
-    const clearReconnectTimer = () => {
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
+    let sseReconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let sseReconnectAttempt = 0;
+    const sseAbortController = new AbortController();
+    const clearSseReconnectTimer = () => {
+      if (sseReconnectTimer) {
+        clearTimeout(sseReconnectTimer);
+        sseReconnectTimer = null;
       }
     };
 
-    const resumeConversation = (clearRequestStateWhenNotRunning = false) => {
-      const store = useChatRequestStore.getState();
+    const connectSseStream = (markConnecting = false) => {
+      const { connectionState, setConnectionState } =
+        useChatRequestStore.getState();
 
-      if (ac.signal.aborted || store.connectionState === "connecting") {
+      if (
+        sseAbortController.signal.aborted ||
+        connectionState === "connecting"
+      ) {
         return;
       }
 
-      if (clearRequestStateWhenNotRunning) {
-        store.setConnectionState("connecting");
+      if (markConnecting) {
+        setConnectionState("connecting");
       }
 
-      resumeRunningConversation(conversationId, ac.signal, {
-        clearRequestStateWhenNotRunning,
-      }).catch(() => {});
+      resumeRunningConversation(conversationId, sseAbortController.signal).catch(
+        () => {},
+      );
     };
-    resumeConversationRef.current = resumeConversation;
 
-    const handleOffline = () => {
-      const store = useChatRequestStore.getState();
+    const syncSseReconnect = () => {
+      clearSseReconnectTimer();
 
-      clearReconnectTimer();
+      const { connectionState, requestPhase } = useChatRequestStore.getState();
 
-      if (store.status === "done") {
+      if (
+        requestPhase === "done" ||
+        connectionState === "idle" ||
+        connectionState === "connected"
+      ) {
+        sseReconnectAttempt = 0;
         return;
       }
 
-      store.setConnectionState("disconnected");
-    };
-
-    const handleOnline = () => {
-      const store = useChatRequestStore.getState();
-
-      clearReconnectTimer();
-
-      if (store.status === "done" || store.connectionState === "connecting") {
+      if (connectionState !== "disconnected") {
         return;
       }
 
-      resumeConversation(true);
+      if (typeof navigator !== "undefined" && navigator.onLine === false) {
+        return;
+      }
+
+      const delay =
+        RECONNECT_DELAYS_MS[
+          Math.min(
+            sseReconnectAttempt,
+            RECONNECT_DELAYS_MS.length - 1,
+          )
+        ];
+
+      sseReconnectTimer = setTimeout(() => {
+        sseReconnectTimer = null;
+        sseReconnectAttempt += 1;
+        connectSseStream(true);
+      }, delay);
     };
 
-    resumeConversation();
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
+    const handleSseOffline = () => {
+      clearSseReconnectTimer();
+
+      const { requestPhase, setConnectionState } =
+        useChatRequestStore.getState();
+
+      if (requestPhase === "done") {
+        return;
+      }
+
+      setConnectionState("disconnected");
+    };
+
+    const handleSseOnline = () => {
+      clearSseReconnectTimer();
+
+      const { connectionState, requestPhase } = useChatRequestStore.getState();
+
+      if (requestPhase === "done" || connectionState === "connecting") {
+        return;
+      }
+
+      connectSseStream(true);
+    };
+
+    const unsubscribeRequestState = useChatRequestStore.subscribe(
+      syncSseReconnect,
+    );
+
+    syncSseReconnect();
+    window.addEventListener("offline", handleSseOffline);
+    window.addEventListener("online", handleSseOnline);
 
     return () => {
-      clearReconnectTimer();
-      reconnectAttemptRef.current = 0;
-      resumeConversationRef.current = null;
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
-      ac.abort();
+      unsubscribeRequestState();
+      clearSseReconnectTimer();
+      sseReconnectAttempt = 0;
+      window.removeEventListener("offline", handleSseOffline);
+      window.removeEventListener("online", handleSseOnline);
+      sseAbortController.abort();
       resetLastEventId();
       useChatRequestStore.getState().clearRequestState();
       useChatRequestStore.getState().setConnectionState("idle");
     };
   }, [conversationId]);
-
-  useEffect(() => {
-    // 状态变化会频繁触发这个 effect，先清掉旧的重试定时器，
-    // 避免重复排队多个重连任务。
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-
-    // 请求已经结束，或者连接已经恢复正常时，停止重试并重置退避计数。
-    if (
-      status === "done" ||
-      connectionState === "idle" ||
-      connectionState === "connected"
-    ) {
-      reconnectAttemptRef.current = 0;
-      return;
-    }
-
-    if (connectionState !== "disconnected") {
-      return;
-    }
-
-    // 浏览器离线时不主动轮询，等 online 事件触发后再恢复。
-    if (typeof navigator !== "undefined" && navigator.onLine === false) {
-      return;
-    }
-
-    // 使用有上限的退避重试，避免断线后持续高频请求服务端。
-    const delay =
-      RECONNECT_DELAYS_MS[
-        Math.min(reconnectAttemptRef.current, RECONNECT_DELAYS_MS.length - 1)
-      ];
-
-    reconnectTimerRef.current = setTimeout(() => {
-      reconnectTimerRef.current = null;
-      reconnectAttemptRef.current += 1;
-      resumeConversationRef.current?.(true);
-    }, delay);
-
-    return () => {
-      if (reconnectTimerRef.current) {
-        clearTimeout(reconnectTimerRef.current);
-        reconnectTimerRef.current = null;
-      }
-    };
-  }, [connectionState, conversationId, status]);
 
   if (isLoading) {
     return null;

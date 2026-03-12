@@ -13,13 +13,13 @@ vi.mock('@/stores/zustand/useChatRequestStore', () => {
   const store = {
     getState: () => store._state,
     _state: {
-      status: 'done' as string,
+      requestPhase: 'done' as string,
       activeRequestId: null as string | null,
       connectionState: 'idle' as string,
       currentRole: 'aether',
       availableRoles: [],
       rolesLoading: false,
-      setStatus: vi.fn(),
+      setRequestPhase: vi.fn(),
       setActiveRequestId: vi.fn(),
       setConnectionState: vi.fn(),
       clearRequestState: vi.fn(),

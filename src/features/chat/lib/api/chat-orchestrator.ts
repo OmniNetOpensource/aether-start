@@ -1,400 +1,401 @@
-import { toast } from '@/hooks/useToast'
-import { useConversationsStore } from '@/stores/zustand/useConversationsStore'
-import { applyChatEventToTree } from '@/lib/chat/api/event-handlers'
-import { stripTransientSearchDataFromMessages } from '@/lib/chat/search-result-payload'
-import type { Message, MessageLike, SerializedMessage } from '@/types/message'
-import type { ChatAgentStatus, MessageTreeSnapshot } from '@/types/chat-api'
-import { appNavigate } from '@/lib/navigation'
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
-import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
-import type { ChatServerToClientEvent } from '@/types/chat-event-types'
+import { toast } from "@/hooks/useToast";
+import { useConversationsStore } from "@/stores/zustand/useConversationsStore";
+import { applyChatEventToTree } from "@/lib/chat/api/event-handlers";
+import { stripTransientSearchDataFromMessages } from "@/lib/chat/search-result-payload";
+import type { Message, MessageLike, SerializedMessage } from "@/types/message";
+import type { ChatAgentStatus, MessageTreeSnapshot } from "@/types/chat-api";
+import { appNavigate } from "@/lib/navigation";
+import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
+import type { ChatServerToClientEvent } from "@/types/chat-event-types";
 
-const AGENT_NAME = 'chat-agent'
-const BUSY_WARNING = '当前会话正在生成中'
-const SELECT_ROLE_WARNING = '请先选择角色'
-const QUOTA_EXCEEDED_MESSAGE = '额度不足'
+const AGENT_NAME = "chat-agent";
+const BUSY_WARNING = "当前会话正在生成中";
+const SELECT_ROLE_WARNING = "请先选择角色";
+const QUOTA_EXCEEDED_MESSAGE = "额度不足";
 
-type FinishedChatStatus = 'completed' | 'aborted' | 'error'
+type FinishedChatStatus = "completed" | "aborted" | "error";
 
 export type AgentStatusResponse = {
-  status: ChatAgentStatus
-  requestId?: string
-}
+  status: ChatAgentStatus;
+  requestId?: string;
+};
 
 type StartRequestPayload = {
-  messages: Message[]
-  titleSource?: MessageLike
-  preferLocalTitle?: boolean
-}
-
-type ResumeRunningConversationOptions = {
-  clearRequestStateWhenNotRunning?: boolean
-}
+  messages: Message[];
+  titleSource?: MessageLike;
+  preferLocalTitle?: boolean;
+};
 
 type ChatStatusEvent =
-  | { type: 'sync'; status: ChatAgentStatus; requestId?: string }
-  | { type: 'started'; requestId: string }
-  | { type: 'finished'; requestId: string; status: FinishedChatStatus }
-  | { type: 'busy'; currentRequestId: string }
+  | { type: "sync"; status: ChatAgentStatus; requestId?: string }
+  | { type: "started"; requestId: string }
+  | { type: "finished"; requestId: string; status: FinishedChatStatus }
+  | { type: "busy"; currentRequestId: string };
 
 const eventCursor = (() => {
-  let value = 0
+  let value = 0;
 
   return {
     get value() {
-      return value
+      return value;
     },
     mark(eventId: number) {
       if (eventId > value) {
-        value = eventId
+        value = eventId;
       }
     },
     shouldConsume(eventId: number) {
-      return eventId > value
+      return eventId > value;
     },
     reset() {
-      value = 0
+      value = 0;
     },
-  }
-})()
+  };
+})();
 
-let activeAbortController: AbortController | null = null
+let activeAbortController: AbortController | null = null;
 
-export const resetLastEventId = () => eventCursor.reset()
+export const resetLastEventId = () => eventCursor.reset();
 
 const resolveAgentBaseUrl = () => {
   const isSecure =
-    typeof window !== 'undefined' && window.location.protocol === 'https:'
+    typeof window !== "undefined" && window.location.protocol === "https:";
   const host =
-    typeof window !== 'undefined' ? window.location.host : 'localhost:3000'
+    typeof window !== "undefined" ? window.location.host : "localhost:3000";
 
-  return `${isSecure ? 'https' : 'http'}://${host}/agents/${AGENT_NAME}`
-}
+  return `${isSecure ? "https" : "http"}://${host}/agents/${AGENT_NAME}`;
+};
 
 const isChatAgentStatus = (value: unknown): value is ChatAgentStatus =>
-  value === 'idle' ||
-  value === 'running' ||
-  value === 'completed' ||
-  value === 'aborted' ||
-  value === 'error'
+  value === "idle" ||
+  value === "running" ||
+  value === "completed" ||
+  value === "aborted" ||
+  value === "error";
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
+  typeof value === "object" && value !== null;
 
-const generateId = (prefix = 'id') =>
-  typeof crypto !== 'undefined' && crypto.randomUUID
+const generateId = (prefix = "id") =>
+  typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
-    : `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`
+    : `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 const replaceActiveAbortController = (linkedSignal?: AbortSignal) => {
-  activeAbortController?.abort()
+  activeAbortController?.abort();
 
-  const controller = new AbortController()
-  const abortSignal = linkedSignal
-  const unlink = abortSignal ? () => controller.abort() : null
+  const controller = new AbortController();
+  const abortSignal = linkedSignal;
+  const unlink = abortSignal ? () => controller.abort() : null;
 
-  activeAbortController = controller
+  activeAbortController = controller;
 
   if (abortSignal && unlink) {
-    abortSignal.addEventListener('abort', unlink)
+    abortSignal.addEventListener("abort", unlink);
   }
 
   return {
     signal: controller.signal,
     release() {
       if (abortSignal && unlink) {
-        abortSignal.removeEventListener('abort', unlink)
+        abortSignal.removeEventListener("abort", unlink);
       }
       if (activeAbortController === controller) {
-        activeAbortController = null
+        activeAbortController = null;
       }
     },
-  }
-}
+  };
+};
 
 const consumeSSE = async (
   body: ReadableStream<Uint8Array>,
   onMessage: (event: string, data: string) => void,
   signal?: AbortSignal,
 ) => {
-  const reader = body.getReader()
-  const decoder = new TextDecoder()
-  let buffer = ''
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
 
   const flushBufferedMessages = () => {
-    let boundaryIndex = buffer.indexOf('\n\n')
+    let boundaryIndex = buffer.indexOf("\n\n");
 
     while (boundaryIndex >= 0) {
-      const block = buffer.slice(0, boundaryIndex)
-      buffer = buffer.slice(boundaryIndex + 2)
-      boundaryIndex = buffer.indexOf('\n\n')
+      const block = buffer.slice(0, boundaryIndex);
+      buffer = buffer.slice(boundaryIndex + 2);
+      boundaryIndex = buffer.indexOf("\n\n");
 
       if (!block.trim()) {
-        continue
+        continue;
       }
 
-      let event = 'message'
-      const dataLines: string[] = []
+      let event = "message";
+      const dataLines: string[] = [];
 
-      for (const line of block.split('\n')) {
-        if (line.startsWith('event:')) {
-          event = line.slice(6).trimStart()
-          continue
+      for (const line of block.split("\n")) {
+        if (line.startsWith("event:")) {
+          event = line.slice(6).trimStart();
+          continue;
         }
 
-        if (line.startsWith('data:')) {
-          dataLines.push(line.slice(5).trimStart())
+        if (line.startsWith("data:")) {
+          dataLines.push(line.slice(5).trimStart());
         }
       }
 
       if (dataLines.length > 0) {
-        onMessage(event, dataLines.join('\n'))
+        onMessage(event, dataLines.join("\n"));
       }
     }
-  }
+  };
 
   try {
     while (!signal?.aborted) {
-      const { done, value } = await reader.read()
+      const { done, value } = await reader.read();
       if (done) {
-        break
+        break;
       }
 
-      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n')
-      flushBufferedMessages()
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+      flushBufferedMessages();
     }
 
-    buffer += decoder.decode().replace(/\r\n/g, '\n')
-    flushBufferedMessages()
+    buffer += decoder.decode().replace(/\r\n/g, "\n");
+    flushBufferedMessages();
   } finally {
-    reader.cancel().catch(() => {})
+    reader.cancel().catch(() => {});
   }
-}
+};
 
 const isAbortError = (error: unknown) =>
-  (error instanceof DOMException && error.name === 'AbortError') ||
-  (error instanceof Error && error.name === 'AbortError')
+  (error instanceof DOMException && error.name === "AbortError") ||
+  (error instanceof Error && error.name === "AbortError");
 
 const isRecoverableStreamError = (error: unknown) => {
   if (isAbortError(error) || !(error instanceof Error)) {
-    return false
+    return false;
   }
 
-  if (error.message.startsWith('Chat request failed:')) {
-    return false
+  if (error.message.startsWith("Chat request failed:")) {
+    return false;
   }
 
-  const message = error.message.toLowerCase()
+  const message = error.message.toLowerCase();
 
   return (
     error instanceof TypeError ||
-    message.includes('network') ||
-    message.includes('fetch') ||
-    message.includes('stream') ||
-    message.includes('load failed')
-  )
-}
+    message.includes("network") ||
+    message.includes("fetch") ||
+    message.includes("stream") ||
+    message.includes("load failed")
+  );
+};
 
 const resetRequestState = () => {
-  const store = useChatRequestStore.getState()
-  store.clearRequestState()
-  store.setConnectionState('idle')
-}
+  const store = useChatRequestStore.getState();
+  store.clearRequestState();
+  store.setConnectionState("idle");
+};
 
 const markRequestDisconnected = (requestId?: string | null) => {
-  const store = useChatRequestStore.getState()
+  const store = useChatRequestStore.getState();
 
-  if (requestId && store.activeRequestId && store.activeRequestId !== requestId) {
-    return
+  if (
+    requestId &&
+    store.activeRequestId &&
+    store.activeRequestId !== requestId
+  ) {
+    return;
   }
 
-  if (store.status === 'done') {
-    return
+  if (store.requestPhase === "done") {
+    return;
   }
 
-  store.setStatus('answering')
-  store.setConnectionState('disconnected')
-}
+  store.setRequestPhase("answering");
+  store.setConnectionState("disconnected");
+};
 
-const handleChatEvent = (
-  event: ChatServerToClientEvent,
-  requestId: string,
-) => {
-  const store = useChatRequestStore.getState()
-  const isConversationUpdate = event.type === 'conversation_updated'
+const handleChatEvent = (event: ChatServerToClientEvent, requestId: string) => {
+  const store = useChatRequestStore.getState();
+  const isConversationUpdate = event.type === "conversation_updated";
 
   if (
     !isConversationUpdate &&
     store.activeRequestId &&
     store.activeRequestId !== requestId
   ) {
-    return
+    return;
   }
 
   if (
     !isConversationUpdate &&
-    (store.activeRequestId === requestId || store.status !== 'done')
+    (store.activeRequestId === requestId || store.requestPhase !== "done")
   ) {
-    store.setStatus('answering')
+    store.setRequestPhase("answering");
   }
 
-  applyChatEventToTree(event)
-}
+  applyChatEventToTree(event);
+};
 
 const consumeEvent = (item: Record<string, unknown>) => {
-  const eventId = typeof item.eventId === 'number' ? item.eventId : null
-  const requestId = typeof item.requestId === 'string' ? item.requestId : null
+  const eventId = typeof item.eventId === "number" ? item.eventId : null;
+  const requestId = typeof item.requestId === "string" ? item.requestId : null;
   const event = isRecord(item.event)
     ? (item.event as ChatServerToClientEvent)
-    : null
+    : null;
 
   if (!eventId || !requestId || !event || !eventCursor.shouldConsume(eventId)) {
-    return
+    return;
   }
 
-  eventCursor.mark(eventId)
-  handleChatEvent(event, requestId)
-}
+  eventCursor.mark(eventId);
+  handleChatEvent(event, requestId);
+};
 
 const handleChatStatus = (statusEvent: ChatStatusEvent) => {
-  const store = useChatRequestStore.getState()
+  const store = useChatRequestStore.getState();
 
   switch (statusEvent.type) {
-    case 'busy':
-      toast.warning(BUSY_WARNING)
-      store.setStatus('answering')
-      store.setActiveRequestId(statusEvent.currentRequestId)
-      store.setConnectionState('connected')
-      return
+    case "busy":
+      toast.warning(BUSY_WARNING);
+      store.setRequestPhase("answering");
+      store.setActiveRequestId(statusEvent.currentRequestId);
+      store.setConnectionState("connected");
+      return;
 
-    case 'started':
-      store.setStatus(store.status === 'answering' ? 'answering' : 'sending')
-      store.setActiveRequestId(statusEvent.requestId)
-      store.setConnectionState('connected')
-      return
+    case "started":
+      store.setRequestPhase(
+        store.requestPhase === "answering" ? "answering" : "sending",
+      );
+      store.setActiveRequestId(statusEvent.requestId);
+      store.setConnectionState("connected");
+      return;
 
-    case 'sync':
-      if (statusEvent.status === 'running') {
-        store.setStatus('answering')
-        store.setActiveRequestId(statusEvent.requestId ?? store.activeRequestId)
-        store.setConnectionState('connected')
-        return
+    case "sync":
+      if (statusEvent.status === "running") {
+        store.setRequestPhase("answering");
+        store.setActiveRequestId(
+          statusEvent.requestId ?? store.activeRequestId,
+        );
+        store.setConnectionState("connected");
+        return;
       }
 
-      if (statusEvent.status !== 'idle') {
-        store.setStatus('done')
-        store.setActiveRequestId(null)
+      if (statusEvent.status !== "idle") {
+        store.setRequestPhase("done");
+        store.setActiveRequestId(null);
       }
-      return
+      return;
 
-    case 'finished':
+    case "finished":
       if (
         store.activeRequestId &&
         store.activeRequestId !== statusEvent.requestId
       ) {
-        return
+        return;
       }
 
-      store.setStatus('done')
-      store.setActiveRequestId(null)
+      store.setRequestPhase("done");
+      store.setActiveRequestId(null);
   }
-}
+};
 
 const dispatchSSE = (event: string, raw: string) => {
-  let payload: Record<string, unknown>
+  let payload: Record<string, unknown>;
 
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = JSON.parse(raw);
     if (!isRecord(parsed)) {
-      return
+      return;
     }
-    payload = parsed
+    payload = parsed;
   } catch {
-    return
+    return;
   }
 
   switch (event) {
-    case 'chat_event':
-      consumeEvent(payload)
-      return
+    case "chat_event":
+      consumeEvent(payload);
+      return;
 
-    case 'chat_started':
-      if (typeof payload.requestId === 'string') {
-        handleChatStatus({ type: 'started', requestId: payload.requestId })
+    case "chat_started":
+      if (typeof payload.requestId === "string") {
+        handleChatStatus({ type: "started", requestId: payload.requestId });
       }
-      return
+      return;
 
-    case 'chat_finished':
-      if (typeof payload.requestId !== 'string') {
-        return
+    case "chat_finished":
+      if (typeof payload.requestId !== "string") {
+        return;
       }
 
       handleChatStatus({
-        type: 'finished',
+        type: "finished",
         requestId: payload.requestId,
         status:
-          payload.status === 'completed' ||
-          payload.status === 'aborted' ||
-          payload.status === 'error'
+          payload.status === "completed" ||
+          payload.status === "aborted" ||
+          payload.status === "error"
             ? payload.status
-            : 'error',
-      })
-      return
+            : "error",
+      });
+      return;
 
-    case 'sync_response':
+    case "sync_response":
       handleChatStatus({
-        type: 'sync',
-        status: isChatAgentStatus(payload.status) ? payload.status : 'idle',
+        type: "sync",
+        status: isChatAgentStatus(payload.status) ? payload.status : "idle",
         requestId:
-          typeof payload.requestId === 'string' ? payload.requestId : undefined,
-      })
+          typeof payload.requestId === "string" ? payload.requestId : undefined,
+      });
 
       if (!Array.isArray(payload.events)) {
-        return
+        return;
       }
 
       for (const item of payload.events) {
         if (isRecord(item)) {
-          consumeEvent(item)
+          consumeEvent(item);
         }
       }
-      return
+      return;
 
-    case 'busy':
-      if (typeof payload.currentRequestId === 'string') {
+    case "busy":
+      if (typeof payload.currentRequestId === "string") {
         handleChatStatus({
-          type: 'busy',
+          type: "busy",
           currentRequestId: payload.currentRequestId,
-        })
+        });
       }
-      return
+      return;
 
-    case 'conversation_update':
+    case "conversation_update":
       if (
-        typeof payload.conversationId === 'string' &&
-        typeof payload.title === 'string' &&
-        typeof payload.updated_at === 'string'
+        typeof payload.conversationId === "string" &&
+        typeof payload.title === "string" &&
+        typeof payload.updated_at === "string"
       ) {
         applyChatEventToTree({
-          type: 'conversation_updated',
+          type: "conversation_updated",
           conversationId: payload.conversationId,
           title: payload.title,
           updated_at: payload.updated_at,
-        })
+        });
       }
   }
-}
+};
 
 const consumeStreamResponse = async (
   response: Response,
   signal: AbortSignal,
 ) => {
   if (!response.ok || !response.body) {
-    throw new Error(`Chat request failed: ${response.status}`)
+    throw new Error(`Chat request failed: ${response.status}`);
   }
 
-  await consumeSSE(response.body, dispatchSSE, signal)
-}
+  await consumeSSE(response.body, dispatchSSE, signal);
+};
 
 const buildPreparedRequest = (
   conversationId: string,
@@ -403,14 +404,14 @@ const buildPreparedRequest = (
   requestId: string,
   messages: Message[],
 ) => {
-  const sanitizedMessages = stripTransientSearchDataFromMessages(messages)
+  const sanitizedMessages = stripTransientSearchDataFromMessages(messages);
   const rawTreeSnapshot = useMessageTreeStore
     .getState()
-    ._getTreeState() as MessageTreeSnapshot
+    ._getTreeState() as MessageTreeSnapshot;
   const treeSnapshot: MessageTreeSnapshot = {
     ...rawTreeSnapshot,
     messages: stripTransientSearchDataFromMessages(rawTreeSnapshot.messages),
-  }
+  };
 
   const conversationHistory: SerializedMessage[] = sanitizedMessages.map(
     (message) =>
@@ -418,7 +419,7 @@ const buildPreparedRequest = (
         role: message.role,
         blocks: message.blocks,
       }) as SerializedMessage,
-  )
+  );
 
   return {
     requestId,
@@ -427,61 +428,61 @@ const buildPreparedRequest = (
     conversationId,
     conversationHistory,
     treeSnapshot,
-  }
-}
+  };
+};
 
 export const checkAgentStatus = async (
   conversationId: string,
 ): Promise<AgentStatusResponse> => {
   const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}`, {
-    method: 'GET',
-    credentials: 'include',
-  })
+    method: "GET",
+    credentials: "include",
+  });
 
   if (response.status === 404) {
-    return { status: 'idle' }
+    return { status: "idle" };
   }
 
   if (!response.ok) {
-    throw new Error(`Agent status probe failed: ${response.status}`)
+    throw new Error(`Agent status probe failed: ${response.status}`);
   }
 
-  const data = (await response.json()) as Record<string, unknown>
+  const data = (await response.json()) as Record<string, unknown>;
 
   return {
-    status: isChatAgentStatus(data.status) ? data.status : 'idle',
-    requestId: typeof data.requestId === 'string' ? data.requestId : undefined,
-  }
-}
+    status: isChatAgentStatus(data.status) ? data.status : "idle",
+    requestId: typeof data.requestId === "string" ? data.requestId : undefined,
+  };
+};
 
 export const startChatRequest = async ({ messages }: StartRequestPayload) => {
-  const requestStore = useChatRequestStore.getState()
-  if (requestStore.status !== 'done') {
-    return
+  const requestStore = useChatRequestStore.getState();
+  if (requestStore.requestPhase !== "done") {
+    return;
   }
 
   if (!requestStore.currentRole) {
-    toast.warning(SELECT_ROLE_WARNING)
-    return
+    toast.warning(SELECT_ROLE_WARNING);
+    return;
   }
 
-  let conversationId = useMessageTreeStore.getState().conversationId
-  const requestId = generateId('msg')
+  let conversationId = useMessageTreeStore.getState().conversationId;
+  const requestId = generateId("msg");
 
   if (!conversationId) {
-    conversationId = generateId('conv')
-    const now = new Date().toISOString()
+    conversationId = generateId("conv");
+    const now = new Date().toISOString();
 
-    useMessageTreeStore.getState().setConversationId(conversationId)
+    useMessageTreeStore.getState().setConversationId(conversationId);
     useConversationsStore.getState().addConversation({
       id: conversationId,
-      title: 'New Chat',
+      title: "New Chat",
       is_pinned: false,
       pinned_at: null,
       created_at: now,
       updated_at: now,
-    })
-    appNavigate(`/app/c/${conversationId}`)
+    });
+    appNavigate(`/app/c/${conversationId}`);
   }
 
   const body = buildPreparedRequest(
@@ -490,151 +491,151 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
     requestStore.currentPrompt || undefined,
     requestId,
     messages,
-  )
+  );
 
-  const { signal, release } = replaceActiveAbortController()
-  requestStore.setStatus('sending')
-  requestStore.setActiveRequestId(requestId)
-  requestStore.setConnectionState('connecting')
+  const { signal, release } = replaceActiveAbortController();
+  requestStore.setRequestPhase("sending");
+  requestStore.setActiveRequestId(requestId);
+  requestStore.setConnectionState("connecting");
 
   try {
-    const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(body),
-      signal,
-    })
+    const response = await fetch(
+      `${resolveAgentBaseUrl()}/${conversationId}/chat`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+        signal,
+      },
+    );
 
     if (response.status === 409) {
-      const data = (await response.json()) as Record<string, unknown>
-      if (typeof data.currentRequestId === 'string') {
+      const data = (await response.json()) as Record<string, unknown>;
+      if (typeof data.currentRequestId === "string") {
         handleChatStatus({
-          type: 'busy',
+          type: "busy",
           currentRequestId: data.currentRequestId,
-        })
+        });
       }
-      return
+      return;
     }
 
     if (response.status === 402) {
-      const data = (await response.json()) as Record<string, unknown>
+      const data = (await response.json()) as Record<string, unknown>;
       applyChatEventToTree({
-        type: 'error',
+        type: "error",
         message:
-          typeof data.message === 'string'
+          typeof data.message === "string"
             ? data.message
             : QUOTA_EXCEEDED_MESSAGE,
-      })
-      resetRequestState()
-      return
+      });
+      resetRequestState();
+      return;
     }
 
-    requestStore.setConnectionState('connected')
-    await consumeStreamResponse(response, signal)
+    requestStore.setConnectionState("connected");
+    await consumeStreamResponse(response, signal);
 
     if (useChatRequestStore.getState().activeRequestId === requestId) {
-      markRequestDisconnected(requestId)
+      markRequestDisconnected(requestId);
     }
   } catch (error) {
     if (isAbortError(error)) {
-      return
+      return;
     }
 
     if (isRecoverableStreamError(error)) {
-      markRequestDisconnected(requestId)
-      return
+      markRequestDisconnected(requestId);
+      return;
     }
 
-    resetRequestState()
+    resetRequestState();
   } finally {
-    release()
+    release();
   }
-}
+};
 
 export const stopActiveChatRequest = () => {
-  const conversationId = useMessageTreeStore.getState().conversationId
-  const requestId = useChatRequestStore.getState().activeRequestId
+  const conversationId = useMessageTreeStore.getState().conversationId;
+  const requestId = useChatRequestStore.getState().activeRequestId;
 
-  activeAbortController?.abort()
-  activeAbortController = null
+  activeAbortController?.abort();
+  activeAbortController = null;
 
   if (conversationId) {
     fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
       body: JSON.stringify({ requestId }),
-    }).catch(() => {})
+    }).catch(() => {});
   }
 
-  resetRequestState()
-}
+  resetRequestState();
+};
 
 export const resumeRunningConversation = async (
   conversationId: string,
   signal: AbortSignal,
-  options?: ResumeRunningConversationOptions,
 ) => {
   if (!conversationId) {
-    return
+    return;
   }
 
-  let agentStatus: AgentStatusResponse
+  let agentStatus: AgentStatusResponse;
 
   try {
-    agentStatus = await checkAgentStatus(conversationId)
+    agentStatus = await checkAgentStatus(conversationId);
   } catch {
     if (!signal.aborted) {
-      markRequestDisconnected(useChatRequestStore.getState().activeRequestId)
+      markRequestDisconnected(useChatRequestStore.getState().activeRequestId);
     }
-    return
+    return;
   }
 
-  if (agentStatus.status !== 'running') {
-    if (options?.clearRequestStateWhenNotRunning) {
-      resetRequestState()
-    }
-    return
+  if (agentStatus.status !== "running") {
+    resetRequestState();
+    return;
   }
 
-  const requestStore = useChatRequestStore.getState()
-  requestStore.setStatus('answering')
-  requestStore.setActiveRequestId(agentStatus.requestId ?? null)
-  requestStore.setConnectionState('connecting')
+  const requestStore = useChatRequestStore.getState();
+  requestStore.setRequestPhase("answering");
+  requestStore.setActiveRequestId(agentStatus.requestId ?? null);
+  requestStore.setConnectionState("connecting");
 
-  const activeRequest = replaceActiveAbortController(signal)
+  const activeRequest = replaceActiveAbortController(signal);
 
   try {
     const response = await fetch(
       `${resolveAgentBaseUrl()}/${conversationId}/events?lastEventId=${eventCursor.value}`,
       {
-        credentials: 'include',
+        credentials: "include",
         signal: activeRequest.signal,
       },
-    )
+    );
 
-    requestStore.setConnectionState('connected')
-    await consumeStreamResponse(response, activeRequest.signal)
+    requestStore.setConnectionState("connected");
+    await consumeStreamResponse(response, activeRequest.signal);
 
     if (
       agentStatus.requestId &&
       useChatRequestStore.getState().activeRequestId === agentStatus.requestId
     ) {
-      markRequestDisconnected(agentStatus.requestId)
+      markRequestDisconnected(agentStatus.requestId);
     }
   } catch (error) {
     if (isAbortError(error)) {
-      return
+      return;
     }
 
     if (isRecoverableStreamError(error)) {
-      markRequestDisconnected(agentStatus.requestId)
-      return
+      markRequestDisconnected(agentStatus.requestId);
+      return;
     }
 
-    resetRequestState()
+    resetRequestState();
   } finally {
-    activeRequest.release()
+    activeRequest.release();
   }
-}
+};

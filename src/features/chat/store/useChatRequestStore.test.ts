@@ -25,7 +25,7 @@ describe('useChatRequestStore', () => {
 
   it('starts with the expected initial state', () => {
     expect(useChatRequestStore.getState()).toMatchObject({
-      status: 'done',
+      requestPhase: 'done',
       activeRequestId: null,
       connectionState: 'idle',
       currentRole: '',
@@ -41,13 +41,13 @@ describe('useChatRequestStore', () => {
     const store = useChatRequestStore.getState()
 
     store.setCurrentRole('role-custom')
-    store.setStatus('sending')
+    store.setRequestPhase('sending')
     store.setActiveRequestId('req-1')
     store.setConnectionState('connecting')
 
     expect(useChatRequestStore.getState()).toMatchObject({
       currentRole: 'role-custom',
-      status: 'sending',
+      requestPhase: 'sending',
       activeRequestId: 'req-1',
       connectionState: 'connecting',
     })
@@ -60,14 +60,14 @@ describe('useChatRequestStore', () => {
 
     store.setCurrentRole('aether')
     store.setConnectionState('connected')
-    store.setStatus('answering')
+    store.setRequestPhase('answering')
     store.setActiveRequestId('req-9')
     store.clearRequestState()
 
     expect(useChatRequestStore.getState()).toMatchObject({
       currentRole: 'aether',
       connectionState: 'connected',
-      status: 'done',
+      requestPhase: 'done',
       activeRequestId: null,
     })
   })

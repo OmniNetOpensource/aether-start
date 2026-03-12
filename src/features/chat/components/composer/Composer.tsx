@@ -26,7 +26,7 @@ import { useResponsive } from "@/components/ResponsiveContext";
 
 export function Composer() {
   const input = useComposerStore((state) => state.input);
-  const status = useChatRequestStore((s) => s.status);
+  const requestPhase = useChatRequestStore((s) => s.requestPhase);
   const pendingAttachments = useComposerStore(
     (state) => state.pendingAttachments,
   );
@@ -40,7 +40,7 @@ export function Composer() {
   const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
-  const isBusy = status !== "done";
+  const isBusy = requestPhase !== "done";
 
   const submitMessage = async () => {
     const trimmed = input.trim();
@@ -205,7 +205,7 @@ export function Composer() {
           </div>
 
           <ComposerToolbar
-            status={status}
+            requestPhase={requestPhase}
             sendDisabled={sendDisabled}
             onSendButtonClick={handleSendButtonClick}
           />
@@ -256,7 +256,7 @@ export function Composer() {
           </div>
 
           <ComposerToolbar
-            status={status}
+            requestPhase={requestPhase}
             sendDisabled={sendDisabled}
             onSendButtonClick={handleSendButtonClick}
           />

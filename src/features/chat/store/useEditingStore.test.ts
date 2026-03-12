@@ -69,7 +69,7 @@ describe('useEditingStore', () => {
     })
     useChatRequestStore.setState(initialChatRequestState)
     const store = useChatRequestStore.getState()
-    store.setStatus('done')
+    store.setRequestPhase('done')
     store.setActiveRequestId(null)
     store.setConnectionState('idle')
     store.setCurrentRole('aether')

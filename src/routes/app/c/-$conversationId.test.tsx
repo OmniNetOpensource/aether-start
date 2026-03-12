@@ -10,10 +10,13 @@ const {
   useConversationLoaderMock,
   clearRequestStateMock,
   setConnectionStateMock,
+  resetRequestListeners,
+  subscribeRequestStateMock,
   requestState,
 } = vi.hoisted(() => {
+  const requestListeners = new Set<() => void>()
   const requestState = {
-    status: 'done' as 'sending' | 'answering' | 'done',
+    requestPhase: 'done' as 'sending' | 'answering' | 'done',
     connectionState: 'idle' as 'idle' | 'connecting' | 'connected' | 'disconnected',
   }
 
@@ -24,6 +27,14 @@ const {
     clearRequestStateMock: vi.fn(),
     setConnectionStateMock: vi.fn((connectionState: 'idle' | 'connecting' | 'connected' | 'disconnected') => {
       requestState.connectionState = connectionState
+      requestListeners.forEach((listener) => listener())
+    }),
+    resetRequestListeners: () => requestListeners.clear(),
+    subscribeRequestStateMock: vi.fn((listener: () => void) => {
+      requestListeners.add(listener)
+      return () => {
+        requestListeners.delete(listener)
+      }
     }),
     requestState,
   }
@@ -47,20 +58,21 @@ vi.mock('@/features/chat/lib/api/chat-orchestrator', () => ({
 vi.mock('@/features/chat/store/useChatRequestStore', () => ({
   useChatRequestStore: Object.assign(
     (selector: (state: {
-      status: typeof requestState.status
+      requestPhase: typeof requestState.requestPhase
       connectionState: typeof requestState.connectionState
     }) => unknown) =>
       selector({
-        status: requestState.status,
+        requestPhase: requestState.requestPhase,
         connectionState: requestState.connectionState,
       }),
     {
       getState: () => ({
-        status: requestState.status,
+        requestPhase: requestState.requestPhase,
         connectionState: requestState.connectionState,
         clearRequestState: clearRequestStateMock,
         setConnectionState: setConnectionStateMock,
       }),
+      subscribe: subscribeRequestStateMock,
     },
   ),
 }))
@@ -94,7 +106,9 @@ describe('ConversationPage SSE lifecycle', () => {
     resumeRunningConversationMock.mockResolvedValue(undefined)
     clearRequestStateMock.mockReset()
     setConnectionStateMock.mockReset()
-    requestState.status = 'done'
+    subscribeRequestStateMock.mockClear()
+    resetRequestListeners()
+    requestState.requestPhase = 'done'
     requestState.connectionState = 'idle'
     useConversationLoaderMock.mockReturnValue({ isLoading: false })
   })
@@ -103,7 +117,7 @@ describe('ConversationPage SSE lifecycle', () => {
     vi.useRealTimers()
   })
 
-  it('calls resumeRunningConversation on mount with an AbortSignal', async () => {
+  it('does not start recovery directly from the route on mount', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
@@ -112,13 +126,7 @@ describe('ConversationPage SSE lifecycle', () => {
       await flush()
     })
 
-    expect(resetLastEventIdMock).toHaveBeenCalled()
-    expect(resumeRunningConversationMock).toHaveBeenCalledTimes(1)
-    expect(resumeRunningConversationMock).toHaveBeenCalledWith(
-      'conv-1',
-      expect.any(AbortSignal),
-      { clearRequestStateWhenNotRunning: false },
-    )
+    expect(resumeRunningConversationMock).not.toHaveBeenCalled()
 
     await act(async () => {
       root.unmount()
@@ -145,7 +153,7 @@ describe('ConversationPage SSE lifecycle', () => {
   })
 
   it('marks the connection as disconnected when the browser goes offline mid-stream', async () => {
-    requestState.status = 'answering'
+    requestState.requestPhase = 'answering'
     requestState.connectionState = 'connected'
 
     const container = document.createElement('div')
@@ -172,7 +180,7 @@ describe('ConversationPage SSE lifecycle', () => {
   })
 
   it('tries to resume the running conversation when the browser comes back online', async () => {
-    requestState.status = 'answering'
+    requestState.requestPhase = 'answering'
     requestState.connectionState = 'disconnected'
 
     const container = document.createElement('div')
@@ -193,7 +201,6 @@ describe('ConversationPage SSE lifecycle', () => {
     expect(resumeRunningConversationMock).toHaveBeenCalledWith(
       'conv-1',
       expect.any(AbortSignal),
-      { clearRequestStateWhenNotRunning: true },
     )
 
     await act(async () => {
@@ -205,7 +212,7 @@ describe('ConversationPage SSE lifecycle', () => {
   it('retries with backoff when the stream is disconnected without an offline event', async () => {
     vi.useFakeTimers()
 
-    requestState.status = 'answering'
+    requestState.requestPhase = 'answering'
     requestState.connectionState = 'disconnected'
 
     const container = document.createElement('div')
@@ -233,7 +240,6 @@ describe('ConversationPage SSE lifecycle', () => {
     expect(resumeRunningConversationMock).toHaveBeenCalledWith(
       'conv-1',
       expect.any(AbortSignal),
-      { clearRequestStateWhenNotRunning: true },
     )
 
     await act(async () => {
@@ -242,7 +248,7 @@ describe('ConversationPage SSE lifecycle', () => {
     })
   })
 
-  it('resets event cursor on both mount and unmount', async () => {
+  it('resets event cursor on unmount', async () => {
     const container = document.createElement('div')
     const root = createRoot(container)
 
@@ -251,14 +257,11 @@ describe('ConversationPage SSE lifecycle', () => {
       await flush()
     })
 
-    const mountResetCount = resetLastEventIdMock.mock.calls.length
-
     await act(async () => {
       root.unmount()
       await flush()
     })
 
-    // Reset called at least on mount, and again on unmount cleanup
-    expect(resetLastEventIdMock.mock.calls.length).toBeGreaterThan(mountResetCount)
+    expect(resetLastEventIdMock).toHaveBeenCalledTimes(1)
   })
 })

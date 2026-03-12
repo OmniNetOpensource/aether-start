@@ -161,7 +161,7 @@ describe('chat-orchestrator SSE model', () => {
     expect(opts.method).toBe('POST')
 
     // After SSE consumption finishes, request should be done
-    expect(useChatRequestStore.getState().status).toBe('done')
+    expect(useChatRequestStore.getState().requestPhase).toBe('done')
     expect(applyChatEventToTreeMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'content', content: 'hello' }),
     )
@@ -225,7 +225,7 @@ describe('chat-orchestrator SSE model', () => {
     expect(applyChatEventToTreeMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'content', content: 'hello crlf' }),
     )
-    expect(useChatRequestStore.getState().status).toBe('done')
+    expect(useChatRequestStore.getState().requestPhase).toBe('done')
   })
 
   it('handles 409 busy response from server', async () => {
@@ -241,7 +241,7 @@ describe('chat-orchestrator SSE model', () => {
     })
 
     // Should set to answering with the busy request's ID
-    expect(useChatRequestStore.getState().status).toBe('answering')
+    expect(useChatRequestStore.getState().requestPhase).toBe('answering')
     expect(useChatRequestStore.getState().activeRequestId).toBe('req-busy')
     expect(useChatRequestStore.getState().connectionState).toBe('connected')
   })
@@ -258,7 +258,7 @@ describe('chat-orchestrator SSE model', () => {
       messages: [{ role: 'user', blocks: [] } as never],
     })
 
-    expect(useChatRequestStore.getState().status).toBe('answering')
+    expect(useChatRequestStore.getState().requestPhase).toBe('answering')
     expect(useChatRequestStore.getState().activeRequestId).toBeTruthy()
     expect(useChatRequestStore.getState().connectionState).toBe('disconnected')
   })
@@ -291,7 +291,7 @@ describe('chat-orchestrator SSE model', () => {
       (call: unknown[]) => typeof call[0] === 'string' && (call[0] as string).includes('/abort'),
     )
     expect(abortCall).toBeDefined()
-    expect(useChatRequestStore.getState().status).toBe('done')
+    expect(useChatRequestStore.getState().requestPhase).toBe('done')
   })
 
   it('resumeRunningConversation connects to events stream when agent is running', async () => {
@@ -326,7 +326,7 @@ describe('chat-orchestrator SSE model', () => {
     const ac = new AbortController()
     await orchestrator.resumeRunningConversation('conv-1', ac.signal)
 
-    expect(useChatRequestStore.getState().status).toBe('done')
+    expect(useChatRequestStore.getState().requestPhase).toBe('done')
 
     // Should have made the status probe and events subscription
     const calls = fetchMock.mock.calls as Array<[string, RequestInit?]>
@@ -334,23 +334,8 @@ describe('chat-orchestrator SSE model', () => {
     expect(calls.some(([url]) => url.includes('/conv-1/events'))).toBe(true)
   })
 
-  it('resumeRunningConversation does nothing when agent is idle', async () => {
-    fetchMock.mockResolvedValueOnce({
-      ok: true,
-      status: 200,
-      json: async () => ({ status: 'idle' }),
-    })
-
-    const orchestrator = await import('./chat-orchestrator')
-    const ac = new AbortController()
-    await orchestrator.resumeRunningConversation('conv-1', ac.signal)
-
-    // Only the status probe should have been called
-    expect(fetchMock).toHaveBeenCalledTimes(1)
-  })
-
-  it('clears stale request state when recovery finds no running agent', async () => {
-    useChatRequestStore.getState().setStatus('answering')
+  it('resumeRunningConversation resets request state when agent is idle', async () => {
+    useChatRequestStore.getState().setRequestPhase('answering')
     useChatRequestStore.getState().setActiveRequestId('req-stale')
     useChatRequestStore.getState().setConnectionState('disconnected')
 
@@ -362,11 +347,30 @@ describe('chat-orchestrator SSE model', () => {
 
     const orchestrator = await import('./chat-orchestrator')
     const ac = new AbortController()
-    await orchestrator.resumeRunningConversation('conv-1', ac.signal, {
-      clearRequestStateWhenNotRunning: true,
+    await orchestrator.resumeRunningConversation('conv-1', ac.signal)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(useChatRequestStore.getState().requestPhase).toBe('done')
+    expect(useChatRequestStore.getState().activeRequestId).toBeNull()
+    expect(useChatRequestStore.getState().connectionState).toBe('idle')
+  })
+
+  it('clears stale request state when recovery finds no running agent', async () => {
+    useChatRequestStore.getState().setRequestPhase('answering')
+    useChatRequestStore.getState().setActiveRequestId('req-stale')
+    useChatRequestStore.getState().setConnectionState('disconnected')
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({ status: 'idle' }),
     })
 
-    expect(useChatRequestStore.getState().status).toBe('done')
+    const orchestrator = await import('./chat-orchestrator')
+    const ac = new AbortController()
+    await orchestrator.resumeRunningConversation('conv-1', ac.signal)
+
+    expect(useChatRequestStore.getState().requestPhase).toBe('done')
     expect(useChatRequestStore.getState().activeRequestId).toBeNull()
     expect(useChatRequestStore.getState().connectionState).toBe('idle')
   })

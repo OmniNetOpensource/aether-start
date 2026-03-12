@@ -115,7 +115,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        if (useChatRequestStore.getState().status !== "done") {
+        if (useChatRequestStore.getState().requestPhase !== "done") {
           stopActiveChatRequest();
         }
 
@@ -171,7 +171,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        if (useChatRequestStore.getState().status !== "done") {
+        if (useChatRequestStore.getState().requestPhase !== "done") {
           stopActiveChatRequest();
         }
 

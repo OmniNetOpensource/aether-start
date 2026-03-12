@@ -484,8 +484,8 @@ export function OutlineButton() {
   const currentPath = useMessageTreeStore((state) => state.currentPath);
   const latestRootId = useMessageTreeStore((state) => state.latestRootId);
   const selectMessage = useMessageTreeStore((state) => state.selectMessage);
-  const status = useChatRequestStore((s) => s.status);
-  const isBusy = status !== "done";
+  const requestPhase = useChatRequestStore((s) => s.requestPhase);
+  const isBusy = requestPhase !== "done";
 
   const outline = (() => {
     // Tree building and layout are only needed while the dialog is visible.

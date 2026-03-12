@@ -31,9 +31,9 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const deviceType = useResponsive();
   const isDesktop = deviceType === "desktop";
   const uploading = useComposerStore((state) => state.uploading);
-  const status = useChatRequestStore((s) => s.status);
+  const requestPhase = useChatRequestStore((s) => s.requestPhase);
   const currentRole = useChatRequestStore((s) => s.currentRole);
-  const isBusy = status !== "done";
+  const isBusy = requestPhase !== "done";
 
   const state =
     editingState?.messageId === messageId ? editingState : null;

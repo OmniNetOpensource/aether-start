@@ -7,9 +7,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const {
   navigateMock,
   getConversationFnMock,
+  resetLastEventIdMock,
+  resumeRunningConversationMock,
 } = vi.hoisted(() => ({
   navigateMock: vi.fn(),
   getConversationFnMock: vi.fn(),
+  resetLastEventIdMock: vi.fn(),
+  resumeRunningConversationMock: vi.fn().mockResolvedValue(undefined),
 }))
 
 vi.mock('@tanstack/react-router', () => ({
@@ -22,7 +26,8 @@ vi.mock('@/server/functions/conversations', () => ({
 
 vi.mock('@/lib/chat/api/chat-orchestrator', () => ({
   startChatRequest: vi.fn(),
-  resumeRunningConversation: vi.fn(),
+  resetLastEventId: resetLastEventIdMock,
+  resumeRunningConversation: resumeRunningConversationMock,
   stopActiveChatRequest: vi.fn(),
 }))
 
@@ -49,13 +54,16 @@ describe('useConversationLoader', () => {
   beforeEach(() => {
     navigateMock.mockReset()
     getConversationFnMock.mockReset()
+    resetLastEventIdMock.mockReset()
+    resumeRunningConversationMock.mockReset()
+    resumeRunningConversationMock.mockResolvedValue(undefined)
 
     useComposerStore.getState().clear()
     useEditingStore.getState().clear()
     useMessageTreeStore.getState().clear()
     useChatRequestStore.setState(initialChatRequestState)
     const store = useChatRequestStore.getState()
-    store.setStatus('done')
+    store.setRequestPhase('done')
     store.setActiveRequestId(null)
     store.setConnectionState('idle')
     store.setCurrentRole('aether')
@@ -63,7 +71,7 @@ describe('useConversationLoader', () => {
     store.setRolesLoading(false)
   })
 
-  it('loads the conversation without triggering recovery from the loader', async () => {
+  it('loads the conversation and probes for a running request after hydration', async () => {
     getConversationFnMock.mockResolvedValueOnce({
       id: 'conv-1',
       role: 'aether',
@@ -82,6 +90,12 @@ describe('useConversationLoader', () => {
     })
 
     expect(useMessageTreeStore.getState().conversationId).toBe('conv-1')
+    expect(resetLastEventIdMock).toHaveBeenCalledTimes(1)
+    expect(resumeRunningConversationMock).toHaveBeenCalledTimes(1)
+    expect(resumeRunningConversationMock).toHaveBeenCalledWith(
+      'conv-1',
+      expect.any(AbortSignal),
+    )
 
     await act(async () => {
       root.unmount()

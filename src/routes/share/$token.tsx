@@ -145,17 +145,15 @@ function SharedConversationPage() {
 
   return (
     <main className="h-screen w-full bg-(--surface-primary) overflow-y-auto">
-      <div className="pt-12">
-        <div className="mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-1 mb-8">
+      <div className="pt-12 flex flex-col items-center">
+        <div className="w-full max-w-[390px] px-4 mb-8">
           <h1 className="text-2xl font-semibold text-(--text-primary)">
             {data.title?.trim() || "Aether 分享"}
           </h1>
         </div>
-        <ReadonlyMessageList
-          messages={readonlyMessages}
-          usePageScroll
-          listClassName="!pb-12"
-        />
+        <div className="w-full max-w-[390px] pb-12">
+          <ReadonlyMessageList messages={readonlyMessages} isPhone />
+        </div>
       </div>
     </main>
   );

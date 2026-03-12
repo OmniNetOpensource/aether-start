@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button'
 export function ShareButton() {
   const [open, setOpen] = useState(false)
   const currentPath = useMessageTreeStore((state) => state.currentPath)
-  const status = useChatRequestStore((s) => s.status)
-  const isBusy = status !== "done"
+  const requestPhase = useChatRequestStore((s) => s.requestPhase)
+  const isBusy = requestPhase !== "done"
 
   if (currentPath.length === 0) {
     return null

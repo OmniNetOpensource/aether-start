@@ -75,9 +75,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const messages = useMessageTreeStore((s) => s.messages);
   const currentPath = useMessageTreeStore((s) => s.currentPath);
   const conversationId = useMessageTreeStore((s) => s.conversationId);
-  const status = useChatRequestStore((s) => s.status);
+  const requestPhase = useChatRequestStore((s) => s.requestPhase);
   const conversations = useConversationsStore((s) => s.conversations);
-  const isBusy = status !== "done";
+  const isBusy = requestPhase !== "done";
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set());
   const [isGenerating, setIsGenerating] = useState(false);
@@ -421,14 +421,15 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         >
           <div
             ref={captureRef}
-            className="rounded-2xl border border-border bg-background p-10 text-foreground"
-            style={{ width: 960, fontFamily: EXPORT_FONT }}
+            className="rounded-2xl border border-border bg-background p-6 text-foreground"
+            style={{ width: 390, fontFamily: EXPORT_FONT }}
           >
-            <ReadonlyMessageList
-              messages={selectedPreviewMessages}
-              usePageScroll
-              listClassName="pb-6"
-            />
+            <div className="pb-6">
+              <ReadonlyMessageList
+                messages={selectedPreviewMessages}
+                isPhone
+              />
+            </div>
             <footer className="mt-6 border-t border-border pt-4 text-sm text-muted-foreground">
               Exported from Aether
             </footer>
