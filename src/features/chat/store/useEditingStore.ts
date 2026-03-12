@@ -13,7 +13,7 @@ import {
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
 } from "@/lib/conversation/tree/block-operations";
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
 import type { Attachment, UserContentBlock } from "@/types/message";
 
 type EditingState = {
@@ -44,7 +44,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
   devtools((set, get) => ({
       editingState: null,
       startEditing: (messageId) => {
-        const messages = useMessageTreeStore.getState().messages;
+        const messages = useChatSessionStore.getState().messages;
         const target = messages[messageId - 1];
         if (!target || target.role !== "user") {
           return;
@@ -109,9 +109,9 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        const selectedRole = useMessageTreeStore.getState().currentRole;
+        const selectedRole = useChatSessionStore.getState().currentRole;
         if (!selectedRole) {
-          toast.warning("请先选择角色");
+          toast.warning("璇峰厛閫夋嫨瑙掕壊");
           return;
         }
 
@@ -122,11 +122,11 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         const trimmed = editingState.editedContent.trim();
         const attachments = editingState.editedAttachments;
         if (!trimmed && attachments.length === 0) {
-          toast.warning("请输入内容或添加附件");
+          toast.warning("璇疯緭鍏ュ唴瀹规垨娣诲姞闄勪欢");
           return;
         }
 
-        const treeStore = useMessageTreeStore.getState();
+        const treeStore = useChatSessionStore.getState();
         const result = editMessage(
           treeStore.getTreeState(),
           depth,
@@ -158,16 +158,16 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         });
       },
       retryFromMessage: async (messageId, depth) => {
-        const treeStore = useMessageTreeStore.getState();
+        const treeStore = useChatSessionStore.getState();
         const treeState = treeStore.getTreeState();
         const targetNode = treeState.messages[messageId - 1];
         if (!targetNode) {
           return;
         }
 
-        const selectedRole = useMessageTreeStore.getState().currentRole;
+        const selectedRole = useChatSessionStore.getState().currentRole;
         if (!selectedRole) {
-          toast.warning("请先选择角色");
+          toast.warning("璇峰厛閫夋嫨瑙掕壊");
           return;
         }
 

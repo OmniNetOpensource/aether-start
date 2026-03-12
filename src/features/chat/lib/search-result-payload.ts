@@ -15,10 +15,6 @@ export type SearchClientPayload = {
   results: SearchClientResult[];
 };
 
-export type FetchClientPayload = {
-  type: "fetch_result";
-};
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
@@ -65,5 +61,5 @@ export const stringifySearchClientPayload = (
   });
 
 export const stringifyFetchClientPayload = (
-  payload: FetchClientPayload,
+  payload: { type: "fetch_result" },
 ): string => JSON.stringify(payload);

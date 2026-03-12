@@ -1,7 +1,7 @@
 
 import { useRef } from "react";
 import { MessageItem } from "./MessageItem";
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { SelectionToolbar } from "./SelectionToolbar";
 import { ConnectionStatusInline } from "./ConnectionStatusInline";
@@ -15,7 +15,7 @@ export function MessageList({
   className,
   listClassName,
 }: MessageListProps = {}) {
-  const currentPath = useMessageTreeStore((state) => state.currentPath);
+  const currentPath = useChatSessionStore((state) => state.currentPath);
   const requestPhase = useChatRequestStore((s) => s.requestPhase);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);

@@ -6,7 +6,7 @@ import {
 } from "@/lib/chat/api/chat-orchestrator";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
-import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { getConversationFn } from "@/server/functions/conversations";
 import { buildCurrentPath } from "@/lib/conversation/tree/message-tree";
 import type { Attachment, Message } from "@/types/message";
@@ -67,11 +67,11 @@ const hydrateMessage = (msg: Message): Message =>
 
 export function useConversationLoader(loadingConversationId: string | undefined) {
   const navigate = useNavigate();
-  const currentConversationId = useMessageTreeStore(
+  const currentConversationId = useChatSessionStore(
     (state) => state.conversationId,
   );
-  const initializeTree = useMessageTreeStore((state) => state.initializeTree);
-  const setConversationId = useMessageTreeStore(
+  const initializeTree = useChatSessionStore((state) => state.initializeTree);
+  const setConversationId = useChatSessionStore(
     (state) => state.setConversationId,
   );
 
@@ -129,7 +129,7 @@ export function useConversationLoader(loadingConversationId: string | undefined)
         useEditingStore.getState().clear();
         setConversationId(loadingConversationId);
         initializeTree(mappedMessages, currentPath);
-        const store = useMessageTreeStore.getState();
+        const store = useChatSessionStore.getState();
         const roleId =
           conversation.role ??
           store.currentRole ??

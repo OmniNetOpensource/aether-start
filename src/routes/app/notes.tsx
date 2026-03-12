@@ -1,14 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Lightbulb, Loader2, Plus } from 'lucide-react'
+import { buildAttachmentsFromFiles } from '@/features/chat/lib/attachments'
 import { NoteCard } from '@/features/notes/components/NoteCard'
 import { NoteEditDialog } from '@/features/notes/components/NoteEditDialog'
-import { buildAttachmentsFromFiles } from '@/features/chat/lib/attachments'
 import { useChatRequestStore } from '@/features/chat/store/useChatRequestStore'
 import { useComposerStore } from '@/features/chat/store/useComposerStore'
 import { useEditingStore } from '@/features/chat/store/useEditingStore'
-import { useMessageTreeStore } from '@/features/sidebar/store/useMessageTreeStore'
 import { useNotesStore, type NoteItem } from '@/features/notes/store/useNotesStore'
+import { useChatSessionStore } from '@/features/sidebar/store/useChatSessionStore'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,6 +50,7 @@ const collectClipboardFiles = (clipboardData: DataTransfer | null) => {
     if (item.kind !== 'file') {
       continue
     }
+
     const file = item.getAsFile()
     if (file) {
       pastedFiles.push(file)
@@ -89,7 +90,6 @@ function NotesPage() {
   const sentinelRef = useRef<HTMLDivElement | null>(null)
 
   const isDialogOpen = editingNote !== null
-
   const emptyStateVisible = hasLoaded && notes.length === 0 && !loading
 
   useEffect(() => {
@@ -111,9 +111,11 @@ function NotesPage() {
         if (!entries.some((entry) => entry.isIntersecting)) {
           return
         }
+
         if (loadingMore || !hasMore) {
           return
         }
+
         void loadMoreNotes()
       },
       {
@@ -134,7 +136,6 @@ function NotesPage() {
 
       const text = event.clipboardData?.getData('text/plain')?.trim() ?? ''
       const files = collectClipboardFiles(event.clipboardData)
-
       if (!text && files.length === 0) {
         return
       }
@@ -144,22 +145,22 @@ function NotesPage() {
 
       void (async () => {
         try {
-          const attachments = files.length > 0 ? await buildAttachmentsFromFiles(files) : []
+          const attachments =
+            files.length > 0 ? await buildAttachmentsFromFiles(files) : []
           if (!text && attachments.length === 0) {
             return
           }
 
           const now = new Date().toISOString()
-          const note: NoteItem = {
+          await upsertNote({
             id: generateNoteId(),
             content: text,
             attachments,
             created_at: now,
             updated_at: now,
-          }
+          })
 
-          await upsertNote(note)
-          toast.success('已创建灵感笔记')
+          toast.success('Note created from clipboard')
         } finally {
           setCreatingByPaste(false)
         }
@@ -170,6 +171,25 @@ function NotesPage() {
     return () => window.removeEventListener('paste', handlePaste)
   }, [creatingByPaste, isDialogOpen, upsertNote])
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && isDialogOpen) {
+        setEditingNote(null)
+        return
+      }
+
+      if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
+        event.preventDefault()
+        if (!isDialogOpen) {
+          setEditingNote(createEmptyNote())
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [isDialogOpen])
+
   const selectedNote = editingNote
     ? notes.find((item) => item.id === editingNote.id) ?? editingNote
     : null
@@ -177,7 +197,7 @@ function NotesPage() {
   const handleStartConversation = (note: NoteItem) => {
     useChatRequestStore.getState().clearRequestState()
     useEditingStore.getState().clear()
-    useMessageTreeStore.getState().clear()
+    useChatSessionStore.getState().clearSession()
 
     const composer = useComposerStore.getState()
     composer.setInput(note.content ?? '')
@@ -190,71 +210,58 @@ function NotesPage() {
     setEditingNote(createEmptyNote())
   }
 
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isDialogOpen) {
-        setEditingNote(null)
-        return
-      }
-      if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
-        event.preventDefault()
-        if (!isDialogOpen) {
-          setEditingNote(createEmptyNote())
-        }
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isDialogOpen])
-
   return (
-    <div className='flex h-full min-h-0 w-full flex-col'>
-      <header className='flex h-14 shrink-0 items-center justify-between border-b px-6'>
-        <div className='flex items-center gap-2 text-(--text-primary)'>
-          <Lightbulb className='h-5 w-5' />
-          <h1 className='text-xl font-semibold md:text-2xl'>灵感笔记</h1>
+    <div className="flex h-full min-h-0 w-full flex-col">
+      <header className="flex h-14 shrink-0 items-center justify-between border-b px-6">
+        <div className="flex items-center gap-2 text-(--text-primary)">
+          <Lightbulb className="h-5 w-5" />
+          <h1 className="text-xl font-semibold md:text-2xl">Notes</h1>
         </div>
         <Button
-          type='button'
-          size='sm'
-          className='gap-1.5'
+          type="button"
+          size="sm"
+          className="gap-1.5"
           onClick={handleCreateNote}
         >
-          <Plus className='h-4 w-4' />
-          新建笔记
+          <Plus className="h-4 w-4" />
+          New note
         </Button>
       </header>
 
-      <div ref={scrollRootRef} className='min-h-0 flex-1 overflow-y-auto px-6 py-6'>
+      <div
+        ref={scrollRootRef}
+        className="min-h-0 flex-1 overflow-y-auto px-6 py-6"
+      >
         {loading && !hasLoaded ? (
-          <div className='flex items-center justify-center py-10 text-(--text-tertiary)'>
-            <Loader2 className='h-4 w-4 animate-spin' />
-            <span className='ml-2 text-sm'>加载笔记中...</span>
+          <div className="flex items-center justify-center py-10 text-(--text-tertiary)">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="ml-2 text-sm">Loading notes...</span>
           </div>
         ) : (
-          <div className='space-y-4'>
+          <div className="space-y-4">
             {emptyStateVisible ? (
-              <div className='flex flex-col items-center justify-center rounded-xl border border-dashed border-(--border-primary) bg-(--surface-muted)/30 px-8 py-12 text-center'>
-                <Lightbulb className='mb-4 h-12 w-12 text-(--text-tertiary)' />
-                <p className='text-base font-medium text-(--text-primary)'>
-                  还没有灵感笔记
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-(--border-primary) bg-(--surface-muted)/30 px-8 py-12 text-center">
+                <Lightbulb className="mb-4 h-12 w-12 text-(--text-tertiary)" />
+                <p className="text-base font-medium text-(--text-primary)">
+                  No notes yet.
                 </p>
-                <p className='mt-2 text-sm text-(--text-secondary)'>
-                  点击「新建笔记」开始记录，或使用 Ctrl+V 粘贴文本/图片快速创建
+                <p className="mt-2 text-sm text-(--text-secondary)">
+                  Create a note or paste text and images with Ctrl+V to turn your
+                  clipboard into a note instantly.
                 </p>
                 <Button
-                  type='button'
-                  size='sm'
-                  className='mt-6 gap-1.5'
+                  type="button"
+                  size="sm"
+                  className="mt-6 gap-1.5"
                   onClick={handleCreateNote}
                 >
-                  <Plus className='h-4 w-4' />
-                  新建笔记
+                  <Plus className="h-4 w-4" />
+                  New note
                 </Button>
               </div>
             ) : null}
 
-            <div className='grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4'>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
               {notes.map((note) => (
                 <NoteCard
                   key={note.id}
@@ -269,15 +276,15 @@ function NotesPage() {
             {hasMore || loadingMore ? (
               <div
                 ref={sentinelRef}
-                className='flex items-center justify-center py-4 text-(--text-tertiary)'
+                className="flex items-center justify-center py-4 text-(--text-tertiary)"
               >
                 {loadingMore ? (
                   <>
-                    <Loader2 className='h-4 w-4 animate-spin' />
-                    <span className='ml-2 text-xs'>加载更多...</span>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span className="ml-2 text-xs">Loading more...</span>
                   </>
                 ) : (
-                  <span className='text-xs'>滚动加载更多...</span>
+                  <span className="text-xs">Scroll to load more...</span>
                 )}
               </div>
             ) : null}
@@ -288,12 +295,9 @@ function NotesPage() {
       <NoteEditDialog
         open={isDialogOpen}
         note={selectedNote}
-        isNew={
-          selectedNote !== null &&
-          !notes.some((n) => n.id === selectedNote.id)
-        }
-        onOpenChange={(open) => {
-          if (!open) {
+        isNew={selectedNote !== null && !notes.some((item) => item.id === selectedNote.id)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
             setEditingNote(null)
           }
         }}
@@ -304,23 +308,24 @@ function NotesPage() {
 
       <AlertDialog
         open={noteToDelete !== null}
-        onOpenChange={(open) => {
-          if (!open) {
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) {
             setNoteToDelete(null)
           }
         }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>删除笔记</AlertDialogTitle>
+            <AlertDialogTitle>Delete note</AlertDialogTitle>
             <AlertDialogDescription>
-              确定要删除这条笔记吗？删除后无法恢复。
+              This action cannot be undone. The selected note will be permanently
+              removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>取消</AlertDialogCancel>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className='bg-(--status-destructive) text-(--status-destructive-foreground) hover:bg-(--status-destructive)/90'
+              className="bg-(--status-destructive) text-(--status-destructive-foreground) hover:bg-(--status-destructive)/90"
               onClick={() => {
                 if (noteToDelete) {
                   void deleteNote(noteToDelete.id)
@@ -328,7 +333,7 @@ function NotesPage() {
                 }
               }}
             >
-              删除
+              Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

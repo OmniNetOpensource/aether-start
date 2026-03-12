@@ -31,24 +31,17 @@ vi.mock('@/stores/zustand/useChatRequestStore', () => {
   }
 })
 
-vi.mock('@/stores/zustand/useMessageTreeStore', () => ({
-  useMessageTreeStore: {
+vi.mock('@/stores/zustand/useChatSessionStore', () => ({
+  useChatSessionStore: {
     getState: () => ({
       conversationId: 'conv-a',
+      addConversation: vi.fn(),
       getTreeState: () => ({
         messages: [],
         currentPath: [],
         latestRootId: null,
         nextId: 1,
       }),
-    }),
-  },
-}))
-
-vi.mock('@/stores/zustand/useConversationsStore', () => ({
-  useConversationsStore: {
-    getState: () => ({
-      addConversation: vi.fn(),
     }),
   },
 }))

@@ -8,7 +8,8 @@ export type ChatBackend =
   | "rightcode-openai"
   | "dmx"
   | "ikun"
-  | "ikun-gemini";
+  | "ikun-gemini"
+  | "openrouter";
 
 export type BackendConfig = {
   apiKey: string;
@@ -287,6 +288,27 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "anthropic",
     backend: "rightcode-claude-sale",
   },
+  openrouterHunterAlpha: {
+    id: "openrouterHunterAlpha",
+    name: "hunter-alpha+openrouter",
+    model: "openrouter/hunter-alpha",
+    format: "openai",
+    backend: "openrouter",
+  },
+  openrouterHealerAlpha: {
+    id: "openrouterHealerAlpha",
+    name: "healer-alpha+openrouter",
+    model: "openrouter/healer-alpha",
+    format: "openai",
+    backend: "openrouter",
+  },
+  openrouterNemotron: {
+    id: "openrouterNemotron",
+    name: "nemotron-3-super+openrouter",
+    model: "nvidia/nemotron-3-super-120b-a12b:free",
+    format: "openai",
+    backend: "openrouter",
+  },
 };
 
 export const getAvailableModels = (): { id: string; name: string }[] =>
@@ -444,6 +466,16 @@ export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
     return {
       apiKey,
       baseURL,
+      defaultHeaders: { "User-Agent": "aether" },
+    };
+  }
+
+  if (backend === "openrouter") {
+    const apiKey = env.OPENROUTER_API_KEY;
+    if (!apiKey) throw new Error("Missing OPENROUTER_API_KEY");
+    return {
+      apiKey,
+      baseURL: "https://openrouter.ai/api/v1",
       defaultHeaders: { "User-Agent": "aether" },
     };
   }

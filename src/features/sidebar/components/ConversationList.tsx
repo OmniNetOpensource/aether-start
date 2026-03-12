@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import { useConversationsStore } from "@/stores/zustand/useConversationsStore";
-import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { ConversationItem } from "./ConversationItem";
 
 type ConversationListProps = {
@@ -11,20 +10,20 @@ type ConversationListProps = {
 export function ConversationList({
   onDropdownOpenChange,
 }: ConversationListProps) {
-  const conversations = useConversationsStore((state) => state.conversations);
-  const conversationsLoading = useConversationsStore(
+  const conversations = useChatSessionStore((state) => state.conversations);
+  const conversationsLoading = useChatSessionStore(
     (state) => state.conversationsLoading,
   );
-  const loadInitialConversations = useConversationsStore(
+  const loadInitialConversations = useChatSessionStore(
     (state) => state.loadInitialConversations,
   );
-  const loadMoreConversations = useConversationsStore(
+  const loadMoreConversations = useChatSessionStore(
     (state) => state.loadMoreConversations,
   );
-  const hasLoaded = useConversationsStore((state) => state.hasLoaded);
-  const loadingMore = useConversationsStore((state) => state.loadingMore);
-  const hasMore = useConversationsStore((state) => state.hasMore);
-  const activeConversationId = useMessageTreeStore(
+  const hasLoaded = useChatSessionStore((state) => state.hasLoaded);
+  const loadingMore = useChatSessionStore((state) => state.loadingMore);
+  const hasMore = useChatSessionStore((state) => state.hasMore);
+  const activeConversationId = useChatSessionStore(
     (state) => state.conversationId,
   );
   const historyScrollRef = useRef<HTMLDivElement | null>(null);
@@ -69,7 +68,7 @@ export function ConversationList({
     return (
       <div className="flex items-center justify-center py-6 text-(--text-tertiary)">
         <Loader2 className="h-4 w-4 animate-spin" />
-        <span className="ml-2 text-xs">加载会话中...</span>
+        <span className="ml-2 text-xs">鍔犺浇浼氳瘽涓?..</span>
       </div>
     );
   }
@@ -122,7 +121,7 @@ export function ConversationList({
               ))}
               {isEmpty ? (
                 <p className="px-1 py-8 text-center text-sm text-(--text-tertiary)">
-                  开始一次新对话
+                  寮€濮嬩竴娆℃柊瀵硅瘽
                 </p>
               ) : null}
               {hasMore || loadingMore ? (
@@ -133,10 +132,10 @@ export function ConversationList({
                   {loadingMore ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span className="ml-2 text-xs">加载更多...</span>
+                      <span className="ml-2 text-xs">鍔犺浇鏇村...</span>
                     </>
                   ) : (
-                    <span className="text-xs">滚动加载更多...</span>
+                    <span className="text-xs">婊氬姩鍔犺浇鏇村...</span>
                   )}
                 </div>
               ) : null}

@@ -1,16 +1,15 @@
-
-import { Share2 } from 'lucide-react'
 import { useState } from 'react'
-import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
-import { ShareDialog } from './ShareDialog'
+import { Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
+import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
+import { ShareDialog } from './ShareDialog'
 
 export function ShareButton() {
   const [open, setOpen] = useState(false)
-  const currentPath = useMessageTreeStore((state) => state.currentPath)
-  const requestPhase = useChatRequestStore((s) => s.requestPhase)
-  const isBusy = requestPhase !== "done"
+  const currentPath = useChatSessionStore((state) => state.currentPath)
+  const requestPhase = useChatRequestStore((state) => state.requestPhase)
+  const isBusy = requestPhase !== 'done'
 
   if (currentPath.length === 0) {
     return null
@@ -23,8 +22,12 @@ export function ShareButton() {
         variant="ghost"
         size="icon-lg"
         className="rounded-lg"
-        aria-label="分享对话"
-        title={isBusy ? '生成中，暂不可分享' : '分享对话'}
+        aria-label="Share conversation"
+        title={
+          isBusy
+            ? 'Sharing is unavailable while a response is streaming.'
+            : 'Share conversation'
+        }
         onClick={() => setOpen(true)}
         disabled={isBusy}
       >

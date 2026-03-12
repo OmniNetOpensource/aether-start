@@ -1,6 +1,5 @@
 import type { ChatErrorCode, ChatErrorInfo, ChatServerToClientEvent } from '@/types/chat-event-types'
-import { useConversationsStore } from '@/stores/zustand/useConversationsStore'
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
 
 const ERROR_COPY: Record<ChatErrorCode, { title: string; cause: string; suggestion: string }> = {
   invalid_request: {
@@ -169,7 +168,7 @@ export const applyChatEventToTree = (
   if (event.type === 'conversation_updated') {
     if (event.title) {
       const now = event.updated_at ?? new Date().toISOString()
-      useConversationsStore.getState().addConversation({
+      useChatSessionStore.getState().addConversation({
         id: event.conversationId,
         title: event.title,
         is_pinned: false,
@@ -182,7 +181,7 @@ export const applyChatEventToTree = (
   }
 
   if (event.type === 'thinking') {
-    useMessageTreeStore.getState().appendToAssistant({
+    useChatSessionStore.getState().appendToAssistant({
       kind: 'thinking',
       text:
         typeof event.content === 'string'
@@ -199,7 +198,7 @@ export const applyChatEventToTree = (
         ? (event.args as Record<string, unknown>)
         : {}
 
-    useMessageTreeStore.getState().appendToAssistant({
+    useChatSessionStore.getState().appendToAssistant({
       kind: 'tool',
       data: {
         call: {
@@ -223,7 +222,7 @@ export const applyChatEventToTree = (
       }
     }
 
-    useMessageTreeStore.getState().appendToAssistant({
+    useChatSessionStore.getState().appendToAssistant({
       kind: 'tool_result',
       tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
       result: resultText,
@@ -239,7 +238,7 @@ export const applyChatEventToTree = (
     const safeMessage = rawMessage || 'unknown error'
     const enhancedMessage = enhanceServerErrorMessage(safeMessage, event.error)
 
-    useMessageTreeStore.getState().appendToAssistant({
+    useChatSessionStore.getState().appendToAssistant({
       type: 'error',
       message: enhancedMessage,
     })
@@ -251,7 +250,7 @@ export const applyChatEventToTree = (
       typeof event.content === 'string'
         ? event.content
         : String(event.content ?? '')
-    useMessageTreeStore.getState().appendToAssistant({
+    useChatSessionStore.getState().appendToAssistant({
       type: 'content',
       content: addition,
     })

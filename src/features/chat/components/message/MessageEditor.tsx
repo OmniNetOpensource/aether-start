@@ -1,144 +1,143 @@
-
-import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from "react";
-import { ArrowUp, ImagePlus, X } from "lucide-react";
-import { ImagePreview } from "@/components/ImagePreview";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
-import { toast } from "@/hooks/useToast";
-import { useResponsive } from "@/components/ResponsiveContext";
-import { useEditingStore } from '@/stores/zustand/useEditingStore'
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useComposerStore } from '@/stores/zustand/useComposerStore'
-import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
+import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from 'react'
+import { ArrowUp, ImagePlus, X } from 'lucide-react'
+import { ImagePreview } from '@/components/ImagePreview'
+import { useResponsive } from '@/components/ResponsiveContext'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { toast } from '@/hooks/useToast'
+import { cn } from '@/lib/utils'
 import {
   buildAttachmentsFromFiles,
   getAttachmentPreviewUrl,
-} from "@/lib/chat/attachments";
+} from '@/lib/chat/attachments'
+import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
+import { useComposerStore } from '@/stores/zustand/useComposerStore'
+import { useEditingStore } from '@/stores/zustand/useEditingStore'
+import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
 
 type MessageEditorProps = {
-  messageId: number;
-  depth: number;
-};
+  messageId: number
+  depth: number
+}
 
 export function MessageEditor({ messageId, depth }: MessageEditorProps) {
-  const editingState = useEditingStore((state) => state.editingState);
-  const updateEditContent = useEditingStore((state) => state.updateEditContent);
+  const editingState = useEditingStore((state) => state.editingState)
+  const updateEditContent = useEditingStore((state) => state.updateEditContent)
   const updateEditAttachments = useEditingStore(
-    (state) => state.updateEditAttachments
-  );
-  const cancelEditing = useEditingStore((state) => state.cancelEditing);
-  const submitEdit = useEditingStore((state) => state.submitEdit);
-  const deviceType = useResponsive();
-  const isDesktop = deviceType === "desktop";
-  const uploading = useComposerStore((state) => state.uploading);
-  const requestPhase = useChatRequestStore((s) => s.requestPhase);
-  const currentRole = useMessageTreeStore((state) => state.currentRole);
-  const isBusy = requestPhase !== "done";
+    (state) => state.updateEditAttachments,
+  )
+  const cancelEditing = useEditingStore((state) => state.cancelEditing)
+  const submitEdit = useEditingStore((state) => state.submitEdit)
+  const deviceType = useResponsive()
+  const isDesktop = deviceType === 'desktop'
+  const uploading = useComposerStore((state) => state.uploading)
+  const requestPhase = useChatRequestStore((state) => state.requestPhase)
+  const currentRole = useChatSessionStore((state) => state.currentRole)
+  const isBusy = requestPhase !== 'done'
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-  const state =
-    editingState?.messageId === messageId ? editingState : null;
-
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const state = editingState?.messageId === messageId ? editingState : null
 
   useEffect(() => {
     if (state && textareaRef.current) {
-      textareaRef.current.focus();
+      textareaRef.current.focus()
     }
-  }, [state]);
+  }, [state])
 
   useEffect(() => {
-    const textarea = textareaRef.current;
+    const textarea = textareaRef.current
     if (!textarea) {
-      return;
+      return
     }
 
-    textarea.style.height = "auto";
-    const computedStyle = window.getComputedStyle(textarea);
-    const lineHeightValue = parseFloat(computedStyle.lineHeight);
-    const paddingTopValue = parseFloat(computedStyle.paddingTop);
-    const paddingBottomValue = parseFloat(computedStyle.paddingBottom);
+    textarea.style.height = 'auto'
+    const computedStyle = window.getComputedStyle(textarea)
+    const lineHeightValue = parseFloat(computedStyle.lineHeight)
+    const paddingTopValue = parseFloat(computedStyle.paddingTop)
+    const paddingBottomValue = parseFloat(computedStyle.paddingBottom)
 
-    const fallbackLineHeight = 20;
+    const fallbackLineHeight = 20
     const lineHeight = Number.isFinite(lineHeightValue)
       ? lineHeightValue
-      : fallbackLineHeight;
-    const paddingTop = Number.isFinite(paddingTopValue) ? paddingTopValue : 0;
+      : fallbackLineHeight
+    const paddingTop = Number.isFinite(paddingTopValue) ? paddingTopValue : 0
     const paddingBottom = Number.isFinite(paddingBottomValue)
       ? paddingBottomValue
-      : 0;
-    const maxLines = 5;
-    const maxHeight = lineHeight * maxLines + paddingTop + paddingBottom;
-    const newHeight = Math.min(textarea.scrollHeight, maxHeight);
+      : 0
+    const maxLines = 5
+    const maxHeight = lineHeight * maxLines + paddingTop + paddingBottom
+    const newHeight = Math.min(textarea.scrollHeight, maxHeight)
 
-    textarea.style.height = `${newHeight}px`;
-  }, [state?.editedContent]);
+    textarea.style.height = `${newHeight}px`
+  }, [state?.editedContent])
 
   if (!state) {
-    return null;
+    return null
   }
 
-  const { editedContent, editedAttachments } = state;
-  const hasText = editedContent.trim().length > 0;
-  const hasAttachments = editedAttachments.length > 0;
+  const { editedContent, editedAttachments } = state
+  const hasText = editedContent.trim().length > 0
+  const hasAttachments = editedAttachments.length > 0
   const sendDisabled =
-    isBusy || uploading || (!hasText && !hasAttachments) || !currentRole;
+    isBusy || uploading || (!hasText && !hasAttachments) || !currentRole
 
   const handleAddAttachments = async (files: File[]) => {
     if (!files.length) {
-      return;
+      return
     }
+
     if (uploading) {
-      toast.info("正在上传附件，请稍后再试。");
-      return;
+      toast.info('Attachments are still uploading. Please wait.')
+      return
     }
 
-    const attachments = await buildAttachmentsFromFiles(files);
+    const attachments = await buildAttachmentsFromFiles(files)
     if (attachments.length === 0) {
-      return;
+      return
     }
 
-    updateEditAttachments([...editedAttachments, ...attachments]);
-  };
+    updateEditAttachments([...editedAttachments, ...attachments])
+  }
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const clipboardData = event.clipboardData;
+    const clipboardData = event.clipboardData
     if (!clipboardData) {
-      return;
+      return
     }
 
-    const pastedFiles: File[] = [];
+    const pastedFiles: File[] = []
     if (clipboardData.files?.length) {
-      pastedFiles.push(...Array.from(clipboardData.files));
+      pastedFiles.push(...Array.from(clipboardData.files))
     } else if (clipboardData.items?.length) {
       for (const item of Array.from(clipboardData.items)) {
-        if (item.kind !== "file") {
-          continue;
+        if (item.kind !== 'file') {
+          continue
         }
-        const file = item.getAsFile();
+
+        const file = item.getAsFile()
         if (file) {
-          pastedFiles.push(file);
+          pastedFiles.push(file)
         }
       }
     }
 
     if (pastedFiles.length === 0) {
-      return;
+      return
     }
 
-    event.preventDefault();
-    void handleAddAttachments(pastedFiles);
-  };
+    event.preventDefault()
+    void handleAddAttachments(pastedFiles)
+  }
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && event.ctrlKey && !event.shiftKey) {
-      event.preventDefault();
+    if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
+      event.preventDefault()
       if (!sendDisabled) {
-        submitEdit(depth);
+        submitEdit(depth)
       }
     }
-  };
+  }
 
   return (
     <div className="relative flex w-full flex-col gap-2 rounded-xl border bg-(--surface-muted) p-3 shadow-sm">
@@ -146,14 +145,14 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
         type="button"
         variant="ghost"
         size="icon"
-        aria-label="取消编辑"
+        aria-label="Cancel editing"
         onClick={cancelEditing}
         className="absolute right-2 top-2 h-7 w-7 text-(--text-secondary) transition-colors hover:text-(--text-primary)"
       >
         <X className="h-4 w-4" />
       </Button>
 
-      {hasAttachments && (
+      {hasAttachments ? (
         <div className="flex flex-wrap gap-2">
           {editedAttachments.map((attachment) => (
             <div key={attachment.id} className="group relative">
@@ -167,10 +166,10 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
                 type="button"
                 variant="ghost"
                 size="icon"
-                aria-label="移除附件"
+                aria-label="Remove attachment"
                 onClick={() =>
                   updateEditAttachments(
-                    editedAttachments.filter((item) => item.id !== attachment.id)
+                    editedAttachments.filter((item) => item.id !== attachment.id),
                   )
                 }
                 className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary)/50 text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary)/70 hover:text-(--status-destructive)"
@@ -180,7 +179,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       <Textarea
         ref={textareaRef}
@@ -189,10 +188,10 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
         onKeyDown={handleKeyDown}
         onPaste={handlePaste}
         rows={1}
-        placeholder="编辑消息内容..."
-        enterKeyHint={isDesktop ? undefined : "enter"}
+        placeholder="Edit your message..."
+        enterKeyHint={isDesktop ? undefined : 'enter'}
         className="min-h-10 max-h-[200px] resize-none border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
-        style={{ height: "44px" }}
+        style={{ height: '44px' }}
       />
 
       <div className="flex items-center justify-between gap-2 pt-1">
@@ -204,9 +203,9 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
             accept="image/*"
             className="hidden"
             onChange={(event) => {
-              const files = Array.from(event.target.files ?? []);
-              event.target.value = "";
-              void handleAddAttachments(files);
+              const files = Array.from(event.target.files ?? [])
+              event.target.value = ''
+              void handleAddAttachments(files)
             }}
           />
           <Button
@@ -218,7 +217,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
             disabled={uploading}
           >
             <ImagePlus className="h-3.5 w-3.5" />
-            添加附件
+            Add image
           </Button>
         </div>
         <Button
@@ -226,17 +225,17 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
           onClick={() => submitEdit(depth)}
           disabled={sendDisabled}
           size="icon"
-          aria-label="发送编辑"
+          aria-label="Submit edit"
           className={cn(
-            "h-8 w-8 rounded-full transition-all duration-200",
+            'h-8 w-8 rounded-full transition-all duration-200',
             sendDisabled
-              ? "bg-(--surface-muted) text-(--text-tertiary) cursor-not-allowed"
-              : "hover:scale-105 active:scale-95"
+              ? 'cursor-not-allowed bg-(--surface-muted) text-(--text-tertiary)'
+              : 'hover:scale-105 active:scale-95',
           )}
         >
           <ArrowUp className="h-4 w-4" />
         </Button>
       </div>
     </div>
-  );
+  )
 }

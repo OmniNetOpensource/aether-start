@@ -1,48 +1,49 @@
-import { useEffect, useState } from "react";
-import { Link, useNavigate } from "@tanstack/react-router";
-import { MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
-import { Shimmer } from "@/components/ai-elements/shimmer";
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from '@tanstack/react-router'
+import { MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react'
+import { Shimmer } from '@/components/ai-elements/shimmer'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { useConversationsStore } from "@/stores/zustand/useConversationsStore";
-import type { ConversationMeta } from "@/types/conversation";
+} from '@/components/ui/dropdown-menu'
+import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
+import type { ConversationMeta } from '@/types/conversation'
 
-const PLACEHOLDER_TITLES = ["New Chat", "未命名会话"];
+const PLACEHOLDER_TITLES = ['New Chat', 'Untitled Chat']
 
 function isPlaceholderTitle(title: string | null): boolean {
-  if (!title || !title.trim()) return true;
-  return PLACEHOLDER_TITLES.includes(title.trim());
+  if (!title || !title.trim()) {
+    return true
+  }
+
+  return PLACEHOLDER_TITLES.includes(title.trim())
 }
 
 type ConversationItemProps = {
-  conversation: ConversationMeta;
-  isActive: boolean;
-  onDropdownOpenChange: (open: boolean) => void;
-};
+  conversation: ConversationMeta
+  isActive: boolean
+  onDropdownOpenChange: (open: boolean) => void
+}
 
 export function ConversationItem({
   conversation,
   isActive,
   onDropdownOpenChange,
 }: ConversationItemProps) {
-  const title = conversation.title || "未命名会话";
-  const useShimmer = isPlaceholderTitle(conversation.title);
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const navigate = useNavigate();
-  const deleteConversation = useConversationsStore(
+  const title = conversation.title || 'Untitled Chat'
+  const useShimmer = isPlaceholderTitle(conversation.title)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const navigate = useNavigate()
+  const deleteConversation = useChatSessionStore(
     (state) => state.deleteConversation,
-  );
-  const setConversationPinned = useConversationsStore(
+  )
+  const setConversationPinned = useChatSessionStore(
     (state) => state.setConversationPinned,
-  );
+  )
 
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
-    // Allow modified clicks to keep their native browser behavior.
     if (
       event.ctrlKey ||
       event.metaKey ||
@@ -50,47 +51,49 @@ export function ConversationItem({
       event.altKey ||
       event.button !== 0
     ) {
-      return;
+      return
     }
-  };
+  }
 
   const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-  };
+    event.preventDefault()
+    event.stopPropagation()
+  }
 
   const handleDelete = async () => {
-    const confirmed = window.confirm("确定要删除这个会话吗？删除后无法恢复。");
+    const confirmed = window.confirm(
+      'Delete this conversation? This action cannot be undone.',
+    )
     if (!confirmed) {
-      return;
+      return
     }
 
-    await deleteConversation(conversation.id);
+    await deleteConversation(conversation.id)
 
     if (isActive) {
-      navigate({ to: "/app" });
+      navigate({ to: '/app' })
     }
-  };
+  }
 
   const handleSetPinned = async (pinned: boolean) => {
-    await setConversationPinned(conversation.id, pinned);
-  };
+    await setConversationPinned(conversation.id, pinned)
+  }
 
   const handleMenuOpenChange = (open: boolean) => {
-    setMenuOpen(open);
-    onDropdownOpenChange(open);
-  };
+    setMenuOpen(open)
+    onDropdownOpenChange(open)
+  }
 
   useEffect(() => {
     return () => {
-      onDropdownOpenChange(false);
-    };
-  }, [onDropdownOpenChange]);
+      onDropdownOpenChange(false)
+    }
+  }, [onDropdownOpenChange])
 
   return (
     <div
       className={`group relative flex-col w-full items-start justify-center gap-3 rounded-sm p-0.5 text-left transition-all hover:bg-(--surface-hover) ${
-        isActive ? "bg-(--surface-active)" : "bg-transparent"
+        isActive ? 'bg-(--surface-active)' : 'bg-transparent'
       }`}
     >
       <Link
@@ -130,7 +133,7 @@ export function ConversationItem({
               <button
                 type="button"
                 onClick={handleMenuClick}
-                aria-label="会话操作"
+                aria-label="Conversation actions"
                 className="flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
               >
                 <MoreHorizontal className="size-4" />
@@ -144,7 +147,7 @@ export function ConversationItem({
             >
               <DropdownMenuItem
                 onSelect={() => {
-                  void handleSetPinned(!conversation.is_pinned);
+                  void handleSetPinned(!conversation.is_pinned)
                 }}
               >
                 {conversation.is_pinned ? (
@@ -152,21 +155,21 @@ export function ConversationItem({
                 ) : (
                   <Pin className="size-4" />
                 )}
-                {conversation.is_pinned ? "取消置顶" : "置顶会话"}
+                {conversation.is_pinned ? 'Unpin' : 'Pin'}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => {
-                  void handleDelete();
+                  void handleDelete()
                 }}
                 variant="destructive"
               >
                 <Trash2 className="size-4" />
-                删除会话
+                Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -45,10 +45,11 @@ vi.mock('@/hooks/useToast', () => ({
   },
 }))
 
-vi.mock('@/stores/zustand/useConversationsStore', () => ({
-  useConversationsStore: {
+vi.mock('@/stores/zustand/useChatSessionStore', () => ({
+  useChatSessionStore: {
     getState: () => ({
       addConversation: addConversationMock,
+      ...messageTreeState,
     }),
   },
 }))
@@ -59,12 +60,6 @@ vi.mock('@/lib/chat/api/event-handlers', () => ({
 
 vi.mock('@/lib/navigation', () => ({
   appNavigate: appNavigateMock,
-}))
-
-vi.mock('@/stores/zustand/useMessageTreeStore', () => ({
-  useMessageTreeStore: {
-    getState: () => messageTreeState,
-  },
 }))
 
 vi.stubGlobal('fetch', fetchMock)

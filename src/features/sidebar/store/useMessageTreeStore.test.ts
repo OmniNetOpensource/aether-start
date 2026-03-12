@@ -17,9 +17,10 @@ vi.mock('@/server/functions/chat/models', () => ({
 }))
 
 import {
-  initialMessageTreeSelectionState,
-  useMessageTreeStore,
-} from './useMessageTreeStore'
+  initialConversationListState,
+  initialChatSessionSelectionState,
+  useChatSessionStore,
+} from './useChatSessionStore'
 
 const textBlock = (content: string): ContentBlock => ({
   type: 'content',
@@ -82,15 +83,19 @@ const buildMultiRootState = () => {
   return state
 }
 
-describe('useMessageTreeStore', () => {
+describe('useChatSessionStore', () => {
   beforeEach(() => {
     getAvailableModelsFnMock.mockReset()
     getAvailablePromptsFnMock.mockReset()
     localStorage.clear()
-    useMessageTreeStore.setState({
-      ...createEmptyMessageState(),
+    useChatSessionStore.setState({
+      ...initialConversationListState,
       conversationId: null,
-      ...initialMessageTreeSelectionState,
+      ...initialChatSessionSelectionState,
+      messages: [],
+      currentPath: [],
+      latestRootId: null,
+      nextId: 1,
     })
   })
 
@@ -100,9 +105,9 @@ describe('useMessageTreeStore', () => {
       { role: 'assistant', blocks: [textBlock('a')] },
     ])
 
-    useMessageTreeStore.getState().initializeTree(linear.messages, [])
+    useChatSessionStore.getState().initializeTree(linear.messages, [])
 
-    expect(useMessageTreeStore.getState()).toMatchObject({
+    expect(useChatSessionStore.getState()).toMatchObject({
       currentPath: [1, 2],
       latestRootId: 1,
       nextId: 3,
@@ -110,7 +115,7 @@ describe('useMessageTreeStore', () => {
   })
 
   it('normalizes parentId for messages loaded from older snapshots', () => {
-    useMessageTreeStore.getState().initializeTree(
+    useChatSessionStore.getState().initializeTree(
       [
         {
           id: 1,
@@ -134,7 +139,7 @@ describe('useMessageTreeStore', () => {
       [1, 2],
     )
 
-    const [root, child] = useMessageTreeStore.getState().messages
+    const [root, child] = useChatSessionStore.getState().messages
     expect(root.parentId).toBeNull()
     expect(child.parentId).toBe(1)
   })
@@ -145,27 +150,27 @@ describe('useMessageTreeStore', () => {
       { role: 'assistant', blocks: [textBlock('hello')] },
     ])
 
-    useMessageTreeStore.getState().initializeTree(linear.messages, linear.currentPath)
-    useMessageTreeStore.getState().appendToAssistant({
+    useChatSessionStore.getState().initializeTree(linear.messages, linear.currentPath)
+    useChatSessionStore.getState().appendToAssistant({
       type: 'content',
       content: ' world',
     })
 
-    const assistant = useMessageTreeStore.getState().messages[1]
+    const assistant = useChatSessionStore.getState().messages[1]
     expect(assistant.role).toBe('assistant')
     expect(assistant.blocks).toEqual([{ type: 'content', content: 'hello world' }])
   })
 
   it('creates an assistant message when appending with no assistant at path end', () => {
     const linear = createLinearMessages([{ role: 'user', blocks: [textBlock('question')] }])
-    useMessageTreeStore.getState().initializeTree(linear.messages, linear.currentPath)
+    useChatSessionStore.getState().initializeTree(linear.messages, linear.currentPath)
 
-    useMessageTreeStore.getState().appendToAssistant({
+    useChatSessionStore.getState().appendToAssistant({
       type: 'content',
       content: 'answer',
     })
 
-    const state = useMessageTreeStore.getState()
+    const state = useChatSessionStore.getState()
     expect(state.currentPath).toEqual([1, 2])
     expect(state.nextId).toBe(3)
     expect(state.messages[1].role).toBe('assistant')
@@ -174,50 +179,50 @@ describe('useMessageTreeStore', () => {
 
   it('returns branch info and navigates sibling branches', () => {
     const messages = buildBranchedMessages()
-    useMessageTreeStore.getState().initializeTree(messages, [1, 3])
+    useChatSessionStore.getState().initializeTree(messages, [1, 3])
 
-    const info = useMessageTreeStore.getState().getBranchInfo(3)
+    const info = useChatSessionStore.getState().getBranchInfo(3)
     expect(info).toEqual({
       currentIndex: 1,
       total: 2,
       siblingIds: [2, 3],
     })
 
-    useMessageTreeStore.getState().navigateBranch(3, 2, 'prev')
-    expect(useMessageTreeStore.getState().currentPath).toEqual([1, 2])
+    useChatSessionStore.getState().navigateBranch(3, 2, 'prev')
+    expect(useChatSessionStore.getState().currentPath).toEqual([1, 2])
   })
 
   it('selects a message and rebuilds the active path through its descendants', () => {
     const state = buildNestedBranchedState()
-    useMessageTreeStore.getState().initializeTree(state.messages, state.currentPath)
+    useChatSessionStore.getState().initializeTree(state.messages, state.currentPath)
 
-    useMessageTreeStore.getState().selectMessage(2)
+    useChatSessionStore.getState().selectMessage(2)
 
-    expect(useMessageTreeStore.getState().currentPath).toEqual([1, 2, 3])
-    expect(useMessageTreeStore.getState().messages[0].latestChild).toBe(2)
+    expect(useChatSessionStore.getState().currentPath).toEqual([1, 2, 3])
+    expect(useChatSessionStore.getState().messages[0].latestChild).toBe(2)
   })
 
   it('selects a message under another root and updates latestRootId', () => {
     const state = buildMultiRootState()
-    useMessageTreeStore.getState().initializeTree(state.messages, state.currentPath)
+    useChatSessionStore.getState().initializeTree(state.messages, state.currentPath)
 
-    useMessageTreeStore.getState().selectMessage(2)
+    useChatSessionStore.getState().selectMessage(2)
 
-    expect(useMessageTreeStore.getState().currentPath).toEqual([1, 2])
-    expect(useMessageTreeStore.getState().latestRootId).toBe(1)
+    expect(useChatSessionStore.getState().currentPath).toEqual([1, 2])
+    expect(useChatSessionStore.getState().latestRootId).toBe(1)
   })
 
   it('extracts path messages and clears store state', () => {
     const messages = buildBranchedMessages()
-    useMessageTreeStore.getState().initializeTree(messages, [1, 3])
+    useChatSessionStore.getState().initializeTree(messages, [1, 3])
 
-    const pathMessages = useMessageTreeStore.getState().getMessagesFromPath()
+    const pathMessages = useChatSessionStore.getState().getMessagesFromPath()
     expect(pathMessages.map((message) => message.id)).toEqual([1, 3])
 
-    useMessageTreeStore.getState().setConversationId('conv-1')
-    useMessageTreeStore.getState().clear()
+    useChatSessionStore.getState().setConversationId('conv-1')
+    useChatSessionStore.getState().clearSession()
 
-    expect(useMessageTreeStore.getState()).toMatchObject({
+    expect(useChatSessionStore.getState()).toMatchObject({
       messages: [],
       currentPath: [],
       latestRootId: null,
@@ -233,11 +238,11 @@ describe('useMessageTreeStore', () => {
       { id: 'coder', name: 'Coder' },
     ])
 
-    await useMessageTreeStore.getState().loadAvailableRoles()
-    await useMessageTreeStore.getState().loadAvailableRoles()
+    await useChatSessionStore.getState().loadAvailableRoles()
+    await useChatSessionStore.getState().loadAvailableRoles()
 
     expect(getAvailableModelsFnMock).toHaveBeenCalledTimes(1)
-    expect(useMessageTreeStore.getState()).toMatchObject({
+    expect(useChatSessionStore.getState()).toMatchObject({
       rolesLoading: false,
       currentRole: 'coder',
       availableRoles: [
@@ -254,11 +259,11 @@ describe('useMessageTreeStore', () => {
       { id: 'coder', name: 'Coder' },
     ])
 
-    await useMessageTreeStore.getState().loadAvailablePrompts()
-    await useMessageTreeStore.getState().loadAvailablePrompts()
+    await useChatSessionStore.getState().loadAvailablePrompts()
+    await useChatSessionStore.getState().loadAvailablePrompts()
 
     expect(getAvailablePromptsFnMock).toHaveBeenCalledTimes(1)
-    expect(useMessageTreeStore.getState()).toMatchObject({
+    expect(useChatSessionStore.getState()).toMatchObject({
       promptsLoading: false,
       currentPrompt: 'coder',
       availablePrompts: [

@@ -5,13 +5,13 @@ import { MessageList } from "@/components/chat/message/MessageList";
 import { useComposerStore } from '@/stores/zustand/useComposerStore'
 import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
 import { useEditingStore } from '@/stores/zustand/useEditingStore'
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
 export const Route = createFileRoute("/app/")({
   component: HomePage,
 });
 
 function HomePage() {
-  const messages = useMessageTreeStore((state) => state.messages);
+  const messages = useChatSessionStore((state) => state.messages);
   const hasMessages = messages.length > 0;
 
   useEffect(() => {
@@ -24,7 +24,7 @@ function HomePage() {
     if (!hasPrefill) {
       composer.clear();
     }
-    useMessageTreeStore.getState().clear();
+    useChatSessionStore.getState().clearSession();
   }, []);
 
   return (

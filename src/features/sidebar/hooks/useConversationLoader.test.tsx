@@ -39,9 +39,10 @@ import {
 } from '@/stores/zustand/useChatRequestStore'
 import { useEditingStore } from '@/stores/zustand/useEditingStore'
 import {
-  initialMessageTreeSelectionState,
-  useMessageTreeStore,
-} from '@/stores/zustand/useMessageTreeStore'
+  initialConversationListState,
+  initialChatSessionSelectionState,
+  useChatSessionStore,
+} from '@/stores/zustand/useChatSessionStore'
 
 function TestComponent(props: { conversationId?: string }) {
   useConversationLoader(props.conversationId)
@@ -63,14 +64,17 @@ describe('useConversationLoader', () => {
 
     useComposerStore.getState().clear()
     useEditingStore.getState().clear()
-    useMessageTreeStore.getState().clear()
-    useMessageTreeStore.setState(initialMessageTreeSelectionState)
+    useChatSessionStore.getState().clearSession()
+    useChatSessionStore.setState({
+      ...initialConversationListState,
+      ...initialChatSessionSelectionState,
+    })
     useChatRequestStore.setState(initialChatRequestState)
     const store = useChatRequestStore.getState()
     store.setRequestPhase('done')
     store.setActiveRequestId(null)
     store.setConnectionState('idle')
-    const messageTreeStore = useMessageTreeStore.getState()
+    const messageTreeStore = useChatSessionStore.getState()
     messageTreeStore.setCurrentRole('aether')
     messageTreeStore.setAvailableRoles([{ id: 'aether', name: 'Aether' }])
     messageTreeStore.setRolesLoading(false)
@@ -94,7 +98,7 @@ describe('useConversationLoader', () => {
       await flush()
     })
 
-    expect(useMessageTreeStore.getState().conversationId).toBe('conv-1')
+    expect(useChatSessionStore.getState().conversationId).toBe('conv-1')
     expect(resetLastEventIdMock).toHaveBeenCalledTimes(1)
     expect(resumeRunningConversationMock).toHaveBeenCalledTimes(1)
     expect(resumeRunningConversationMock).toHaveBeenCalledWith(

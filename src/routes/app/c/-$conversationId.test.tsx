@@ -77,8 +77,8 @@ vi.mock('@/features/chat/store/useChatRequestStore', () => ({
   ),
 }))
 
-vi.mock('@/features/sidebar/store/useConversationsStore', () => ({
-  useConversationsStore: (selector: (state: { conversations: Array<{ id: string; title: string }> }) => unknown) =>
+vi.mock('@/features/sidebar/store/useChatSessionStore', () => ({
+  useChatSessionStore: (selector: (state: { conversations: Array<{ id: string; title: string }> }) => unknown) =>
     selector({
       conversations: [{ id: 'conv-1', title: 'Conversation' }],
     }),

@@ -6,9 +6,9 @@ import {
 } from '@/stores/zustand/useChatRequestStore'
 import { addMessage, createEmptyMessageState } from '@/lib/conversation/tree/message-tree'
 import {
-  initialMessageTreeSelectionState,
-  useMessageTreeStore,
-} from '@/stores/zustand/useMessageTreeStore'
+  initialChatSessionSelectionState,
+  useChatSessionStore,
+} from '@/stores/zustand/useChatSessionStore'
 
 const { startChatRequestMock, stopActiveChatRequestMock, warningMock } = vi.hoisted(() => ({
   startChatRequestMock: vi.fn(),
@@ -55,7 +55,7 @@ const seedTreeWithUserAndAssistant = () => {
     [{ type: 'content', content: 'assistant reply' }],
     '2024-01-02',
   )
-  useMessageTreeStore.getState().setTreeState(fullState)
+  useChatSessionStore.getState().setTreeState(fullState)
 }
 
 describe('useEditingStore', () => {
@@ -66,19 +66,19 @@ describe('useEditingStore', () => {
     warningMock.mockReset()
 
     useEditingStore.setState({ editingState: null })
-    useMessageTreeStore.setState({
+    useChatSessionStore.setState({
       ...createEmptyMessageState(),
       conversationId: null,
-      ...initialMessageTreeSelectionState,
+      ...initialChatSessionSelectionState,
     })
     useChatRequestStore.setState(initialChatRequestState)
     const store = useChatRequestStore.getState()
     store.setRequestPhase('done')
     store.setActiveRequestId(null)
     store.setConnectionState('idle')
-    useMessageTreeStore.getState().setCurrentRole('aether')
-    useMessageTreeStore.getState().setAvailableRoles([])
-    useMessageTreeStore.getState().setRolesLoading(false)
+    useChatSessionStore.getState().setCurrentRole('aether')
+    useChatSessionStore.getState().setAvailableRoles([])
+    useChatSessionStore.getState().setRolesLoading(false)
   })
 
   it('starts and cancels editing for a user message', () => {
@@ -118,11 +118,11 @@ describe('useEditingStore', () => {
   it('submitEdit warns when role is missing', async () => {
     seedTreeWithUserAndAssistant()
     useEditingStore.getState().startEditing(1)
-    useMessageTreeStore.getState().setCurrentRole('')
+    useChatSessionStore.getState().setCurrentRole('')
 
     await useEditingStore.getState().submitEdit(1)
 
-    expect(warningMock).toHaveBeenCalledWith('请先选择角色')
+    expect(warningMock).toHaveBeenCalledWith('璇峰厛閫夋嫨瑙掕壊')
     expect(startChatRequestMock).not.toHaveBeenCalled()
     expect(useEditingStore.getState().editingState).not.toBeNull()
   })
@@ -140,7 +140,7 @@ describe('useEditingStore', () => {
     const requestArg = startChatRequestMock.mock.calls[0][0]
     expect(requestArg.messages).toHaveLength(1)
     expect(requestArg.titleSource.role).toBe('user')
-    expect(useMessageTreeStore.getState().currentPath[0]).toBe(3)
+    expect(useChatSessionStore.getState().currentPath[0]).toBe(3)
   })
 
   it('retryFromMessage for assistant rewinds path and starts chat request', async () => {
@@ -148,7 +148,7 @@ describe('useEditingStore', () => {
 
     await useEditingStore.getState().retryFromMessage(2, 2)
 
-    expect(useMessageTreeStore.getState().currentPath).toEqual([1])
+    expect(useChatSessionStore.getState().currentPath).toEqual([1])
     expect(useEditingStore.getState().editingState).toBeNull()
     expect(startChatRequestMock).toHaveBeenCalledTimes(1)
     expect(startChatRequestMock.mock.calls[0][0].messages.map((m: { id: number }) => m.id)).toEqual(

@@ -7,7 +7,7 @@ import { getBranchInfo as getBranchInfoFn } from "@/lib/conversation/tree/messag
 import { ResearchBlock } from "../research/ResearchBlock";
 import { Copy, Check, AlertCircle, Pencil, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
 import { MessageEditor } from "./MessageEditor";
@@ -43,7 +43,7 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
       size="sm"
       onClick={handleCopy}
       className="text-2xs text-neutral-500 dark:text-neutral-400"
-      title="复制内容"
+      title="澶嶅埗鍐呭"
     >
       {isCopied ? (
         <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -93,7 +93,7 @@ export function MessageItem({
   depth,
   isStreaming,
 }: MessageItemProps) {
-  const messageFromStore = useMessageTreeStore(
+  const messageFromStore = useChatSessionStore(
     (state) => state.messages[messageId - 1],
   );
   const requestPhase = useChatRequestStore((s) => s.requestPhase);
@@ -102,11 +102,11 @@ export function MessageItem({
   );
   const startEditing = useEditingStore((state) => state.startEditing);
   const retryFromMessage = useEditingStore((state) => state.retryFromMessage);
-  const navigateBranch = useMessageTreeStore((state) => state.navigateBranch);
+  const navigateBranch = useChatSessionStore((state) => state.navigateBranch);
   const message = messageFromStore;
 
   const branchInfo = getBranchInfoFn(
-    useMessageTreeStore.getState().messages,
+    useChatSessionStore.getState().messages,
     messageId,
   );
   const isBusy = requestPhase !== "done";
@@ -238,13 +238,13 @@ export function MessageItem({
                   <ActionButton
                     onClick={handleStartEditing}
                     disabled={isBusy}
-                    title="编辑消息"
+                    title="缂栬緫娑堟伅"
                     icon={<Pencil className="h-3.5 w-3.5" strokeWidth={2.5} />}
                   />
                   <ActionButton
                     onClick={handleRetry}
                     disabled={isBusy}
-                    title="重试生成"
+                    title="閲嶈瘯鐢熸垚"
                     icon={
                       <RotateCcw className="h-3.5 w-3.5" strokeWidth={2.5} />
                     }
@@ -256,7 +256,7 @@ export function MessageItem({
                 <ActionButton
                   onClick={handleRetry}
                   disabled={isBusy}
-                  title="重试生成"
+                  title="閲嶈瘯鐢熸垚"
                   icon={<RotateCcw className="h-3.5 w-3.5" />}
                 />
               )}

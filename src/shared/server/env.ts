@@ -20,6 +20,7 @@ type ServerEnv = {
   GEMINI_BASE_URL_IKUNCODE?: string
   DMX_APIKEY?: string
   DMX_BASEURL?: string
+  OPENROUTER_API_KEY?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
   JINA_API_KEY?: string
@@ -114,6 +115,9 @@ export const getServerEnv = (): ServerEnv => {
     DMX_BASEURL:
       readString(bindings.DMX_BASEURL) ??
       readStringFromProcess('DMX_BASEURL'),
+    OPENROUTER_API_KEY:
+      readString((bindings as Record<string, unknown>).OPENROUTER_API_KEY) ??
+      readStringFromProcess('OPENROUTER_API_KEY'),
     SERP_API_KEY:
       readString(bindings.SERP_API_KEY) ?? readStringFromProcess('SERP_API_KEY'),
     SUPADATA_API_KEY:

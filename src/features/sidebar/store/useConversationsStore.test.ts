@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ConversationDetail, ConversationMeta } from '@/types/conversation'
-import { createEmptyMessageState } from '@/lib/conversation/tree/message-tree'
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import {
+  initialChatSessionSelectionState,
+  initialConversationListState,
+  useChatSessionStore,
+} from './useChatSessionStore'
 
 const {
   listConversationsPageFnMock,
@@ -24,7 +27,6 @@ vi.mock('@/server/functions/conversations', () => ({
   setConversationPinnedFn: setConversationPinnedFnMock,
   updateConversationTitleFn: updateConversationTitleFnMock,
 }))
-import { useConversationsStore } from './useConversationsStore'
 
 const createMeta = (
   id: string,
@@ -58,7 +60,7 @@ const createDetail = (
   messages: [],
 })
 
-describe('useConversationsStore', () => {
+describe('useChatSessionStore', () => {
   beforeEach(() => {
     listConversationsPageFnMock.mockReset()
     clearConversationsFnMock.mockReset()
@@ -66,16 +68,13 @@ describe('useConversationsStore', () => {
     setConversationPinnedFnMock.mockReset()
     updateConversationTitleFnMock.mockReset()
 
-    useConversationsStore.setState({
-      conversations: [],
-      conversationsLoading: false,
-      hasLoaded: false,
-      loadingMore: false,
-      hasMore: false,
-      conversationsCursor: null,
-    })
-    useMessageTreeStore.setState({
-      ...createEmptyMessageState(),
+    useChatSessionStore.setState({
+      ...initialConversationListState,
+      ...initialChatSessionSelectionState,
+      messages: [],
+      currentPath: [],
+      latestRootId: null,
+      nextId: 1,
       conversationId: null,
     })
   })
@@ -87,21 +86,21 @@ describe('useConversationsStore', () => {
     })
     const newerUnpinned = createMeta('c-2', '2024-01-02T00:00:00.000Z', 'newer')
 
-    useConversationsStore.getState().addConversation(olderPinned)
-    useConversationsStore.getState().addConversation(newerUnpinned)
-    expect(useConversationsStore.getState().conversations.map((item) => item.id)).toEqual([
+    useChatSessionStore.getState().addConversation(olderPinned)
+    useChatSessionStore.getState().addConversation(newerUnpinned)
+    expect(useChatSessionStore.getState().conversations.map((item) => item.id)).toEqual([
       'c-1',
       'c-2',
     ])
 
-    useConversationsStore.getState().setConversations([
+    useChatSessionStore.getState().setConversations([
       createMeta('c-2', '2024-01-04T00:00:00.000Z', 'updated title', {
         isPinned: true,
         pinnedAt: '2024-01-05T00:00:00.000Z',
       }),
     ])
 
-    expect(useConversationsStore.getState().conversations).toEqual([
+    expect(useChatSessionStore.getState().conversations).toEqual([
       createMeta('c-2', '2024-01-04T00:00:00.000Z', 'updated title', {
         isPinned: true,
         pinnedAt: '2024-01-05T00:00:00.000Z',
@@ -124,12 +123,12 @@ describe('useConversationsStore', () => {
       },
     })
 
-    await useConversationsStore.getState().loadInitialConversations()
+    await useChatSessionStore.getState().loadInitialConversations()
 
     expect(listConversationsPageFnMock).toHaveBeenCalledWith({
       data: { limit: 10, cursor: null },
     })
-    expect(useConversationsStore.getState()).toMatchObject({
+    expect(useChatSessionStore.getState()).toMatchObject({
       hasLoaded: true,
       conversationsLoading: false,
       hasMore: true,
@@ -140,14 +139,14 @@ describe('useConversationsStore', () => {
         id: 'c-1',
       },
     })
-    expect(useConversationsStore.getState().conversations.map((item) => item.id)).toEqual([
+    expect(useChatSessionStore.getState().conversations.map((item) => item.id)).toEqual([
       'c-2',
       'c-1',
     ])
   })
 
   it('loadMoreConversations appends next page and updates cursor', async () => {
-    useConversationsStore.setState({
+    useChatSessionStore.setState({
       conversations: [createMeta('c-1', '2024-01-04T00:00:00.000Z')],
       hasLoaded: true,
       hasMore: true,
@@ -166,7 +165,7 @@ describe('useConversationsStore', () => {
       nextCursor: null,
     })
 
-    await useConversationsStore.getState().loadMoreConversations()
+    await useChatSessionStore.getState().loadMoreConversations()
 
     expect(listConversationsPageFnMock).toHaveBeenCalledWith({
       data: {
@@ -179,19 +178,19 @@ describe('useConversationsStore', () => {
         },
       },
     })
-    expect(useConversationsStore.getState()).toMatchObject({
+    expect(useChatSessionStore.getState()).toMatchObject({
       loadingMore: false,
       hasMore: false,
       conversationsCursor: null,
     })
-    expect(useConversationsStore.getState().conversations.map((item) => item.id)).toEqual([
+    expect(useChatSessionStore.getState().conversations.map((item) => item.id)).toEqual([
       'c-1',
       'c-3',
     ])
   })
 
   it('setConversationPinned applies optimistic update and keeps server pinned_at', async () => {
-    useConversationsStore.setState({
+    useChatSessionStore.setState({
       conversations: [createMeta('c-1', '2024-01-02T00:00:00.000Z')],
       hasLoaded: true,
     })
@@ -201,12 +200,12 @@ describe('useConversationsStore', () => {
       pinned_at: '2024-01-10T00:00:00.000Z',
     })
 
-    await useConversationsStore.getState().setConversationPinned('c-1', true)
+    await useChatSessionStore.getState().setConversationPinned('c-1', true)
 
     expect(setConversationPinnedFnMock).toHaveBeenCalledWith({
       data: { id: 'c-1', pinned: true },
     })
-    expect(useConversationsStore.getState().conversations[0]).toMatchObject({
+    expect(useChatSessionStore.getState().conversations[0]).toMatchObject({
       id: 'c-1',
       is_pinned: true,
       pinned_at: '2024-01-10T00:00:00.000Z',
@@ -215,15 +214,15 @@ describe('useConversationsStore', () => {
 
   it('setConversationPinned rolls back on request failure', async () => {
     const original = createMeta('c-1', '2024-01-02T00:00:00.000Z')
-    useConversationsStore.setState({
+    useChatSessionStore.setState({
       conversations: [original],
       hasLoaded: true,
     })
 
     setConversationPinnedFnMock.mockRejectedValueOnce(new Error('network error'))
 
-    await useConversationsStore.getState().setConversationPinned('c-1', true)
+    await useChatSessionStore.getState().setConversationPinned('c-1', true)
 
-    expect(useConversationsStore.getState().conversations[0]).toEqual(original)
+    expect(useChatSessionStore.getState().conversations[0]).toEqual(original)
   })
 })

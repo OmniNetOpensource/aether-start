@@ -11,17 +11,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useResponsive } from "@/components/ResponsiveContext";
-import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 
 export function PromptSelector() {
   const deviceType = useResponsive();
   const isMobile = deviceType === "mobile";
-  const currentPrompt = useMessageTreeStore((state) => state.currentPrompt);
-  const prompts = useMessageTreeStore((state) => state.availablePrompts);
-  const loadAvailablePrompts = useMessageTreeStore(
+  const currentPrompt = useChatSessionStore((state) => state.currentPrompt);
+  const prompts = useChatSessionStore((state) => state.availablePrompts);
+  const loadAvailablePrompts = useChatSessionStore(
     (state) => state.loadAvailablePrompts,
   );
-  const setCurrentPrompt = useMessageTreeStore(
+  const setCurrentPrompt = useChatSessionStore(
     (state) => state.setCurrentPrompt,
   );
 
@@ -42,7 +42,7 @@ export function PromptSelector() {
           type="button"
           variant="ghost"
           size="sm"
-          aria-label={`选择提示词，当前为 ${currentPromptName}`}
+          aria-label={`閫夋嫨鎻愮ず璇嶏紝褰撳墠涓?${currentPromptName}`}
           title={currentPromptName}
           className={cn(
             toolButtonBaseClass,

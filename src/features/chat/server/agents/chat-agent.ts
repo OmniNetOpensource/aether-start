@@ -52,6 +52,7 @@ type ChatAgentEnv = Cloudflare.Env & {
   GEMINI_BASE_URL_IKUNCODE?: string
   DMX_APIKEY?: string
   DMX_BASEURL?: string
+  OPENROUTER_API_KEY?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
 }
