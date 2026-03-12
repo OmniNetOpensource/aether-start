@@ -38,7 +38,10 @@ import {
   useChatRequestStore,
 } from '@/stores/zustand/useChatRequestStore'
 import { useEditingStore } from '@/stores/zustand/useEditingStore'
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import {
+  initialMessageTreeSelectionState,
+  useMessageTreeStore,
+} from '@/stores/zustand/useMessageTreeStore'
 
 function TestComponent(props: { conversationId?: string }) {
   useConversationLoader(props.conversationId)
@@ -61,14 +64,16 @@ describe('useConversationLoader', () => {
     useComposerStore.getState().clear()
     useEditingStore.getState().clear()
     useMessageTreeStore.getState().clear()
+    useMessageTreeStore.setState(initialMessageTreeSelectionState)
     useChatRequestStore.setState(initialChatRequestState)
     const store = useChatRequestStore.getState()
     store.setRequestPhase('done')
     store.setActiveRequestId(null)
     store.setConnectionState('idle')
-    store.setCurrentRole('aether')
-    store.setAvailableRoles([{ id: 'aether', name: 'Aether' }])
-    store.setRolesLoading(false)
+    const messageTreeStore = useMessageTreeStore.getState()
+    messageTreeStore.setCurrentRole('aether')
+    messageTreeStore.setAvailableRoles([{ id: 'aether', name: 'Aether' }])
+    messageTreeStore.setRolesLoading(false)
   })
 
   it('loads the conversation and probes for a running request after hydration', async () => {

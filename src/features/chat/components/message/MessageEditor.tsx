@@ -10,6 +10,7 @@ import { useResponsive } from "@/components/ResponsiveContext";
 import { useEditingStore } from '@/stores/zustand/useEditingStore'
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from '@/stores/zustand/useComposerStore'
+import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
 import {
   buildAttachmentsFromFiles,
   getAttachmentPreviewUrl,
@@ -32,7 +33,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const isDesktop = deviceType === "desktop";
   const uploading = useComposerStore((state) => state.uploading);
   const requestPhase = useChatRequestStore((s) => s.requestPhase);
-  const currentRole = useChatRequestStore((s) => s.currentRole);
+  const currentRole = useMessageTreeStore((state) => state.currentRole);
   const isBusy = requestPhase !== "done";
 
   const state =

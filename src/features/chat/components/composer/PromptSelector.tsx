@@ -11,17 +11,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useResponsive } from "@/components/ResponsiveContext";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
+import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
 
 export function PromptSelector() {
   const deviceType = useResponsive();
   const isMobile = deviceType === "mobile";
-  const currentPrompt = useChatRequestStore((s) => s.currentPrompt);
-  const prompts = useChatRequestStore((s) => s.availablePrompts);
-  const loadAvailablePrompts = useChatRequestStore(
+  const currentPrompt = useMessageTreeStore((state) => state.currentPrompt);
+  const prompts = useMessageTreeStore((state) => state.availablePrompts);
+  const loadAvailablePrompts = useMessageTreeStore(
     (state) => state.loadAvailablePrompts,
   );
-  const setCurrentPrompt = useChatRequestStore(
+  const setCurrentPrompt = useMessageTreeStore(
     (state) => state.setCurrentPrompt,
   );
 

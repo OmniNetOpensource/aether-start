@@ -1,185 +1,69 @@
-import type { ContentBlock, MessageLike, ResearchItem, Tool } from '@/types/message'
-
 export const SEARCH_TOOL_NAMES = new Set([
-  'search',
-  'serper_search',
-  'tavily_search',
-  'serp_search',
-  'brave_search',
-])
+  "search",
+  "serper_search",
+  "tavily_search",
+  "serp_search",
+  "brave_search",
+]);
 
 export type SearchClientResult = {
-  title: string
-  url: string
-}
+  title: string;
+  url: string;
+};
 
 export type SearchClientPayload = {
-  results: SearchClientResult[]
-}
+  results: SearchClientResult[];
+};
 
 export type FetchClientPayload = {
-  type: 'fetch_result'
-}
+  type: "fetch_result";
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
+  typeof value === "object" && value !== null;
 
-const cloneTool = (tool: Tool): Tool => ({
-  call: {
-    tool: tool.call.tool,
-    args: { ...tool.call.args },
-  },
-  ...(tool.result
-    ? {
-        result: { ...tool.result },
-      }
-    : {}),
-})
-
-export const parseSearchClientPayload = (raw: string): SearchClientPayload | null => {
+export const parseSearchClientPayload = (
+  raw: string,
+): SearchClientPayload | null => {
   try {
-    const parsed = JSON.parse(raw)
+    const parsed = JSON.parse(raw);
     if (!isRecord(parsed) || !Array.isArray(parsed.results)) {
-      return null
+      return null;
     }
 
     const results = parsed.results
       .map((item) => {
         if (!isRecord(item)) {
-          return null
+          return null;
         }
 
-        const title = typeof item.title === 'string' ? item.title.trim() : ''
-        const url = typeof item.url === 'string' ? item.url : ''
+        const title = typeof item.title === "string" ? item.title.trim() : "";
+        const url = typeof item.url === "string" ? item.url : "";
 
         if (!title || !url) {
-          return null
+          return null;
         }
 
-        return { title, url }
+        return { title, url };
       })
-      .filter((item): item is SearchClientResult => Boolean(item))
+      .filter((item): item is SearchClientResult => Boolean(item));
 
-    return { results }
+    return { results };
   } catch {
-    return null
+    return null;
   }
-}
+};
 
-export const stringifySearchClientPayload = (payload: SearchClientPayload): string =>
+export const stringifySearchClientPayload = (
+  payload: SearchClientPayload,
+): string =>
   JSON.stringify({
     results: payload.results.map((item) => ({
       title: item.title,
       url: item.url,
     })),
-  })
+  });
 
-export const parseFetchClientPayload = (raw: string): FetchClientPayload | null => {
-  try {
-    const parsed = JSON.parse(raw)
-    if (!isRecord(parsed) || parsed.type !== 'fetch_result') {
-      return null
-    }
-
-    return { type: 'fetch_result' }
-  } catch {
-    return null
-  }
-}
-
-export const stringifyFetchClientPayload = (payload: FetchClientPayload): string =>
-  JSON.stringify(payload)
-
-export const stripTransientSearchClientPayload = (raw: string): string => {
-  const parsed = parseSearchClientPayload(raw)
-  if (!parsed) {
-    return raw
-  }
-
-  return stringifySearchClientPayload({
-    results: parsed.results.map(({ title, url }) => ({ title, url })),
-  })
-}
-
-export const stripTransientFetchClientPayload = (raw: string): string => {
-  const parsedFetchPayload = parseFetchClientPayload(raw)
-  if (parsedFetchPayload) {
-    return stringifyFetchClientPayload({ type: 'fetch_result' })
-  }
-
-  try {
-    const parsed = JSON.parse(raw)
-    if (
-      !isRecord(parsed) ||
-      parsed.type !== 'image' ||
-      typeof parsed.data_url !== 'string' ||
-      typeof parsed.faviconDataUrl !== 'string'
-    ) {
-      return raw
-    }
-
-    const rest = { ...parsed }
-    delete rest.faviconDataUrl
-    return JSON.stringify(rest)
-  } catch {
-    return raw
-  }
-}
-
-const stripTransientSearchDataFromResearchItems = (
-  items: ResearchItem[],
-): ResearchItem[] =>
-  items.map((item) => {
-    if (item.kind !== 'tool') {
-      return { ...item }
-    }
-
-    const tool = cloneTool(item.data)
-    if (
-      SEARCH_TOOL_NAMES.has(tool.call.tool) &&
-      tool.result &&
-      typeof tool.result.result === 'string'
-    ) {
-      tool.result.result = stripTransientSearchClientPayload(tool.result.result)
-    } else if (
-      tool.call.tool === 'fetch_url' &&
-      tool.result &&
-      typeof tool.result.result === 'string'
-    ) {
-      tool.result.result = stripTransientFetchClientPayload(tool.result.result)
-    }
-
-    return {
-      kind: 'tool',
-      data: tool,
-    }
-  })
-
-export const stripTransientSearchDataFromBlocks = (
-  blocks: ContentBlock[],
-): ContentBlock[] =>
-  blocks.map((block) => {
-    if (block.type === 'research') {
-      return {
-        ...block,
-        items: stripTransientSearchDataFromResearchItems(block.items),
-      }
-    }
-
-    if (block.type === 'attachments') {
-      return {
-        ...block,
-        attachments: block.attachments.map((attachment) => ({ ...attachment })),
-      }
-    }
-
-    return { ...block }
-  })
-
-export const stripTransientSearchDataFromMessages = <T extends MessageLike>(
-  messages: T[],
-): T[] =>
-  messages.map((message) => ({
-    ...message,
-    blocks: stripTransientSearchDataFromBlocks(message.blocks),
-  })) as T[]
+export const stringifyFetchClientPayload = (
+  payload: FetchClientPayload,
+): string => JSON.stringify(payload);

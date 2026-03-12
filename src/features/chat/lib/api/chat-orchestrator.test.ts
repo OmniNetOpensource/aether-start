@@ -13,10 +13,16 @@ const {
 } = vi.hoisted(() => {
   const messageTreeState = {
     conversationId: 'conv-1' as string | null,
+    currentRole: 'aether',
+    currentPrompt: '',
+    availableRoles: [] as Array<{ id: string; name: string }>,
     setConversationId: vi.fn((conversationId: string) => {
       messageTreeState.conversationId = conversationId
     }),
-    _getTreeState: vi.fn(() => ({
+    setCurrentRole: vi.fn((currentRole: string) => {
+      messageTreeState.currentRole = currentRole
+    }),
+    getTreeState: vi.fn(() => ({
       messages: [],
       currentPath: [],
       latestRootId: null,
@@ -116,14 +122,14 @@ describe('chat-orchestrator SSE model', () => {
     fetchMock.mockReset()
 
     useChatRequestStore.setState(initialChatRequestState)
-    useChatRequestStore.getState().setCurrentRole('aether')
-    useChatRequestStore.getState().setAvailableRoles([
-      { id: 'aether', name: 'Aether' },
-    ])
 
     messageTreeState.conversationId = 'conv-1'
+    messageTreeState.currentRole = 'aether'
+    messageTreeState.currentPrompt = ''
+    messageTreeState.availableRoles = [{ id: 'aether', name: 'Aether' }]
     messageTreeState.setConversationId.mockClear()
-    messageTreeState._getTreeState.mockClear()
+    messageTreeState.setCurrentRole.mockClear()
+    messageTreeState.getTreeState.mockClear()
 
     const orchestrator = await import('./chat-orchestrator')
     orchestrator.resetLastEventId()

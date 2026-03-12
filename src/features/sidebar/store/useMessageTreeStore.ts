@@ -1,5 +1,9 @@
 import { create } from "zustand";
 import { devtools } from "zustand/middleware";
+import {
+  getAvailableModelsFn,
+  getAvailablePromptsFn,
+} from "@/server/functions/chat/models";
 import type {
   AssistantMessage,
   BranchInfo,
@@ -24,9 +28,59 @@ import {
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 
-type MessageTreeState = TreeSnapshot & {
-  conversationId: string | null;
+export type RoleInfo = { id: string; name: string };
+
+export type PromptInfo = { id: string; name: string };
+
+const MODEL_STORAGE_KEY = "aether_current_role";
+const PROMPT_STORAGE_KEY = "aether_current_prompt";
+
+const getStoredValue = (key: string) => {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
 };
+
+const setStoredValue = (key: string, value: string) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+};
+
+export type MessageTreeSelectionState = {
+  currentRole: string;
+  availableRoles: RoleInfo[];
+  rolesLoading: boolean;
+  currentPrompt: string;
+  availablePrompts: PromptInfo[];
+  promptsLoading: boolean;
+};
+
+export const initialMessageTreeSelectionState: MessageTreeSelectionState = {
+  currentRole: "",
+  availableRoles: [],
+  rolesLoading: false,
+  currentPrompt: "",
+  availablePrompts: [],
+  promptsLoading: false,
+};
+
+type MessageTreeState = TreeSnapshot &
+  MessageTreeSelectionState & {
+  conversationId: string | null;
+  };
 
 type MessageTreeActions = {
   setMessages: (messages: Message[]) => void;
@@ -41,15 +95,24 @@ type MessageTreeActions = {
     depth: number,
     direction: "prev" | "next",
   ) => void;
+  setCurrentRole: (role: string) => void;
+  setAvailableRoles: (roles: RoleInfo[]) => void;
+  setRolesLoading: (loading: boolean) => void;
+  loadAvailableRoles: () => Promise<void>;
+  setCurrentPrompt: (promptId: string) => void;
+  setAvailablePrompts: (prompts: PromptInfo[]) => void;
+  setPromptsLoading: (loading: boolean) => void;
+  loadAvailablePrompts: () => Promise<void>;
+  cyclePrompt: () => void;
   clear: () => void;
-  _getTreeState: () => TreeSnapshot;
-  _setTreeState: (partial: Partial<TreeSnapshot>) => void;
-  _addMessage: (
+  getTreeState: () => TreeSnapshot;
+  setTreeState: (partial: Partial<TreeSnapshot>) => void;
+  addMessage: (
     role: Message["role"],
     blocks: ContentBlock[],
     createdAt?: string,
   ) => ReturnType<typeof addMessage>;
-  _editMessage: (
+  editMessage: (
     depth: number,
     messageId: number,
     blocks: ContentBlock[],
@@ -63,6 +126,7 @@ export const useMessageTreeStore = create<
     (set, get) => ({
       ...createEmptyMessageState(),
       conversationId: null,
+      ...initialMessageTreeSelectionState,
       setMessages: (messages) => {
         // Normalize to a linear tree so branch navigation works with simple lists.
         const linearState = createLinearMessages(
@@ -142,7 +206,7 @@ export const useMessageTreeStore = create<
 
         targetPath.reverse();
 
-        let nextState = state._getTreeState();
+        let nextState = state.getTreeState();
         for (let index = 0; index < targetPath.length; index += 1) {
           nextState = switchBranch(nextState, index + 1, targetPath[index]);
         }
@@ -159,16 +223,114 @@ export const useMessageTreeStore = create<
         );
       },
       clear: () => {
+        const state = get();
         set(
           {
             ...createEmptyMessageState(),
             conversationId: null,
+            currentRole: state.currentRole,
+            availableRoles: state.availableRoles,
+            rolesLoading: state.rolesLoading,
+            currentPrompt: state.currentPrompt,
+            availablePrompts: state.availablePrompts,
+            promptsLoading: state.promptsLoading,
           },
           false,
           "clear",
         );
       },
-      _getTreeState: () => {
+      setCurrentRole: (currentRole) => {
+        set({ currentRole }, false, "setCurrentRole");
+
+        if (currentRole) {
+          setStoredValue(MODEL_STORAGE_KEY, currentRole);
+        }
+      },
+      setAvailableRoles: (availableRoles) =>
+        set({ availableRoles }, false, "setAvailableRoles"),
+      setRolesLoading: (rolesLoading) =>
+        set({ rolesLoading }, false, "setRolesLoading"),
+      loadAvailableRoles: async () => {
+        const state = get();
+        if (state.availableRoles.length > 0 || state.rolesLoading) {
+          return;
+        }
+
+        set({ rolesLoading: true }, false, "loadAvailableRoles/start");
+
+        try {
+          const roles = await getAvailableModelsFn();
+          const firstId = roles[0]?.id ?? "";
+          const stored = getStoredValue(MODEL_STORAGE_KEY);
+          const storedValid = stored && roles.some((role) => role.id === stored);
+          const roleToUse = storedValid ? stored : firstId;
+
+          if (roleToUse) {
+            get().setCurrentRole(roleToUse);
+          }
+
+          set({ availableRoles: roles }, false, "loadAvailableRoles/success");
+        } catch {
+          // ignore
+        } finally {
+          set({ rolesLoading: false }, false, "loadAvailableRoles/finish");
+        }
+      },
+      setCurrentPrompt: (currentPrompt) => {
+        set({ currentPrompt }, false, "setCurrentPrompt");
+
+        if (currentPrompt) {
+          setStoredValue(PROMPT_STORAGE_KEY, currentPrompt);
+        }
+      },
+      setAvailablePrompts: (availablePrompts) =>
+        set({ availablePrompts }, false, "setAvailablePrompts"),
+      setPromptsLoading: (promptsLoading) =>
+        set({ promptsLoading }, false, "setPromptsLoading"),
+      loadAvailablePrompts: async () => {
+        const state = get();
+        if (state.availablePrompts.length > 0 || state.promptsLoading) {
+          return;
+        }
+
+        set({ promptsLoading: true }, false, "loadAvailablePrompts/start");
+
+        try {
+          const prompts = await getAvailablePromptsFn();
+          const firstId = prompts[0]?.id ?? "aether";
+          const stored = getStoredValue(PROMPT_STORAGE_KEY);
+          const storedValid = stored && prompts.some((prompt) => prompt.id === stored);
+          const promptToUse = storedValid ? stored : firstId;
+
+          if (promptToUse) {
+            get().setCurrentPrompt(promptToUse);
+          }
+
+          set(
+            { availablePrompts: prompts },
+            false,
+            "loadAvailablePrompts/success",
+          );
+        } catch {
+          // ignore
+        } finally {
+          set({ promptsLoading: false }, false, "loadAvailablePrompts/finish");
+        }
+      },
+      cyclePrompt: () => {
+        const state = get();
+        if (state.availablePrompts.length === 0) {
+          return;
+        }
+
+        const currentIndex = state.availablePrompts.findIndex(
+          (prompt) => prompt.id === state.currentPrompt,
+        );
+        const nextIndex =
+          currentIndex < 0 ? 0 : (currentIndex + 1) % state.availablePrompts.length;
+        get().setCurrentPrompt(state.availablePrompts[nextIndex].id);
+      },
+      getTreeState: () => {
         const state = get();
         return {
           messages: state.messages,
@@ -177,7 +339,7 @@ export const useMessageTreeStore = create<
           nextId: state.nextId,
         };
       },
-      _setTreeState: (partial) =>
+      setTreeState: (partial) =>
         set(
           (state) => ({
             messages: partial.messages
@@ -188,11 +350,11 @@ export const useMessageTreeStore = create<
             nextId: partial.nextId ?? state.nextId,
           }),
           false,
-          "_setTreeState",
+          "setTreeState",
         ),
-      _addMessage: (role, blocks, createdAt) => {
+      addMessage: (role, blocks, createdAt) => {
         const result = addMessage(
-          get()._getTreeState(),
+          get().getTreeState(),
           role,
           blocks,
           createdAt,
@@ -205,13 +367,13 @@ export const useMessageTreeStore = create<
             nextId: result.nextId,
           },
           false,
-          "_addMessage",
+          "addMessage",
         );
         return result;
       },
-      _editMessage: (depth, messageId, blocks) => {
+      editMessage: (depth, messageId, blocks) => {
         const result = editMessage(
-          get()._getTreeState(),
+          get().getTreeState(),
           depth,
           messageId,
           blocks,
@@ -227,7 +389,7 @@ export const useMessageTreeStore = create<
             nextId: result.nextId,
           },
           false,
-          "_editMessage",
+          "editMessage",
         );
         return result;
       },

@@ -35,7 +35,7 @@ vi.mock('@/stores/zustand/useMessageTreeStore', () => ({
   useMessageTreeStore: {
     getState: () => ({
       conversationId: 'conv-a',
-      _getTreeState: () => ({
+      getTreeState: () => ({
         messages: [],
         currentPath: [],
         latestRootId: null,

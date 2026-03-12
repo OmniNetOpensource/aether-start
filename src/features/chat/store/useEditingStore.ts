@@ -109,7 +109,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        const selectedRole = useChatRequestStore.getState().currentRole;
+        const selectedRole = useMessageTreeStore.getState().currentRole;
         if (!selectedRole) {
           toast.warning("请先选择角色");
           return;
@@ -128,7 +128,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
 
         const treeStore = useMessageTreeStore.getState();
         const result = editMessage(
-          treeStore._getTreeState(),
+          treeStore.getTreeState(),
           depth,
           editingState.messageId,
           buildUserBlocks(editingState.editedContent, attachments)
@@ -139,7 +139,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        treeStore._setTreeState({
+        treeStore.setTreeState({
           messages: result.messages,
           currentPath: result.currentPath,
           latestRootId: result.latestRootId,
@@ -159,13 +159,13 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
       },
       retryFromMessage: async (messageId, depth) => {
         const treeStore = useMessageTreeStore.getState();
-        const treeState = treeStore._getTreeState();
+        const treeState = treeStore.getTreeState();
         const targetNode = treeState.messages[messageId - 1];
         if (!targetNode) {
           return;
         }
 
-        const selectedRole = useChatRequestStore.getState().currentRole;
+        const selectedRole = useMessageTreeStore.getState().currentRole;
         if (!selectedRole) {
           toast.warning("请先选择角色");
           return;
@@ -187,7 +187,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
             return;
           }
 
-          treeStore._setTreeState({
+          treeStore.setTreeState({
             messages: result.messages,
             currentPath: result.currentPath,
             latestRootId: result.latestRootId,
@@ -213,7 +213,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        treeStore._setTreeState({ currentPath: nextPath });
+        treeStore.setTreeState({ currentPath: nextPath });
         set({ editingState: null }, false, "retryFromMessage/assistant");
 
         const pathMessages = computeMessagesFromPath(treeState.messages, nextPath);

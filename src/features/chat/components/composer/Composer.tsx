@@ -34,7 +34,7 @@ export function Composer() {
     (state) => state.uploadingAttachments,
   );
   const uploading = useComposerStore((state) => state.uploading);
-  const currentRole = useChatRequestStore((s) => s.currentRole);
+  const currentRole = useMessageTreeStore((state) => state.currentRole);
   const deviceType = useResponsive();
   const isDesktop = deviceType === "desktop";
   const setInput = useComposerStore((state) => state.setInput);
@@ -56,7 +56,7 @@ export function Composer() {
     }
 
     const treeStore = useMessageTreeStore.getState();
-    const result = treeStore._addMessage(
+    const result = treeStore.addMessage(
       "user",
       buildUserBlocks(input, pendingAttachments),
     );
@@ -103,7 +103,7 @@ export function Composer() {
       !event.metaKey
     ) {
       event.preventDefault();
-      useChatRequestStore.getState().cyclePrompt();
+      useMessageTreeStore.getState().cyclePrompt();
       return;
     }
 

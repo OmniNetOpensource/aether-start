@@ -4,7 +4,6 @@ import {
   resetLastEventId,
   resumeRunningConversation,
 } from "@/lib/chat/api/chat-orchestrator";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
 import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
@@ -130,7 +129,7 @@ export function useConversationLoader(loadingConversationId: string | undefined)
         useEditingStore.getState().clear();
         setConversationId(loadingConversationId);
         initializeTree(mappedMessages, currentPath);
-        const store = useChatRequestStore.getState();
+        const store = useMessageTreeStore.getState();
         const roleId =
           conversation.role ??
           store.currentRole ??

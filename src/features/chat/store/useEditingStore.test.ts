@@ -5,7 +5,10 @@ import {
   useChatRequestStore,
 } from '@/stores/zustand/useChatRequestStore'
 import { addMessage, createEmptyMessageState } from '@/lib/conversation/tree/message-tree'
-import { useMessageTreeStore } from '@/stores/zustand/useMessageTreeStore'
+import {
+  initialMessageTreeSelectionState,
+  useMessageTreeStore,
+} from '@/stores/zustand/useMessageTreeStore'
 
 const { startChatRequestMock, stopActiveChatRequestMock, warningMock } = vi.hoisted(() => ({
   startChatRequestMock: vi.fn(),
@@ -52,7 +55,7 @@ const seedTreeWithUserAndAssistant = () => {
     [{ type: 'content', content: 'assistant reply' }],
     '2024-01-02',
   )
-  useMessageTreeStore.getState()._setTreeState(fullState)
+  useMessageTreeStore.getState().setTreeState(fullState)
 }
 
 describe('useEditingStore', () => {
@@ -66,15 +69,16 @@ describe('useEditingStore', () => {
     useMessageTreeStore.setState({
       ...createEmptyMessageState(),
       conversationId: null,
+      ...initialMessageTreeSelectionState,
     })
     useChatRequestStore.setState(initialChatRequestState)
     const store = useChatRequestStore.getState()
     store.setRequestPhase('done')
     store.setActiveRequestId(null)
     store.setConnectionState('idle')
-    store.setCurrentRole('aether')
-    store.setAvailableRoles([])
-    store.setRolesLoading(false)
+    useMessageTreeStore.getState().setCurrentRole('aether')
+    useMessageTreeStore.getState().setAvailableRoles([])
+    useMessageTreeStore.getState().setRolesLoading(false)
   })
 
   it('starts and cancels editing for a user message', () => {
@@ -114,7 +118,7 @@ describe('useEditingStore', () => {
   it('submitEdit warns when role is missing', async () => {
     seedTreeWithUserAndAssistant()
     useEditingStore.getState().startEditing(1)
-    useChatRequestStore.getState().setCurrentRole('')
+    useMessageTreeStore.getState().setCurrentRole('')
 
     await useEditingStore.getState().submitEdit(1)
 

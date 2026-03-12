@@ -1,11 +1,25 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ContentBlock, Message } from '@/types/message'
 import {
   addMessage,
   createEmptyMessageState,
   createLinearMessages,
 } from '@/lib/conversation/tree/message-tree'
-import { useMessageTreeStore } from './useMessageTreeStore'
+
+const { getAvailableModelsFnMock, getAvailablePromptsFnMock } = vi.hoisted(() => ({
+  getAvailableModelsFnMock: vi.fn(),
+  getAvailablePromptsFnMock: vi.fn(),
+}))
+
+vi.mock('@/server/functions/chat/models', () => ({
+  getAvailableModelsFn: getAvailableModelsFnMock,
+  getAvailablePromptsFn: getAvailablePromptsFnMock,
+}))
+
+import {
+  initialMessageTreeSelectionState,
+  useMessageTreeStore,
+} from './useMessageTreeStore'
 
 const textBlock = (content: string): ContentBlock => ({
   type: 'content',
@@ -70,9 +84,13 @@ const buildMultiRootState = () => {
 
 describe('useMessageTreeStore', () => {
   beforeEach(() => {
+    getAvailableModelsFnMock.mockReset()
+    getAvailablePromptsFnMock.mockReset()
+    localStorage.clear()
     useMessageTreeStore.setState({
       ...createEmptyMessageState(),
       conversationId: null,
+      ...initialMessageTreeSelectionState,
     })
   })
 
@@ -205,6 +223,48 @@ describe('useMessageTreeStore', () => {
       latestRootId: null,
       nextId: 1,
       conversationId: null,
+    })
+  })
+
+  it('loads roles once and restores the stored role when possible', async () => {
+    localStorage.setItem('aether_current_role', 'coder')
+    getAvailableModelsFnMock.mockResolvedValueOnce([
+      { id: 'aether', name: 'Aether' },
+      { id: 'coder', name: 'Coder' },
+    ])
+
+    await useMessageTreeStore.getState().loadAvailableRoles()
+    await useMessageTreeStore.getState().loadAvailableRoles()
+
+    expect(getAvailableModelsFnMock).toHaveBeenCalledTimes(1)
+    expect(useMessageTreeStore.getState()).toMatchObject({
+      rolesLoading: false,
+      currentRole: 'coder',
+      availableRoles: [
+        { id: 'aether', name: 'Aether' },
+        { id: 'coder', name: 'Coder' },
+      ],
+    })
+  })
+
+  it('loads prompts once and restores the stored prompt when possible', async () => {
+    localStorage.setItem('aether_current_prompt', 'coder')
+    getAvailablePromptsFnMock.mockResolvedValueOnce([
+      { id: 'aether', name: 'Aether' },
+      { id: 'coder', name: 'Coder' },
+    ])
+
+    await useMessageTreeStore.getState().loadAvailablePrompts()
+    await useMessageTreeStore.getState().loadAvailablePrompts()
+
+    expect(getAvailablePromptsFnMock).toHaveBeenCalledTimes(1)
+    expect(useMessageTreeStore.getState()).toMatchObject({
+      promptsLoading: false,
+      currentPrompt: 'coder',
+      availablePrompts: [
+        { id: 'aether', name: 'Aether' },
+        { id: 'coder', name: 'Coder' },
+      ],
     })
   })
 })

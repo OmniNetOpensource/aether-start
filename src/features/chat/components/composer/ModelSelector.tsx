@@ -2,7 +2,6 @@
 
 import * as React from "react";
 import { Bot, Check, ChevronDown } from "lucide-react";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import {
   Command,
   CommandDialog,
@@ -15,6 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useResponsive } from "@/components/ResponsiveContext";
+import { useMessageTreeStore } from "@/stores/zustand/useMessageTreeStore";
 
 /** 从 role id/name 推断 provider，用于分组 */
 function getProviderFromRole(roleId: string, roleName: string): string {
@@ -34,12 +34,12 @@ export function ModelSelector() {
   const [open, setOpen] = React.useState(false);
   const deviceType = useResponsive();
   const isMobile = deviceType === "mobile";
-  const currentRole = useChatRequestStore((s) => s.currentRole);
-  const roles = useChatRequestStore((s) => s.availableRoles);
-  const loadAvailableRoles = useChatRequestStore(
+  const currentRole = useMessageTreeStore((state) => state.currentRole);
+  const roles = useMessageTreeStore((state) => state.availableRoles);
+  const loadAvailableRoles = useMessageTreeStore(
     (state) => state.loadAvailableRoles,
   );
-  const setCurrentRole = useChatRequestStore((state) => state.setCurrentRole);
+  const setCurrentRole = useMessageTreeStore((state) => state.setCurrentRole);
 
   React.useEffect(() => {
     void loadAvailableRoles();
