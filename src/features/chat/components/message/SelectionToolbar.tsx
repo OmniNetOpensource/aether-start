@@ -197,7 +197,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         position: 'fixed',
         top,
         left,
-        zIndex: 100,
+        zIndex: 'var(--z-floating)',
         visibility: 'visible',
       })
     })

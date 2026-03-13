@@ -41,7 +41,7 @@ const CommandDialog = ({
   <Dialog open={props.open} onOpenChange={props.onOpenChange}>
     <DialogContent
       className={cn(
-        "fixed top-[50%] left-[50%] z-50 w-full max-w-[calc(100vw-2rem)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2",
+        "fixed top-[50%] left-[50%] w-full max-w-[calc(100vw-2rem)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2",
         "overflow-hidden p-0 gap-0 rounded-lg border bg-(--surface-primary) shadow-lg",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
