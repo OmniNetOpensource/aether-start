@@ -12,33 +12,20 @@ describe('useChatRequestStore', () => {
 
   it('starts with the expected initial state', () => {
     expect(useChatRequestStore.getState()).toMatchObject({
-      requestPhase: 'done',
-      connectionState: 'idle',
+      status: 'idle',
     })
   })
 
-  it('updates request state fields', () => {
+  it('updates status', () => {
     const store = useChatRequestStore.getState()
 
-    store.setRequestPhase('sending')
-    store.setConnectionState('connecting')
+    store.setStatus('sending')
+    expect(useChatRequestStore.getState().status).toBe('sending')
 
-    expect(useChatRequestStore.getState()).toMatchObject({
-      requestPhase: 'sending',
-      connectionState: 'connecting',
-    })
-  })
+    store.setStatus('streaming')
+    expect(useChatRequestStore.getState().status).toBe('streaming')
 
-  it('clearRequestState resets only the request lifecycle', () => {
-    const store = useChatRequestStore.getState()
-
-    store.setConnectionState('connected')
-    store.setRequestPhase('answering')
-    store.clearRequestState()
-
-    expect(useChatRequestStore.getState()).toMatchObject({
-      connectionState: 'connected',
-      requestPhase: 'done',
-    })
+    store.setStatus('idle')
+    expect(useChatRequestStore.getState().status).toBe('idle')
   })
 })

@@ -72,9 +72,6 @@ describe('useEditingStore', () => {
       ...initialChatSessionSelectionState,
     })
     useChatRequestStore.setState(initialChatRequestState)
-    const store = useChatRequestStore.getState()
-    store.setRequestPhase('done')
-    store.setConnectionState('idle')
     useChatSessionStore.getState().setCurrentRole('aether')
     useChatSessionStore.getState().setAvailableRoles([])
     useChatSessionStore.getState().setRolesLoading(false)

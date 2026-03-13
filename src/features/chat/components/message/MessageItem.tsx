@@ -96,7 +96,7 @@ export function MessageItem({
   const messageFromStore = useChatSessionStore(
     (state) => state.messages[messageId - 1],
   );
-  const requestPhase = useChatRequestStore((s) => s.requestPhase);
+  const status = useChatRequestStore((s) => s.status);
   const isEditing = useEditingStore(
     (state) => state.editingState?.messageId === messageId,
   );
@@ -109,14 +109,14 @@ export function MessageItem({
     useChatSessionStore.getState().messages,
     messageId,
   );
-  const isBusy = requestPhase !== "done";
+  const isBusy = status !== "idle";
 
   const handleStartEditing = () => startEditing(messageId);
 
   const handleRetry = () => retryFromMessage(messageId, depth);
 
   const handleNavigate = (direction: "prev" | "next") => {
-    if (requestPhase === "done") {
+    if (status === "idle") {
       navigateBranch(messageId, depth, direction);
     }
   };

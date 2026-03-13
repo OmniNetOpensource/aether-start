@@ -15,7 +15,7 @@ function HomePage() {
   const hasMessages = messages.length > 0;
 
   useEffect(() => {
-    useChatRequestStore.getState().clearRequestState();
+    useChatRequestStore.getState().setStatus("idle");
     useEditingStore.getState().clear();
     const composer = useComposerStore.getState();
     const hasPrefill =

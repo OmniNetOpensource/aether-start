@@ -23,20 +23,43 @@ const TITLE_PROMPT =
 export const generateTitleFromConversation = async (
   conversationTranscript: string,
 ): Promise<string> => {
+  const completeTitleGeneration = (
+    title: string,
+    data?: Record<string, unknown>,
+  ) => {
+    log('TITLE', 'Title generation completed', {
+      title,
+      ...data,
+    })
+    return title
+  }
+
   if (!conversationTranscript.trim()) {
-    return FALLBACK_TITLE
+    return completeTitleGeneration(FALLBACK_TITLE, {
+      usedFallback: true,
+      reason: 'empty_transcript',
+    })
   }
 
   const modelConfig = getModelConfig(TITLE_GENERATION_MODEL_ID)
   if (!modelConfig) {
-    return FALLBACK_TITLE
+    return completeTitleGeneration(FALLBACK_TITLE, {
+      usedFallback: true,
+      reason: 'missing_model_config',
+      modelId: TITLE_GENERATION_MODEL_ID,
+    })
   }
 
   let backendConfig: ReturnType<typeof getBackendConfig>
   try {
     backendConfig = getBackendConfig(modelConfig.backend)
   } catch {
-    return FALLBACK_TITLE
+    return completeTitleGeneration(FALLBACK_TITLE, {
+      usedFallback: true,
+      reason: 'invalid_backend_config',
+      modelId: modelConfig.id,
+      backend: modelConfig.backend,
+    })
   }
 
   const prompt = [TITLE_PROMPT, conversationTranscript].join('\n')
@@ -92,7 +115,13 @@ export const generateTitleFromConversation = async (
         title,
       })
 
-      return title || FALLBACK_TITLE
+      const resolvedTitle = title || FALLBACK_TITLE
+      return completeTitleGeneration(resolvedTitle, {
+        modelId: modelConfig.id,
+        backend: modelConfig.backend,
+        usedFallback: !title,
+        reason: title ? 'success' : 'empty_model_output',
+      })
     }
 
     log('TITLE', 'Sending title generation request', requestLog)
@@ -132,7 +161,13 @@ export const generateTitleFromConversation = async (
       title,
     })
 
-    return title || FALLBACK_TITLE
+    const resolvedTitle = title || FALLBACK_TITLE
+    return completeTitleGeneration(resolvedTitle, {
+      modelId: modelConfig.id,
+      backend: modelConfig.backend,
+      usedFallback: !title,
+      reason: title ? 'success' : 'empty_model_output',
+    })
   } catch (error) {
     const message =
       error instanceof Error ? error.message : String(error)
@@ -140,6 +175,12 @@ export const generateTitleFromConversation = async (
       error: message,
       fullError: error,
     })
-    return FALLBACK_TITLE
+    return completeTitleGeneration(FALLBACK_TITLE, {
+      modelId: modelConfig.id,
+      backend: modelConfig.backend,
+      usedFallback: true,
+      reason: 'request_failed',
+      error: message,
+    })
   }
 }

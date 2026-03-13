@@ -8,8 +8,8 @@ import { ShareDialog } from './ShareDialog'
 export function ShareButton() {
   const [open, setOpen] = useState(false)
   const currentPath = useChatSessionStore((state) => state.currentPath)
-  const requestPhase = useChatRequestStore((state) => state.requestPhase)
-  const isBusy = requestPhase !== 'done'
+  const status = useChatRequestStore((state) => state.status)
+  const isBusy = status !== 'idle'
 
   if (currentPath.length === 0) {
     return null

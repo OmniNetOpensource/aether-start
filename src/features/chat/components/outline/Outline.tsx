@@ -711,8 +711,8 @@ export function OutlineButton() {
   const currentPath = useChatSessionStore((state) => state.currentPath)
   const latestRootId = useChatSessionStore((state) => state.latestRootId)
   const selectMessage = useChatSessionStore((state) => state.selectMessage)
-  const requestPhase = useChatRequestStore((state) => state.requestPhase)
-  const isBusy = requestPhase !== 'done'
+  const status = useChatRequestStore((state) => state.status)
+  const isBusy = status !== 'idle'
 
   const outline = (() => {
     if (!open) {

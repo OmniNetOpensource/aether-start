@@ -16,7 +16,7 @@ export function MessageList({
   listClassName,
 }: MessageListProps = {}) {
   const currentPath = useChatSessionStore((state) => state.currentPath);
-  const requestPhase = useChatRequestStore((s) => s.requestPhase);
+  const status = useChatRequestStore((s) => s.status);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
@@ -33,7 +33,7 @@ export function MessageList({
         >
           {currentPath.map((messageId, index) => {
             const isLastMessage = index === currentPath.length - 1;
-            const isStreaming = isLastMessage && requestPhase === "answering";
+            const isStreaming = isLastMessage && status === "streaming";
             const depth = index + 1;
 
             return (

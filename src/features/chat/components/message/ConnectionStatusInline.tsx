@@ -13,7 +13,7 @@ type VisibleConnectionState =
   | 'disconnected'
 
 export function ConnectionStatusInline() {
-  const connectionState = useChatRequestStore((s) => s.connectionState)
+  const status = useChatRequestStore((s) => s.status)
   const [visibleState, setVisibleState] = useState<VisibleConnectionState>('idle')
   const [fadingOut, setFadingOut] = useState(false)
   const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -34,13 +34,22 @@ export function ConnectionStatusInline() {
       hideTimerRef.current = null
     }
 
+    const displayState: VisibleConnectionState =
+      status === 'idle'
+        ? 'idle'
+        : status === 'sending'
+          ? 'connecting'
+          : status === 'streaming'
+            ? 'connected'
+            : 'disconnected'
+
     syncTimerRef.current = setTimeout(() => {
       setFadingOut(false)
-      setVisibleState(connectionState === 'idle' ? 'idle' : connectionState)
+      setVisibleState(displayState)
       syncTimerRef.current = null
     }, 0)
 
-    if (connectionState === 'connected') {
+    if (status === 'streaming') {
       fadeTimerRef.current = setTimeout(() => {
         setFadingOut(true)
       }, CONNECTED_VISIBLE_MS)
@@ -65,7 +74,7 @@ export function ConnectionStatusInline() {
         hideTimerRef.current = null
       }
     }
-  }, [connectionState])
+  }, [status])
 
   if (visibleState === 'idle') {
     return null

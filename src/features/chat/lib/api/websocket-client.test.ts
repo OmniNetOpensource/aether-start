@@ -13,15 +13,8 @@ vi.mock("@/stores/zustand/useChatRequestStore", () => {
   const store = {
     getState: () => store._state,
     _state: {
-      requestPhase: "done" as string,
-      connectionState: "idle" as string,
-      currentRole: "aether",
-      availableRoles: [],
-      rolesLoading: false,
-      setRequestPhase: vi.fn(),
-      setConnectionState: vi.fn(),
-      clearRequestState: vi.fn(),
-      setCurrentRole: vi.fn(),
+      status: "idle" as string,
+      setStatus: vi.fn(),
     },
   };
   return {

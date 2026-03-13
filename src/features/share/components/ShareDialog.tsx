@@ -80,8 +80,8 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const currentPath = useChatSessionStore((state) => state.currentPath)
   const conversationId = useChatSessionStore((state) => state.conversationId)
   const conversations = useChatSessionStore((state) => state.conversations)
-  const requestPhase = useChatRequestStore((state) => state.requestPhase)
-  const isBusy = requestPhase !== 'done'
+  const status = useChatRequestStore((state) => state.status)
+  const isBusy = status !== 'idle'
 
   const [selectedIds, setSelectedIds] = useState<Set<number>>(() => new Set())
   const [isGenerating, setIsGenerating] = useState(false)

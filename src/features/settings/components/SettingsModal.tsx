@@ -114,7 +114,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     try {
       await authClient.signOut();
     } finally {
-      useChatRequestStore.getState().clearRequestState();
+      useChatRequestStore.getState().setStatus("idle");
       useComposerStore.getState().clear();
       useEditingStore.getState().clear();
       useChatSessionStore.getState().clearSession();

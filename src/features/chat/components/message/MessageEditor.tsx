@@ -31,9 +31,9 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const deviceType = useResponsive()
   const isDesktop = deviceType === 'desktop'
   const uploading = useComposerStore((state) => state.uploading)
-  const requestPhase = useChatRequestStore((state) => state.requestPhase)
+  const status = useChatRequestStore((state) => state.status)
   const currentRole = useChatSessionStore((state) => state.currentRole)
-  const isBusy = requestPhase !== 'done'
+  const isBusy = status !== 'idle'
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 

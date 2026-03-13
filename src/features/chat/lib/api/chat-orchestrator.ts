@@ -12,8 +12,6 @@ const BUSY_WARNING = "This conversation is already generating a response.";
 const SELECT_ROLE_WARNING = "Select a role before sending a message.";
 const QUOTA_EXCEEDED_MESSAGE = "Quota exceeded.";
 
-type FinishedChatStatus = "completed" | "aborted" | "error";
-
 type AgentStatusResponse = {
   status: ChatAgentStatus;
 };
@@ -22,33 +20,12 @@ type StartRequestPayload = {
   messages: Message[];
 };
 
-type ChatStatusEvent =
-  | { type: "sync"; status: ChatAgentStatus }
-  | { type: "started" }
-  | { type: "finished"; status: FinishedChatStatus }
-  | { type: "busy" };
+let lastEventId = 0;
+export const resetLastEventId = () => {
+  lastEventId = 0;
+};
 
-const eventCursor = (() => {
-  let value = 0;
-
-  return {
-    get value() {
-      return value;
-    },
-    update(eventId: number) {
-      if (eventId > value) {
-        value = eventId;
-      }
-    },
-    reset() {
-      value = 0;
-    },
-  };
-})();
-
-let activeAbortController: AbortController | null = null;
-
-export const resetLastEventId = () => eventCursor.reset();
+let activeController: AbortController | null = null;
 
 const resolveAgentBaseUrl = () => {
   const protocol =
@@ -71,35 +48,86 @@ const isChatAgentStatus = (value: unknown): value is ChatAgentStatus =>
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
+const safeParse = (raw: string): Record<string, unknown> | null => {
+  try {
+    const parsed = JSON.parse(raw);
+    return isRecord(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+};
+
 const generateId = (prefix = "id") =>
   typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
     : `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
-const replaceActiveAbortController = (linkedSignal?: AbortSignal) => {
-  activeAbortController?.abort();
+const isAbortError = (error: unknown) =>
+  (error instanceof DOMException && error.name === "AbortError") ||
+  (error instanceof Error && error.name === "AbortError");
 
-  const controller = new AbortController();
-  activeAbortController = controller;
-
-  const handleLinkedAbort = () => controller.abort();
-  if (linkedSignal?.aborted) {
-    controller.abort();
-  } else if (linkedSignal) {
-    linkedSignal.addEventListener("abort", handleLinkedAbort);
+const finalizeStream = () => {
+  if (useChatRequestStore.getState().status !== "idle") {
+    useChatRequestStore.getState().setStatus("disconnected");
   }
+};
 
-  return {
-    signal: controller.signal,
-    release() {
-      if (linkedSignal) {
-        linkedSignal.removeEventListener("abort", handleLinkedAbort);
+const handleSSEMessage = (event: string, raw: string) => {
+  const payload = safeParse(raw);
+  if (!payload) return;
+  const { setStatus } = useChatRequestStore.getState();
+
+  switch (event) {
+    case "chat_event": {
+      if (typeof payload.eventId !== "number" || payload.eventId <= lastEventId)
+        return;
+      lastEventId = payload.eventId;
+      setStatus("streaming");
+      applyChatEventToTree(payload.event as ChatServerToClientEvent);
+      return;
+    }
+    case "chat_started":
+      setStatus("streaming");
+      return;
+    case "chat_finished":
+      setStatus("idle");
+      return;
+    case "sync_response":
+      setStatus(
+        payload.status === "running" ? "streaming" : "idle",
+      );
+      if (Array.isArray(payload.events)) {
+        for (const item of payload.events) {
+          if (
+            isRecord(item) &&
+            typeof item.eventId === "number" &&
+            item.eventId > lastEventId
+          ) {
+            lastEventId = item.eventId;
+            applyChatEventToTree(item.event as ChatServerToClientEvent);
+          }
+        }
       }
-      if (activeAbortController === controller) {
-        activeAbortController = null;
+      return;
+    case "busy":
+      toast.warning(BUSY_WARNING);
+      setStatus("streaming");
+      return;
+    case "conversation_update":
+      if (
+        typeof payload.conversationId === "string" &&
+        typeof payload.title === "string" &&
+        typeof payload.updated_at === "string"
+      ) {
+        applyChatEventToTree({
+          type: "conversation_updated",
+          conversationId: payload.conversationId,
+          title: payload.title,
+          updated_at: payload.updated_at,
+        });
       }
-    },
-  };
+      return;
+  }
 };
 
 const consumeSSE = async (
@@ -119,9 +147,7 @@ const consumeSSE = async (
       buffer = buffer.slice(boundaryIndex + 2);
       boundaryIndex = buffer.indexOf("\n\n");
 
-      if (!block.trim()) {
-        continue;
-      }
+      if (!block.trim()) continue;
 
       let event = "message";
       const dataLines: string[] = [];
@@ -131,7 +157,6 @@ const consumeSSE = async (
           event = line.slice(6).trimStart();
           continue;
         }
-
         if (line.startsWith("data:")) {
           dataLines.push(line.slice(5).trimStart());
         }
@@ -146,9 +171,7 @@ const consumeSSE = async (
   try {
     while (!signal?.aborted) {
       const { done, value } = await reader.read();
-      if (done) {
-        break;
-      }
+      if (done) break;
 
       buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
       flush();
@@ -161,180 +184,6 @@ const consumeSSE = async (
   }
 };
 
-const isAbortError = (error: unknown) =>
-  (error instanceof DOMException && error.name === "AbortError") ||
-  (error instanceof Error && error.name === "AbortError");
-
-const isRecoverableStreamError = (error: unknown) => {
-  if (isAbortError(error) || !(error instanceof Error)) {
-    return false;
-  }
-
-  if (error.message.startsWith("Chat request failed:")) {
-    return false;
-  }
-
-  const message = error.message.toLowerCase();
-  return (
-    error instanceof TypeError ||
-    message.includes("network") ||
-    message.includes("fetch") ||
-    message.includes("stream") ||
-    message.includes("load failed")
-  );
-};
-
-const resetRequestState = () => {
-  const store = useChatRequestStore.getState();
-  store.clearRequestState();
-  store.setConnectionState("idle");
-};
-
-const markRequestDisconnected = () => {
-  const store = useChatRequestStore.getState();
-
-  if (store.requestPhase === "done") {
-    return;
-  }
-
-  store.setRequestPhase("answering");
-  store.setConnectionState("disconnected");
-};
-
-const handleChatEvent = (event: ChatServerToClientEvent) => {
-  const store = useChatRequestStore.getState();
-  const isConversationUpdate = event.type === "conversation_updated";
-
-  if (!isConversationUpdate && store.requestPhase !== "done") {
-    store.setRequestPhase("answering");
-  }
-
-  applyChatEventToTree(event);
-};
-
-const consumeEvent = (item: Record<string, unknown>) => {
-  const eventId = typeof item.eventId === "number" ? item.eventId : null;
-  const event = isRecord(item.event)
-    ? (item.event as ChatServerToClientEvent)
-    : null;
-
-  if (!eventId || !event || eventId <= eventCursor.value) {
-    return;
-  }
-
-  eventCursor.update(eventId);
-  handleChatEvent(event);
-};
-
-const handleChatStatus = (statusEvent: ChatStatusEvent) => {
-  const store = useChatRequestStore.getState();
-
-  switch (statusEvent.type) {
-    case "busy":
-      toast.warning(BUSY_WARNING);
-      store.setRequestPhase("answering");
-      store.setConnectionState("connected");
-      return;
-
-    case "started":
-      store.setRequestPhase(
-        store.requestPhase === "answering" ? "answering" : "sending",
-      );
-      store.setConnectionState("connected");
-      return;
-
-    case "sync":
-      if (statusEvent.status === "running") {
-        store.setRequestPhase("answering");
-        store.setConnectionState("connected");
-        return;
-      }
-
-      if (statusEvent.status === "idle") {
-        resetRequestState();
-        return;
-      }
-
-      store.setRequestPhase("done");
-      return;
-
-    case "finished":
-      store.setRequestPhase("done");
-      store.setConnectionState("connected");
-  }
-};
-
-const dispatchSSE = (event: string, raw: string) => {
-  let payload: Record<string, unknown>;
-
-  try {
-    const parsed = JSON.parse(raw);
-    if (!isRecord(parsed)) {
-      return;
-    }
-    payload = parsed;
-  } catch {
-    return;
-  }
-
-  switch (event) {
-    case "chat_event":
-      consumeEvent(payload);
-      return;
-
-    case "chat_started":
-      handleChatStatus({ type: "started" });
-      return;
-
-    case "chat_finished":
-      handleChatStatus({
-        type: "finished",
-        status:
-          payload.status === "completed" ||
-          payload.status === "aborted" ||
-          payload.status === "error"
-            ? payload.status
-            : "error",
-      });
-      return;
-
-    case "sync_response":
-      handleChatStatus({
-        type: "sync",
-        status: isChatAgentStatus(payload.status) ? payload.status : "idle",
-      });
-
-      if (!Array.isArray(payload.events)) {
-        return;
-      }
-
-      for (const item of payload.events) {
-        if (isRecord(item)) {
-          consumeEvent(item);
-        }
-      }
-      return;
-
-    case "busy":
-      handleChatStatus({ type: "busy" });
-      return;
-
-    case "conversation_update":
-      if (
-        typeof payload.conversationId === "string" &&
-        typeof payload.title === "string" &&
-        typeof payload.updated_at === "string"
-      ) {
-        applyChatEventToTree({
-          type: "conversation_updated",
-          conversationId: payload.conversationId,
-          title: payload.title,
-          updated_at: payload.updated_at,
-        });
-      }
-  }
-};
-
 const consumeStreamResponse = async (
   response: Response,
   signal: AbortSignal,
@@ -343,7 +192,7 @@ const consumeStreamResponse = async (
     throw new Error(`Chat request failed: ${response.status}`);
   }
 
-  await consumeSSE(response.body, dispatchSSE, signal);
+  await consumeSSE(response.body, handleSSEMessage, signal);
 };
 
 const buildPreparedRequest = (
@@ -402,9 +251,7 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
-  if (requestStore.requestPhase !== "done") {
-    return;
-  }
+  if (requestStore.status !== "idle") return;
 
   if (!sessionStore.currentRole) {
     toast.warning(SELECT_ROLE_WARNING);
@@ -439,9 +286,10 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
     messages,
   );
 
-  const { signal, release } = replaceActiveAbortController();
-  requestStore.setRequestPhase("sending");
-  requestStore.setConnectionState("connecting");
+  activeController?.abort();
+  activeController = new AbortController();
+  const signal = activeController.signal;
+  requestStore.setStatus("sending");
 
   try {
     const response = await fetch(
@@ -457,7 +305,8 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
 
     if (response.status === 409) {
       await response.json().catch(() => ({}));
-      handleChatStatus({ type: "busy" });
+      toast.warning(BUSY_WARNING);
+      useChatRequestStore.getState().setStatus("streaming");
       return;
     }
 
@@ -470,35 +319,32 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
             ? data.message
             : QUOTA_EXCEEDED_MESSAGE,
       });
-      resetRequestState();
+      useChatRequestStore.getState().setStatus("idle");
       return;
     }
 
-    requestStore.setConnectionState("connected");
     await consumeStreamResponse(response, signal);
 
-    markRequestDisconnected();
+    finalizeStream();
   } catch (error) {
-    if (isAbortError(error)) {
+    if (isAbortError(error)) return;
+
+    if (error instanceof TypeError) {
+      finalizeStream();
       return;
     }
 
-    if (isRecoverableStreamError(error)) {
-      markRequestDisconnected();
-      return;
-    }
-
-    resetRequestState();
+    useChatRequestStore.getState().setStatus("idle");
   } finally {
-    release();
+    activeController = null;
   }
 };
 
 export const stopActiveChatRequest = () => {
   const conversationId = useChatSessionStore.getState().conversationId;
 
-  activeAbortController?.abort();
-  activeAbortController = null;
+  activeController?.abort();
+  activeController = null;
 
   if (conversationId) {
     fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
@@ -509,38 +355,44 @@ export const stopActiveChatRequest = () => {
     }).catch(() => {});
   }
 
-  resetRequestState();
+  useChatRequestStore.getState().setStatus("idle");
 };
 
 export const resumeRunningConversation = async (
   conversationId: string,
-  signal: AbortSignal,
+  linkedSignal: AbortSignal,
 ) => {
-  if (!conversationId || signal.aborted) {
-    return;
-  }
+  if (!conversationId || linkedSignal.aborted) return;
 
   let agentStatus: AgentStatusResponse;
 
   try {
     agentStatus = await checkAgentStatus(conversationId);
   } catch {
-    if (!signal.aborted) {
-      markRequestDisconnected();
+    if (!linkedSignal.aborted) {
+      finalizeStream();
     }
     return;
   }
 
   if (agentStatus.status !== "running") {
-    resetRequestState();
+    useChatRequestStore.getState().setStatus("idle");
     return;
   }
 
-  const requestStore = useChatRequestStore.getState();
-  requestStore.setRequestPhase("answering");
-  requestStore.setConnectionState("connecting");
+  activeController?.abort();
+  const controller = new AbortController();
+  activeController = controller;
 
-  const abortHandle = replaceActiveAbortController(signal);
+  const handleLinkedAbort = () => controller.abort();
+  if (linkedSignal.aborted) {
+    controller.abort();
+  } else {
+    linkedSignal.addEventListener("abort", handleLinkedAbort);
+  }
+
+  const requestStore = useChatRequestStore.getState();
+  requestStore.setStatus("sending");
 
   try {
     const response = await fetch(
@@ -549,27 +401,27 @@ export const resumeRunningConversation = async (
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lastEventId: eventCursor.value }),
-        signal: abortHandle.signal,
+        body: JSON.stringify({ lastEventId }),
+        signal: controller.signal,
       },
     );
 
-    requestStore.setConnectionState("connected");
-    await consumeStreamResponse(response, abortHandle.signal);
+    await consumeStreamResponse(response, controller.signal);
 
-    markRequestDisconnected();
+    finalizeStream();
   } catch (error) {
-    if (isAbortError(error)) {
+    if (isAbortError(error)) return;
+
+    if (error instanceof TypeError) {
+      finalizeStream();
       return;
     }
 
-    if (isRecoverableStreamError(error)) {
-      markRequestDisconnected();
-      return;
-    }
-
-    resetRequestState();
+    useChatRequestStore.getState().setStatus("idle");
   } finally {
-    abortHandle.release();
+    linkedSignal.removeEventListener("abort", handleLinkedAbort);
+    if (activeController === controller) {
+      activeController = null;
+    }
   }
 };

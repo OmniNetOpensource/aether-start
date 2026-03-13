@@ -3,18 +3,18 @@ import { ArrowUp, Loader2, Paperclip, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
-import type { ChatRequestPhase } from "@/stores/zustand/useChatRequestStore";
+import type { ChatStatus } from "@/stores/zustand/useChatRequestStore";
 import { ModelSelector } from "./ModelSelector";
 import { PromptSelector } from "./PromptSelector";
 
 type ComposerToolbarProps = {
-  requestPhase: ChatRequestPhase;
+  status: ChatStatus;
   sendDisabled: boolean;
   onSendButtonClick: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 export function ComposerToolbar({
-  requestPhase,
+  status,
   sendDisabled,
   onSendButtonClick,
 }: ComposerToolbarProps) {
@@ -109,7 +109,7 @@ export function ComposerToolbar({
       <div className="flex items-center gap-1">
         <ModelSelector />
         <Button
-          type={requestPhase !== "done" || sendDisabled ? "button" : "submit"}
+          type={status !== "idle" || sendDisabled ? "button" : "submit"}
           aria-disabled={sendDisabled}
           onClick={handleSendClick}
           size="icon"
@@ -120,9 +120,9 @@ export function ComposerToolbar({
               : "bg-(--interactive-primary) text-(--surface-primary) hover:bg-(--interactive-primary) hover:scale-105 active:scale-95",
           )}
         >
-          {requestPhase === "sending" ? (
+          {status === "sending" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : requestPhase === "answering" ? (
+          ) : status === "streaming" || status === "disconnected" ? (
             <Square className="h-4 w-4 fill-current" />
           ) : (
             <ArrowUp

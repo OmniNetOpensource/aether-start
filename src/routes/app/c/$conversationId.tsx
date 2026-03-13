@@ -46,8 +46,7 @@ export function ConversationPage() {
     return () => {
       abortController.abort();
       resetLastEventId();
-      useChatRequestStore.getState().clearRequestState();
-      useChatRequestStore.getState().setConnectionState("idle");
+      useChatRequestStore.getState().setStatus("idle");
     };
   }, [conversationId]);
 

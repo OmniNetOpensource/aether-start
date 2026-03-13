@@ -26,7 +26,7 @@ import { PeekingAttachments } from './PeekingAttachments'
 
 export function Composer() {
   const input = useComposerStore((state) => state.input)
-  const requestPhase = useChatRequestStore((state) => state.requestPhase)
+  const status = useChatRequestStore((state) => state.status)
   const pendingAttachments = useComposerStore(
     (state) => state.pendingAttachments,
   )
@@ -40,7 +40,7 @@ export function Composer() {
   const setInput = useComposerStore((state) => state.setInput)
   const addAttachments = useComposerStore((state) => state.addAttachments)
   const removeAttachment = useComposerStore((state) => state.removeAttachment)
-  const isBusy = requestPhase !== 'done'
+  const isBusy = status !== 'idle'
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
   const submitMessage = async () => {
@@ -215,7 +215,7 @@ export function Composer() {
         <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-sidebar p-2 transition-all">
           <div className="flex w-full items-end gap-2">{textarea}</div>
           <ComposerToolbar
-            requestPhase={requestPhase}
+            status={status}
             sendDisabled={sendDisabled}
             onSendButtonClick={handleSendButtonClick}
           />
@@ -241,7 +241,7 @@ export function Composer() {
         <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-sidebar p-2 transition-all">
           <div className="flex w-full items-end gap-2">{textarea}</div>
           <ComposerToolbar
-            requestPhase={requestPhase}
+            status={status}
             sendDisabled={sendDisabled}
             onSendButtonClick={handleSendButtonClick}
           />

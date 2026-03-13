@@ -71,9 +71,6 @@ describe("useConversationLoader", () => {
       ...initialChatSessionSelectionState,
     });
     useChatRequestStore.setState(initialChatRequestState);
-    const store = useChatRequestStore.getState();
-    store.setRequestPhase("done");
-    store.setConnectionState("idle");
     const messageTreeStore = useChatSessionStore.getState();
     messageTreeStore.setCurrentRole("aether");
     messageTreeStore.setAvailableRoles([{ id: "aether", name: "Aether" }]);
