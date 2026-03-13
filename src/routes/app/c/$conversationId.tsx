@@ -1,14 +1,8 @@
-import { useEffect } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Composer } from "@/features/chat/components/composer/Composer";
+import { ArtifactPanel } from "@/features/chat/components/artifact/ArtifactPanel";
 import { MessageList } from "@/features/chat/components/message/MessageList";
-import {
-  resetLastEventId,
-  resumeRunningConversation,
-} from "@/features/chat/lib/api/chat-orchestrator";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
 import { useConversationLoader } from "@/features/sidebar/hooks/useConversationLoader";
-import { useChatSessionStore } from "@/features/sidebar/store/useChatSessionStore";
 
 export const Route = createFileRoute("/app/c/$conversationId")({
   component: ConversationPage,
@@ -17,38 +11,6 @@ export const Route = createFileRoute("/app/c/$conversationId")({
 export function ConversationPage() {
   const { conversationId } = Route.useParams();
   const { isLoading } = useConversationLoader(conversationId);
-  const conversations = useChatSessionStore((state) => state.conversations);
-  const title = conversations.find((item) => item.id === conversationId)?.title;
-
-  useEffect(() => {
-    const defaultTitle = "Aether";
-
-    if (title) {
-      const truncatedTitle =
-        title.length > 50 ? `${title.slice(0, 50)}...` : title;
-      document.title = `${truncatedTitle} - Aether`;
-    } else {
-      document.title = defaultTitle;
-    }
-
-    return () => {
-      document.title = defaultTitle;
-    };
-  }, [title]);
-
-  useEffect(() => {
-    const abortController = new AbortController();
-
-    resumeRunningConversation(conversationId, abortController.signal).catch(
-      () => {},
-    );
-
-    return () => {
-      abortController.abort();
-      resetLastEventId();
-      useChatRequestStore.getState().setStatus("idle");
-    };
-  }, [conversationId]);
 
   if (isLoading) {
     return null;
@@ -61,6 +23,7 @@ export function ConversationPage() {
           <MessageList />
           <Composer />
         </div>
+        <ArtifactPanel />
       </main>
     </div>
   );

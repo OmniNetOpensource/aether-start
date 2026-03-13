@@ -134,7 +134,7 @@ export function ConversationItem({
                 type="button"
                 onClick={handleMenuClick}
                 aria-label="Conversation actions"
-                className="flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-(--surface-hover) hover:text-foreground group-hover:opacity-100 data-[state=open]:opacity-100"
+                className="flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-100 transition-opacity hover:bg-(--surface-hover) hover:text-foreground md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100"
               >
                 <MoreHorizontal className="size-4" />
               </button>

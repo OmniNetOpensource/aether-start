@@ -1,9 +1,9 @@
-import { create } from 'zustand'
-import { devtools } from 'zustand/middleware'
+import { create } from "zustand";
+import { devtools } from "zustand/middleware";
 import {
   getAvailableModelsFn,
   getAvailablePromptsFn,
-} from '@/server/functions/chat/models'
+} from "@/server/functions/chat/models";
 import {
   listConversationsPageFn,
   type ConversationListCursor,
@@ -11,7 +11,7 @@ import {
   deleteConversationFn,
   setConversationPinnedFn,
   updateConversationTitleFn,
-} from '@/server/functions/conversations'
+} from "@/server/functions/conversations";
 import {
   addMessage,
   buildCurrentPath,
@@ -22,33 +22,62 @@ import {
   getBranchInfo,
   normalizeMessageParentIds,
   switchBranch,
-} from '@/lib/conversation/tree/message-tree'
+} from "@/lib/conversation/tree/message-tree";
 import {
   applyAssistantAddition,
   type AssistantAddition,
-} from '@/lib/conversation/tree/block-operations'
-import type { ConversationDetail, ConversationMeta } from '@/types/conversation'
+} from "@/lib/conversation/tree/block-operations";
+import type {
+  ConversationArtifact,
+  ConversationDetail,
+  ConversationMeta,
+} from "@/types/conversation";
+import type { ArtifactLanguage } from "@/types/chat-api";
 import type {
   AssistantMessage,
   BranchInfo,
   ContentBlock,
   Message,
-} from '@/types/message'
+} from "@/types/message";
 
-type TreeSnapshot = ReturnType<typeof createEmptyMessageState>
+type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 
-export type RoleInfo = { id: string; name: string }
+export type RoleInfo = { id: string; name: string };
 
-export type PromptInfo = { id: string; name: string }
+export type PromptInfo = { id: string; name: string };
 
 type ConversationListState = {
-  conversations: ConversationMeta[]
-  conversationsLoading: boolean
-  hasLoaded: boolean
-  loadingMore: boolean
-  hasMore: boolean
-  conversationsCursor: ConversationListCursor
-}
+  conversations: ConversationMeta[];
+  conversationsLoading: boolean;
+  hasLoaded: boolean;
+  loadingMore: boolean;
+  hasMore: boolean;
+  conversationsCursor: ConversationListCursor;
+};
+
+export type ArtifactStatus = "streaming" | "completed" | "failed";
+export type ArtifactView = "code" | "preview";
+
+export type ArtifactRecord = ConversationArtifact & {
+  status: ArtifactStatus;
+  errorMessage: string | null;
+};
+
+type ArtifactState = {
+  artifacts: ArtifactRecord[];
+  selectedArtifactId: string | null;
+  artifactPanelOpen: boolean;
+  activeStreamingArtifactId: string | null;
+  artifactView: ArtifactView;
+};
+
+const initialArtifactState: ArtifactState = {
+  artifacts: [],
+  selectedArtifactId: null,
+  artifactPanelOpen: false,
+  activeStreamingArtifactId: null,
+  artifactView: "code",
+};
 
 export const initialConversationListState: ConversationListState = {
   conversations: [],
@@ -57,148 +86,163 @@ export const initialConversationListState: ConversationListState = {
   loadingMore: false,
   hasMore: false,
   conversationsCursor: null,
-}
+};
 
-const MODEL_STORAGE_KEY = 'aether_current_role'
-const PROMPT_STORAGE_KEY = 'aether_current_prompt'
-const PAGE_SIZE = 10
+const MODEL_STORAGE_KEY = "aether_current_role";
+const PROMPT_STORAGE_KEY = "aether_current_prompt";
+const PAGE_SIZE = 10;
 
 const getStoredValue = (key: string) => {
-  if (typeof window === 'undefined') {
-    return null
+  if (typeof window === "undefined") {
+    return null;
   }
 
   try {
-    return localStorage.getItem(key)
+    return localStorage.getItem(key);
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 const setStoredValue = (key: string, value: string) => {
-  if (typeof window === 'undefined') {
-    return
+  if (typeof window === "undefined") {
+    return;
   }
 
   try {
-    localStorage.setItem(key, value)
+    localStorage.setItem(key, value);
   } catch {
     // ignore
   }
-}
+};
 
 export type ChatSessionSelectionState = {
-  currentRole: string
-  availableRoles: RoleInfo[]
-  rolesLoading: boolean
-  currentPrompt: string
-  availablePrompts: PromptInfo[]
-  promptsLoading: boolean
-}
+  currentRole: string;
+  availableRoles: RoleInfo[];
+  rolesLoading: boolean;
+  currentPrompt: string;
+  availablePrompts: PromptInfo[];
+  promptsLoading: boolean;
+};
 
 export const initialChatSessionSelectionState: ChatSessionSelectionState = {
-  currentRole: '',
+  currentRole: "",
   availableRoles: [],
   rolesLoading: false,
-  currentPrompt: '',
+  currentPrompt: "",
   availablePrompts: [],
   promptsLoading: false,
-}
+};
 
 type ChatSessionState = TreeSnapshot &
   ConversationListState &
   ChatSessionSelectionState & {
-    conversationId: string | null
-  }
+    conversationId: string | null;
+  } & ArtifactState;
 
 type ChatSessionActions = {
-  addConversation: (conversation: ConversationMeta) => void
-  setConversations: (conversations: ConversationMeta[]) => void
-  loadInitialConversations: () => Promise<void>
-  loadMoreConversations: () => Promise<void>
-  clearConversations: () => Promise<void>
-  resetConversations: () => void
-  deleteConversation: (id: string) => Promise<void>
-  updateConversationTitle: (id: string, title: string) => Promise<void>
-  setConversationPinned: (id: string, pinned: boolean) => Promise<void>
-  setMessages: (messages: Message[]) => void
-  initializeTree: (messages?: Message[], currentPath?: number[]) => void
-  getMessagesFromPath: () => Message[]
-  setConversationId: (id: string | null) => void
-  selectMessage: (messageId: number) => void
-  appendToAssistant: (addition: AssistantAddition) => void
-  getBranchInfo: (messageId: number) => BranchInfo | null
+  addConversation: (conversation: ConversationMeta) => void;
+  setConversations: (conversations: ConversationMeta[]) => void;
+  loadInitialConversations: () => Promise<void>;
+  loadMoreConversations: () => Promise<void>;
+  clearConversations: () => Promise<void>;
+  resetConversations: () => void;
+  deleteConversation: (id: string) => Promise<void>;
+  updateConversationTitle: (id: string, title: string) => Promise<void>;
+  setConversationPinned: (id: string, pinned: boolean) => Promise<void>;
+  setMessages: (messages: Message[]) => void;
+  initializeTree: (messages?: Message[], currentPath?: number[]) => void;
+  getMessagesFromPath: () => Message[];
+  setConversationId: (id: string | null) => void;
+  selectMessage: (messageId: number) => void;
+  appendToAssistant: (addition: AssistantAddition) => void;
+  getBranchInfo: (messageId: number) => BranchInfo | null;
   navigateBranch: (
     messageId: number,
     depth: number,
-    direction: 'prev' | 'next',
-  ) => void
-  setCurrentRole: (role: string) => void
-  setAvailableRoles: (roles: RoleInfo[]) => void
-  setRolesLoading: (loading: boolean) => void
-  loadAvailableRoles: () => Promise<void>
-  setCurrentPrompt: (promptId: string) => void
-  setAvailablePrompts: (prompts: PromptInfo[]) => void
-  setPromptsLoading: (loading: boolean) => void
-  loadAvailablePrompts: () => Promise<void>
-  cyclePrompt: () => void
-  clearSession: () => void
-  getTreeState: () => TreeSnapshot
-  setTreeState: (partial: Partial<TreeSnapshot>) => void
+    direction: "prev" | "next",
+  ) => void;
+  setCurrentRole: (role: string) => void;
+  setAvailableRoles: (roles: RoleInfo[]) => void;
+  setRolesLoading: (loading: boolean) => void;
+  loadAvailableRoles: () => Promise<void>;
+  setCurrentPrompt: (promptId: string) => void;
+  setAvailablePrompts: (prompts: PromptInfo[]) => void;
+  setPromptsLoading: (loading: boolean) => void;
+  loadAvailablePrompts: () => Promise<void>;
+  cyclePrompt: () => void;
+  setArtifacts: (artifacts: ConversationArtifact[]) => void;
+  selectArtifact: (artifactId: string | null) => void;
+  setArtifactPanelOpen: (open: boolean) => void;
+  setArtifactView: (view: ArtifactView) => void;
+  startArtifact: (artifactId: string) => void;
+  updateArtifactTitle: (artifactId: string, title: string) => void;
+  updateArtifactLanguage: (
+    artifactId: string,
+    language: ArtifactLanguage,
+  ) => void;
+  appendArtifactCode: (artifactId: string, delta: string) => void;
+  completeArtifact: (artifactId: string) => void;
+  failArtifact: (artifactId: string, message: string) => void;
+  clearSession: () => void;
+  getTreeState: () => TreeSnapshot;
+  setTreeState: (partial: Partial<TreeSnapshot>) => void;
   addMessage: (
-    role: Message['role'],
+    role: Message["role"],
     blocks: ContentBlock[],
     createdAt?: string,
-  ) => ReturnType<typeof addMessage>
+  ) => ReturnType<typeof addMessage>;
   editMessage: (
     depth: number,
     messageId: number,
     blocks: ContentBlock[],
-  ) => ReturnType<typeof editMessage> | null
-}
+  ) => ReturnType<typeof editMessage> | null;
+};
 
-const sortConversations = (conversations: ConversationMeta[]): ConversationMeta[] => {
-  const sorted = [...conversations]
+const sortConversations = (
+  conversations: ConversationMeta[],
+): ConversationMeta[] => {
+  const sorted = [...conversations];
   sorted.sort((a, b) => {
     if (a.is_pinned !== b.is_pinned) {
-      return a.is_pinned ? -1 : 1
+      return a.is_pinned ? -1 : 1;
     }
 
-    const aSortAt = a.is_pinned ? (a.pinned_at ?? a.updated_at) : a.updated_at
-    const bSortAt = b.is_pinned ? (b.pinned_at ?? b.updated_at) : b.updated_at
-    const bySortAt = bSortAt.localeCompare(aSortAt)
+    const aSortAt = a.is_pinned ? (a.pinned_at ?? a.updated_at) : a.updated_at;
+    const bSortAt = b.is_pinned ? (b.pinned_at ?? b.updated_at) : b.updated_at;
+    const bySortAt = bSortAt.localeCompare(aSortAt);
 
     if (bySortAt !== 0) {
-      return bySortAt
+      return bySortAt;
     }
 
-    const byUpdated = b.updated_at.localeCompare(a.updated_at)
+    const byUpdated = b.updated_at.localeCompare(a.updated_at);
     if (byUpdated !== 0) {
-      return byUpdated
+      return byUpdated;
     }
 
-    return b.id.localeCompare(a.id)
-  })
+    return b.id.localeCompare(a.id);
+  });
 
-  return sorted
-}
+  return sorted;
+};
 
 const upsertConversations = (
   conversations: ConversationMeta[],
   incoming: ConversationMeta[],
 ) => {
-  const map = new Map<string, ConversationMeta>()
+  const map = new Map<string, ConversationMeta>();
 
   for (const conversation of conversations) {
-    map.set(conversation.id, conversation)
+    map.set(conversation.id, conversation);
   }
 
   for (const conversation of incoming) {
-    map.set(conversation.id, conversation)
+    map.set(conversation.id, conversation);
   }
 
-  return sortConversations(Array.from(map.values()))
-}
+  return sortConversations(Array.from(map.values()));
+};
 
 const mapDetailToMeta = (detail: ConversationDetail): ConversationMeta => ({
   id: detail.id,
@@ -209,50 +253,67 @@ const mapDetailToMeta = (detail: ConversationDetail): ConversationMeta => ({
   created_at: detail.created_at,
   updated_at: detail.updated_at,
   user_id: detail.user_id,
-})
+});
 
-export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>()(
+export const useChatSessionStore = create<
+  ChatSessionState & ChatSessionActions
+>()(
   devtools(
     (set, get) => ({
       ...createEmptyMessageState(),
       ...initialConversationListState,
       conversationId: null,
       ...initialChatSessionSelectionState,
+      ...initialArtifactState,
       addConversation: (conversation) =>
         set((state) => ({
-          conversations: upsertConversations(state.conversations, [conversation]),
+          conversations: upsertConversations(state.conversations, [
+            conversation,
+          ]),
         })),
       setConversations: (conversations) =>
         set((state) => ({
-          conversations: upsertConversations(state.conversations, conversations),
+          conversations: upsertConversations(
+            state.conversations,
+            conversations,
+          ),
         })),
       loadInitialConversations: async () => {
-        const { hasLoaded, conversationsLoading } = get()
+        const { hasLoaded, conversationsLoading } = get();
         if (hasLoaded || conversationsLoading) {
-          return
+          return;
         }
 
-        set({ conversationsLoading: true }, false, 'loadInitialConversations/start')
+        set(
+          { conversationsLoading: true },
+          false,
+          "loadInitialConversations/start",
+        );
 
         try {
           const page = await listConversationsPageFn({
             data: { limit: PAGE_SIZE, cursor: null },
-          })
-          const conversations = (page.items as ConversationDetail[]).map(mapDetailToMeta)
+          });
+          const conversations = (page.items as ConversationDetail[]).map(
+            mapDetailToMeta,
+          );
 
           set(
             (state) => ({
-              conversations: upsertConversations(state.conversations, conversations),
+              conversations: upsertConversations(
+                state.conversations,
+                conversations,
+              ),
               hasLoaded: true,
               conversationsLoading: false,
               hasMore: page.nextCursor !== null,
               conversationsCursor: page.nextCursor,
             }),
             false,
-            'loadInitialConversations/success',
-          )
+            "loadInitialConversations/success",
+          );
         } catch (error) {
-          console.error('Failed to load conversations:', error)
+          console.error("Failed to load conversations:", error);
           set(
             {
               hasLoaded: true,
@@ -261,8 +322,8 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
               conversationsCursor: null,
             },
             false,
-            'loadInitialConversations/failure',
-          )
+            "loadInitialConversations/failure",
+          );
         }
       },
       loadMoreConversations: async () => {
@@ -272,31 +333,36 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
           loadingMore,
           hasMore,
           conversationsCursor,
-        } = get()
+        } = get();
         if (!hasLoaded || conversationsLoading || loadingMore || !hasMore) {
-          return
+          return;
         }
 
-        set({ loadingMore: true }, false, 'loadMoreConversations/start')
+        set({ loadingMore: true }, false, "loadMoreConversations/start");
 
         try {
           const page = await listConversationsPageFn({
             data: { limit: PAGE_SIZE, cursor: conversationsCursor },
-          })
-          const conversations = (page.items as ConversationDetail[]).map(mapDetailToMeta)
+          });
+          const conversations = (page.items as ConversationDetail[]).map(
+            mapDetailToMeta,
+          );
 
           set(
             (state) => ({
-              conversations: upsertConversations(state.conversations, conversations),
+              conversations: upsertConversations(
+                state.conversations,
+                conversations,
+              ),
               loadingMore: false,
               hasMore: page.nextCursor !== null,
               conversationsCursor: page.nextCursor,
             }),
             false,
-            'loadMoreConversations/success',
-          )
+            "loadMoreConversations/success",
+          );
         } catch (error) {
-          console.error('Failed to load more conversations:', error)
+          console.error("Failed to load more conversations:", error);
           set(
             {
               loadingMore: false,
@@ -304,15 +370,15 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
               conversationsCursor: null,
             },
             false,
-            'loadMoreConversations/failure',
-          )
+            "loadMoreConversations/failure",
+          );
         }
       },
       clearConversations: async () => {
         try {
-          await clearConversationsFn()
+          await clearConversationsFn();
         } catch (error) {
-          console.error('Failed to clear conversations:', error)
+          console.error("Failed to clear conversations:", error);
         }
 
         set(
@@ -325,8 +391,8 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             conversationsCursor: null,
           },
           false,
-          'clearConversations',
-        )
+          "clearConversations",
+        );
       },
       resetConversations: () =>
         set(
@@ -334,7 +400,7 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             ...initialConversationListState,
           },
           false,
-          'resetConversations',
+          "resetConversations",
         ),
       deleteConversation: async (id) => {
         set(
@@ -342,60 +408,64 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             conversations: state.conversations.filter((item) => item.id !== id),
           }),
           false,
-          'deleteConversation/optimistic',
-        )
+          "deleteConversation/optimistic",
+        );
 
         try {
-          await deleteConversationFn({ data: { id } })
+          await deleteConversationFn({ data: { id } });
         } catch (error) {
-          console.error('Failed to delete conversation:', error)
+          console.error("Failed to delete conversation:", error);
         }
       },
       updateConversationTitle: async (id, title) => {
-        const { conversations } = get()
-        const target = conversations.find((item) => item.id === id)
+        const { conversations } = get();
+        const target = conversations.find((item) => item.id === id);
         if (!target) {
-          return
+          return;
         }
 
-        const updated: ConversationMeta = { ...target, title }
+        const updated: ConversationMeta = { ...target, title };
         set(
           (state) => ({
             conversations: upsertConversations(state.conversations, [updated]),
           }),
           false,
-          'updateConversationTitle/optimistic',
-        )
+          "updateConversationTitle/optimistic",
+        );
 
         try {
-          await updateConversationTitleFn({ data: { id, title } })
+          await updateConversationTitleFn({ data: { id, title } });
         } catch (error) {
-          console.error('Failed to update conversation title:', error)
+          console.error("Failed to update conversation title:", error);
         }
       },
       setConversationPinned: async (id, pinned) => {
-        const { conversations } = get()
-        const target = conversations.find((item) => item.id === id)
+        const { conversations } = get();
+        const target = conversations.find((item) => item.id === id);
         if (!target) {
-          return
+          return;
         }
 
         const optimistic: ConversationMeta = {
           ...target,
           is_pinned: pinned,
           pinned_at: pinned ? new Date().toISOString() : null,
-        }
+        };
 
         set(
           (state) => ({
-            conversations: upsertConversations(state.conversations, [optimistic]),
+            conversations: upsertConversations(state.conversations, [
+              optimistic,
+            ]),
           }),
           false,
-          'setConversationPinned/optimistic',
-        )
+          "setConversationPinned/optimistic",
+        );
 
         try {
-          const result = await setConversationPinnedFn({ data: { id, pinned } })
+          const result = await setConversationPinnedFn({
+            data: { id, pinned },
+          });
           set(
             (state) => ({
               conversations: upsertConversations(state.conversations, [
@@ -406,17 +476,17 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
               ]),
             }),
             false,
-            'setConversationPinned/success',
-          )
+            "setConversationPinned/success",
+          );
         } catch (error) {
-          console.error('Failed to update conversation pin state:', error)
+          console.error("Failed to update conversation pin state:", error);
           set(
             (state) => ({
               conversations: upsertConversations(state.conversations, [target]),
             }),
             false,
-            'setConversationPinned/rollback',
-          )
+            "setConversationPinned/rollback",
+          );
         }
       },
       setMessages: (messages) => {
@@ -426,7 +496,7 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             blocks: message.blocks ?? [],
             createdAt: message.createdAt,
           })),
-        )
+        );
 
         set(
           {
@@ -436,28 +506,28 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             nextId: linearState.nextId,
           },
           false,
-          'setMessages',
-        )
+          "setMessages",
+        );
       },
       initializeTree: (messages = [], currentPath = []) => {
-        const normalizedMessages = normalizeMessageParentIds(messages)
+        const normalizedMessages = normalizeMessageParentIds(messages);
         const resolvedCurrentPath =
           Array.isArray(currentPath) &&
-          currentPath.every((id) => typeof id === 'number')
+          currentPath.every((id) => typeof id === "number")
             ? currentPath
-            : []
+            : [];
         const fallbackRootId =
-          normalizedMessages.length > 0 ? normalizedMessages[0].id : null
+          normalizedMessages.length > 0 ? normalizedMessages[0].id : null;
         const nextPath =
           resolvedCurrentPath.length > 0
             ? resolvedCurrentPath
-            : buildCurrentPath(normalizedMessages, fallbackRootId)
-        const latestRootId = nextPath[0] ?? fallbackRootId
+            : buildCurrentPath(normalizedMessages, fallbackRootId);
+        const latestRootId = nextPath[0] ?? fallbackRootId;
         const nextId =
           normalizedMessages.reduce(
             (maxId, message) => Math.max(maxId, message.id),
             0,
-          ) + 1
+          ) + 1;
 
         set(
           {
@@ -467,40 +537,40 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             nextId,
           },
           false,
-          'initializeTree',
-        )
+          "initializeTree",
+        );
       },
       getMessagesFromPath: () =>
         computeMessagesFromPath(get().messages, get().currentPath),
       setConversationId: (conversationId) =>
-        set({ conversationId }, false, 'setConversationId'),
+        set({ conversationId }, false, "setConversationId"),
       selectMessage: (messageId) => {
-        const state = get()
-        const targetPath: number[] = []
-        const visited = new Set<number>()
-        let currentId: number | null = messageId
+        const state = get();
+        const targetPath: number[] = [];
+        const visited = new Set<number>();
+        let currentId: number | null = messageId;
 
         while (currentId !== null) {
           if (visited.has(currentId)) {
-            return
+            return;
           }
 
           const currentMessage: Message | undefined =
-            state.messages[currentId - 1]
+            state.messages[currentId - 1];
           if (!currentMessage) {
-            return
+            return;
           }
 
-          targetPath.push(currentId)
-          visited.add(currentId)
-          currentId = currentMessage.parentId
+          targetPath.push(currentId);
+          visited.add(currentId);
+          currentId = currentMessage.parentId;
         }
 
-        targetPath.reverse()
+        targetPath.reverse();
 
-        let nextState = state.getTreeState()
+        let nextState = state.getTreeState();
         for (let index = 0; index < targetPath.length; index += 1) {
-          nextState = switchBranch(nextState, index + 1, targetPath[index])
+          nextState = switchBranch(nextState, index + 1, targetPath[index]);
         }
 
         set(
@@ -511,22 +581,23 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             nextId: nextState.nextId,
           },
           false,
-          'selectMessage',
-        )
+          "selectMessage",
+        );
       },
       appendToAssistant: (addition) =>
         set(
           (state) => {
-            const lastId = state.currentPath[state.currentPath.length - 1] ?? null
-            const lastMessage = lastId ? state.messages[lastId - 1] : null
+            const lastId =
+              state.currentPath[state.currentPath.length - 1] ?? null;
+            const lastMessage = lastId ? state.messages[lastId - 1] : null;
 
-            let nextMessages = state.messages
-            let nextPath = state.currentPath
-            let nextLatestRootId = state.latestRootId
-            let nextId = state.nextId
-            let assistantId = lastId
+            let nextMessages = state.messages;
+            let nextPath = state.currentPath;
+            let nextLatestRootId = state.latestRootId;
+            let nextId = state.nextId;
+            let assistantId = lastId;
 
-            if (!lastMessage || lastMessage.role !== 'assistant') {
+            if (!lastMessage || lastMessage.role !== "assistant") {
               const result = addMessage(
                 {
                   messages: state.messages,
@@ -534,53 +605,58 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
                   latestRootId: state.latestRootId,
                   nextId: state.nextId,
                 },
-                'assistant',
+                "assistant",
                 [],
-              )
-              nextMessages = result.messages
-              nextPath = result.currentPath
-              nextLatestRootId = result.latestRootId
-              nextId = result.nextId
-              assistantId = result.addedMessage.id
+              );
+              nextMessages = result.messages;
+              nextPath = result.currentPath;
+              nextLatestRootId = result.latestRootId;
+              nextId = result.nextId;
+              assistantId = result.addedMessage.id;
             }
 
             if (!assistantId || !nextMessages[assistantId - 1]) {
-              return state
+              return state;
             }
 
-            const targetMessage = nextMessages[assistantId - 1] as AssistantMessage
-            const updatedMessages = [...nextMessages]
+            const targetMessage = nextMessages[
+              assistantId - 1
+            ] as AssistantMessage;
+            const updatedMessages = [...nextMessages];
             updatedMessages[assistantId - 1] = {
               ...targetMessage,
-              blocks: applyAssistantAddition(targetMessage.blocks ?? [], addition),
-            }
+              blocks: applyAssistantAddition(
+                targetMessage.blocks ?? [],
+                addition,
+              ),
+            };
 
             return {
               messages: updatedMessages,
               currentPath: nextPath,
               latestRootId: nextLatestRootId,
               nextId,
-            }
+            };
           },
           false,
-          'appendToAssistant',
+          "appendToAssistant",
         ),
       getBranchInfo: (messageId) => getBranchInfo(get().messages, messageId),
       navigateBranch: (messageId, depth, direction) => {
-        const state = get()
-        const info = getBranchInfo(state.messages, messageId)
+        const state = get();
+        const info = getBranchInfo(state.messages, messageId);
         if (!info) {
-          return
+          return;
         }
 
         const nextIndex =
-          direction === 'prev' ? info.currentIndex - 1 : info.currentIndex + 1
+          direction === "prev" ? info.currentIndex - 1 : info.currentIndex + 1;
         if (nextIndex < 0 || nextIndex >= info.total) {
-          return
+          return;
         }
 
-        const targetId = info.siblingIds[nextIndex]
-        const nextState = switchBranch(state.getTreeState(), depth, targetId)
+        const targetId = info.siblingIds[nextIndex];
+        const nextState = switchBranch(state.getTreeState(), depth, targetId);
 
         set(
           {
@@ -590,105 +666,282 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             nextId: nextState.nextId,
           },
           false,
-          'navigateBranch',
-        )
+          "navigateBranch",
+        );
       },
+      setArtifacts: (artifacts) =>
+        set(
+          {
+            artifacts: artifacts.map((artifact) => ({
+              ...artifact,
+              status: "completed",
+              errorMessage: null,
+            })),
+            selectedArtifactId: artifacts[0]?.id ?? null,
+            artifactPanelOpen: artifacts.length > 0,
+            activeStreamingArtifactId: null,
+            artifactView: artifacts.length > 0 ? "preview" : "code",
+          },
+          false,
+          "setArtifacts",
+        ),
+      selectArtifact: (selectedArtifactId) =>
+        set(
+          (state) => {
+            const target = state.artifacts.find(
+              (artifact) => artifact.id === selectedArtifactId,
+            );
+            return {
+              selectedArtifactId,
+              artifactView: target?.status === "completed" ? "preview" : "code",
+            };
+          },
+          false,
+          "selectArtifact",
+        ),
+      setArtifactPanelOpen: (artifactPanelOpen) =>
+        set({ artifactPanelOpen }, false, "setArtifactPanelOpen"),
+      setArtifactView: (artifactView) =>
+        set({ artifactView }, false, "setArtifactView"),
+      startArtifact: (artifactId) =>
+        set(
+          (state) => {
+            const now = new Date().toISOString();
+            const existing = state.artifacts.find(
+              (artifact) => artifact.id === artifactId,
+            );
+            const nextArtifact: ArtifactRecord = existing ?? {
+              id: artifactId,
+              conversation_id: state.conversationId ?? "",
+              title: "Untitled Artifact",
+              language: "html",
+              code: "",
+              created_at: now,
+              updated_at: now,
+              status: "streaming",
+              errorMessage: null,
+            };
+
+            const nextArtifacts: ArtifactRecord[] = [
+              {
+                ...nextArtifact,
+                status: "streaming",
+                errorMessage: null,
+                updated_at: now,
+              },
+              ...state.artifacts.filter(
+                (artifact) => artifact.id !== artifactId,
+              ),
+            ];
+
+            return {
+              artifacts: nextArtifacts,
+              selectedArtifactId: artifactId,
+              artifactPanelOpen: true,
+              activeStreamingArtifactId: artifactId,
+              artifactView: "code",
+            };
+          },
+          false,
+          "startArtifact",
+        ),
+      updateArtifactTitle: (artifactId, title) =>
+        set(
+          (state) => ({
+            artifacts: state.artifacts.map((artifact) =>
+              artifact.id === artifactId
+                ? { ...artifact, title, updated_at: new Date().toISOString() }
+                : artifact,
+            ),
+          }),
+          false,
+          "updateArtifactTitle",
+        ),
+      updateArtifactLanguage: (artifactId, language) =>
+        set(
+          (state) => ({
+            artifacts: state.artifacts.map((artifact) =>
+              artifact.id === artifactId
+                ? {
+                    ...artifact,
+                    language,
+                    updated_at: new Date().toISOString(),
+                  }
+                : artifact,
+            ),
+          }),
+          false,
+          "updateArtifactLanguage",
+        ),
+      appendArtifactCode: (artifactId, delta) =>
+        set(
+          (state) => ({
+            artifacts: state.artifacts.map((artifact) =>
+              artifact.id === artifactId
+                ? {
+                    ...artifact,
+                    code: artifact.code + delta,
+                    updated_at: new Date().toISOString(),
+                  }
+                : artifact,
+            ),
+          }),
+          false,
+          "appendArtifactCode",
+        ),
+      completeArtifact: (artifactId) =>
+        set(
+          (state) => ({
+            artifacts: state.artifacts.map((artifact) =>
+              artifact.id === artifactId
+                ? {
+                    ...artifact,
+                    status: "completed",
+                    errorMessage: null,
+                    updated_at: new Date().toISOString(),
+                  }
+                : artifact,
+            ),
+            selectedArtifactId: artifactId,
+            artifactPanelOpen: true,
+            activeStreamingArtifactId:
+              state.activeStreamingArtifactId === artifactId
+                ? null
+                : state.activeStreamingArtifactId,
+            artifactView: "preview",
+          }),
+          false,
+          "completeArtifact",
+        ),
+      failArtifact: (artifactId, message) =>
+        set(
+          (state) => ({
+            artifacts: state.artifacts.map((artifact) =>
+              artifact.id === artifactId
+                ? {
+                    ...artifact,
+                    status: "failed",
+                    errorMessage: message,
+                    updated_at: new Date().toISOString(),
+                  }
+                : artifact,
+            ),
+            selectedArtifactId: artifactId,
+            artifactPanelOpen: true,
+            activeStreamingArtifactId:
+              state.activeStreamingArtifactId === artifactId
+                ? null
+                : state.activeStreamingArtifactId,
+            artifactView: "code",
+          }),
+          false,
+          "failArtifact",
+        ),
       setCurrentRole: (currentRole) => {
-        set({ currentRole }, false, 'setCurrentRole')
+        set({ currentRole }, false, "setCurrentRole");
 
         if (currentRole) {
-          setStoredValue(MODEL_STORAGE_KEY, currentRole)
+          setStoredValue(MODEL_STORAGE_KEY, currentRole);
         }
       },
       setAvailableRoles: (availableRoles) =>
-        set({ availableRoles }, false, 'setAvailableRoles'),
+        set({ availableRoles }, false, "setAvailableRoles"),
       setRolesLoading: (rolesLoading) =>
-        set({ rolesLoading }, false, 'setRolesLoading'),
+        set({ rolesLoading }, false, "setRolesLoading"),
       loadAvailableRoles: async () => {
-        const state = get()
+        const state = get();
         if (state.availableRoles.length > 0 || state.rolesLoading) {
-          return
+          return;
         }
 
-        set({ rolesLoading: true }, false, 'loadAvailableRoles/start')
+        set({ rolesLoading: true }, false, "loadAvailableRoles/start");
 
         try {
-          const roles = await getAvailableModelsFn()
-          const firstId = roles[0]?.id ?? ''
-          const stored = getStoredValue(MODEL_STORAGE_KEY)
+          const roles = await getAvailableModelsFn();
+          const firstId = roles[0]?.id ?? "";
+          const stored = getStoredValue(MODEL_STORAGE_KEY);
           const roleToUse =
-            stored && roles.some((role) => role.id === stored) ? stored : firstId
+            stored && roles.some((role) => role.id === stored)
+              ? stored
+              : firstId;
 
           if (roleToUse) {
-            get().setCurrentRole(roleToUse)
+            get().setCurrentRole(roleToUse);
           }
 
-          set({ availableRoles: roles }, false, 'loadAvailableRoles/success')
+          set({ availableRoles: roles }, false, "loadAvailableRoles/success");
         } catch {
           // ignore
         } finally {
-          set({ rolesLoading: false }, false, 'loadAvailableRoles/finish')
+          set({ rolesLoading: false }, false, "loadAvailableRoles/finish");
         }
       },
       setCurrentPrompt: (currentPrompt) => {
-        set({ currentPrompt }, false, 'setCurrentPrompt')
+        set({ currentPrompt }, false, "setCurrentPrompt");
 
         if (currentPrompt) {
-          setStoredValue(PROMPT_STORAGE_KEY, currentPrompt)
+          setStoredValue(PROMPT_STORAGE_KEY, currentPrompt);
         }
       },
       setAvailablePrompts: (availablePrompts) =>
-        set({ availablePrompts }, false, 'setAvailablePrompts'),
+        set({ availablePrompts }, false, "setAvailablePrompts"),
       setPromptsLoading: (promptsLoading) =>
-        set({ promptsLoading }, false, 'setPromptsLoading'),
+        set({ promptsLoading }, false, "setPromptsLoading"),
       loadAvailablePrompts: async () => {
-        const state = get()
+        const state = get();
         if (state.availablePrompts.length > 0 || state.promptsLoading) {
-          return
+          return;
         }
 
-        set({ promptsLoading: true }, false, 'loadAvailablePrompts/start')
+        set({ promptsLoading: true }, false, "loadAvailablePrompts/start");
 
         try {
-          const prompts = await getAvailablePromptsFn()
-          const firstId = prompts[0]?.id ?? 'aether'
-          const stored = getStoredValue(PROMPT_STORAGE_KEY)
+          const prompts = await getAvailablePromptsFn();
+          const firstId = prompts[0]?.id ?? "aether";
+          const stored = getStoredValue(PROMPT_STORAGE_KEY);
           const promptToUse =
             stored && prompts.some((prompt) => prompt.id === stored)
               ? stored
-              : firstId
+              : firstId;
 
           if (promptToUse) {
-            get().setCurrentPrompt(promptToUse)
+            get().setCurrentPrompt(promptToUse);
           }
 
-          set({ availablePrompts: prompts }, false, 'loadAvailablePrompts/success')
+          set(
+            { availablePrompts: prompts },
+            false,
+            "loadAvailablePrompts/success",
+          );
         } catch {
           // ignore
         } finally {
-          set({ promptsLoading: false }, false, 'loadAvailablePrompts/finish')
+          set({ promptsLoading: false }, false, "loadAvailablePrompts/finish");
         }
       },
       cyclePrompt: () => {
-        const state = get()
+        const state = get();
         if (state.availablePrompts.length === 0) {
-          return
+          return;
         }
 
         const currentIndex = state.availablePrompts.findIndex(
           (prompt) => prompt.id === state.currentPrompt,
-        )
+        );
         const nextIndex =
-          currentIndex < 0 ? 0 : (currentIndex + 1) % state.availablePrompts.length
+          currentIndex < 0
+            ? 0
+            : (currentIndex + 1) % state.availablePrompts.length;
 
-        get().setCurrentPrompt(state.availablePrompts[nextIndex].id)
+        get().setCurrentPrompt(state.availablePrompts[nextIndex].id);
       },
       clearSession: () => {
-        const state = get()
+        const state = get();
         set(
           {
             ...createEmptyMessageState(),
             conversationId: null,
+            ...initialArtifactState,
             currentRole: state.currentRole,
             availableRoles: state.availableRoles,
             rolesLoading: state.rolesLoading,
@@ -697,17 +950,17 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             promptsLoading: state.promptsLoading,
           },
           false,
-          'clearSession',
-        )
+          "clearSession",
+        );
       },
       getTreeState: () => {
-        const state = get()
+        const state = get();
         return {
           messages: state.messages,
           currentPath: state.currentPath,
           latestRootId: state.latestRootId,
           nextId: state.nextId,
-        }
+        };
       },
       setTreeState: (partial) =>
         set(
@@ -720,10 +973,15 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             nextId: partial.nextId ?? state.nextId,
           }),
           false,
-          'setTreeState',
+          "setTreeState",
         ),
       addMessage: (role, blocks, createdAt) => {
-        const result = addMessage(get().getTreeState(), role, blocks, createdAt)
+        const result = addMessage(
+          get().getTreeState(),
+          role,
+          blocks,
+          createdAt,
+        );
         set(
           {
             messages: result.messages,
@@ -732,14 +990,19 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             nextId: result.nextId,
           },
           false,
-          'addMessage',
-        )
-        return result
+          "addMessage",
+        );
+        return result;
       },
       editMessage: (depth, messageId, blocks) => {
-        const result = editMessage(get().getTreeState(), depth, messageId, blocks)
+        const result = editMessage(
+          get().getTreeState(),
+          depth,
+          messageId,
+          blocks,
+        );
         if (!result) {
-          return null
+          return null;
         }
 
         set(
@@ -750,17 +1013,17 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             nextId: result.nextId,
           },
           false,
-          'editMessage',
-        )
+          "editMessage",
+        );
 
-        return result
+        return result;
       },
     }),
-    { name: 'ChatSessionStore' },
+    { name: "ChatSessionStore" },
   ),
-)
+);
 
 export const useIsNewChat = () =>
   useChatSessionStore(
     (state) => state.conversationId === null && state.messages.length === 0,
-  )
+  );

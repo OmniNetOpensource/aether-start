@@ -4,6 +4,7 @@ import {
   resetLastEventId,
   resumeRunningConversation,
 } from "@/lib/chat/api/chat-orchestrator";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
@@ -76,6 +77,7 @@ export function useConversationLoader(
   const setConversationId = useChatSessionStore(
     (state) => state.setConversationId,
   );
+  const setArtifacts = useChatSessionStore((state) => state.setArtifacts);
 
   useEffect(() => {
     if (
@@ -134,6 +136,9 @@ export function useConversationLoader(
         useEditingStore.getState().clear();
         setConversationId(loadingConversationId);
         initializeTree(mappedMessages, currentPath);
+        setArtifacts(
+          Array.isArray(conversation.artifacts) ? conversation.artifacts : [],
+        );
         const store = useChatSessionStore.getState();
         const roleId =
           conversation.role ??
@@ -165,6 +170,7 @@ export function useConversationLoader(
     navigate,
     setConversationId,
     initializeTree,
+    setArtifacts,
   ]);
 
   useEffect(() => {
@@ -188,6 +194,34 @@ export function useConversationLoader(
       abortController.abort();
     };
   }, [loadingConversationId, currentConversationId]);
+
+  const conversations = useChatSessionStore((state) => state.conversations);
+  const title = conversations.find(
+    (item) => item.id === loadingConversationId,
+  )?.title;
+
+  useEffect(() => {
+    const defaultTitle = "Aether";
+
+    if (title) {
+      const truncatedTitle =
+        title.length > 50 ? `${title.slice(0, 50)}...` : title;
+      document.title = `${truncatedTitle} - Aether`;
+    } else {
+      document.title = defaultTitle;
+    }
+
+    return () => {
+      document.title = defaultTitle;
+    };
+  }, [title]);
+
+  useEffect(() => {
+    return () => {
+      resetLastEventId();
+      useChatRequestStore.getState().setStatus("idle");
+    };
+  }, [loadingConversationId]);
 
   return { isLoading: loadingConversationId !== currentConversationId };
 }

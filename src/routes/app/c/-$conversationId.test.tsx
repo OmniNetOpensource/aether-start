@@ -6,7 +6,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
 const {
-  resetLastEventIdMock,
   resumeRunningConversationMock,
   useConversationLoaderMock,
   setStatusMock,
@@ -20,13 +19,14 @@ const {
   };
 
   return {
-    resetLastEventIdMock: vi.fn(),
     resumeRunningConversationMock: vi.fn().mockResolvedValue(undefined),
     useConversationLoaderMock: vi.fn(),
-    setStatusMock: vi.fn((status: "idle" | "sending" | "streaming" | "disconnected") => {
-      requestState.status = status;
-      requestListeners.forEach((listener) => listener());
-    }),
+    setStatusMock: vi.fn(
+      (status: "idle" | "sending" | "streaming" | "disconnected") => {
+        requestState.status = status;
+        requestListeners.forEach((listener) => listener());
+      },
+    ),
     resetRequestListeners: () => requestListeners.clear(),
     subscribeRequestStateMock: vi.fn((listener: () => void) => {
       requestListeners.add(listener);
@@ -49,15 +49,13 @@ vi.mock("@/features/sidebar/hooks/useConversationLoader", () => ({
 }));
 
 vi.mock("@/features/chat/lib/api/chat-orchestrator", () => ({
-  resetLastEventId: resetLastEventIdMock,
   resumeRunningConversation: resumeRunningConversationMock,
 }));
 
 vi.mock("@/features/chat/store/useChatRequestStore", () => ({
   useChatRequestStore: Object.assign(
-    (
-      selector: (state: { status: typeof requestState.status }) => unknown,
-    ) => selector({ status: requestState.status }),
+    (selector: (state: { status: typeof requestState.status }) => unknown) =>
+      selector({ status: requestState.status }),
     {
       getState: () => ({
         status: requestState.status,
@@ -72,10 +70,16 @@ vi.mock("@/features/sidebar/store/useChatSessionStore", () => ({
   useChatSessionStore: (
     selector: (state: {
       conversations: Array<{ id: string; title: string }>;
+      artifacts: [];
+      artifactPanelOpen: boolean;
+      setArtifactPanelOpen: (open: boolean) => void;
     }) => unknown,
   ) =>
     selector({
       conversations: [{ id: "conv-1", title: "Conversation" }],
+      artifacts: [],
+      artifactPanelOpen: false,
+      setArtifactPanelOpen: vi.fn(),
     }),
 }));
 
@@ -96,7 +100,6 @@ const flush = async () => {
 
 describe("ConversationPage SSE lifecycle", () => {
   beforeEach(() => {
-    resetLastEventIdMock.mockReset();
     resumeRunningConversationMock.mockReset();
     resumeRunningConversationMock.mockResolvedValue(undefined);
     setStatusMock.mockReset();
@@ -110,7 +113,7 @@ describe("ConversationPage SSE lifecycle", () => {
     vi.useRealTimers();
   });
 
-  it("starts recovery from the route when conversationId is present", async () => {
+  it("does not start recovery from the route when conversationId is present", async () => {
     const container = document.createElement("div");
     const root = createRoot(container);
 
@@ -119,32 +122,12 @@ describe("ConversationPage SSE lifecycle", () => {
       await flush();
     });
 
-    expect(resumeRunningConversationMock).toHaveBeenCalledWith(
-      "conv-1",
-      expect.any(AbortSignal),
-    );
+    expect(resumeRunningConversationMock).not.toHaveBeenCalled();
 
     await act(async () => {
       root.unmount();
       await flush();
     });
-  });
-
-  it("clears request state on unmount", async () => {
-    const container = document.createElement("div");
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(<ConversationPage />);
-      await flush();
-    });
-
-    await act(async () => {
-      root.unmount();
-      await flush();
-    });
-
-    expect(setStatusMock).toHaveBeenCalledWith("idle");
   });
 
   it("marks the connection as disconnected when the browser goes offline mid-stream", async () => {
@@ -239,22 +222,5 @@ describe("ConversationPage SSE lifecycle", () => {
       root.unmount();
       await flush();
     });
-  });
-
-  it("resets event cursor on unmount", async () => {
-    const container = document.createElement("div");
-    const root = createRoot(container);
-
-    await act(async () => {
-      root.render(<ConversationPage />);
-      await flush();
-    });
-
-    await act(async () => {
-      root.unmount();
-      await flush();
-    });
-
-    expect(resetLastEventIdMock).toHaveBeenCalledTimes(1);
   });
 });

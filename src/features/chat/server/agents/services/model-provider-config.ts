@@ -354,9 +354,7 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
   const id = promptId.trim();
   return (
     PROMPT_CONFIGS[id] ??
-    Object.values(PROMPT_CONFIGS).find(
-      (p) => p.id === id || p.name === id,
-    ) ??
+    Object.values(PROMPT_CONFIGS).find((p) => p.id === id || p.name === id) ??
     null
   );
 };
