@@ -18,7 +18,8 @@
       "Bash(cd D:/develop/projects/aether-start && pnpm lint 2>&1)",
       "Bash(head:*)",
       "Bash(grep:*)",
-      "Bash(cd \"D:/develop/projects/aether-start\" && pnpm test -- --run src/features/chat/components/message/MessageItem.test.tsx 2>&1)"
+      "Bash(cd \"D:/develop/projects/aether-start\" && pnpm test -- --run src/features/chat/components/message/MessageItem.test.tsx 2>&1)",
+      "Bash(cd /d/develop/projects/aether-start && pnpm test -- --run src/features/chat/lib/api/chat-orchestrator.test.ts 2>&1)"
     ]
   }
 }

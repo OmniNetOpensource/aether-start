@@ -14,8 +14,8 @@ This file gives Claude Code repository-specific guidance for working in this pro
 
 The codebase is in the middle of a structure cleanup. Do not assume everything lives under `src/features/`. Right now:
 
-- `src/features/chat/` contains the Redux chat request slice and commands
-- much of the conversation tree, chat client orchestration, and UI still lives in `src/lib/`, `src/components/`, and `src/stores/zustand/`
+- `src/features/chat/` contains the chat request store, composer/editing stores, chat client orchestration, UI, and server-side agent code
+- much of the surrounding UI state lives in feature-local stores and `src/shared/stores/`
 - server logic lives under `src/server/`
 
 ## Commands
@@ -48,7 +48,7 @@ TanStack Start file routes live in `src/routes/`.
 
 Important routes:
 
-- `src/routes/__root.tsx` - root shell, theme loader, Redux provider, responsive provider, tooltip, toast, Sentry boundary
+- `src/routes/__root.tsx` - root shell, theme loader, responsive provider, tooltip, toast, Sentry boundary
 - `src/routes/index.tsx` - entry route
 - `src/routes/app/route.tsx` - authenticated app shell with sidebar and chat room layout
 - `src/routes/app/index.tsx` - new chat landing inside app
@@ -65,21 +65,17 @@ Do not edit `src/routeTree.gen.ts` manually.
 
 ### Frontend State
 
-State is split on purpose:
+State is store-based, and the active client stores are Zustand stores:
 
-- Redux store in `src/stores/redux/`
-  - currently owns `chatRequest`
-  - store factory: `src/stores/redux/createAppStore.ts`
-- Zustand stores in `src/stores/zustand/`
-  - conversation list
-  - composer state
-  - message tree
-  - editing state
-  - notes
-  - toast
+- `src/features/chat/store/useChatRequestStore.ts`
+- `src/features/chat/store/useComposerStore.ts`
+- `src/features/chat/store/useEditingStore.ts`
+- `src/features/sidebar/store/useChatSessionStore.ts`
+- `src/features/notes/store/useNotesStore.ts`
+- `src/shared/stores/toast.ts`
 
-If you are changing request lifecycle or connection status, start in `src/features/chat/state/`.
-If you are changing message tree, composer, or conversations, the logic is still mostly in Zustand and `src/lib/conversation/`.
+If you are changing request lifecycle or connection status, start in `src/features/chat/store/useChatRequestStore.ts`.
+If you are changing message tree, composer, or conversations, inspect the nearby feature store plus the related orchestration and route code.
 
 ### Chat Flow
 
@@ -87,11 +83,10 @@ The request lifecycle spans client UI, orchestrator code, and a Cloudflare Agent
 
 Main pieces:
 
-- `src/features/chat/state/chatRequestSlice.ts` - request status, role list, connection state
-- `src/features/chat/state/chatRequestCommands.ts` - UI-facing commands
-- `src/lib/chat/api/chat-orchestrator.ts` - client chat session orchestration, sync/reconnect, route controller
-- `src/lib/chat/api/event-handlers.ts` - applies streamed events to the message tree
-- `src/server/agents/chat-agent.ts` - long-running server agent handling chat requests, sync, abort, persistence, quota, and tool loops
+- `src/features/chat/store/useChatRequestStore.ts` - request status
+- `src/features/chat/lib/api/chat-orchestrator.ts` - client chat session orchestration, sync/reconnect, route controller
+- `src/features/chat/lib/api/event-handlers.ts` - applies streamed events to the message tree
+- `src/features/chat/server/agents/chat-agent.ts` - long-running server agent handling chat requests, sync, abort, persistence, quota, and tool loops
 
 The client sends:
 

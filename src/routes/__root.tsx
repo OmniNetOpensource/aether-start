@@ -61,7 +61,7 @@ function RootComponent() {
             </p>
             <button
               type="button"
-              className="px-4 py-2 rounded-md bg-primary text-primary text-sm"
+              className="px-4 py-2 rounded-md bg-(--interactive-primary) text-(--surface-primary) text-sm"
               onClick={resetError}
             >
               重试

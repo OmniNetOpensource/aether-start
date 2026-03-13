@@ -12,14 +12,6 @@ const BUSY_WARNING = "This conversation is already generating a response.";
 const SELECT_ROLE_WARNING = "Select a role before sending a message.";
 const QUOTA_EXCEEDED_MESSAGE = "Quota exceeded.";
 
-type AgentStatusResponse = {
-  status: ChatAgentStatus;
-};
-
-type StartRequestPayload = {
-  messages: Message[];
-};
-
 let lastEventId = 0;
 export const resetLastEventId = () => {
   lastEventId = 0;
@@ -34,28 +26,11 @@ const resolveAgentBaseUrl = () => {
       : "http";
   const host =
     typeof window !== "undefined" ? window.location.host : "localhost:3000";
-
   return `${protocol}://${host}/agents/${AGENT_NAME}`;
 };
 
-const isChatAgentStatus = (value: unknown): value is ChatAgentStatus =>
-  value === "idle" ||
-  value === "running" ||
-  value === "completed" ||
-  value === "aborted" ||
-  value === "error";
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
-
-const safeParse = (raw: string): Record<string, unknown> | null => {
-  try {
-    const parsed = JSON.parse(raw);
-    return isRecord(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-};
 
 const generateId = (prefix = "id") =>
   typeof crypto !== "undefined" && crypto.randomUUID
@@ -72,15 +47,26 @@ const finalizeStream = () => {
   }
 };
 
-const handleSSEMessage = (event: string, raw: string) => {
-  const payload = safeParse(raw);
-  if (!payload) return;
+const handleSSEMessage = (
+  event: string,
+  raw: string,
+  shouldFilterEventId: boolean,
+) => {
+  let payload: Record<string, unknown>;
+  try {
+    const parsed = JSON.parse(raw);
+    if (!isRecord(parsed)) return;
+    payload = parsed;
+  } catch {
+    return;
+  }
+
   const { setStatus } = useChatRequestStore.getState();
 
   switch (event) {
     case "chat_event": {
-      if (typeof payload.eventId !== "number" || payload.eventId <= lastEventId)
-        return;
+      if (typeof payload.eventId !== "number") return;
+      if (shouldFilterEventId && payload.eventId <= lastEventId) return;
       lastEventId = payload.eventId;
       setStatus("streaming");
       applyChatEventToTree(payload.event as ChatServerToClientEvent);
@@ -93,9 +79,7 @@ const handleSSEMessage = (event: string, raw: string) => {
       setStatus("idle");
       return;
     case "sync_response":
-      setStatus(
-        payload.status === "running" ? "streaming" : "idle",
-      );
+      setStatus(payload.status === "running" ? "streaming" : "idle");
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
           if (
@@ -130,18 +114,21 @@ const handleSSEMessage = (event: string, raw: string) => {
   }
 };
 
-const consumeSSE = async (
-  body: ReadableStream<Uint8Array>,
-  onMessage: (event: string, data: string) => void,
-  signal?: AbortSignal,
+const consumeStreamResponse = async (
+  response: Response,
+  signal: AbortSignal,
+  shouldFilterEventId = true,
 ) => {
-  const reader = body.getReader();
+  if (!response.ok || !response.body) {
+    throw new Error(`Chat request failed: ${response.status}`);
+  }
+
+  const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let buffer = "";
 
   const flush = () => {
     let boundaryIndex = buffer.indexOf("\n\n");
-
     while (boundaryIndex >= 0) {
       const block = buffer.slice(0, boundaryIndex);
       buffer = buffer.slice(boundaryIndex + 2);
@@ -163,7 +150,7 @@ const consumeSSE = async (
       }
 
       if (dataLines.length > 0) {
-        onMessage(event, dataLines.join("\n"));
+        handleSSEMessage(event, dataLines.join("\n"), shouldFilterEventId);
       }
     }
   };
@@ -172,11 +159,9 @@ const consumeSSE = async (
     while (!signal?.aborted) {
       const { done, value } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
       flush();
     }
-
     buffer += decoder.decode().replace(/\r\n/g, "\n");
     flush();
   } finally {
@@ -184,74 +169,39 @@ const consumeSSE = async (
   }
 };
 
-const consumeStreamResponse = async (
-  response: Response,
-  signal: AbortSignal,
-) => {
-  if (!response.ok || !response.body) {
-    throw new Error(`Chat request failed: ${response.status}`);
-  }
-
-  await consumeSSE(response.body, handleSSEMessage, signal);
-};
-
-const buildPreparedRequest = (
-  conversationId: string,
-  role: string,
-  promptId: string | undefined,
-  idempotencyKey: string,
-  messages: Message[],
-) => {
-  const treeSnapshot: MessageTreeSnapshot = useChatSessionStore
-    .getState()
-    .getTreeState();
-
-  const conversationHistory: SerializedMessage[] = messages.map(
-    (message) =>
-      ({
-        role: message.role,
-        blocks: message.blocks,
-      }) as SerializedMessage,
-  );
-
-  return {
-    idempotencyKey,
-    role,
-    promptId,
-    conversationId,
-    conversationHistory,
-    treeSnapshot,
-  };
-};
-
 export const checkAgentStatus = async (
   conversationId: string,
-): Promise<AgentStatusResponse> => {
+): Promise<{ status: ChatAgentStatus }> => {
   const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}`, {
     method: "GET",
     credentials: "include",
   });
 
-  if (response.status === 404) {
-    return { status: "idle" };
-  }
-
-  if (!response.ok) {
-    throw new Error(`Agent status probe failed: ${response.status}`);
-  }
+  if (response.status === 404) return { status: "idle" };
+  if (!response.ok) throw new Error(`Agent status probe failed: ${response.status}`);
 
   const data = (await response.json()) as Record<string, unknown>;
+  const status = data.status;
 
   return {
-    status: isChatAgentStatus(data.status) ? data.status : "idle",
+    status:
+      status === "idle" ||
+      status === "running" ||
+      status === "completed" ||
+      status === "aborted" ||
+      status === "error"
+        ? status
+        : "idle",
   };
 };
 
-export const startChatRequest = async ({ messages }: StartRequestPayload) => {
+export const startChatRequest = async ({ messages }: { messages: Message[] }) => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
   if (requestStore.status !== "idle") return;
+
+  resetLastEventId();
 
   if (!sessionStore.currentRole) {
     toast.warning(SELECT_ROLE_WARNING);
@@ -278,13 +228,24 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
     appNavigate(`/app/c/${conversationId}`);
   }
 
-  const body = buildPreparedRequest(
-    conversationId,
-    sessionStore.currentRole,
-    sessionStore.currentPrompt || undefined,
+  const treeSnapshot: MessageTreeSnapshot = useChatSessionStore
+    .getState()
+    .getTreeState();
+
+  const body = {
     idempotencyKey,
-    messages,
-  );
+    role: sessionStore.currentRole,
+    promptId: sessionStore.currentPrompt || undefined,
+    conversationId,
+    conversationHistory: messages.map(
+      (message) =>
+        ({
+          role: message.role,
+          blocks: message.blocks,
+        }) as SerializedMessage,
+    ),
+    treeSnapshot,
+  };
 
   activeController?.abort();
   activeController = new AbortController();
@@ -323,7 +284,7 @@ export const startChatRequest = async ({ messages }: StartRequestPayload) => {
       return;
     }
 
-    await consumeStreamResponse(response, signal);
+    await consumeStreamResponse(response, signal, false);
 
     finalizeStream();
   } catch (error) {
@@ -364,7 +325,7 @@ export const resumeRunningConversation = async (
 ) => {
   if (!conversationId || linkedSignal.aborted) return;
 
-  let agentStatus: AgentStatusResponse;
+  let agentStatus: { status: ChatAgentStatus };
 
   try {
     agentStatus = await checkAgentStatus(conversationId);
@@ -391,8 +352,7 @@ export const resumeRunningConversation = async (
     linkedSignal.addEventListener("abort", handleLinkedAbort);
   }
 
-  const requestStore = useChatRequestStore.getState();
-  requestStore.setStatus("sending");
+  useChatRequestStore.getState().setStatus("sending");
 
   try {
     const response = await fetch(

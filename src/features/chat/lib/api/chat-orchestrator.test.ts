@@ -231,6 +231,57 @@ describe("chat-orchestrator SSE model", () => {
     expect(useChatRequestStore.getState().status).toBe("idle");
   });
 
+  it("does not drop new /chat events when a previous request used a higher event id", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: sseStream([
+        {
+          event: "chat_event",
+          data: {
+            eventId: 99,
+            event: { type: "content", content: "older stream" },
+          },
+        },
+        {
+          event: "chat_finished",
+          data: { status: "completed" },
+        },
+      ]),
+    });
+
+    const orchestrator = await import("./chat-orchestrator");
+    await orchestrator.startChatRequest({
+      messages: [{ role: "user", blocks: [] } as never],
+    });
+
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: sseStream([
+        {
+          event: "chat_event",
+          data: {
+            eventId: 1,
+            event: { type: "content", content: "fresh stream" },
+          },
+        },
+        {
+          event: "chat_finished",
+          data: { status: "completed" },
+        },
+      ]),
+    });
+
+    await orchestrator.startChatRequest({
+      messages: [{ role: "user", blocks: [] } as never],
+    });
+
+    expect(applyChatEventToTreeMock).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "content", content: "fresh stream" }),
+    );
+  });
+
   it("handles 409 busy response from server", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: false,
