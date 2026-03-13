@@ -1,5 +1,14 @@
 import { toPng } from 'html-to-image'
-import { Check, Copy, Download, Link2, Loader2, XCircle } from 'lucide-react'
+import {
+  Check,
+  CheckSquare2,
+  Copy,
+  Download,
+  Link2,
+  Loader2,
+  Square,
+  XCircle,
+} from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { ReadonlyMessageList } from '@/features/share/components/ReadonlyMessageList'
 import { Button } from '@/components/ui/button'
@@ -50,10 +59,7 @@ const EXPORT_FONT =
   'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
 
 const capturePixelRatio = () => {
-  if (typeof window === 'undefined') {
-    return 1
-  }
-
+  if (typeof window === 'undefined') return 1
   const dpr = window.devicePixelRatio || 1
   const coarse = window.matchMedia?.('(pointer: coarse)').matches ?? false
   return Math.min(coarse ? 1 : 2, dpr)
@@ -98,15 +104,12 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
   const selectedMessages = pathMessages.filter(({ id }) => selectedIds.has(id))
   const selectedCount = selectedMessages.length
-  const selectedPreviewMessages = selectedMessages.map(
-    ({ message }) => message,
-  )
+  const selectedPreviewMessages = selectedMessages.map(({ message }) => message)
+  const allSelected =
+    pathMessages.length > 0 && selectedIds.size === pathMessages.length
 
   const conversationTitle = (() => {
-    if (!conversationId) {
-      return 'Aether'
-    }
-
+    if (!conversationId) return 'Aether'
     const conversation = conversations.find((item) => item.id === conversationId)
     return conversation?.title?.trim() || 'Aether'
   })()
@@ -124,9 +127,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   }
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      resetState()
-    }
+    if (!nextOpen) resetState()
     onOpenChange(nextOpen)
   }
 
@@ -158,9 +159,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
         }
       })
       .finally(() => {
-        if (!cancelled) {
-          setShareLoading(false)
-        }
+        if (!cancelled) setShareLoading(false)
       })
 
     return () => {
@@ -171,13 +170,18 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const toggleSelection = (id: number) => {
     setSelectedIds((current) => {
       const next = new Set(current)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
       return next
     })
+  }
+
+  const selectAll = () => {
+    setSelectedIds(new Set(pathMessages.map(({ id }) => id)))
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
   }
 
   const handleCreateShare = async () => {
@@ -185,7 +189,6 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
       toast.error('No conversation selected')
       return
     }
-
     if (pathMessages.length === 0) {
       toast.warning('There are no messages to share')
       return
@@ -208,9 +211,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   }
 
   const handleRevokeShare = async () => {
-    if (!conversationId) {
-      return
-    }
+    if (!conversationId) return
 
     setShareActionLoading('revoke')
     try {
@@ -226,9 +227,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   }
 
   const handleCopyUrl = async () => {
-    if (!shareUrl) {
-      return
-    }
+    if (!shareUrl) return
 
     try {
       await navigator.clipboard.writeText(shareUrl)
@@ -242,9 +241,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   }
 
   const handleDownload = async () => {
-    if (selectedCount === 0) {
-      return
-    }
+    if (selectedCount === 0) return
 
     setIsGenerating(true)
     let restore: (() => void) | null = null
@@ -253,9 +250,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
       await document.fonts?.ready
       await waitForFrames()
       const node = captureRef.current
-      if (!node) {
-        throw new Error('capture node not ready')
-      }
+      if (!node) throw new Error('capture node not ready')
 
       restore = await prepareCrossOriginImagesForExport(node)
       await waitForImages(node)
@@ -269,10 +264,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
       await downloadDataUrl(dataUrl, filename)
       toast.success('Image downloaded')
     } catch (error) {
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        return
-      }
-
+      if (error instanceof DOMException && error.name === 'AbortError') return
       console.error('Failed to download', error)
       toast.error('Failed to generate image')
     } finally {
@@ -285,148 +277,233 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex max-h-[90vh] flex-col overflow-hidden px-8 py-8 sm:max-w-4xl">
-        <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl font-medium tracking-tight">
+      <DialogContent
+        className="flex max-h-[90vh] flex-col overflow-hidden px-6 py-6 sm:max-w-2xl"
+        aria-describedby="share-dialog-description"
+      >
+        <DialogHeader className="space-y-1.5">
+          <DialogTitle className="text-lg font-semibold tracking-tight">
             Share
           </DialogTitle>
-          <DialogDescription className="text-(--text-tertiary)">
-            Create a shareable URL or export selected messages as a PNG.
+          <DialogDescription
+            id="share-dialog-description"
+            className="text-sm text-(--text-tertiary)"
+          >
+            Create a public link or export messages as PNG.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
-          <section className="space-y-3 rounded-xl border border-border bg-(--surface-muted)/20 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-(--text-primary)">
-              <Link2 className="h-4 w-4" />
-              Share URL
-            </div>
+        <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-hidden">
+          {/* Share URL section */}
+          <section
+            className="shrink-0 space-y-3"
+            aria-labelledby="share-url-heading"
+          >
+            <h3
+              id="share-url-heading"
+              className="flex items-center gap-2 text-sm font-medium text-(--text-primary)"
+            >
+              <Link2 className="h-4 w-4 shrink-0 text-(--text-tertiary)" />
+              Share link
+            </h3>
 
             {shareLoading ? (
-              <div className="flex items-center gap-2 text-sm text-(--text-tertiary)">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading share status...
+              <div
+                className="flex h-20 items-center gap-2 rounded-lg border border-border bg-(--surface-muted)/30 px-4"
+                aria-live="polite"
+              >
+                <Loader2 className="h-4 w-4 shrink-0 animate-spin text-(--text-tertiary)" />
+                <span className="text-sm text-(--text-tertiary)">
+                  Loading…
+                </span>
               </div>
             ) : shareStatus === 'active' && shareUrl ? (
               <div className="space-y-3">
-                <div className="break-all rounded-lg border border-border bg-background px-3 py-2 text-sm text-(--text-secondary)">
-                  {shareUrl}
-                </div>
-                <div className="flex items-center gap-2">
+                <div className="flex gap-2">
+                  <div className="min-w-0 flex-1 break-all rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-(--text-secondary)">
+                    {shareUrl}
+                  </div>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={handleCopyUrl}
                     disabled={isLoading}
+                    aria-label={copied ? 'Copied' : 'Copy URL'}
+                    className="shrink-0"
                   >
                     {copied ? (
-                      <Check className="h-4 w-4" />
+                      <Check className="h-4 w-4 text-green-600" />
                     ) : (
                       <Copy className="h-4 w-4" />
                     )}
-                    {copied ? 'Copied' : 'Copy URL'}
+                    {copied ? 'Copied' : 'Copy'}
                   </Button>
+                </div>
+                <div className="flex items-center gap-2">
                   <Button
                     type="button"
                     size="sm"
                     variant="ghost"
                     onClick={handleRevokeShare}
                     disabled={isLoading}
-                    className="text-destructive"
+                    className="text-(--text-tertiary) hover:text-destructive hover:bg-destructive/10"
                   >
                     {shareActionLoading === 'revoke' ? (
                       <>
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Revoking...
+                        Revoking…
                       </>
                     ) : (
                       <>
                         <XCircle className="h-4 w-4" />
-                        Revoke
+                        Revoke link
                       </>
                     )}
                   </Button>
                 </div>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-(--text-tertiary)">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-(--text-tertiary)">
                   {shareStatus === 'revoked'
-                    ? 'This share URL was revoked. Create a new one if needed.'
-                    : 'Create a shareable URL for this conversation.'}
-                </span>
+                    ? 'Link was revoked. Create a new one to share again.'
+                    : 'Anyone with the link can view this conversation.'}
+                </p>
                 <Button
                   type="button"
                   size="sm"
                   onClick={handleCreateShare}
                   disabled={isLoading || isBusy || pathMessages.length === 0}
+                  className="shrink-0"
                 >
                   {shareActionLoading === 'create' ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Creating...
+                      Creating…
                     </>
                   ) : shareStatus === 'revoked' ? (
-                    'Create New URL'
+                    'Create new link'
                   ) : (
-                    'Create URL'
+                    'Create link'
                   )}
                 </Button>
               </div>
             )}
           </section>
 
-          <section className="space-y-5">
-            <div className="max-h-[44vh] overflow-y-auto px-1">
-              {pathMessages.length === 0 ? (
-                <div className="py-12 text-center text-sm text-(--text-tertiary)">
-                  No messages available to share.
-                </div>
-              ) : (
-                <div className="space-y-px">
-                  {pathMessages.map(({ id, message, pathIndex }) => {
-                    const isSelected = selectedIds.has(id)
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => toggleSelection(id)}
-                        className={cn(
-                          'flex w-full cursor-pointer items-start gap-3 rounded-lg border-l-2 px-4 py-3.5 text-left transition-colors',
-                          isSelected
-                            ? 'border-l-(--interactive-primary) bg-(--surface-muted)/50'
-                            : 'border-l-transparent hover:bg-(--surface-hover)',
-                        )}
-                      >
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
-                            <span
-                              className={
-                                message.role === 'user'
-                                  ? 'font-medium text-(--text-secondary)'
-                                  : ''
-                              }
-                            >
-                              {ROLE_LABEL[message.role]}
-                            </span>
-                            <span>Path</span>
-                            <span>#{pathIndex + 1}</span>
-                          </div>
-                          <p className="mt-1 line-clamp-2 text-sm text-(--text-secondary)">
-                            {buildMessageSnippet(message)}
-                          </p>
-                        </div>
-                      </button>
-                    )
-                  })}
+          {/* Divider */}
+          <div className="h-px shrink-0 bg-border" role="separator" />
+
+          {/* Export section */}
+          <section
+            className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden"
+            aria-labelledby="export-heading"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <h3
+                id="export-heading"
+                className="flex items-center gap-2 text-sm font-medium text-(--text-primary)"
+              >
+                <Download className="h-4 w-4 shrink-0 text-(--text-tertiary)" />
+                Export as image
+              </h3>
+              {pathMessages.length > 0 && (
+                <div className="flex gap-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={allSelected ? clearSelection : selectAll}
+                    className="h-7 px-2 text-xs text-(--text-tertiary) hover:text-(--text-secondary)"
+                  >
+                    {allSelected ? 'Clear' : 'Select all'}
+                  </Button>
                 </div>
               )}
             </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-(--surface-muted)/20">
+              {pathMessages.length === 0 ? (
+                <div
+                  className="flex flex-col items-center justify-center gap-2 py-16 px-4 text-center"
+                  role="status"
+                >
+                  <p className="text-sm text-(--text-tertiary)">
+                    No messages in this branch.
+                  </p>
+                  <p className="text-xs text-(--text-tertiary)/80">
+                    Select a conversation branch to export.
+                  </p>
+                </div>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {pathMessages.map(({ id, message, pathIndex }) => {
+                    const isSelected = selectedIds.has(id)
+                    return (
+                      <li key={id}>
+                        <button
+                          type="button"
+                          role="checkbox"
+                          aria-checked={isSelected}
+                          aria-label={`${isSelected ? 'Deselect' : 'Select'} message ${pathIndex + 1}`}
+                          onClick={() => toggleSelection(id)}
+                          className={cn(
+                            'flex w-full cursor-pointer items-start gap-3 rounded-lg px-4 py-3 text-left transition-colors',
+                            'hover:bg-(--surface-hover)',
+                            isSelected && 'bg-(--surface-muted)/40',
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              'mt-0.5 shrink-0',
+                              isSelected
+                                ? 'text-(--interactive-primary)'
+                                : 'text-(--text-tertiary)',
+                            )}
+                            aria-hidden
+                          >
+                            {isSelected ? (
+                              <CheckSquare2 className="h-4 w-4" />
+                            ) : (
+                              <Square className="h-4 w-4" />
+                            )}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2 text-xs text-(--text-tertiary)">
+                              <span
+                                className={
+                                  message.role === 'user'
+                                    ? 'font-medium text-(--text-secondary)'
+                                    : ''
+                                }
+                              >
+                                {ROLE_LABEL[message.role]}
+                              </span>
+                              <span aria-hidden>·</span>
+                              <span>Message {pathIndex + 1}</span>
+                            </div>
+                            <p className="mt-1 line-clamp-2 text-sm text-(--text-secondary)">
+                              {buildMessageSnippet(message)}
+                            </p>
+                          </div>
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {selectedCount > 0 && (
+              <p className="shrink-0 text-xs text-(--text-tertiary)">
+                {selectedCount} message{selectedCount !== 1 ? 's' : ''} selected
+              </p>
+            )}
           </section>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="flex shrink-0 flex-row items-center justify-between gap-2 border-t border-border pt-4">
           <Button
             type="button"
             variant="ghost"
@@ -439,17 +516,17 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
             type="button"
             onClick={handleDownload}
             disabled={selectedCount === 0 || isGenerating || isBusy}
-            className="min-w-24"
+            className="min-w-28"
           >
             {isGenerating ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Exporting...
+                Exporting…
               </>
             ) : (
               <>
                 <Download className="h-4 w-4" />
-                Download PNG
+                Export PNG
               </>
             )}
           </Button>
@@ -457,7 +534,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
         <div
           aria-hidden
-          className="pointer-events-none fixed -left-3000 top-0 opacity-100"
+          className="pointer-events-none fixed -left-[3000px] top-0 opacity-100"
         >
           <div
             ref={captureRef}
