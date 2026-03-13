@@ -366,7 +366,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     const signal = this.abortController.signal
 
     // 背景任务负责持续产出事件并最终收尾；fetch 本身尽快把流返回即可。
-    const task = this.runChatInBackground(message, userId, signal)
+    // response stream 未关闭前 fetch 上下文不会结束，无需 waitUntil。
+    this.runChatInBackground(message, userId, signal)
       .catch((error) => {
         log('AGENT', 'runChatInBackground failed', {
           error: error instanceof Error ? error.message : String(error),
@@ -377,8 +378,6 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         writer.close().catch(() => {})
         this.writers.delete(writer)
       })
-
-    this.ctx.waitUntil(task)
 
     return new Response(readable, {
       headers: {

@@ -39,40 +39,11 @@ export function ConversationPage() {
   useEffect(() => {
     const abortController = new AbortController();
 
-    const connectSseStream = () => {
-      if (useChatRequestStore.getState().connectionState === "connecting") {
-        return;
-      }
-      useChatRequestStore.getState().setConnectionState("connecting");
-
-      resumeRunningConversation(conversationId, abortController.signal).catch(
-        () => {},
-      );
-    };
-
-    const handleOffline = () => {
-      const { requestPhase } = useChatRequestStore.getState();
-      if (requestPhase === "done") {
-        return;
-      }
-      useChatRequestStore.getState().setConnectionState("disconnected");
-    };
-
-    const handleOnline = () => {
-      const { requestPhase } = useChatRequestStore.getState();
-      if (requestPhase === "done") {
-        return;
-      }
-
-      connectSseStream();
-    };
-
-    window.addEventListener("offline", handleOffline);
-    window.addEventListener("online", handleOnline);
+    resumeRunningConversation(conversationId, abortController.signal).catch(
+      () => {},
+    );
 
     return () => {
-      window.removeEventListener("offline", handleOffline);
-      window.removeEventListener("online", handleOnline);
       abortController.abort();
       resetLastEventId();
       useChatRequestStore.getState().clearRequestState();

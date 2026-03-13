@@ -15,7 +15,9 @@
       "Bash(echo EXIT_CODE: $?:*)",
       "Bash(cd /c/develop/projects/aether-start && pnpm install --no-frozen-lockfile 2>&1)",
       "Bash(pnpm install:*)",
-      "Bash(cd D:/develop/projects/aether-start && pnpm lint 2>&1)"
+      "Bash(cd D:/develop/projects/aether-start && pnpm lint 2>&1)",
+      "Bash(head:*)",
+      "Bash(grep:*)"
     ]
   }
 }
