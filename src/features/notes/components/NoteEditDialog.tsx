@@ -161,7 +161,7 @@ export function NoteEditDialog({
                     onClick={() => {
                       setAttachments((prev) => prev.filter((item) => item.id !== attachment.id))
                     }}
-                    className='absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white transition-colors hover:bg-destructive'
+                    className='absolute right-1 top-1 h-6 w-6 rounded-full bg-[#404040] text-white transition-colors hover:bg-destructive'
                   >
                     <X className='h-3.5 w-3.5' />
                   </Button>

@@ -118,14 +118,14 @@ function ResetPasswordPage() {
   return (
     <main className="min-h-screen w-full bg-background relative overflow-hidden flex items-center justify-center p-6">
       {/* Abstract background */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-(--interactive-primary)/10 via-background to-background" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#e8e4dc] via-background to-background" />
       <div className="absolute top-0 left-0 right-0 h-px bg-(--interactive-primary)" />
 
       <motion.div 
         initial={{ opacity: 0, y: 10, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-sm rounded-2xl border ink-border bg-(--surface-secondary)/80 backdrop-blur-xl p-8 shadow-2xl relative z-10"
+        className="w-full max-w-sm rounded-2xl border ink-border bg-(--surface-secondary) backdrop-blur-xl p-8 shadow-2xl relative z-10"
       >
         <div className="mb-8 space-y-2 text-center">
           <motion.div 
@@ -134,7 +134,7 @@ function ResetPasswordPage() {
             transition={{ delay: 0.1, duration: 0.4 }}
             className={cn(
               "mx-auto w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-sm rotate-3 hover:rotate-0 transition-transform cursor-default",
-              isTokenInvalid ? "bg-(--status-destructive)/10 text-(--status-destructive)" : "bg-foreground text-background"
+              isTokenInvalid ? "bg-(--status-destructive-muted) text-(--status-destructive)" : "bg-foreground text-background"
             )}
           >
             {isTokenInvalid ? (

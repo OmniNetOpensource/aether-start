@@ -1,8 +1,6 @@
 import { useState, type ReactNode } from "react";
 import Markdown from "@/components/Markdown";
-import { ImagePreview } from "@/components/ImagePreview";
 import { Message } from "@/types/message";
-import { getAttachmentPreviewUrl } from "@/lib/chat/attachments";
 import { getBranchInfo as getBranchInfoFn } from "@/lib/conversation/tree/message-tree";
 import { ResearchBlock } from "../research/ResearchBlock";
 import { Copy, Check, AlertCircle, Pencil, RotateCcw } from "lucide-react";
@@ -12,6 +10,7 @@ import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
 import { MessageEditor } from "./MessageEditor";
 import { BranchNavigator } from "./BranchNavigator";
+import { AttachmentStack } from "../AttachmentStack";
 
 type CopyButtonProps = {
   blocks: Message["blocks"];
@@ -132,6 +131,7 @@ export function MessageItem({
   const contentBlocks = message.blocks.filter(
     (block) => block.type !== "attachments",
   );
+  const attachments = attachmentBlocks.flatMap((block) => block.attachments);
   const shouldRenderBody =
     isEditing ||
     !isUser ||
@@ -155,35 +155,22 @@ export function MessageItem({
               {isEditing ? (
                 <MessageEditor messageId={messageId} depth={depth} />
               ) : isUser ? (
-                <div className="rounded-lg bg-(--surface-muted) px-4 py-3">
-                  {attachmentBlocks.length > 0 && (
-                    <div className="mb-6 flex gap-3 overflow-x-auto">
-                      {attachmentBlocks.flatMap((block) =>
-                        block.attachments.map((attachment) => (
-                          <ImagePreview
-                            key={attachment.id}
-                            url={attachment.url}
-                            previewUrl={getAttachmentPreviewUrl(attachment)}
-                            name={attachment.name}
-                            size={attachment.size}
-                            className="shrink-0"
-                          />
-                        )),
-                      )}
+                <div>
+                  <AttachmentStack items={attachments} />
+                  <div className="relative z-10 overflow-visible rounded-lg bg-(--surface-muted) px-4 py-3">
+                    <div className="text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
+                      {contentBlocks.map((block, blockIndex) => {
+                        const blockKey = `${index}-${blockIndex}`;
+
+                        if (block.type === "content") {
+                          return (
+                            <Markdown key={blockKey} content={block.content} />
+                          );
+                        }
+
+                        return null;
+                      })}
                     </div>
-                  )}
-                  <div className="text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
-                    {contentBlocks.map((block, blockIndex) => {
-                      const blockKey = `${index}-${blockIndex}`;
-
-                      if (block.type === "content") {
-                        return (
-                          <Markdown key={blockKey} content={block.content} />
-                        );
-                      }
-
-                      return null;
-                    })}
                   </div>
                 </div>
               ) : (
@@ -206,7 +193,7 @@ export function MessageItem({
                       return (
                         <div
                           key={blockKey}
-                          className="flex items-start gap-2 rounded-lg border border-destructive bg-(--status-destructive)/10 px-3 py-2 text-sm text-destructive not-italic"
+                          className="flex items-start gap-2 rounded-lg border border-destructive bg-(--status-destructive-muted) px-3 py-2 text-sm text-destructive not-italic"
                         >
                           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                           <div className="flex-1 whitespace-pre-wrap">

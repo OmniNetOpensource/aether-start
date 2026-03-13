@@ -339,4 +339,4 @@ When working on public share routes, preserve the read-only and noindex behavior
 
 1.如果一个函数或者一个变量在文件里只被使用过一次，就不要单独写
 
-2.代码要简单优雅，变量名要直观，始终保持可读性
+2.代码要简单优雅，变量名要直观，始终保持可读性，始终拒绝抽象

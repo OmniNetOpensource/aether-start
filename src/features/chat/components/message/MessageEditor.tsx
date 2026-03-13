@@ -172,7 +172,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
                     editedAttachments.filter((item) => item.id !== attachment.id),
                   )
                 }
-                className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary)/50 text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary)/70 hover:text-(--status-destructive)"
+                className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary) text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary-hover) hover:text-(--status-destructive)"
               >
                 <X className="h-3.5 w-3.5" />
               </Button>

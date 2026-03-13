@@ -240,7 +240,7 @@ function NotesPage() {
         ) : (
           <div className="space-y-4">
             {emptyStateVisible ? (
-              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-(--border-primary) bg-(--surface-muted)/30 px-8 py-12 text-center">
+              <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-(--border-primary) bg-(--surface-muted) px-8 py-12 text-center">
                 <Lightbulb className="mb-4 h-12 w-12 text-(--text-tertiary)" />
                 <p className="text-base font-medium text-(--text-primary)">
                   No notes yet.

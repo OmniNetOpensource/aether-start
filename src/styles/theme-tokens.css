@@ -5,9 +5,9 @@
   /* Surfaces - Main backgrounds and elevated surfaces */
   --surface-primary: #f3eee3;
   --surface-secondary: #f7f1e6;
-  --surface-muted: rgba(0, 0, 0, 0.03);
-  --surface-hover: rgba(0, 0, 0, 0.05);
-  --surface-active: rgba(0, 0, 0, 0.08);
+  --surface-muted: #ebe8e1;
+  --surface-hover: #e4dfd5;
+  --surface-active: #ddd6c9;
 
   --border-primary: #1a1a1a;
 
@@ -24,14 +24,14 @@
 
   /* Content - Decorative accents */
   --content-accent: #a38b66;
-  --content-accent-muted: rgba(163, 139, 102, 0.6);
+  --content-accent-muted: #b8a88a;
 
   /* Feedback - Loading, cursor */
-  --feedback-loading: rgba(26, 26, 26, 0.6);
-  --feedback-cursor: rgba(26, 26, 26, 0.7);
+  --feedback-loading: #6b6b6b;
+  --feedback-cursor: #5a5a5a;
 
   /* Inline Code */
-  --code-inline-bg: rgba(26, 26, 26, 0.06);
+  --code-inline-bg: #e8e5de;
 
   /* Shiki Syntax Highlighting - Light Theme */
   --sdm-bg: transparent;
@@ -39,8 +39,12 @@
 
   /* Status Colors - Semantic feedback */
   --status-destructive: #BF616A;
+  --status-destructive-hover: #a8545d;
   --status-destructive-foreground: #ffffff;
+  --status-destructive-muted: #fdf2f3;
+  --status-destructive-muted-hover: #fce8ea;
   --status-info: #81A1C1;
+  --status-info-muted: #eef4f9;
   --status-info-foreground: #ffffff;
   --status-success: #A3BE8C;
   --status-success-foreground: #ffffff;
@@ -49,7 +53,7 @@
 
   /* Sidebar - Material differentiation */
   --sidebar-surface: var(--surface-secondary);
-  --sidebar-reveal-hint: rgba(26, 26, 26, 0.04);
+  --sidebar-reveal-hint: #eae7e0;
 
   /* Z-index Scale - Semantic Layering System */
   --z-base: 0;
@@ -74,9 +78,9 @@ html.dark {
   /* Surfaces - Main backgrounds and elevated surfaces */
   --surface-primary: #161614;
   --surface-secondary: #1c1a18;
-  --surface-muted: rgba(255, 255, 255, 0.03);
-  --surface-hover: rgba(255, 255, 255, 0.06);
-  --surface-active: rgba(255, 255, 255, 0.04);
+  --surface-muted: #1a1917;
+  --surface-hover: #1e1d1b;
+  --surface-active: #1b1a18;
 
   --border-primary: #e3ded3;
 
@@ -93,18 +97,18 @@ html.dark {
 
   /* Sidebar - Material differentiation */
   --sidebar-surface: var(--surface-secondary);
-  --sidebar-reveal-hint: rgba(227, 222, 211, 0.04);
+  --sidebar-reveal-hint: #1c1b19;
 
   /* Content - Decorative accents */
   --content-accent: #cbb693;
-  --content-accent-muted: rgba(203, 182, 147, 0.6);
+  --content-accent-muted: #8a7d5f;
 
   /* Feedback - Loading, cursor */
-  --feedback-loading: rgba(227, 222, 211, 0.6);
-  --feedback-cursor: rgba(227, 222, 211, 0.7);
+  --feedback-loading: #9a9588;
+  --feedback-cursor: #a8a396;
 
   /* Inline Code */
-  --code-inline-bg: rgba(255, 255, 255, 0.08);
+  --code-inline-bg: #2a2927;
 
   /* Shiki Syntax Highlighting - Dark Theme */
   --shiki-dark-bg: transparent;
@@ -112,12 +116,16 @@ html.dark {
 
   /* Status Colors - Semantic feedback */
   --status-destructive: #BF616A;
+  --status-destructive-hover: #d4737d;
   --status-destructive-foreground: #ffffff;
+  --status-destructive-muted: #3d2a2d;
+  --status-destructive-muted-hover: #4a3438;
+  --status-info: #88C0D0; /* nord8 */
+  --status-info-muted: #1e2d33;
   --status-success: #A3BE8C; /* nord14 */
   --status-success-foreground: #022c22;
   --status-warning: #EBCB8B; /* nord13 - Brighter yellow for dark mode */
   --status-warning-foreground: #451a03;
-  --status-info: #88C0D0; /* nord8 */
   --status-info-foreground: #1e3a8a;
 
   color-scheme: dark;

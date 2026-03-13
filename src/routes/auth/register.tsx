@@ -43,14 +43,14 @@ function RegisterPage() {
 
   return (
     <main className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background p-6">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-(--interactive-primary)/10 via-background to-background" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#e8e4dc] via-background to-background" />
       <div className="absolute top-0 left-0 right-0 h-px bg-(--interactive-primary)" />
 
       <motion.div
         initial={{ opacity: 0, y: 10, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="relative z-10 w-full max-w-sm rounded-2xl border bg-(--surface-secondary)/80 p-8 shadow-2xl backdrop-blur-xl ink-border"
+        className="relative z-10 w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border"
       >
         {isVerifyMode ? (
           <VerifyEmailPanel
@@ -374,7 +374,7 @@ function VerifyEmailPanel({
   return (
     <>
       <div className="mb-6 space-y-2 text-center">
-        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-(--interactive-primary)/10 text-(--interactive-primary)">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#e8e4dc] text-(--interactive-primary)">
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M22 13V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v12c0 1.1.9 2 2 2h8"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/><path d="m16 19 2 2 4-4"/></svg>
         </div>
         <h1 className="text-2xl font-bold tracking-tight">验证邮箱</h1>

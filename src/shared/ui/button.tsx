@@ -12,13 +12,13 @@ const buttonVariants = cva(
         default:
           "bg-(--interactive-primary) text-(--surface-primary) hover:bg-(--interactive-primary-hover)",
         destructive:
-          "bg-(--status-destructive) text-(--status-destructive-foreground) hover:bg-(--status-destructive)/90 focus-visible:ring-destructive dark:focus-visible:ring-destructive dark:bg-(--status-destructive)/60",
+          "bg-(--status-destructive) text-(--status-destructive-foreground) hover:bg-(--status-destructive-hover) focus-visible:ring-destructive dark:focus-visible:ring-destructive dark:hover:bg-(--status-destructive-hover)",
         outline:
-          "border bg-(--surface-primary) shadow-xs hover:bg-(--surface-hover) hover:text-(--text-primary) dark:bg-(--surface-muted)/30 dark:border-(--border-primary) dark:hover:bg-(--surface-muted)/50",
+          "border bg-(--surface-primary) shadow-xs hover:bg-(--surface-hover) hover:text-(--text-primary) dark:bg-(--surface-muted) dark:border-(--border-primary) dark:hover:bg-(--surface-hover)",
         secondary:
           "bg-(--surface-muted) text-(--text-primary) hover:bg-(--surface-hover)",
         ghost:
-          "hover:bg-(--surface-hover) hover:text-(--text-primary) dark:hover:bg-(--surface-hover)/50",
+          "hover:bg-(--surface-hover) hover:text-(--text-primary)",
         link:
           "text-(--interactive-primary) underline-offset-4 hover:underline",
       },

@@ -121,7 +121,7 @@ export function NoteCard({
           type='button'
           variant='ghost'
           size='icon'
-          className='h-8 w-8 text-(--text-tertiary) opacity-70 transition-opacity hover:text-destructive focus:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100'
+          className='h-8 w-8 text-(--text-tertiary) transition-opacity hover:text-destructive focus:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100'
           aria-label='删除笔记'
           onClick={(event) => {
             event.stopPropagation()

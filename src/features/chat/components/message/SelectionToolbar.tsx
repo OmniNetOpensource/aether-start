@@ -290,7 +290,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 4, scale: 0.95 }}
           transition={{ duration: 0.15 }}
-          className="flex gap-1 rounded-lg bg-background/80 p-1 shadow-lg backdrop-blur-md border border-border"
+          className="flex gap-1 rounded-lg bg-background p-1 shadow-lg backdrop-blur-md border border-border"
           data-selection-toolbar
         >
           <Button
@@ -298,7 +298,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
             variant="ghost"
             size="sm"
             onClick={handleQuote}
-            className="h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50"
+            className="h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700"
           >
             <Quote className="h-3.5 w-3.5" />
             引用
@@ -309,7 +309,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
             size="sm"
             onClick={handleTts}
             disabled={ttsState === 'loading'}
-            className="h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-neutral-200/50 dark:hover:bg-neutral-800/50"
+            className="h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700"
           >
             {ttsIcon()}
             {ttsState === 'playing' ? '停止' : '朗读'}

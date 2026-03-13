@@ -309,7 +309,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
             {shareLoading ? (
               <div
-                className="flex h-20 items-center gap-2 rounded-lg border border-border bg-(--surface-muted)/30 px-4"
+                className="flex h-20 items-center gap-2 rounded-lg border border-border bg-(--surface-muted) px-4"
                 aria-live="polite"
               >
                 <Loader2 className="h-4 w-4 shrink-0 animate-spin text-(--text-tertiary)" />
@@ -347,7 +347,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                     variant="ghost"
                     onClick={handleRevokeShare}
                     disabled={isLoading}
-                    className="text-(--text-tertiary) hover:text-destructive hover:bg-destructive/10"
+                    className="text-(--text-tertiary) hover:text-destructive hover:bg-(--status-destructive-muted)"
                   >
                     {shareActionLoading === 'revoke' ? (
                       <>
@@ -423,7 +423,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
               )}
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-(--surface-muted)/20">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-lg border border-border bg-(--surface-muted)">
               {pathMessages.length === 0 ? (
                 <div
                   className="flex flex-col items-center justify-center gap-2 py-16 px-4 text-center"
@@ -432,7 +432,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                   <p className="text-sm text-(--text-tertiary)">
                     No messages in this branch.
                   </p>
-                  <p className="text-xs text-(--text-tertiary)/80">
+                  <p className="text-xs text-(--text-tertiary)">
                     Select a conversation branch to export.
                   </p>
                 </div>
@@ -451,7 +451,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                           className={cn(
                             'flex w-full cursor-pointer items-start gap-3 rounded-lg px-4 py-3 text-left transition-colors',
                             'hover:bg-(--surface-hover)',
-                            isSelected && 'bg-(--surface-muted)/40',
+                            isSelected && 'bg-(--surface-hover)',
                           )}
                         >
                           <span

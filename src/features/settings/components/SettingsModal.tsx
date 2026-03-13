@@ -189,7 +189,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         <div className="flex flex-col gap-6">
           <div className="space-y-3">
             <h3 className="text-sm font-medium text-muted-foreground">Quota</h3>
-            <div className="space-y-3 rounded-lg border bg-(--surface-muted)/30 p-3">
+            <div className="space-y-3 rounded-lg border bg-(--surface-muted) p-3">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">
                   Remaining credits
@@ -232,10 +232,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
             <h3 className="text-sm font-medium text-muted-foreground">
               Account
             </h3>
-            <div className="rounded-lg border bg-(--surface-muted)/30 p-3">
+            <div className="rounded-lg border bg-(--surface-muted) p-3">
               <Button
                 variant="outline"
-                className="w-full justify-start gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="w-full justify-start gap-2 text-destructive hover:bg-(--status-destructive-muted) hover:text-destructive"
                 onClick={handleSignOut}
                 disabled={isSigningOut}
               >
@@ -254,7 +254,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
               <h3 className="text-sm font-medium text-muted-foreground">
                 Redeem Codes
               </h3>
-              <div className="space-y-3 rounded-lg border bg-(--surface-muted)/30 p-3">
+              <div className="space-y-3 rounded-lg border bg-(--surface-muted) p-3">
                 <div className="flex gap-2">
                   <Input
                     placeholder="Code"

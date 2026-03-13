@@ -235,7 +235,7 @@ export function ConversationSearchDialog({
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent 
-        className='max-h-[80vh] overflow-hidden border-0 bg-white/80 p-0 shadow-2xl backdrop-blur-xl sm:max-w-2xl sm:rounded-2xl dark:bg-black/70' 
+        className='max-h-[80vh] overflow-hidden border-0 bg-white p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl dark:bg-(--surface-primary)' 
         showCloseButton={false}
       >
         <DialogHeader className='sr-only'>
@@ -254,7 +254,7 @@ export function ConversationSearchDialog({
           {loading && <Loader2 className='size-5 animate-spin text-(--text-secondary)' />}
         </div>
 
-        <div className='h-[1px] w-full bg-black/5 dark:bg-white/10' />
+        <div className='h-[1px] w-full bg-(--surface-muted) dark:bg-(--surface-muted)' />
 
         <div ref={listRootRef} className='max-h-[60vh] overflow-y-auto p-2'>
           {!debouncedQuery ? (
@@ -278,7 +278,7 @@ export function ConversationSearchDialog({
                   <button
                     key={item.id}
                     type='button'
-                    className='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-black/5 active:scale-[0.98] dark:hover:bg-white/10'
+                    className='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-(--surface-muted) active:scale-[0.98]'
                     onClick={() => handleSelect(item)}
                   >
                     <div className='flex w-full items-baseline justify-between'>

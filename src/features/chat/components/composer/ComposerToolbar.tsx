@@ -109,7 +109,7 @@ export function ComposerToolbar({
       <div className="flex items-center gap-1">
         <ModelSelector />
         <Button
-          type={status !== "idle" || sendDisabled ? "button" : "submit"}
+          type="button"
           aria-disabled={sendDisabled}
           onClick={handleSendClick}
           size="icon"

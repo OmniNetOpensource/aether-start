@@ -91,8 +91,8 @@ export function ConnectionStatusInline() {
 
   const toneClass =
     isConnecting || isConnected
-      ? 'border-(--status-info) bg-(--status-info)/10 text-(--status-info)'
-      : 'border-(--status-destructive) bg-(--status-destructive)/10 text-(--status-destructive)'
+      ? 'border-(--status-info) bg-(--status-info-muted) text-(--status-info)'
+      : 'border-(--status-destructive) bg-(--status-destructive-muted) text-(--status-destructive)'
 
   return (
     <div className='mt-3 flex w-full items-center'>

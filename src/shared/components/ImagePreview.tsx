@@ -135,7 +135,7 @@ export function ImagePreview({
           <AnimatePresence>
             {isOpen && (
               <motion.div
-                className="fixed inset-0 z-(--z-modal-backdrop) flex items-center justify-center bg-black/70"
+                className="fixed inset-0 z-(--z-modal-backdrop) flex items-center justify-center bg-[#404040]"
                 onClick={handleClose}
                 onWheel={(event) => event.preventDefault()}
                 initial={{ opacity: 0 }}

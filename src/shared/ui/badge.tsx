@@ -26,7 +26,7 @@ function Badge({
             variant === 'secondary',
           'border border-border bg-transparent text-(--text-secondary) hover:bg-(--surface-hover)':
             variant === 'outline',
-          'bg-destructive/10 text-destructive hover:bg-destructive/20':
+          'bg-(--status-destructive-muted) text-destructive hover:bg-(--status-destructive-muted-hover)':
             variant === 'destructive',
         },
         className

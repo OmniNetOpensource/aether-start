@@ -110,13 +110,13 @@ function ChainOfThoughtStep({
   const dotStatusStyles = {
     complete: 'opacity-100',
     active: 'opacity-100 ring-1 ring-(--content-accent-muted)',
-    pending: 'opacity-40',
+    pending: 'text-(--text-tertiary)',
   }
 
   const wrapperStatusStyles = {
     complete: '',
     active: '',
-    pending: 'opacity-60',
+    pending: 'text-(--text-tertiary)',
   }
 
   const nodeContent = icon ?? (

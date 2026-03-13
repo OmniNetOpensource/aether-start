@@ -76,14 +76,14 @@ function ForgotPasswordPage() {
   return (
     <main className="min-h-screen w-full bg-background relative overflow-hidden flex items-center justify-center p-6">
       {/* Abstract background */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-(--interactive-primary)/10 via-background to-background" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#e8e4dc] via-background to-background" />
       <div className="absolute top-0 left-0 right-0 h-px bg-(--interactive-primary)" />
 
       <motion.div 
         initial={{ opacity: 0, y: 10, scale: 0.98 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-sm rounded-2xl border ink-border bg-(--surface-secondary)/80 backdrop-blur-xl p-8 shadow-2xl relative z-10"
+        className="w-full max-w-sm rounded-2xl border ink-border bg-(--surface-secondary) backdrop-blur-xl p-8 shadow-2xl relative z-10"
       >
         <div className="mb-8 space-y-2 text-center">
           <motion.div 
@@ -108,7 +108,7 @@ function ForgotPasswordPage() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-6"
             >
-              <div className="rounded-lg border border-emerald-500 bg-emerald-500/10 px-4 py-3 flex items-start gap-3">
+              <div className="rounded-lg border border-emerald-500 bg-[#ecfdf5] px-4 py-3 flex items-start gap-3">
                 <svg className="w-5 h-5 text-emerald-500 mt-0.5 shrink-0" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                 <p className="text-sm text-emerald-600 dark:text-emerald-400">
                   如果该邮箱已注册，你将在几分钟内收到包含重置链接的邮件。
