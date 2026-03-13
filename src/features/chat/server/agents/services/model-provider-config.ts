@@ -316,6 +316,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "openai",
     backend: "openrouter",
   },
+  gemini31FlashLiteOpenrouter: {
+    id: "gemini31FlashLiteOpenrouter",
+    name: "gemini-3.1-flash-lite+openrouter",
+    model: "google/gemini-3.1-flash-lite-preview",
+    format: "openai",
+    backend: "openrouter",
+  },
 };
 
 export const getAvailableModels = (): { id: string; name: string }[] =>
@@ -357,7 +364,7 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
 export const getDefaultPromptId = (): string => "aether";
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = "gpt5NanoOpenrouter";
+export const TITLE_GENERATION_MODEL_ID = "gemini31FlashLiteOpenrouter";
 
 export const buildSystemPrompt = () => {
   const now = new Date();

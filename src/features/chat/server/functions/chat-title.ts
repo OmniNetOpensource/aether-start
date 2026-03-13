@@ -41,9 +41,20 @@ export const generateTitleFromConversation = async (
 
   const prompt = [TITLE_PROMPT, conversationTranscript].join('\n')
   const signal = AbortSignal.timeout(CONVERSATION_TITLE_TIMEOUT_MS)
+  const requestLog = {
+    modelId: modelConfig.id,
+    model: modelConfig.model,
+    format: modelConfig.format,
+    backend: modelConfig.backend,
+    max_tokens: 64,
+    temperature: 0.2,
+    prompt,
+  }
 
   try {
     if (modelConfig.format === 'anthropic') {
+      log('TITLE', 'Sending title generation request', requestLog)
+
       const client = new Anthropic({
         apiKey: backendConfig.apiKey,
         baseURL: backendConfig.baseURL,
@@ -66,8 +77,25 @@ export const generateTitleFromConversation = async (
           : ''
       const title =
         typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : ''
+
+      log('TITLE', 'Received title generation response', {
+        ...requestLog,
+        response: {
+          id: message.id,
+          model: message.model,
+          role: message.role,
+          stop_reason: message.stop_reason,
+          usage: message.usage,
+          content: message.content,
+        },
+        rawTitle,
+        title,
+      })
+
       return title || FALLBACK_TITLE
     }
+
+    log('TITLE', 'Sending title generation request', requestLog)
 
     const client = getOpenAIClient(backendConfig)
     const response = await client.chat.completions.create(
@@ -76,6 +104,9 @@ export const generateTitleFromConversation = async (
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 64,
         temperature: 0.2,
+        ...(modelConfig.backend === 'openrouter' && {
+          reasoning: { effort: 'none' as const },
+        }),
       },
       { signal },
     )
@@ -83,6 +114,24 @@ export const generateTitleFromConversation = async (
     const rawTitle = response.choices?.[0]?.message?.content?.trim() ?? ''
     const title =
       typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : ''
+
+    log('TITLE', 'Received title generation response', {
+      ...requestLog,
+      response: {
+        id: response.id,
+        model: response.model,
+        usage: response.usage,
+        choices: response.choices?.map((choice) => ({
+          index: choice.index,
+          finish_reason: choice.finish_reason,
+          role: choice.message?.role,
+          content: choice.message?.content ?? null,
+        })),
+      },
+      rawTitle,
+      title,
+    })
+
     return title || FALLBACK_TITLE
   } catch (error) {
     const message =

@@ -16,7 +16,7 @@ export function ReadonlyMessageList({
 }: ReadonlyMessageListProps) {
   const listWidthClass = isPhone
     ? "mx-auto w-full px-1"
-    : "mx-auto w-[90%] md:w-[70%] lg:w-[50%] px-1";
+    : "mx-auto w-[90%] md:w-[70%] lg:w-[58%] px-1";
 
   return (
     <div
