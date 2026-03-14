@@ -4,7 +4,6 @@ import { MessageItem } from "./MessageItem";
 import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { SelectionToolbar } from "./SelectionToolbar";
-import { ConnectionStatusInline } from "./ConnectionStatusInline";
 
 type MessageListProps = {
   className?: string;
@@ -46,8 +45,6 @@ export function MessageList({
               />
             );
           })}
-          <ConnectionStatusInline />
-
         </div>
       </div>
 
