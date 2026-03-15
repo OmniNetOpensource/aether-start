@@ -178,7 +178,8 @@ export const checkAgentStatus = async (
   });
 
   if (response.status === 404) return { status: "idle" };
-  if (!response.ok) throw new Error(`Agent status probe failed: ${response.status}`);
+  if (!response.ok)
+    throw new Error(`Agent status probe failed: ${response.status}`);
 
   const data = (await response.json()) as Record<string, unknown>;
   const status = data.status;
@@ -195,7 +196,11 @@ export const checkAgentStatus = async (
   };
 };
 
-export const startChatRequest = async ({ messages }: { messages: Message[] }) => {
+export const startChatRequest = async ({
+  messages,
+}: {
+  messages: Message[];
+}) => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
