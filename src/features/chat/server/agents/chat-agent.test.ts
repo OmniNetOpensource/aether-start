@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateTitleFromConversation } from '@/server/functions/chat/chat-title'
 import { getConversationById, upsertConversation } from '@/server/db/conversations-db'
+import {
+  getBackendConfig,
+  getModelConfig,
+  getPromptById,
+} from '@/server/agents/services/model-provider-config'
+import { createChatProvider } from '@/server/agents/services/provider-factory'
 
 const { MockDurableObject } = vi.hoisted(() => {
   class MockDurableObject {
@@ -97,6 +103,38 @@ type TestChatAgent = {
   ) => Promise<void>
   fetch: (request: Request) => Promise<Response>
   ensureInitialized: (name: string) => void
+  runChatInBackground: (
+    message: {
+      idempotencyKey: string
+      conversationId: string
+      role: string
+      promptId?: string
+      conversationHistory: Array<{
+        role: 'user' | 'assistant'
+        blocks: Array<{ type: 'content'; content: string }>
+      }>
+      treeSnapshot: {
+        messages: Array<{
+          id: number
+          prevSibling: number | null
+          nextSibling: number | null
+          latestChild: number | null
+          createdAt: string
+          role: 'user' | 'assistant'
+          blocks: Array<{ type: 'content'; content: string }>
+        }>
+        currentPath: number[]
+        latestRootId: number | null
+        nextId: number
+      }
+    },
+    userId: string,
+    signal: AbortSignal,
+  ) => Promise<void>
+  writers: Set<{
+    write: (chunk: Uint8Array) => Promise<void>
+    close: () => Promise<void>
+  }>
 }
 
 const createAgent = (status: 'running' | 'completed' = 'running') => {
@@ -386,5 +424,86 @@ describe('ChatAgent title regeneration', () => {
         title: 'Stable Title',
       }),
     )
+  })
+})
+
+describe('ChatAgent stream cleanup', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('closes every SSE writer when a run finishes', async () => {
+    vi.mocked(getModelConfig).mockReturnValue({
+      backend: 'test-backend',
+      format: 'openai',
+      model: 'test-model',
+    } as never)
+    vi.mocked(getBackendConfig).mockReturnValue({} as never)
+    vi.mocked(getPromptById).mockReturnValue({
+      content: 'You are Aether.',
+    } as never)
+    vi.mocked(createChatProvider).mockReturnValue({
+      convertMessages: vi.fn(async (messages) => messages),
+      run: vi.fn(async function* () {
+        yield { type: 'content', content: 'hello' }
+        return {
+          pendingToolCalls: [],
+          thinkingBlocks: [],
+        }
+      }),
+      formatToolContinuation: vi.fn(),
+    } as never)
+    vi.mocked(getConversationById).mockResolvedValue({
+      user_id: 'user-1',
+      id: 'conv-1',
+      title: 'New Chat',
+      role: 'aether',
+      currentPath: [],
+      messages: [],
+      created_at: '2024-01-01T00:00:00.000Z',
+      updated_at: '2024-01-01T00:00:00.000Z',
+      is_pinned: false,
+      pinned_at: null,
+    } as never)
+    vi.mocked(upsertConversation).mockResolvedValue(undefined as never)
+
+    const agent = createAgent()
+    const primaryWriter = {
+      write: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    }
+    const replayWriter = {
+      write: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
+    }
+    agent.writers = new Set([primaryWriter, replayWriter])
+
+    const abortController = new AbortController()
+
+    await agent.runChatInBackground(
+      {
+        idempotencyKey: 'msg-1',
+        conversationId: 'conv-1',
+        role: 'aether',
+        conversationHistory: [
+          {
+            role: 'user',
+            blocks: [{ type: 'content', content: 'hello' }],
+          },
+        ],
+        treeSnapshot: {
+          messages: [],
+          currentPath: [],
+          latestRootId: null,
+          nextId: 1,
+        },
+      },
+      'user-1',
+      abortController.signal,
+    )
+
+    expect(primaryWriter.close).toHaveBeenCalledTimes(1)
+    expect(replayWriter.close).toHaveBeenCalledTimes(1)
+    expect(agent.writers.size).toBe(0)
   })
 })

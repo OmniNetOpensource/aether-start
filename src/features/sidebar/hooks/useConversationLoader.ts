@@ -181,6 +181,11 @@ export function useConversationLoader(
       return;
     }
 
+    const requestStatus = useChatRequestStore.getState().status;
+    if (requestStatus === "sending" || requestStatus === "streaming") {
+      return;
+    }
+
     resetLastEventId();
 
     const abortController = new AbortController();

@@ -108,4 +108,32 @@ describe("useConversationLoader", () => {
       await flush();
     });
   });
+
+  it("does not open a recovery stream while the current request is already active", async () => {
+    getConversationFnMock.mockResolvedValueOnce({
+      id: "conv-1",
+      role: "aether",
+      currentPath: [],
+      messages: [],
+      created_at: "2026-03-06T00:00:00.000Z",
+      updated_at: "2026-03-06T00:00:00.000Z",
+    });
+    useChatRequestStore.getState().setStatus("streaming");
+
+    const container = document.createElement("div");
+    const root = createRoot(container);
+
+    await act(async () => {
+      root.render(<TestComponent conversationId="conv-1" />);
+      await flush();
+    });
+
+    expect(resetLastEventIdMock).not.toHaveBeenCalled();
+    expect(resumeRunningConversationMock).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+  });
 });

@@ -66,7 +66,7 @@ type ChatAgentEnv = Cloudflare.Env & {
 
 // 一次回复可能会经历多轮“模型输出 -> 调工具 -> 带工具结果继续推理”。
 // 这里限制最大轮数，避免模型陷入无穷工具循环。
-const MAX_ITERATIONS = 200;
+const MAX_ITERATIONS = 50;
 
 // 请求体来自网络边界，先把 unknown 缩小成可用结构。
 const isObject = (value: unknown): value is Record<string, unknown> =>
@@ -297,6 +297,14 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     for (const w of this.writers) {
       this.sendSSE(w, event, data);
     }
+  }
+
+  private async closeAllWriters() {
+    const writers = [...this.writers];
+    this.writers.clear();
+    await Promise.allSettled(
+      writers.map((writer) => writer.close().catch(() => {})),
+    );
   }
 
   // ── POST /chat ───────────────────────────────────────────────────────
@@ -786,14 +794,14 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         });
       }
 
-      this.broadcast("chat_finished", { status: finalStatus });
-
       this.runtimeState = {
         ...this.runtimeState,
         status: finalStatus,
         updatedAt: Date.now(),
       };
 
+      this.broadcast("chat_finished", { status: finalStatus });
+      await this.closeAllWriters();
       this.eventCache = [];
     }
   }
