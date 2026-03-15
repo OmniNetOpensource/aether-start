@@ -366,23 +366,23 @@ export const TITLE_GENERATION_MODEL_ID = "gemini31FlashLiteOpenrouter";
 
 export const buildSystemPrompt = () => {
   const now = new Date();
-  const localDate = now.toLocaleDateString("zh-CN", {
+  const localDate = now.toLocaleDateString("en-US", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   });
 
   const prompt = `
-今天的日期是：${localDate}
-不需要在回答时引用出处。
+Today's date is: ${localDate}
+No need to cite sources in your answers.
 `;
 
   return `${prompt}
-# 需要搜索的时候：非必要情况下不要用中文搜索；在没有足够上下文之前不要回答；如果没有搞清楚，就不断调研直到搞清楚，不要只是了解皮毛，要深入搜索资料去了解，要了解全方位的资料搜寻才能开始回答。
+# When to search: Avoid searching in Chinese unless necessary; do not answer until you have enough context; if unsure, keep researching until you understand—do not just skim the surface, search deeply for information, and only answer after comprehensive research.
 
-# 什么时候不需要搜索：已知的知识
+# When not to search: Known knowledge
 
-- 学会利用google search高级技巧
+- Learn to use Google search advanced techniques
 `;
 };
 
