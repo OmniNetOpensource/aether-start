@@ -1,14 +1,11 @@
-import { Loader2, X } from "lucide-react";
+import { X } from "lucide-react";
 import { ImagePreview } from "@/components/ImagePreview";
 import { Button } from "@/components/ui/button";
-import {
-  getAttachmentPreviewUrl,
-  type PendingAttachmentUpload,
-} from "@/lib/chat/attachments";
+import { getAttachmentPreviewUrl } from "@/lib/chat/attachments";
 import type { Attachment } from "@/types/message";
 
 type AttachmentStackProps = {
-  items: (Attachment | PendingAttachmentUpload)[];
+  items: Attachment[];
   onRemove?: (id: string) => void;
 };
 
@@ -30,35 +27,15 @@ function getOffsetY(id: string) {
   return (hash % 7) - 3;
 }
 
-type StackItem =
-  | { type: "ready"; attachment: Attachment; rotate: number; offsetY: number }
-  | {
-      type: "uploading";
-      attachment: PendingAttachmentUpload;
-      rotate: number;
-      offsetY: number;
-    };
-
 export function AttachmentStack({
   items: rawItems,
   onRemove,
 }: AttachmentStackProps) {
-  const items: StackItem[] = rawItems.map((attachment) => {
-    if ("url" in attachment) {
-      return {
-        type: "ready",
-        attachment,
-        rotate: getRotate(attachment.id),
-        offsetY: getOffsetY(attachment.id),
-      };
-    }
-    return {
-      type: "uploading",
-      attachment,
-      rotate: getRotate(attachment.id),
-      offsetY: getOffsetY(attachment.id),
-    };
-  });
+  const items = rawItems.map((attachment) => ({
+    attachment,
+    rotate: getRotate(attachment.id),
+    offsetY: getOffsetY(attachment.id),
+  }));
 
   if (items.length === 0) {
     return null;
@@ -71,7 +48,7 @@ export function AttachmentStack({
         className="flex justify-between items-center"
         style={{ transform: "translateY(70%)" }}
       >
-        {items.map(({ type, attachment, rotate, offsetY }, index) => (
+        {items.map(({ attachment, rotate, offsetY }, index) => (
           <div
             key={attachment.id}
             className="group relative flex-shrink-0 transition-transform duration-200 ease-out hover:!-translate-y-[28px] hover:!rotate-0"
@@ -82,36 +59,19 @@ export function AttachmentStack({
             }}
           >
             <div
-              className="relative overflow-hidden rounded-lg shadow-md ring-1 ring-black"
+              className="animate-peeking-attachment-pop relative overflow-hidden rounded-lg shadow-md ring-1 ring-black"
               style={{ width: 72, height: 72 }}
             >
-              {type === "ready" ? (
-                <ImagePreview
-                  url={attachment.url}
-                  previewUrl={getAttachmentPreviewUrl(attachment)}
-                  name={attachment.name}
-                  size={attachment.size}
-                  className="!h-full !w-full !rounded-lg"
-                />
-              ) : (
-                <div className="relative h-full w-full overflow-hidden rounded-lg">
-                  <img
-                    src={attachment.previewUrl}
-                    alt={attachment.name}
-                    className="h-full w-full object-cover "
-                    draggable={false}
-                  />
-                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[#404040] text-white">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    <span className="text-[10px] font-medium uppercase tracking-[0.16em]">
-                      Uploading
-                    </span>
-                  </div>
-                </div>
-              )}
+              <ImagePreview
+                url={attachment.url}
+                previewUrl={getAttachmentPreviewUrl(attachment)}
+                name={attachment.name}
+                size={attachment.size}
+                className="!h-full !w-full !rounded-lg"
+              />
             </div>
 
-            {type === "ready" && onRemove ? (
+            {onRemove ? (
               <Button
                 type="button"
                 variant="ghost"

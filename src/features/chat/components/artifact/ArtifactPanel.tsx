@@ -3,11 +3,7 @@ import { Braces, ChevronDown, Eye, PanelRightOpen } from "lucide-react";
 import { useResponsive } from "@/components/ResponsiveContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/shared/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { cn } from "@/lib/utils";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import {
@@ -166,26 +162,26 @@ function ArtifactPanelBody() {
 
       {/* Main: content only */}
       <div className="min-h-0 flex-1 overflow-hidden pt-4">
-          {artifactView === "preview" && canPreview ? (
-            <div className="h-full min-h-96">
-              <ArtifactPreviewFrame
-                artifactId={selectedArtifact.id}
-                language={selectedArtifact.language}
-                code={selectedArtifact.code}
-              />
-            </div>
-          ) : (
-            <div className="flex h-full min-h-96 flex-col gap-3">
-              {selectedArtifact.errorMessage ? (
-                <div className="rounded-md border border-border/60 bg-(--status-destructive-muted) px-3 py-2 text-xs text-destructive">
-                  {selectedArtifact.errorMessage}
-                </div>
-              ) : null}
-              <pre className="min-h-0 flex-1 overflow-auto rounded-md bg-(--surface-muted) p-4 text-xs leading-relaxed text-foreground">
-                <code>{selectedArtifact.code}</code>
-              </pre>
-            </div>
-          )}
+        {artifactView === "preview" && canPreview ? (
+          <div className="h-full min-h-96">
+            <ArtifactPreviewFrame
+              artifactId={selectedArtifact.id}
+              language={selectedArtifact.language}
+              code={selectedArtifact.code}
+            />
+          </div>
+        ) : (
+          <div className="flex h-full min-h-96 flex-col gap-3">
+            {selectedArtifact.errorMessage ? (
+              <div className="rounded-md border border-border/60 bg-(--status-destructive-muted) px-3 py-2 text-xs text-destructive">
+                {selectedArtifact.errorMessage}
+              </div>
+            ) : null}
+            <pre className="min-h-0 flex-1 overflow-auto rounded-md bg-(--surface-muted) p-4 text-xs leading-relaxed text-foreground">
+              <code>{selectedArtifact.code}</code>
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -257,7 +253,33 @@ export function ArtifactPanel() {
   }
 
   return (
-    <aside className="hidden h-full w-[min(44vw,38rem)] min-w-88 border-l border-border/40 bg-(--sidebar-surface) px-5 py-4 lg:block">
+    <aside className="relative hidden h-full w-[min(44vw,38rem)] min-w-88 shrink-0 bg-(--sidebar-surface) px-5 py-4 lg:block">
+      <div
+        className="group absolute -left-1.5 top-0 z-10 flex h-full w-3 cursor-col-resize items-center justify-center"
+        onPointerDown={(e) => {
+          e.currentTarget.setPointerCapture(e.pointerId);
+          document.body.style.cursor = "col-resize";
+          document.body.style.userSelect = "none";
+        }}
+        onPointerMove={(e) => {
+          if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+          const main = e.currentTarget.closest("main");
+          if (!main) return;
+          const rect = main.getBoundingClientRect();
+          const newWidth = Math.min(
+            Math.max(352, rect.right - e.clientX),
+            rect.width - 400,
+          );
+          (e.currentTarget.parentElement as HTMLElement).style.width =
+            `${newWidth}px`;
+        }}
+        onLostPointerCapture={() => {
+          document.body.style.cursor = "";
+          document.body.style.userSelect = "";
+        }}
+      >
+        <div className="h-full w-px bg-border/40 transition-colors group-hover:bg-border" />
+      </div>
       <ArtifactPanelBody />
     </aside>
   );

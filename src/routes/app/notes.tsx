@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { Lightbulb, Loader2, Plus } from 'lucide-react'
 import { buildAttachmentsFromFiles } from '@/features/chat/lib/attachments'
+import { collectClipboardFiles } from '@/lib/utils/file'
 import { NoteCard } from '@/features/notes/components/NoteCard'
 import { NoteEditDialog } from '@/features/notes/components/NoteEditDialog'
 import { useChatRequestStore } from '@/features/chat/store/useChatRequestStore'
@@ -30,35 +31,6 @@ const generateNoteId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `note_${Date.now()}_${Math.random().toString(16).slice(2)}`
-
-const collectClipboardFiles = (clipboardData: DataTransfer | null) => {
-  if (!clipboardData) {
-    return []
-  }
-
-  const pastedFiles: File[] = []
-  if (clipboardData.files?.length) {
-    pastedFiles.push(...Array.from(clipboardData.files))
-    return pastedFiles
-  }
-
-  if (!clipboardData.items?.length) {
-    return pastedFiles
-  }
-
-  for (const item of Array.from(clipboardData.items)) {
-    if (item.kind !== 'file') {
-      continue
-    }
-
-    const file = item.getAsFile()
-    if (file) {
-      pastedFiles.push(file)
-    }
-  }
-
-  return pastedFiles
-}
 
 const createEmptyNote = (): NoteItem => {
   const now = new Date().toISOString()
@@ -293,6 +265,7 @@ function NotesPage() {
       </div>
 
       <NoteEditDialog
+        key={selectedNote?.id ?? 'new'}
         open={isDialogOpen}
         note={selectedNote}
         isNew={selectedNote !== null && !notes.some((item) => item.id === selectedNote.id)}

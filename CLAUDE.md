@@ -270,7 +270,7 @@ Important files:
 
 Attachment uploads and private asset access live in:
 
-- `src/features/chat/server/functions/attachment-upload.ts`
+- `src/routes/api/upload-attachment.ts`
 - `src/routes/api/assets/$key.ts`
 
 When working on share routes, preserve read-only behavior and asset safety checks.
@@ -392,3 +392,7 @@ When working on public share routes, preserve read-only behavior and noindex sem
 
 1. 如果一个函数或者一个变量在文件里只被使用过一次，就不要单独写。
 2. 代码要简单优雅，变量名要直观，始终保持可读性，始终拒绝抽象。
+
+## Code Standards
+
+- Never typecast. Never use `as`

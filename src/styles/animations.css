@@ -63,6 +63,22 @@
   }
 }
 
+@keyframes peeking-attachment-pop {
+  0% {
+    transform: translateY(24px);
+  }
+  45% {
+    transform: translateY(-16px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-peeking-attachment-pop {
+  animation: peeking-attachment-pop 0.45s ease-out both;
+}
+
 @keyframes mobile-overlay-fade-in {
   from {
     opacity: 0;

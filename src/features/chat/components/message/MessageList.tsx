@@ -1,8 +1,8 @@
-
 import { useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
+import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { SelectionToolbar } from "./SelectionToolbar";
 
 type MessageListProps = {
@@ -16,8 +16,10 @@ export function MessageList({
 }: MessageListProps = {}) {
   const currentPath = useChatSessionStore((state) => state.currentPath);
   const status = useChatRequestStore((s) => s.status);
-
+  const narrow = useChatRoomNarrow();
   const scrollRef = useRef<HTMLDivElement | null>(null);
+
+  const widthClass = narrow ? "w-[90%]" : "w-[70%]";
 
   return (
     <div className={`relative w-full h-full ${className ?? ""}`.trim()}>
@@ -28,7 +30,7 @@ export function MessageList({
         <div
           role="log"
           aria-live="polite"
-          className={`flex-1 min-h-0 flex flex-col mx-auto w-[90%] md:w-[70%] lg:w-[58%] px-1 pb-40 md:pb-44 lg:pb-48 ${listClassName ?? ""}`.trim()}
+          className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-44 ${widthClass} ${listClassName ?? ""}`.trim()}
         >
           {currentPath.map((messageId, index) => {
             const isLastMessage = index === currentPath.length - 1;

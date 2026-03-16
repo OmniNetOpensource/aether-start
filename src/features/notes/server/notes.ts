@@ -1,24 +1,24 @@
-import { createServerFn } from '@tanstack/react-start'
-import { z } from 'zod'
-import { requireSession } from '@/server/functions/auth/session'
-import { getServerBindings } from '@/server/env'
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { requireSession } from "@/server/functions/auth/session";
+import { getServerBindings } from "@/server/env";
 import {
   deleteNoteById,
   listNotesPage,
   type NoteCursor,
   upsertNote,
-} from '@/server/db/notes-db'
+} from "@/server/db/notes-db";
 
 const cursorSchema = z
   .object({
     updated_at: z.string(),
     id: z.string(),
   })
-  .nullable()
+  .nullable();
 
 const attachmentSchema = z.object({
   id: z.string().min(1),
-  kind: z.literal('image'),
+  kind: z.literal("image"),
   name: z.string().min(1),
   size: z.number().nonnegative(),
   mimeType: z.string().min(1),
@@ -26,7 +26,7 @@ const attachmentSchema = z.object({
   storageKey: z.string().optional(),
   thumbnailUrl: z.string().min(1).optional(),
   thumbnailStorageKey: z.string().optional(),
-})
+});
 
 const notePayloadSchema = z.object({
   id: z.string().min(1),
@@ -34,11 +34,11 @@ const notePayloadSchema = z.object({
   attachments: z.array(attachmentSchema),
   created_at: z.string(),
   updated_at: z.string(),
-})
+});
 
-export type NotesCursor = NoteCursor
+export type NotesCursor = NoteCursor;
 
-export const listNotesPageFn = createServerFn({ method: 'POST' })
+export const listNotesPageFn = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       limit: z.number().int().positive().max(100),
@@ -46,37 +46,37 @@ export const listNotesPageFn = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
-    const { DB } = getServerBindings()
-    const session = await requireSession()
+    const { DB } = getServerBindings();
+    const session = await requireSession();
 
     return listNotesPage(DB, {
       userId: session.user.id,
       limit: data.limit,
       cursor: data.cursor,
-    })
-  })
+    });
+  });
 
-export const upsertNoteFn = createServerFn({ method: 'POST' })
+export const upsertNoteFn = createServerFn({ method: "POST" })
   .inputValidator(notePayloadSchema)
   .handler(async ({ data }) => {
-    const { DB } = getServerBindings()
-    const session = await requireSession()
+    const { DB } = getServerBindings();
+    const session = await requireSession();
 
     return upsertNote(DB, {
       ...data,
       user_id: session.user.id,
-    })
-  })
+    });
+  });
 
-export const deleteNoteFn = createServerFn({ method: 'POST' })
+export const deleteNoteFn = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       id: z.string().min(1),
     }),
   )
   .handler(async ({ data }) => {
-    const { DB } = getServerBindings()
-    const session = await requireSession()
+    const { DB } = getServerBindings();
+    const session = await requireSession();
 
-    return deleteNoteById(DB, data.id, session.user.id)
-  })
+    return deleteNoteById(DB, data.id, session.user.id);
+  });

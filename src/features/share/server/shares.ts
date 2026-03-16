@@ -1,7 +1,7 @@
-import { createServerFn } from '@tanstack/react-start'
-import { z } from 'zod'
-import { getServerBindings } from '@/server/env'
-import { requireSession } from '@/server/functions/auth/session'
+import { createServerFn } from "@tanstack/react-start";
+import { z } from "zod";
+import { getServerBindings } from "@/server/env";
+import { requireSession } from "@/server/functions/auth/session";
 import {
   getShareByConversation,
   getPublicShareByToken,
@@ -10,67 +10,74 @@ import {
   resolveStorageKeyForSharedAttachment,
   resolveThumbnailStorageKeyForSharedAttachment,
   upsertOrReactivateShare,
-} from '@/server/db/conversation-shares-db'
-import { getConversationById } from '@/server/db/conversations-db'
+} from "@/server/db/conversation-shares-db";
+import { getConversationById } from "@/server/db/conversations-db";
 import type {
   SharedAttachmentSnapshot,
   SharedConversationSnapshot,
   SharedMessageBlock,
-} from '@/types/share'
+} from "@/types/share";
 
-const shareTokenSchema = z.string().min(1).max(128)
+const shareTokenSchema = z.string().min(1).max(128);
 
 const createShareSchema = z.object({
   conversationId: z.string().min(1),
   title: z.string().nullable(),
-})
+});
 
 const conversationIdSchema = z.object({
   conversationId: z.string().min(1),
-})
+});
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
+  typeof value === "object" && value !== null;
 
-const sanitizeSharedAttachment = (value: unknown): SharedAttachmentSnapshot | null => {
+const sanitizeSharedAttachment = (
+  value: unknown,
+): SharedAttachmentSnapshot | null => {
   if (!isRecord(value)) {
-    return null
+    return null;
   }
 
-  const size = value.size
+  const size = value.size;
   if (
-    typeof value.id !== 'string' ||
-    value.kind !== 'image' ||
-    typeof value.name !== 'string' ||
-    typeof size !== 'number' ||
+    typeof value.id !== "string" ||
+    value.kind !== "image" ||
+    typeof value.name !== "string" ||
+    typeof size !== "number" ||
     !Number.isFinite(size) ||
     size < 0 ||
-    typeof value.mimeType !== 'string' ||
-    typeof value.url !== 'string'
+    typeof value.mimeType !== "string" ||
+    typeof value.url !== "string"
   ) {
-    return null
+    return null;
   }
 
   const attachment: SharedAttachmentSnapshot = {
     id: value.id,
-    kind: 'image',
+    kind: "image",
     name: value.name,
     size,
     mimeType: value.mimeType,
     url: value.url,
-    ...(typeof value.storageKey === 'string' ? { storageKey: value.storageKey } : {}),
-    ...(typeof value.thumbnailUrl === 'string' ? { thumbnailUrl: value.thumbnailUrl } : {}),
-    ...(typeof value.thumbnailStorageKey === 'string'
+    ...(typeof value.storageKey === "string"
+      ? { storageKey: value.storageKey }
+      : {}),
+    ...(typeof value.thumbnailUrl === "string"
+      ? { thumbnailUrl: value.thumbnailUrl }
+      : {}),
+    ...(typeof value.thumbnailStorageKey === "string"
       ? { thumbnailStorageKey: value.thumbnailStorageKey }
       : {}),
-  }
+  };
 
-  const storageKey = resolveStorageKeyForSharedAttachment(attachment)
+  const storageKey = resolveStorageKeyForSharedAttachment(attachment);
   if (!storageKey) {
-    return null
+    return null;
   }
 
-  const thumbnailStorageKey = resolveThumbnailStorageKeyForSharedAttachment(attachment)
+  const thumbnailStorageKey =
+    resolveThumbnailStorageKeyForSharedAttachment(attachment);
 
   return {
     ...attachment,
@@ -83,107 +90,129 @@ const sanitizeSharedAttachment = (value: unknown): SharedAttachmentSnapshot | nu
       : {}),
     // Ensure stored URL points to an allowlisted internal asset route.
     url: `/api/assets/${encodeURIComponent(storageKey)}`,
-  }
-}
+  };
+};
 
 const toSharedMessageBlock = (
   value: unknown,
-  role: 'user' | 'assistant',
+  role: "user" | "assistant",
 ): SharedMessageBlock | null => {
-  if (!isRecord(value) || typeof value.type !== 'string') {
-    return null
+  if (!isRecord(value) || typeof value.type !== "string") {
+    return null;
   }
 
-  if (value.type === 'content' && typeof value.content === 'string') {
-    return { type: 'content', content: value.content }
+  if (value.type === "content" && typeof value.content === "string") {
+    return { type: "content", content: value.content };
   }
 
-  if (role === 'assistant' && value.type === 'error' && typeof value.message === 'string') {
-    return { type: 'error', message: value.message }
+  if (
+    role === "assistant" &&
+    value.type === "error" &&
+    typeof value.message === "string"
+  ) {
+    return { type: "error", message: value.message };
   }
 
-  if (role === 'assistant' && value.type === 'research' && Array.isArray(value.items)) {
+  if (
+    role === "assistant" &&
+    value.type === "research" &&
+    Array.isArray(value.items)
+  ) {
     return {
-      type: 'research',
+      type: "research",
       // Stored blocks are produced by trusted server code paths; preserve shape.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       items: value.items as any,
-    }
+    };
   }
 
-  if (role === 'user' && value.type === 'attachments' && Array.isArray(value.attachments)) {
+  if (
+    role === "user" &&
+    value.type === "attachments" &&
+    Array.isArray(value.attachments)
+  ) {
     const attachments = value.attachments
       .map((attachment) => sanitizeSharedAttachment(attachment))
-      .filter((attachment): attachment is SharedAttachmentSnapshot => attachment !== null)
+      .filter(
+        (attachment): attachment is SharedAttachmentSnapshot =>
+          attachment !== null,
+      );
 
     if (attachments.length === 0) {
-      return null
+      return null;
     }
 
-    return { type: 'attachments', attachments }
+    return { type: "attachments", attachments };
   }
 
-  return null
-}
+  return null;
+};
 
 const toSharedMessageSnapshot = (
   value: unknown,
-): SharedConversationSnapshot['messages'][number] | null => {
-  const role = isRecord(value) ? value.role : null
+): SharedConversationSnapshot["messages"][number] | null => {
+  const role = isRecord(value) ? value.role : null;
 
   if (
     !isRecord(value) ||
-    typeof value.id !== 'number' ||
+    typeof value.id !== "number" ||
     !Number.isInteger(value.id) ||
     value.id <= 0 ||
-    (role !== 'user' && role !== 'assistant') ||
+    (role !== "user" && role !== "assistant") ||
     !Array.isArray(value.blocks)
   ) {
-    return null
+    return null;
   }
 
   const blocks = value.blocks
     .map((block) => toSharedMessageBlock(block, role))
-    .filter((block): block is SharedMessageBlock => block !== null)
+    .filter((block): block is SharedMessageBlock => block !== null);
 
   if (blocks.length === 0) {
-    return null
+    return null;
   }
 
   return {
     id: value.id,
     role,
-    createdAt: typeof value.createdAt === 'string' ? value.createdAt : new Date().toISOString(),
+    createdAt:
+      typeof value.createdAt === "string"
+        ? value.createdAt
+        : new Date().toISOString(),
     blocks,
-  }
-}
+  };
+};
 
 const buildSnapshotFromConversation = (
   conversation: Exclude<Awaited<ReturnType<typeof getConversationById>>, null>,
 ): SharedConversationSnapshot => {
-  const messagesById = new Map<number, unknown>()
+  const messagesById = new Map<number, unknown>();
   for (const message of conversation.messages) {
-    if (!isRecord(message) || typeof message.id !== 'number') {
-      continue
+    if (!isRecord(message) || typeof message.id !== "number") {
+      continue;
     }
-    messagesById.set(message.id, message)
+    messagesById.set(message.id, message);
   }
 
   const currentPathMessages = conversation.currentPath
     .map((messageId) => messagesById.get(messageId))
-    .filter((message): message is unknown => message !== undefined)
+    .filter((message): message is unknown => message !== undefined);
 
-  const sourceMessages = currentPathMessages.length > 0
-    ? currentPathMessages
-    : conversation.messages
+  const sourceMessages =
+    currentPathMessages.length > 0
+      ? currentPathMessages
+      : conversation.messages;
 
   return {
     version: 1,
     messages: sourceMessages
       .map((message) => toSharedMessageSnapshot(message))
-      .filter((message): message is SharedConversationSnapshot['messages'][number] => message !== null),
-  }
-}
+      .filter(
+        (message): message is SharedConversationSnapshot["messages"][number] =>
+          message !== null,
+      ),
+  };
+};
 
 const buildPublicSnapshot = (
   token: string,
@@ -196,22 +225,22 @@ const buildPublicSnapshot = (
       role: message.role,
       createdAt: message.createdAt,
       blocks: message.blocks.map((block) => {
-        if (block.type !== 'attachments') {
-          return block
+        if (block.type !== "attachments") {
+          return block;
         }
 
         return {
-          type: 'attachments' as const,
+          type: "attachments" as const,
           attachments: block.attachments.map((attachment) => {
-            const storageKey = resolveStorageKeyForSharedAttachment(attachment)
+            const storageKey = resolveStorageKeyForSharedAttachment(attachment);
             const thumbnailStorageKey =
-              resolveThumbnailStorageKeyForSharedAttachment(attachment)
+              resolveThumbnailStorageKeyForSharedAttachment(attachment);
             const publicUrl = storageKey
               ? `/api/share-assets/${encodeURIComponent(token)}/${encodeURIComponent(attachment.id)}`
-              : attachment.url
+              : attachment.url;
             const publicThumbnailUrl = thumbnailStorageKey
               ? `/api/share-assets/${encodeURIComponent(token)}/${encodeURIComponent(attachment.id)}?variant=thumbnail`
-              : undefined
+              : undefined;
 
             return {
               id: attachment.id,
@@ -220,66 +249,72 @@ const buildPublicSnapshot = (
               size: attachment.size,
               mimeType: attachment.mimeType,
               url: publicUrl,
-              ...(publicThumbnailUrl ? { thumbnailUrl: publicThumbnailUrl } : {}),
-            }
+              ...(publicThumbnailUrl
+                ? { thumbnailUrl: publicThumbnailUrl }
+                : {}),
+            };
           }),
-        }
+        };
       }),
     })),
-  }
-}
+  };
+};
 
-export const getConversationShareFn = createServerFn({ method: 'POST' })
+export const getConversationShareFn = createServerFn({ method: "POST" })
   .inputValidator(conversationIdSchema)
   .handler(async ({ data }) => {
-    const { DB } = getServerBindings()
-    const session = await requireSession()
+    const { DB } = getServerBindings();
+    const session = await requireSession();
 
     return getShareByConversation(DB, {
       userId: session.user.id,
       conversationId: data.conversationId,
-    })
-  })
+    });
+  });
 
-export const createConversationShareFn = createServerFn({ method: 'POST' })
+export const createConversationShareFn = createServerFn({ method: "POST" })
   .inputValidator(createShareSchema)
   .handler(async ({ data }) => {
-    const { DB } = getServerBindings()
-    const session = await requireSession()
+    const { DB } = getServerBindings();
+    const session = await requireSession();
 
-    const conversation = await getConversationById(DB, data.conversationId, session.user.id)
+    const conversation = await getConversationById(
+      DB,
+      data.conversationId,
+      session.user.id,
+    );
     if (!conversation) {
-      throw new Error('Conversation not found')
+      throw new Error("Conversation not found");
     }
 
-    const snapshot = buildSnapshotFromConversation(conversation)
+    const snapshot = buildSnapshotFromConversation(conversation);
     if (snapshot.messages.length === 0) {
-      throw new Error('No messages to share')
+      throw new Error("No messages to share");
     }
 
-    const title = data.title ?? conversation.title ?? null
+    const title = data.title ?? conversation.title ?? null;
 
     return upsertOrReactivateShare(DB, {
       userId: session.user.id,
       conversationId: data.conversationId,
       title,
       snapshot,
-    })
-  })
+    });
+  });
 
-export const revokeConversationShareFn = createServerFn({ method: 'POST' })
+export const revokeConversationShareFn = createServerFn({ method: "POST" })
   .inputValidator(conversationIdSchema)
   .handler(async ({ data }) => {
-    const { DB } = getServerBindings()
-    const session = await requireSession()
+    const { DB } = getServerBindings();
+    const session = await requireSession();
 
     return revokeShare(DB, {
       userId: session.user.id,
       conversationId: data.conversationId,
-    })
-  })
+    });
+  });
 
-export const getPublicConversationShareFn = createServerFn({ method: 'POST' })
+export const getPublicConversationShareFn = createServerFn({ method: "POST" })
   .inputValidator(
     z.object({
       token: shareTokenSchema,
@@ -287,21 +322,21 @@ export const getPublicConversationShareFn = createServerFn({ method: 'POST' })
   )
   .handler(async ({ data }) => {
     if (!isSafeShareToken(data.token)) {
-      return { status: 'not_found' as const }
+      return { status: "not_found" as const };
     }
 
-    const { DB } = getServerBindings()
-    const result = await getPublicShareByToken(DB, data.token)
+    const { DB } = getServerBindings();
+    const result = await getPublicShareByToken(DB, data.token);
 
-    if (result.status === 'not_found' || result.status === 'revoked') {
-      return result
+    if (result.status === "not_found" || result.status === "revoked") {
+      return result;
     }
 
     return {
-      status: 'active' as const,
+      status: "active" as const,
       token: result.token,
       title: result.title,
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- buildPublicSnapshot output matches PublicShareView structurally
       snapshot: buildPublicSnapshot(result.token, result.snapshotRaw) as any,
-    }
-  })
+    };
+  });

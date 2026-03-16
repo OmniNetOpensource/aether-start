@@ -1,77 +1,85 @@
-import type { Attachment } from '@/types/message'
+import type { Attachment } from "@/types/message";
 
 export type NoteCursor = {
-  updated_at: string
-  id: string
-} | null
+  updated_at: string;
+  id: string;
+} | null;
 
 export type NoteRecord = {
-  user_id: string
-  id: string
-  content: string
-  attachments: Attachment[]
-  created_at: string
-  updated_at: string
-}
+  user_id: string;
+  id: string;
+  content: string;
+  attachments: Attachment[];
+  created_at: string;
+  updated_at: string;
+};
 
 export type NotePayload = {
-  user_id: string
-  id: string
-  content: string
-  attachments: Attachment[]
-  created_at: string
-  updated_at: string
-}
+  user_id: string;
+  id: string;
+  content: string;
+  attachments: Attachment[];
+  created_at: string;
+  updated_at: string;
+};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
+  typeof value === "object" && value !== null;
 
 const isAttachment = (value: unknown): value is Attachment => {
   if (!isRecord(value)) {
-    return false
+    return false;
   }
 
   return (
-    typeof value.id === 'string' &&
-    value.kind === 'image' &&
-    typeof value.name === 'string' &&
-    typeof value.size === 'number' &&
-    typeof value.mimeType === 'string' &&
-    value.mimeType.startsWith('image/') &&
-    typeof value.url === 'string' &&
+    typeof value.id === "string" &&
+    value.kind === "image" &&
+    typeof value.name === "string" &&
+    typeof value.size === "number" &&
+    typeof value.mimeType === "string" &&
+    value.mimeType.startsWith("image/") &&
+    typeof value.url === "string" &&
     value.url.length > 0 &&
-    (typeof value.storageKey === 'string' || typeof value.storageKey === 'undefined') &&
-    (typeof value.thumbnailUrl === 'string' || typeof value.thumbnailUrl === 'undefined') &&
-    (typeof value.thumbnailStorageKey === 'string' || typeof value.thumbnailStorageKey === 'undefined')
-  )
-}
+    (typeof value.storageKey === "string" ||
+      typeof value.storageKey === "undefined") &&
+    (typeof value.thumbnailUrl === "string" ||
+      typeof value.thumbnailUrl === "undefined") &&
+    (typeof value.thumbnailStorageKey === "string" ||
+      typeof value.thumbnailStorageKey === "undefined")
+  );
+};
 
 const safeParseAttachments = (value: string): Attachment[] => {
   try {
-    const parsed = JSON.parse(value)
+    const parsed = JSON.parse(value);
     if (!Array.isArray(parsed)) {
-      return []
+      return [];
     }
 
-    return parsed.filter((item): item is Attachment => isAttachment(item))
+    return parsed.filter((item): item is Attachment => isAttachment(item));
   } catch {
-    return []
+    return [];
   }
-}
+};
 
 const toNoteRecord = (row: unknown): NoteRecord | null => {
   if (
     !isRecord(row) ||
-    typeof row.id !== 'string' ||
-    typeof row.user_id !== 'string'
+    typeof row.id !== "string" ||
+    typeof row.user_id !== "string"
   ) {
-    return null
+    return null;
   }
 
-  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString()
-  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt
-  const content = typeof row.content === 'string' ? row.content : ''
-  const attachmentsJson = typeof row.attachments_json === 'string' ? row.attachments_json : '[]'
+  const createdAt =
+    typeof row.created_at === "string"
+      ? row.created_at
+      : new Date().toISOString();
+  const updatedAt =
+    typeof row.updated_at === "string" ? row.updated_at : createdAt;
+  const content = typeof row.content === "string" ? row.content : "";
+  const attachmentsJson =
+    typeof row.attachments_json === "string" ? row.attachments_json : "[]";
 
   return {
     user_id: row.user_id,
@@ -80,8 +88,8 @@ const toNoteRecord = (row: unknown): NoteRecord | null => {
     attachments: safeParseAttachments(attachmentsJson),
     created_at: createdAt,
     updated_at: updatedAt,
-  }
-}
+  };
+};
 
 export const listNotesPage = async (
   db: D1Database,
@@ -99,7 +107,12 @@ export const listNotesPage = async (
           LIMIT ?4
           `,
         )
-        .bind(input.userId, input.cursor.updated_at, input.cursor.id, input.limit)
+        .bind(
+          input.userId,
+          input.cursor.updated_at,
+          input.cursor.id,
+          input.limit,
+        )
         .all()
     : await db
         .prepare(
@@ -112,25 +125,25 @@ export const listNotesPage = async (
           `,
         )
         .bind(input.userId, input.limit)
-        .all()
+        .all();
 
   const mapped = Array.isArray(rows.results)
     ? rows.results
         .map((row) => toNoteRecord(row))
         .filter((row): row is NoteRecord => !!row)
-    : []
+    : [];
 
-  const last = mapped.at(-1)
+  const last = mapped.at(-1);
   const nextCursor: NoteCursor =
     mapped.length === input.limit && last
       ? { updated_at: last.updated_at, id: last.id }
-      : null
+      : null;
 
   return {
     items: mapped,
     nextCursor,
-  }
-}
+  };
+};
 
 export const getNoteById = async (
   db: D1Database,
@@ -147,15 +160,12 @@ export const getNoteById = async (
       `,
     )
     .bind(id, userId)
-    .first()
+    .first();
 
-  return toNoteRecord(row)
-}
+  return toNoteRecord(row);
+};
 
-export const upsertNote = async (
-  db: D1Database,
-  payload: NotePayload,
-) => {
+export const upsertNote = async (db: D1Database, payload: NotePayload) => {
   await db
     .prepare(
       `
@@ -175,10 +185,10 @@ export const upsertNote = async (
       payload.created_at,
       payload.updated_at,
     )
-    .run()
+    .run();
 
-  return { ok: true }
-}
+  return { ok: true };
+};
 
 export const deleteNoteById = async (
   db: D1Database,
@@ -186,9 +196,9 @@ export const deleteNoteById = async (
   userId: string,
 ) => {
   await db
-    .prepare('DELETE FROM notes WHERE user_id = ?1 AND id = ?2')
+    .prepare("DELETE FROM notes WHERE user_id = ?1 AND id = ?2")
     .bind(userId, id)
-    .run()
+    .run();
 
-  return { ok: true }
-}
+  return { ok: true };
+};

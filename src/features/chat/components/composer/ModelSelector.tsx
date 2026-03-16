@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useResponsive } from "@/components/ResponsiveContext";
+import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 
 /** 根据 role id/name 推断 provider，用于分组 */
@@ -32,8 +32,7 @@ function getProviderFromRole(roleId: string, roleName: string): string {
 
 export function ModelSelector() {
   const [open, setOpen] = React.useState(false);
-  const deviceType = useResponsive();
-  const isMobile = deviceType === "mobile";
+  const narrow = useChatRoomNarrow();
   const currentRole = useChatSessionStore((state) => state.currentRole);
   const roles = useChatSessionStore((state) => state.availableRoles);
   const loadAvailableRoles = useChatSessionStore(
@@ -76,12 +75,12 @@ export function ModelSelector() {
         title={currentRoleName || '选择模型'}
         className={cn(
           toolButtonBaseClass,
-          isMobile
+          narrow
             ? "w-8 px-0 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground"
             : "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
         )}
       >
-        {isMobile ? (
+        {narrow ? (
           <Bot className="h-3.5 w-3.5" />
         ) : (
           <>
@@ -92,7 +91,7 @@ export function ModelSelector() {
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen} label="选择模型">
         <Command className="rounded-lg border-0" loop>
-          <CommandInput placeholder="搜索模型..." autoFocus={!isMobile} />
+          <CommandInput placeholder="搜索模型..." autoFocus={!narrow} />
           <CommandList>
             <CommandEmpty>未找到匹配的模型</CommandEmpty>
             {grouped.map(([provider, items]) => (

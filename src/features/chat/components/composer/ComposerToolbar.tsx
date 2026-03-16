@@ -75,13 +75,19 @@ export function ComposerToolbar({
       {/* Left group: Attachments + Prompt */}
       <div className="flex items-center gap-1">
         {/* File picker */}
-        <span title={uploading ? "正在上传附件..." : "添加附件"}>
+        <span
+          title={
+            uploading
+              ? "正在上传附件..."
+              : "添加附件（支持 JPG、PNG、WebP、GIF，最大 20MB）"
+          }
+        >
           <input
             type="file"
             multiple
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept="image/*"
+            accept="image/jpeg,image/png,image/webp,image/gif"
             className="hidden"
           />
           <Button

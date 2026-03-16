@@ -1,5 +1,19 @@
 export const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
 
+export function collectClipboardFiles(clipboardData: DataTransfer | null): File[] {
+  if (!clipboardData) return [];
+  if (clipboardData.files?.length) {
+    return Array.from(clipboardData.files);
+  }
+  const files: File[] = [];
+  for (const item of Array.from(clipboardData.items ?? [])) {
+    if (item.kind !== 'file') continue;
+    const file = item.getAsFile();
+    if (file) files.push(file);
+  }
+  return files;
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes < 1024) {
     return `${bytes} B`;
@@ -17,24 +31,4 @@ export function formatFileSize(bytes: number): string {
   const formatted = size >= 100 ? Math.round(size).toString() : size.toFixed(1);
 
   return `${formatted} ${units[unitIndex]}`;
-}
-
-export function convertFileToBase64(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-      } else {
-        reject(new Error("Failed to read blob as base64"));
-      }
-    };
-
-    reader.onerror = () => {
-      reject(reader.error ?? new Error("Failed to read blob as base64"));
-    };
-
-    reader.readAsDataURL(blob);
-  });
 }

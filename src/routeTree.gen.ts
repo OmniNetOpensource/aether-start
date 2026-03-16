@@ -21,6 +21,7 @@ import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AppNotesRouteImport } from './routes/app/notes'
+import { Route as ApiUploadAttachmentRouteImport } from './routes/api/upload-attachment'
 import { Route as ApiSentryRouteImport } from './routes/api/sentry'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -87,6 +88,11 @@ const AppNotesRoute = AppNotesRouteImport.update({
   path: '/notes',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const ApiUploadAttachmentRoute = ApiUploadAttachmentRouteImport.update({
+  id: '/api/upload-attachment',
+  path: '/api/upload-attachment',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiSentryRoute = ApiSentryRouteImport.update({
   id: '/api/sentry',
   path: '/api/sentry',
@@ -120,6 +126,7 @@ export interface FileRoutesByFullPath {
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/sentry': typeof ApiSentryRoute
+  '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -138,6 +145,7 @@ export interface FileRoutesByTo {
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/sentry': typeof ApiSentryRoute
+  '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -158,6 +166,7 @@ export interface FileRoutesById {
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/sentry': typeof ApiSentryRoute
+  '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
@@ -179,6 +188,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/render-tracker-demo'
     | '/api/sentry'
+    | '/api/upload-attachment'
     | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -197,6 +207,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/render-tracker-demo'
     | '/api/sentry'
+    | '/api/upload-attachment'
     | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | '/404'
     | '/render-tracker-demo'
     | '/api/sentry'
+    | '/api/upload-attachment'
     | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
@@ -236,6 +248,7 @@ export interface RootRouteChildren {
   R404Route: typeof R404Route
   RenderTrackerDemoRoute: typeof RenderTrackerDemoRoute
   ApiSentryRoute: typeof ApiSentryRoute
+  ApiUploadAttachmentRoute: typeof ApiUploadAttachmentRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
@@ -333,6 +346,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppNotesRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/api/upload-attachment': {
+      id: '/api/upload-attachment'
+      path: '/api/upload-attachment'
+      fullPath: '/api/upload-attachment'
+      preLoaderRoute: typeof ApiUploadAttachmentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/sentry': {
       id: '/api/sentry'
       path: '/api/sentry'
@@ -393,6 +413,7 @@ const rootRouteChildren: RootRouteChildren = {
   R404Route: R404Route,
   RenderTrackerDemoRoute: RenderTrackerDemoRoute,
   ApiSentryRoute: ApiSentryRoute,
+  ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,

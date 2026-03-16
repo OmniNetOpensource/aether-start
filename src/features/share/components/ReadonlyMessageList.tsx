@@ -38,9 +38,7 @@ export function ReadonlyMessageList({
           (block) => block.type !== "attachments",
         );
         const shouldRenderBody =
-          !isUser ||
-          contentBlocks.length > 0 ||
-          attachmentBlocks.length > 0;
+          !isUser || contentBlocks.length > 0 || attachmentBlocks.length > 0;
 
         return (
           <div
@@ -50,9 +48,7 @@ export function ReadonlyMessageList({
             className="w-full py-10"
           >
             <div className="w-full min-w-0 flex flex-col items-start text-left">
-              <div
-                className={isUser ? "w-full max-w-[90%] ml-auto" : "w-full"}
-              >
+              <div className={isUser ? "w-full max-w-[90%] ml-auto" : "w-full"}>
                 {shouldRenderBody &&
                   (isUser ? (
                     <div className="rounded-lg bg-(--surface-muted) px-4 py-3">
@@ -63,9 +59,7 @@ export function ReadonlyMessageList({
                               <ImagePreview
                                 key={attachment.id}
                                 url={attachment.url}
-                                previewUrl={getAttachmentPreviewUrl(
-                                  attachment,
-                                )}
+                                previewUrl={getAttachmentPreviewUrl(attachment)}
                                 name={attachment.name}
                                 size={attachment.size}
                                 className="shrink-0"
@@ -117,10 +111,7 @@ export function ReadonlyMessageList({
                         }
 
                         return (
-                          <Markdown
-                            key={blockKey}
-                            content={block.content}
-                          />
+                          <Markdown key={blockKey} content={block.content} />
                         );
                       })}
                     </div>

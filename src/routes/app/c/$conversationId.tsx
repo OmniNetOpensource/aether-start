@@ -1,7 +1,9 @@
+import { useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Composer } from "@/features/chat/components/composer/Composer";
 import { ArtifactPanel } from "@/features/chat/components/artifact/ArtifactPanel";
 import { MessageList } from "@/features/chat/components/message/MessageList";
+import { ChatRoomNarrowProvider } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { useConversationLoader } from "@/features/sidebar/hooks/useConversationLoader";
 
 export const Route = createFileRoute("/app/c/$conversationId")({
@@ -11,6 +13,7 @@ export const Route = createFileRoute("/app/c/$conversationId")({
 export function ConversationPage() {
   const { conversationId } = Route.useParams();
   const { isLoading } = useConversationLoader(conversationId);
+  const chatAreaRef = useRef<HTMLDivElement>(null);
 
   if (isLoading) {
     return null;
@@ -19,10 +22,15 @@ export function ConversationPage() {
   return (
     <div className="flex h-full w-full flex-col">
       <main className="relative flex min-h-0 flex-1">
-        <div className="relative flex min-w-0 flex-1 flex-col">
-          <MessageList />
-          <Composer />
-        </div>
+        <ChatRoomNarrowProvider containerRef={chatAreaRef}>
+          <div
+            ref={chatAreaRef}
+            className="relative flex min-w-0 flex-1 flex-col"
+          >
+            <MessageList />
+            <Composer />
+          </div>
+        </ChatRoomNarrowProvider>
         <ArtifactPanel />
       </main>
     </div>

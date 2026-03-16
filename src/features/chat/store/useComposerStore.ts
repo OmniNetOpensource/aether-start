@@ -1,16 +1,12 @@
 import { create } from "zustand";
 import type { Attachment } from "@/types/message";
-import {
-  createPendingAttachmentUpload,
-  revokePendingAttachmentUpload,
-  type PendingAttachmentUpload,
-  uploadAttachmentFile,
-} from "@/lib/chat/attachments";
+import { uploadAttachmentFile } from "@/lib/chat/attachments";
+
+const UPLOAD_CONCURRENCY = 4;
 
 type ComposerState = {
   input: string;
   pendingAttachments: Attachment[];
-  uploadingAttachments: PendingAttachmentUpload[];
   uploading: boolean;
   _uploadGeneration: number;
 };
@@ -29,7 +25,6 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
   (set, get) => ({
     input: "",
     pendingAttachments: [],
-    uploadingAttachments: [],
     uploading: false,
     _uploadGeneration: 0,
     setInput: (value) => set({ input: value }),
@@ -39,47 +34,43 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
         return;
       }
 
-      const uploadingAttachments = files.map(createPendingAttachmentUpload);
       const uploadGeneration = get()._uploadGeneration + 1;
+      set({ uploading: true, _uploadGeneration: uploadGeneration });
 
-      set((state) => ({
-        uploading: true,
-        uploadingAttachments: [...state.uploadingAttachments, ...uploadingAttachments],
-        _uploadGeneration: uploadGeneration,
-      }));
+      let running = 0;
+      const queue: Array<() => void> = [];
+      const acquire = (): Promise<void> =>
+        running < UPLOAD_CONCURRENCY
+          ? ((running += 1), Promise.resolve())
+          : new Promise((res) => queue.push(res));
+      const release = () => {
+        running -= 1;
+        const next = queue.shift();
+        if (next) {
+          running += 1;
+          next();
+        }
+      };
 
       await Promise.allSettled(
-        files.map(async (file, index) => {
-          const draft = uploadingAttachments[index];
-          const attachment = await uploadAttachmentFile(file);
-
-          revokePendingAttachmentUpload(draft);
-
-          if (get()._uploadGeneration !== uploadGeneration) {
-            return;
+        files.map(async (file) => {
+          await acquire();
+          try {
+            const attachment = await uploadAttachmentFile(file);
+            if (get()._uploadGeneration !== uploadGeneration) return;
+            if (attachment) {
+              set((state) => ({
+                pendingAttachments: [...state.pendingAttachments, attachment],
+              }));
+            }
+          } finally {
+            release();
           }
-
-          set((state) => ({
-            pendingAttachments: attachment
-              ? [...state.pendingAttachments, attachment]
-              : state.pendingAttachments,
-            uploadingAttachments: state.uploadingAttachments.filter(
-              (item) => item.id !== draft.id
-            ),
-          }));
         }),
       );
 
-      if (get()._uploadGeneration !== uploadGeneration) {
-        return;
-      }
-
-      set((state) => ({
-        uploading: false,
-        uploadingAttachments: state.uploadingAttachments.filter(
-          (item) => !uploadingAttachments.some((draft) => draft.id === item.id)
-        ),
-      }));
+      if (get()._uploadGeneration !== uploadGeneration) return;
+      set({ uploading: false });
     },
     removeAttachment: (id) =>
       set((state) => {
@@ -91,32 +82,17 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
       }),
     clearInput: () => set({ input: "" }),
     clearAttachments: () =>
-      set((state) => {
-        for (const attachment of state.uploadingAttachments) {
-          revokePendingAttachmentUpload(attachment);
-        }
-
-        return {
-          pendingAttachments: [],
-          uploadingAttachments: [],
-          uploading: false,
-          _uploadGeneration: state._uploadGeneration + 1,
-        };
-      }),
-    clear: () => {
-      set((state) => {
-        for (const attachment of state.uploadingAttachments) {
-          revokePendingAttachmentUpload(attachment);
-        }
-
-        return {
-          input: "",
-          pendingAttachments: [],
-          uploadingAttachments: [],
-          uploading: false,
-          _uploadGeneration: state._uploadGeneration + 1,
-        };
-      });
-    },
+      set((state) => ({
+        pendingAttachments: [],
+        uploading: false,
+        _uploadGeneration: state._uploadGeneration + 1,
+      })),
+    clear: () =>
+      set((state) => ({
+        input: "",
+        pendingAttachments: [],
+        uploading: false,
+        _uploadGeneration: state._uploadGeneration + 1,
+      })),
   })
 );

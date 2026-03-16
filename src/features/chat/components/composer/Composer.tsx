@@ -1,5 +1,6 @@
 import {
   ClipboardEvent,
+  DragEvent,
   KeyboardEvent,
   MouseEvent,
   useEffect,
@@ -9,6 +10,7 @@ import {
   startChatRequest,
   stopActiveChatRequest,
 } from "@/lib/chat/api/chat-orchestrator";
+import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { setComposerTextarea } from "@/lib/chat/composer-focus";
 import { buildUserBlocks } from "@/lib/conversation/tree/block-operations";
 import { computeMessagesFromPath } from "@/lib/conversation/tree/message-tree";
@@ -29,9 +31,6 @@ export function Composer() {
   const status = useChatRequestStore((state) => state.status);
   const pendingAttachments = useComposerStore(
     (state) => state.pendingAttachments,
-  );
-  const uploadingAttachments = useComposerStore(
-    (state) => state.uploadingAttachments,
   );
   const uploading = useComposerStore((state) => state.uploading);
   const currentRole = useChatSessionStore((state) => state.currentRole);
@@ -157,6 +156,22 @@ export function Composer() {
     void addAttachments(pastedFiles);
   };
 
+  const handleDragOver = (event: DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+  };
+
+  const handleDrop = (event: DragEvent) => {
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (!files.length) return;
+    if (uploading) {
+      toast.info("Attachments are still uploading. Please wait.");
+      return;
+    }
+    void addAttachments(files);
+  };
+
   const handleSendButtonClick = (event: MouseEvent<HTMLButtonElement>) => {
     if (isBusy) {
       event.preventDefault();
@@ -168,12 +183,12 @@ export function Composer() {
 
   const hasText = input.trim().length > 0;
   const hasRole = !!currentRole;
-  const hasAttachments =
-    pendingAttachments.length > 0 || uploadingAttachments.length > 0;
+  const hasAttachments = pendingAttachments.length > 0;
   const sendDisabled = isBusy
     ? false
     : (!hasText && !hasAttachments) || !hasRole || uploading;
   const isNewChat = useIsNewChat();
+  const narrow = useChatRoomNarrow();
 
   const textarea = (
     <Textarea
@@ -193,14 +208,18 @@ export function Composer() {
     />
   );
 
+  const widthClass = narrow ? "w-[90%]" : "w-[50%]";
+
   if (isNewChat) {
     return (
       <div
         key="composer-initial"
-        className="mx-auto flex w-[90%] flex-1 flex-col items-center justify-center  py-12 md:w-[70%] lg:w-[50%]"
+        className={`mx-auto flex flex-1 flex-col items-center justify-center py-12 ${widthClass}`}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
         <AttachmentStack
-          items={[...pendingAttachments, ...uploadingAttachments]}
+          items={pendingAttachments}
           onRemove={removeAttachment}
         />
         <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-sidebar p-2 transition-all">
@@ -218,14 +237,16 @@ export function Composer() {
   return (
     <div
       key="composer-wrapper"
-      className="absolute inset-x-0 bottom-0 z-(--z-composer) pb-4 md:pb-6"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-(--z-composer) pb-4 md:pb-6"
     >
       <div
         key="composer-bottom"
-        className="relative mx-auto flex w-[90%] flex-col gap-3 md:w-[70%] lg:w-[50%]"
+        className={`pointer-events-auto relative mx-auto flex flex-col gap-3 ${widthClass}`}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
       >
         <AttachmentStack
-          items={[...pendingAttachments, ...uploadingAttachments]}
+          items={pendingAttachments}
           onRemove={removeAttachment}
         />
         <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-sidebar p-2 transition-all">

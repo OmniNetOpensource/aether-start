@@ -10,12 +10,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useResponsive } from "@/components/ResponsiveContext";
+import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 
 export function PromptSelector() {
-  const deviceType = useResponsive();
-  const isMobile = deviceType === "mobile";
+  const narrow = useChatRoomNarrow();
   const currentPrompt = useChatSessionStore((state) => state.currentPrompt);
   const prompts = useChatSessionStore((state) => state.availablePrompts);
   const loadAvailablePrompts = useChatSessionStore(
@@ -46,13 +45,13 @@ export function PromptSelector() {
           title={currentPromptName}
           className={cn(
             toolButtonBaseClass,
-            isMobile
+            narrow
               ? "w-8 px-0 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground"
               : "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
           )}
         >
           <MessageSquareText className="h-3.5 w-3.5" />
-          {!isMobile && (
+          {!narrow && (
             <>
               <span className="max-w-20 truncate">{currentPromptName}</span>
               <ChevronDown className="h-3 w-3 transition-transform duration-300" />
