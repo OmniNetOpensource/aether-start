@@ -41,6 +41,7 @@ const {
 vi.mock("@tanstack/react-router", () => ({
   createFileRoute: () => () => ({
     useParams: () => ({ conversationId: "conv-1" }),
+    useLoaderData: () => ({ newChat: true }),
   }),
 }));
 

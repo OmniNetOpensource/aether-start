@@ -2,15 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('@tanstack/react-router', () => ({
   createFileRoute: () => () => ({}),
-  useMatch: () => null,
 }))
 
 vi.mock('@/components/sidebar/Sidebar', () => ({
   default: () => null,
-}))
-
-vi.mock('@/features/chat/components/ChatRoom', () => ({
-  ChatRoom: () => null,
 }))
 
 vi.mock('@/server/functions/auth/session-state', () => ({

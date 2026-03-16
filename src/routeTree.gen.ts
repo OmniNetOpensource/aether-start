@@ -23,6 +23,7 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-pas
 import { Route as AppNotesRouteImport } from './routes/app/notes'
 import { Route as ApiUploadAttachmentRouteImport } from './routes/api/upload-attachment'
 import { Route as ApiSentryRouteImport } from './routes/api/sentry'
+import { Route as AppCRouteRouteImport } from './routes/app/c/route'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
@@ -98,10 +99,15 @@ const ApiSentryRoute = ApiSentryRouteImport.update({
   path: '/api/sentry',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
-  id: '/c/$conversationId',
-  path: '/c/$conversationId',
+const AppCRouteRoute = AppCRouteRouteImport.update({
+  id: '/c',
+  path: '/c',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
+  id: '/$conversationId',
+  path: '/$conversationId',
+  getParentRoute: () => AppCRouteRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -125,6 +131,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
+  '/app/c': typeof AppCRouteRouteWithChildren
   '/api/sentry': typeof ApiSentryRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
@@ -144,6 +151,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
+  '/app/c': typeof AppCRouteRouteWithChildren
   '/api/sentry': typeof ApiSentryRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
@@ -165,6 +173,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
+  '/app/c': typeof AppCRouteRouteWithChildren
   '/api/sentry': typeof ApiSentryRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
@@ -187,6 +196,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/404'
     | '/render-tracker-demo'
+    | '/app/c'
     | '/api/sentry'
     | '/api/upload-attachment'
     | '/app/notes'
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/'
     | '/404'
     | '/render-tracker-demo'
+    | '/app/c'
     | '/api/sentry'
     | '/api/upload-attachment'
     | '/app/notes'
@@ -226,6 +237,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/404'
     | '/render-tracker-demo'
+    | '/app/c'
     | '/api/sentry'
     | '/api/upload-attachment'
     | '/app/notes'
@@ -360,12 +372,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSentryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/app/c': {
+      id: '/app/c'
+      path: '/c'
+      fullPath: '/app/c'
+      preLoaderRoute: typeof AppCRouteRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/app/c/$conversationId': {
       id: '/app/c/$conversationId'
-      path: '/c/$conversationId'
+      path: '/$conversationId'
       fullPath: '/app/c/$conversationId'
       preLoaderRoute: typeof AppCConversationIdRouteImport
-      parentRoute: typeof AppRouteRoute
+      parentRoute: typeof AppCRouteRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -391,16 +410,28 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AppRouteRouteChildren {
-  AppNotesRoute: typeof AppNotesRoute
-  AppIndexRoute: typeof AppIndexRoute
+interface AppCRouteRouteChildren {
   AppCConversationIdRoute: typeof AppCConversationIdRoute
 }
 
+const AppCRouteRouteChildren: AppCRouteRouteChildren = {
+  AppCConversationIdRoute: AppCConversationIdRoute,
+}
+
+const AppCRouteRouteWithChildren = AppCRouteRoute._addFileChildren(
+  AppCRouteRouteChildren,
+)
+
+interface AppRouteRouteChildren {
+  AppCRouteRoute: typeof AppCRouteRouteWithChildren
+  AppNotesRoute: typeof AppNotesRoute
+  AppIndexRoute: typeof AppIndexRoute
+}
+
 const AppRouteRouteChildren: AppRouteRouteChildren = {
+  AppCRouteRoute: AppCRouteRouteWithChildren,
   AppNotesRoute: AppNotesRoute,
   AppIndexRoute: AppIndexRoute,
-  AppCConversationIdRoute: AppCConversationIdRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

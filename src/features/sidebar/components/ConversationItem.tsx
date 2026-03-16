@@ -99,6 +99,7 @@ export function ConversationItem({
       <Link
         to="/app/c/$conversationId"
         params={{ conversationId: conversation.id }}
+        search={{ new_chat: false }}
         onClick={handleClick}
         className="absolute inset-0 z-0"
         aria-label={title}

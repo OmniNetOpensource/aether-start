@@ -134,7 +134,7 @@ export function NoteEditDialog({
               onPaste={handlePaste}
               placeholder="记录你的灵感..."
               rows={8}
-              className="min-h-40 resize-y"
+              className="border-border placeholder:text-muted-foreground min-h-40 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-(--interactive-primary) focus-visible:ring-[3px] disabled:cursor-not-allowed md:text-sm"
             />
           </div>
 

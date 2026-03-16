@@ -1,5 +1,4 @@
 import { useEffect } from "react";
-import { useNavigate } from "@tanstack/react-router";
 import {
   resetLastEventId,
   resumeRunningConversation,
@@ -66,10 +65,18 @@ const hydrateMessage = (msg: Message): Message =>
     createdAt: msg.createdAt ?? new Date().toISOString(),
   }) as Message;
 
+export type ConversationLoaderPayload = NonNullable<
+  Awaited<ReturnType<typeof getConversationFn>>
+>;
+
+export type LoaderData =
+  | { newChat: boolean }
+  | { conversation: ConversationLoaderPayload };
+
 export function useConversationLoader(
   loadingConversationId: string | undefined,
+  loaderData: LoaderData | undefined,
 ) {
-  const navigate = useNavigate();
   const currentConversationId = useChatSessionStore(
     (state) => state.conversationId,
   );
@@ -80,94 +87,57 @@ export function useConversationLoader(
   const setArtifacts = useChatSessionStore((state) => state.setArtifacts);
 
   useEffect(() => {
-    if (
-      !loadingConversationId ||
-      currentConversationId === loadingConversationId
-    ) {
-      return;
-    }
+    if (!loadingConversationId) return;
+    if (loaderData && "newChat" in loaderData && loaderData.newChat) return;
+    if (currentConversationId === loadingConversationId) return;
+
+    const conversation =
+      loaderData && "conversation" in loaderData
+        ? loaderData.conversation
+        : null;
+    if (!conversation) return;
 
     useComposerStore.getState().clear();
 
-    const abortController = new AbortController();
-    const { signal } = abortController;
-    let canceled = false;
+    const rawMessages: Message[] = Array.isArray(conversation.messages)
+      ? (conversation.messages as Message[])
+      : [];
+    const rawCurrentPath = (conversation as { currentPath?: unknown })
+      .currentPath;
+    let currentPath =
+      Array.isArray(rawCurrentPath) &&
+      rawCurrentPath.every((id) => typeof id === "number")
+        ? rawCurrentPath
+        : [];
+    const mappedMessages = rawMessages.map((msg) => hydrateMessage(msg));
 
-    const load = async () => {
-      try {
-        const conversation = await getConversationFn({
-          data: { id: loadingConversationId },
-        });
-        if (canceled || signal.aborted) {
-          return;
-        }
+    if (currentPath.length === 0 && mappedMessages.length > 0) {
+      const rawLatestRootId = (conversation as { latestRootId?: unknown })
+        .latestRootId;
+      const latestRootId =
+        typeof rawLatestRootId === "number"
+          ? rawLatestRootId
+          : mappedMessages[0].id;
+      currentPath = buildCurrentPath(mappedMessages, latestRootId);
+    }
 
-        if (!conversation) {
-          navigate({ to: "/404", replace: true });
-          return;
-        }
-
-        const rawMessages: Message[] = Array.isArray(conversation.messages)
-          ? (conversation.messages as Message[])
-          : [];
-        const rawCurrentPath = (conversation as { currentPath?: unknown })
-          .currentPath;
-        let currentPath =
-          Array.isArray(rawCurrentPath) &&
-          rawCurrentPath.every((id) => typeof id === "number")
-            ? rawCurrentPath
-            : [];
-        const mappedMessages = rawMessages.map((msg) => hydrateMessage(msg));
-
-        if (currentPath.length === 0 && mappedMessages.length > 0) {
-          const rawLatestRootId = (conversation as { latestRootId?: unknown })
-            .latestRootId;
-          const latestRootId =
-            typeof rawLatestRootId === "number"
-              ? rawLatestRootId
-              : mappedMessages[0].id;
-          currentPath = buildCurrentPath(mappedMessages, latestRootId);
-        }
-
-        if (canceled || signal.aborted) {
-          return;
-        }
-
-        useEditingStore.getState().clear();
-        setConversationId(loadingConversationId);
-        initializeTree(mappedMessages, currentPath);
-        setArtifacts(
-          Array.isArray(conversation.artifacts) ? conversation.artifacts : [],
-        );
-        const store = useChatSessionStore.getState();
-        const roleId =
-          conversation.role ??
-          store.currentRole ??
-          store.availableRoles[0]?.id ??
-          "";
-        store.setCurrentRole(roleId);
-      } catch (error) {
-        if (canceled || signal.aborted) {
-          return;
-        }
-        if (error instanceof DOMException && error.name === "AbortError") {
-          return;
-        }
-        console.error("Failed to load conversation:", error);
-        navigate({ to: "/404", replace: true });
-      }
-    };
-
-    void load();
-
-    return () => {
-      canceled = true;
-      abortController.abort();
-    };
+    useEditingStore.getState().clear();
+    setConversationId(loadingConversationId);
+    initializeTree(mappedMessages, currentPath);
+    setArtifacts(
+      Array.isArray(conversation.artifacts) ? conversation.artifacts : [],
+    );
+    const store = useChatSessionStore.getState();
+    const roleId =
+      conversation.role ??
+      store.currentRole ??
+      store.availableRoles[0]?.id ??
+      "";
+    store.setCurrentRole(roleId);
   }, [
     loadingConversationId,
     currentConversationId,
-    navigate,
+    loaderData,
     setConversationId,
     initializeTree,
     setArtifacts,

@@ -6,23 +6,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 ).IS_REACT_ACT_ENVIRONMENT = true;
 
 const {
-  navigateMock,
-  getConversationFnMock,
   resetLastEventIdMock,
   resumeRunningConversationMock,
 } = vi.hoisted(() => ({
-  navigateMock: vi.fn(),
-  getConversationFnMock: vi.fn(),
   resetLastEventIdMock: vi.fn(),
   resumeRunningConversationMock: vi.fn().mockResolvedValue(undefined),
-}));
-
-vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => navigateMock,
-}));
-
-vi.mock("@/server/functions/conversations", () => ({
-  getConversationFn: getConversationFnMock,
 }));
 
 vi.mock("@/lib/chat/api/chat-orchestrator", () => ({
@@ -32,7 +20,10 @@ vi.mock("@/lib/chat/api/chat-orchestrator", () => ({
   stopActiveChatRequest: vi.fn(),
 }));
 
-import { useConversationLoader } from "./useConversationLoader";
+import {
+  useConversationLoader,
+  type ConversationLoaderPayload,
+} from "./useConversationLoader";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import {
   initialChatRequestState,
@@ -45,8 +36,25 @@ import {
   useChatSessionStore,
 } from "@/stores/zustand/useChatSessionStore";
 
-function TestComponent(props: { conversationId?: string }) {
-  useConversationLoader(props.conversationId);
+const mockConversation: ConversationLoaderPayload = {
+  id: "conv-1",
+  user_id: "u1",
+  title: null,
+  role: "aether",
+  is_pinned: false,
+  pinned_at: null,
+  currentPath: [],
+  messages: [],
+  artifacts: [],
+  created_at: "2026-03-06T00:00:00.000Z",
+  updated_at: "2026-03-06T00:00:00.000Z",
+};
+
+function TestComponent(props: {
+  conversationId?: string;
+  loaderData?: { newChat: true } | { conversation: typeof mockConversation };
+}) {
+  useConversationLoader(props.conversationId, props.loaderData);
   return null;
 }
 
@@ -57,8 +65,6 @@ const flush = async () => {
 
 describe("useConversationLoader", () => {
   beforeEach(() => {
-    navigateMock.mockReset();
-    getConversationFnMock.mockReset();
     resetLastEventIdMock.mockReset();
     resumeRunningConversationMock.mockReset();
     resumeRunningConversationMock.mockResolvedValue(undefined);
@@ -78,20 +84,16 @@ describe("useConversationLoader", () => {
   });
 
   it("loads the conversation and probes for a running request after hydration", async () => {
-    getConversationFnMock.mockResolvedValueOnce({
-      id: "conv-1",
-      role: "aether",
-      currentPath: [],
-      messages: [],
-      created_at: "2026-03-06T00:00:00.000Z",
-      updated_at: "2026-03-06T00:00:00.000Z",
-    });
-
     const container = document.createElement("div");
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<TestComponent conversationId="conv-1" />);
+      root.render(
+        <TestComponent
+          conversationId="conv-1"
+          loaderData={{ conversation: mockConversation }}
+        />,
+      );
       await flush();
     });
 
@@ -110,21 +112,18 @@ describe("useConversationLoader", () => {
   });
 
   it("does not open a recovery stream while the current request is already active", async () => {
-    getConversationFnMock.mockResolvedValueOnce({
-      id: "conv-1",
-      role: "aether",
-      currentPath: [],
-      messages: [],
-      created_at: "2026-03-06T00:00:00.000Z",
-      updated_at: "2026-03-06T00:00:00.000Z",
-    });
     useChatRequestStore.getState().setStatus("streaming");
 
     const container = document.createElement("div");
     const root = createRoot(container);
 
     await act(async () => {
-      root.render(<TestComponent conversationId="conv-1" />);
+      root.render(
+        <TestComponent
+          conversationId="conv-1"
+          loaderData={{ conversation: mockConversation }}
+        />,
+      );
       await flush();
     });
 

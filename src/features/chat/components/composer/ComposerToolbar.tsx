@@ -1,6 +1,7 @@
 import { ChangeEvent, MouseEvent, useRef } from "react";
 import { ArrowUp, Loader2, Paperclip, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ensureConversation } from "@/features/chat/components/composer/ensure-conversation";
 import { cn } from "@/lib/utils";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import type { ChatStatus } from "@/stores/zustand/useChatRequestStore";
@@ -67,7 +68,11 @@ export function ComposerToolbar({
       return;
     }
 
-    onSendButtonClick(event);
+    try {
+      ensureConversation();
+    } finally {
+      onSendButtonClick(event);
+    }
   };
 
   return (

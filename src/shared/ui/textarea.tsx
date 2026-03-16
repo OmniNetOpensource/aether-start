@@ -32,10 +32,7 @@ function Textarea({
         else if (ref) ref.current = el;
       }}
       data-slot="textarea"
-      className={cn(
-        "border-border placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-(--interactive-primary) aria-invalid:ring-destructive dark:aria-invalid:ring-destructive aria-invalid:border-destructive flex field-sizing-content min-h-16 w-full rounded-md border bg-(--surface-muted) px-3 py-2 text-base transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed md:text-sm",
-        className,
-      )}
+      className={cn("flex field-sizing-content w-full outline-none disabled:cursor-not-allowed", className)}
       onChange={(e) => {
         if (!supportsFieldSizing) autoResize(e.currentTarget);
         onChange?.(e);

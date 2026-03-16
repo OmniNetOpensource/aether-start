@@ -229,6 +229,7 @@ export function ConversationSearchDialog({
     navigate({
       to: '/app/c/$conversationId',
       params: { conversationId: item.id },
+      search: { new_chat: false },
     })
   }
 

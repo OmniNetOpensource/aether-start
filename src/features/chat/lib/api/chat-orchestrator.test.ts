@@ -171,17 +171,14 @@ describe("chat-orchestrator SSE model", () => {
     );
   });
 
-  it("creates a new conversation when conversationId is null", async () => {
+  it("proceeds when conversationId is null (caller must ensure)", async () => {
     messageTreeState.conversationId = null;
 
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
       body: sseStream([
-        {
-          event: "chat_finished",
-          data: { status: "completed" },
-        },
+        { event: "chat_finished", data: { status: "completed" } },
       ]),
     });
 
@@ -190,11 +187,7 @@ describe("chat-orchestrator SSE model", () => {
       messages: [{ role: "user", blocks: [] } as never],
     });
 
-    expect(messageTreeState.setConversationId).toHaveBeenCalledTimes(1);
-    expect(addConversationMock).toHaveBeenCalledTimes(1);
-    expect(appNavigateMock).toHaveBeenCalledWith(
-      expect.stringContaining("/app/c/"),
-    );
+    expect(fetchMock).toHaveBeenCalled();
   });
 
   it("parses CRLF SSE streams across chunk boundaries", async () => {

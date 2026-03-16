@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { useResponsive } from "@/components/ResponsiveContext";
 
 const CHAT_ROOM_NARROW_THRESHOLD = 760;
 
@@ -13,7 +14,8 @@ export function ChatRoomNarrowProvider({
   containerRef: React.RefObject<HTMLDivElement | null>;
   children: React.ReactNode;
 }) {
-  const [narrow, setNarrow] = useState(true);
+  const deviceType = useResponsive();
+  const [narrow, setNarrow] = useState(deviceType !== "desktop");
 
   useEffect(() => {
     const el = containerRef.current;

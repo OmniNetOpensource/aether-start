@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { MessageItem } from "./MessageItem";
-import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { SelectionToolbar } from "./SelectionToolbar";
@@ -19,14 +19,11 @@ export function MessageList({
   const narrow = useChatRoomNarrow();
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const widthClass = narrow ? "w-[90%]" : "w-[70%]";
+  const widthClass = narrow ? "w-[90%]" : "w-[60%]";
 
   return (
     <div className={`relative w-full h-full ${className ?? ""}`.trim()}>
-      <div
-        ref={scrollRef}
-        className="w-full h-full overflow-y-auto"
-      >
+      <div ref={scrollRef} className="w-full h-full overflow-y-auto">
         <div
           role="log"
           aria-live="polite"

@@ -1,7 +1,6 @@
-import { Outlet, createFileRoute, redirect, useMatch, type ParsedLocation } from '@tanstack/react-router'
+import { Outlet, createFileRoute, redirect, type ParsedLocation } from '@tanstack/react-router'
 import Sidebar from '@/components/sidebar/Sidebar'
 import { getSessionStateFn } from '@/server/functions/auth/session-state'
-import { ChatRoom } from '@/features/chat/components/ChatRoom'
 
 export function getNormalizedAppTarget(
   location: Pick<ParsedLocation, 'pathname' | 'searchStr' | 'hash'>,
@@ -27,20 +26,11 @@ export const Route = createFileRoute('/app')({
 })
 
 function AppLayout() {
-  const isNotesRoute = !!useMatch({ from: '/app/notes', shouldThrow: false })
-  const useStandaloneLayout = isNotesRoute
-
   return (
     <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>
       <Sidebar />
       <div className='relative z-0 flex-1 min-w-0 flex'>
-        {useStandaloneLayout ? (
-          <Outlet />
-        ) : (
-          <ChatRoom>
-            <Outlet />
-          </ChatRoom>
-        )}
+        <Outlet />
       </div>
     </div>
   )

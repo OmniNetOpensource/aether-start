@@ -10,6 +10,7 @@ import {
   startChatRequest,
   stopActiveChatRequest,
 } from "@/lib/chat/api/chat-orchestrator";
+import { ensureConversation } from "@/features/chat/components/composer/ensure-conversation";
 import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { setComposerTextarea } from "@/lib/chat/composer-focus";
 import { buildUserBlocks } from "@/lib/conversation/tree/block-operations";
@@ -67,7 +68,11 @@ export function Composer() {
 
     useComposerStore.getState().clear();
 
-    await startChatRequest({ messages: pathMessages });
+    try {
+      ensureConversation();
+    } finally {
+      await startChatRequest({ messages: pathMessages });
+    }
   };
 
   const textareaCallbackRef = (element: HTMLTextAreaElement | null) => {

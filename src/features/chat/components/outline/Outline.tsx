@@ -1,743 +1,292 @@
-import { useEffect, useRef, useState } from 'react'
-import { GitBranch } from 'lucide-react'
-import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
-import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
-import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
-import type { Message } from '@/types/message'
-import { buildOutlineTree } from './build-outline-tree'
-import { truncateTextByWidth } from './preview-text'
-import { computeTreeLayout } from './tree-layout'
-import type { TreeLayout } from './tree-layout'
-import { NODE_H, NODE_W, ROOT_R } from './tree-layout'
+import { useState } from "react";
+import {
+  Background,
+  BackgroundVariant,
+  Handle,
+  Position,
+  ReactFlow,
+  type Edge,
+  type Node,
+  type NodeProps,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import { GitBranch } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import type { Message } from "@/types/message";
+import { buildOutlineTree, type OutlineNode } from "./build-outline-tree";
+import { truncateTextByWidth } from "./preview-text";
 
-const SCROLL_RETRY_FRAMES = 4
-const CANVAS_PADDING = 32
-const MIN_CANVAS_WIDTH = 560
-const EMPTY_HEIGHT = 240
-const PREVIEW_LIMIT = 20
-const MIN_ZOOM = 0.15
-const MAX_ZOOM = 3
-const ZOOM_WHEEL_FACTOR = 0.001
-const PAN_THRESHOLD = 3
+const NODE_W = 160;
+const NODE_H = 56;
+const GAP_X = 24;
+const GAP_Y = 56;
+const SCROLL_RETRY_FRAMES = 4;
 
-type Camera = { x: number; y: number; zoom: number }
+type MessageNodeData = {
+  role: Message["role"];
+  preview: string;
+  fullPreview: string;
+  siblingIndex: number;
+  siblingCount: number;
+  isOnPath: boolean;
+};
 
-const DEFAULT_CAMERA: Camera = { x: 0, y: 0, zoom: 1 }
+// ── Layout ──────────────────────────────────────────────────────────
 
-const roleLabelMap: Record<Message['role'], string> = {
-  user: 'User',
-  assistant: 'Assistant',
+const measureWidth = (
+  node: OutlineNode,
+  cache: Map<number, number>,
+): number => {
+  const cached = cache.get(node.messageId);
+  if (cached !== undefined) return cached;
+
+  const childrenW = node.children.reduce(
+    (sum, child, i) => sum + (i > 0 ? GAP_X : 0) + measureWidth(child, cache),
+    0,
+  );
+  const w = Math.max(NODE_W, childrenW);
+  cache.set(node.messageId, w);
+  return w;
+};
+
+const buildFlowElements = (
+  roots: OutlineNode[],
+  currentPathSet: Set<number>,
+): { nodes: Node[]; edges: Edge[] } => {
+  const cache = new Map<number, number>();
+  for (const root of roots) measureWidth(root, cache);
+
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+
+  const place = (node: OutlineNode, depth: number, startX: number): number => {
+    const subtreeW = cache.get(node.messageId) ?? NODE_W;
+    const y = depth * (NODE_H + GAP_Y);
+    const childCenters: { cx: number; id: number }[] = [];
+
+    if (node.children.length > 0) {
+      const childrenW = node.children.reduce(
+        (s, c, i) =>
+          s + (i > 0 ? GAP_X : 0) + (cache.get(c.messageId) ?? NODE_W),
+        0,
+      );
+      let cursor = startX + (subtreeW - childrenW) / 2;
+      for (const child of node.children) {
+        const cw = cache.get(child.messageId) ?? NODE_W;
+        childCenters.push({
+          cx: place(child, depth + 1, cursor),
+          id: child.messageId,
+        });
+        cursor += cw + GAP_X;
+      }
+    }
+
+    const x =
+      childCenters.length > 0
+        ? (childCenters[0].cx + childCenters.at(-1)!.cx) / 2 - NODE_W / 2
+        : startX + (subtreeW - NODE_W) / 2;
+
+    const onPath = currentPathSet.has(node.messageId);
+
+    nodes.push({
+      id: String(node.messageId),
+      type: "message",
+      position: { x, y },
+      width: NODE_W,
+      height: NODE_H,
+      data: {
+        role: node.role,
+        preview: truncateTextByWidth(node.preview, 20, "..."),
+        fullPreview: node.fullPreview,
+        siblingIndex: node.siblingIndex,
+        siblingCount: node.siblingCount,
+        isOnPath: onPath,
+      } satisfies MessageNodeData,
+    });
+
+    const cx = x + NODE_W / 2;
+    for (const child of childCenters) {
+      const pathEdge = onPath && currentPathSet.has(child.id);
+      edges.push({
+        id: `e${node.messageId}-${child.id}`,
+        source: String(node.messageId),
+        target: String(child.id),
+        style: {
+          stroke: pathEdge
+            ? "var(--interactive-primary)"
+            : "var(--border-primary)",
+          strokeWidth: pathEdge ? 2 : 1.2,
+          opacity: pathEdge ? 1 : 0.5,
+        },
+      });
+    }
+
+    return cx;
+  };
+
+  let cursor = 0;
+  for (const root of roots) {
+    place(root, 0, cursor);
+    cursor += (cache.get(root.messageId) ?? NODE_W) + GAP_X;
+  }
+
+  return { nodes, edges };
+};
+
+// ── Custom Node ─────────────────────────────────────────────────────
+
+const invisibleHandle: React.CSSProperties = {
+  opacity: 0,
+  pointerEvents: "none",
+  width: 1,
+  height: 1,
+};
+
+const roleLabel: Record<Message["role"], string> = {
+  user: "User",
+  assistant: "Assistant",
+};
+
+function MessageNode({
+  data,
+}: NodeProps<Node<MessageNodeData, "message">>) {
+  const meta = data.isOnPath
+    ? "color-mix(in srgb, var(--text-primary) 72%, var(--surface-primary))"
+    : "var(--text-tertiary)";
+
+  return (
+    <div
+      className="cursor-pointer rounded-[10px] px-3.5 py-2 shadow-sm transition-shadow hover:shadow-md"
+      style={{
+        width: NODE_W,
+        height: NODE_H,
+        background: data.isOnPath
+          ? "color-mix(in srgb, var(--interactive-primary) 12%, var(--surface-primary))"
+          : "var(--surface-secondary)",
+      }}
+      title={`${roleLabel[data.role]}: ${data.fullPreview}`}
+    >
+      <Handle type="target" position={Position.Top} style={invisibleHandle} />
+      <div className="flex items-center justify-between">
+        <span className="text-[10px] font-semibold" style={{ color: meta }}>
+          {roleLabel[data.role]}
+        </span>
+        {data.siblingCount > 1 && (
+          <span className="text-[9px]" style={{ color: meta }}>
+            {data.siblingIndex}/{data.siblingCount}
+          </span>
+        )}
+      </div>
+      <div
+        className="mt-0.5 truncate text-[11px] font-medium"
+        style={{
+          color: data.isOnPath
+            ? "var(--text-primary)"
+            : "var(--text-secondary)",
+        }}
+      >
+        {data.preview}
+      </div>
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={invisibleHandle}
+      />
+    </div>
+  );
 }
+
+const nodeTypes = { message: MessageNode };
+
+// ── Helpers ─────────────────────────────────────────────────────────
 
 const scrollToMessage = (messageId: number) => {
-  let attempts = 0
-
+  let attempts = 0;
   const tryScroll = () => {
-    const target = document.querySelector<HTMLElement>(
+    const el = document.querySelector<HTMLElement>(
       `[data-message-id="${messageId}"]`,
-    )
-
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      return
+    );
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
     }
+    if (attempts++ < SCROLL_RETRY_FRAMES) requestAnimationFrame(tryScroll);
+  };
+  requestAnimationFrame(tryScroll);
+};
 
-    if (attempts >= SCROLL_RETRY_FRAMES) {
-      return
-    }
-
-    attempts += 1
-    requestAnimationFrame(tryScroll)
-  }
-
-  requestAnimationFrame(tryScroll)
-}
-
-const trimPreview = (text: string) =>
-  truncateTextByWidth(text, PREVIEW_LIMIT, '...')
-
-const buildCurvePath = (x1: number, y1: number, x2: number, y2: number) => {
-  const midY = (y1 + y2) / 2
-  return `M ${x1} ${y1} C ${x1} ${midY}, ${x2} ${midY}, ${x2} ${y2}`
-}
-
-const edgeKey = (fromId: number, toId: number) => `${fromId}:${toId}`
-const clampZoom = (zoom: number) => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom))
-const toWorldPoint = ({
-  screenX,
-  screenY,
-  camera,
-  width,
-  height,
-}: {
-  screenX: number
-  screenY: number
-  camera: Camera
-  width: number
-  height: number
-}) => {
-  const translateX = width / 2 - camera.x * camera.zoom
-  const translateY = height / 2 - camera.y * camera.zoom
-
-  return {
-    x: (screenX - translateX) / camera.zoom,
-    y: (screenY - translateY) / camera.zoom,
-  }
-}
-
-const toCameraPoint = ({
-  screenX,
-  screenY,
-  worldX,
-  worldY,
-  zoom,
-  width,
-  height,
-}: {
-  screenX: number
-  screenY: number
-  worldX: number
-  worldY: number
-  zoom: number
-  width: number
-  height: number
-}) => ({
-  x: (width / 2 - screenX) / zoom + worldX,
-  y: (height / 2 - screenY) / zoom + worldY,
-})
-
-const getPointerMetrics = (
-  first: { x: number; y: number },
-  second: { x: number; y: number },
-) => {
-  const dx = second.x - first.x
-  const dy = second.y - first.y
-  return {
-    midpointX: (first.x + second.x) / 2,
-    midpointY: (first.y + second.y) / 2,
-    distance: Math.hypot(dx, dy),
-  }
-}
+// ── Components ──────────────────────────────────────────────────────
 
 function OutlineGraph({
-  open,
-  layout,
+  roots,
   currentPath,
   onSelect,
   disabled,
 }: {
-  open: boolean
-  layout: TreeLayout | null
-  currentPath: number[]
-  onSelect: (messageId: number) => void
-  disabled: boolean
+  roots: OutlineNode[];
+  currentPath: number[];
+  onSelect: (messageId: number) => void;
+  disabled: boolean;
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  const [camera, setCamera] = useState<Camera>(DEFAULT_CAMERA)
-  const [isPanning, setIsPanning] = useState(false)
-  const [isAnimating, setIsAnimating] = useState(false)
-  const [hoveredNodeId, setHoveredNodeId] = useState<number | null>(null)
-  const activePointersRef = useRef(
-    new Map<number, { x: number; y: number }>(),
-  )
-  const gestureStateRef = useRef<
-    | {
-        type: 'pan'
-        pointerId: number
-        startX: number
-        startY: number
-        originX: number
-        originY: number
-      }
-    | {
-        type: 'pinch'
-        pointerIds: [number, number]
-        originZoom: number
-        startDistance: number
-        anchorX: number
-        anchorY: number
-      }
-    | null
-  >(null)
-  const didPanRef = useRef(false)
-  const cameraRef = useRef(camera)
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
+  const { nodes, edges } = buildFlowElements(roots, new Set(currentPath));
 
-  useEffect(() => {
-    cameraRef.current = camera
-  }, [camera])
-
-  const currentPathSet = new Set(currentPath)
-  const currentEdgeSet = (() => {
-    const next = new Set<string>()
-    for (let index = 1; index < currentPath.length; index += 1) {
-      next.add(edgeKey(currentPath[index - 1], currentPath[index]))
-    }
-    return next
-  })()
-
-  const canvasWidth = layout
-    ? Math.max(layout.width + CANVAS_PADDING * 2, MIN_CANVAS_WIDTH)
-    : MIN_CANVAS_WIDTH
-  const canvasHeight = layout
-    ? Math.max(layout.height + CANVAS_PADDING * 2, EMPTY_HEIGHT)
-    : EMPTY_HEIGHT
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container || !open) {
-      return
-    }
-
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0]
-      if (!entry) {
-        return
-      }
-
-      setContainerSize({
-        width: entry.contentRect.width,
-        height: entry.contentRect.height,
-      })
-    })
-
-    observer.observe(container)
-    return () => observer.disconnect()
-  }, [open])
-
-  useEffect(() => {
-    if (!open || !layout || currentPath.length === 0) {
-      return
-    }
-
-    activePointersRef.current.clear()
-    gestureStateRef.current = null
-    didPanRef.current = false
-
-    const nodeById = new Map<number, TreeLayout['nodes'][number]>()
-    for (const node of layout.nodes) {
-      nodeById.set(node.messageId, node)
-    }
-
-    const lastId = currentPath[currentPath.length - 1]
-    const targetNode = nodeById.get(lastId)
-
-    const frame = requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        const container = containerRef.current
-        if (!container) {
-          return
-        }
-
-        const width = container.clientWidth
-        const height = container.clientHeight
-        if (width === 0 || height === 0) {
-          return
-        }
-
-        const fitZoom = clampZoom(
-          Math.min(width / canvasWidth, height / canvasHeight, 1.5),
-        )
-        const focusX = targetNode
-          ? targetNode.x +
-            (targetNode.isVirtualRoot ? ROOT_R : NODE_W / 2) +
-            CANVAS_PADDING
-          : canvasWidth / 2
-        const focusY = targetNode
-          ? targetNode.y +
-            (targetNode.isVirtualRoot ? ROOT_R : NODE_H / 2) +
-            CANVAS_PADDING
-          : canvasHeight / 2
-
-        setIsAnimating(true)
-        setCamera({ x: focusX, y: focusY, zoom: fitZoom })
-        setTimeout(() => setIsAnimating(false), 220)
-      })
-    })
-
-    return () => cancelAnimationFrame(frame)
-  }, [open, layout, currentPath, canvasHeight, canvasWidth])
-
-  useEffect(() => {
-    const container = containerRef.current
-    if (!container || !open) {
-      return
-    }
-
-    const handleWheel = (event: WheelEvent) => {
-      event.preventDefault()
-      const rect = container.getBoundingClientRect()
-      const cursorX = event.clientX - rect.left
-      const cursorY = event.clientY - rect.top
-      const currentCamera = cameraRef.current
-      const width = container.clientWidth
-      const height = container.clientHeight
-      const { x: worldX, y: worldY } = toWorldPoint({
-        screenX: cursorX,
-        screenY: cursorY,
-        camera: currentCamera,
-        width,
-        height,
-      })
-      const delta = -event.deltaY * ZOOM_WHEEL_FACTOR
-      const newZoom = clampZoom(currentCamera.zoom * (1 + delta))
-      setCamera({
-        ...toCameraPoint({
-          screenX: cursorX,
-          screenY: cursorY,
-          worldX,
-          worldY,
-          zoom: newZoom,
-          width,
-          height,
-        }),
-        zoom: newZoom,
-      })
-    }
-
-    container.addEventListener('wheel', handleWheel, { passive: false })
-    return () => container.removeEventListener('wheel', handleWheel)
-  }, [open])
-
-  const startPinch = () => {
-    const container = containerRef.current
-    if (!container) {
-      return
-    }
-
-    const pointers = Array.from(activePointersRef.current.entries())
-    if (pointers.length < 2) {
-      return
-    }
-
-    const [[firstPointerId, first], [secondPointerId, second]] = pointers
-    const width = container.clientWidth
-    const height = container.clientHeight
-    if (width === 0 || height === 0) {
-      return
-    }
-
-    const { midpointX, midpointY, distance } = getPointerMetrics(first, second)
-    const currentCamera = cameraRef.current
-    const { x: anchorX, y: anchorY } = toWorldPoint({
-      screenX: midpointX,
-      screenY: midpointY,
-      camera: currentCamera,
-      width,
-      height,
-    })
-
-    didPanRef.current = true
-    setIsPanning(true)
-    gestureStateRef.current = {
-      type: 'pinch',
-      pointerIds: [firstPointerId, secondPointerId],
-      originZoom: currentCamera.zoom,
-      startDistance: Math.max(distance, 1),
-      anchorX,
-      anchorY,
-    }
-  }
-
-  const handlePointerDown = (event: React.PointerEvent<SVGSVGElement>) => {
-    const startedOnNode = Boolean(
-      (event.target as Element).closest("[role='button']"),
-    )
-    if (startedOnNode && event.pointerType !== 'touch') {
-      return
-    }
-
-    event.currentTarget.setPointerCapture(event.pointerId)
-    activePointersRef.current.set(event.pointerId, {
-      x: event.clientX,
-      y: event.clientY,
-    })
-
-    if (activePointersRef.current.size >= 2) {
-      startPinch()
-      return
-    }
-
-    setIsPanning(true)
-    didPanRef.current = false
-    gestureStateRef.current = {
-      type: 'pan',
-      pointerId: event.pointerId,
-      startX: event.clientX,
-      startY: event.clientY,
-      originX: cameraRef.current.x,
-      originY: cameraRef.current.y,
-    }
-  }
-
-  const handlePointerMove = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (!activePointersRef.current.has(event.pointerId)) {
-      return
-    }
-
-    activePointersRef.current.set(event.pointerId, {
-      x: event.clientX,
-      y: event.clientY,
-    })
-
-    const gesture = gestureStateRef.current
-    if (!gesture) {
-      return
-    }
-
-    if (gesture.type === 'pan') {
-      if (gesture.pointerId !== event.pointerId) {
-        return
-      }
-
-      const dx = event.clientX - gesture.startX
-      const dy = event.clientY - gesture.startY
-      if (
-        !didPanRef.current &&
-        Math.abs(dx) < PAN_THRESHOLD &&
-        Math.abs(dy) < PAN_THRESHOLD
-      ) {
-        return
-      }
-
-      didPanRef.current = true
-      setCamera((current) => ({
-        ...current,
-        x: gesture.originX - dx / current.zoom,
-        y: gesture.originY - dy / current.zoom,
-      }))
-      return
-    }
-
-    const first = activePointersRef.current.get(gesture.pointerIds[0])
-    const second = activePointersRef.current.get(gesture.pointerIds[1])
-    const container = containerRef.current
-    if (!first || !second || !container) {
-      return
-    }
-
-    const width = container.clientWidth
-    const height = container.clientHeight
-    if (width === 0 || height === 0) {
-      return
-    }
-
-    const { midpointX, midpointY, distance } = getPointerMetrics(first, second)
-    const nextZoom = clampZoom(
-      gesture.originZoom * (Math.max(distance, 1) / gesture.startDistance),
-    )
-    setCamera({
-      ...toCameraPoint({
-        screenX: midpointX,
-        screenY: midpointY,
-        worldX: gesture.anchorX,
-        worldY: gesture.anchorY,
-        zoom: nextZoom,
-        width,
-        height,
-      }),
-      zoom: nextZoom,
-    })
-  }
-
-  const handlePointerEnd = (event: React.PointerEvent<SVGSVGElement>) => {
-    if (!activePointersRef.current.has(event.pointerId)) {
-      return
-    }
-
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId)
-    }
-
-    activePointersRef.current.delete(event.pointerId)
-
-    const gesture = gestureStateRef.current
-    if (!gesture) {
-      setIsPanning(activePointersRef.current.size > 0)
-      return
-    }
-
-    if (
-      gesture.type === 'pan' &&
-      gesture.pointerId === event.pointerId &&
-      activePointersRef.current.size === 0
-    ) {
-      gestureStateRef.current = null
-      setIsPanning(false)
-      return
-    }
-
-    if (activePointersRef.current.size >= 2) {
-      startPinch()
-      return
-    }
-
-    const [nextPointerId, nextPointer] = Array.from(
-      activePointersRef.current.entries(),
-    )[0] ?? [null, null]
-
-    if (nextPointerId === null || nextPointer === null) {
-      gestureStateRef.current = null
-      setIsPanning(false)
-      return
-    }
-
-    gestureStateRef.current = {
-      type: 'pan',
-      pointerId: nextPointerId,
-      startX: nextPointer.x,
-      startY: nextPointer.y,
-      originX: cameraRef.current.x,
-      originY: cameraRef.current.y,
-    }
-    setIsPanning(true)
-  }
-
-  if (!layout || layout.nodes.length === 0) {
+  if (nodes.length === 0) {
     return (
-      <div className="relative h-[70vh] overflow-hidden rounded-md border border-(--border-primary)">
-        <div className="flex h-[240px] items-center justify-center text-xs text-(--text-tertiary)">
-          No messages yet.
-        </div>
+      <div className="flex h-60 items-center justify-center rounded-md border border-(--border-primary) text-xs text-(--text-tertiary)">
+        No messages yet.
       </div>
-    )
+    );
   }
-
-  const translateX = containerSize.width / 2 - camera.x * camera.zoom
-  const translateY = containerSize.height / 2 - camera.y * camera.zoom
-  const useTransition = isAnimating && !isPanning
 
   return (
-    <div
-      ref={containerRef}
-      className="relative h-[70vh] overflow-hidden rounded-md border border-(--border-primary)"
-      style={{
-        cursor: isPanning ? 'grabbing' : 'grab',
-        backgroundColor: 'var(--surface-primary)',
-        backgroundImage:
-          'radial-gradient(circle, var(--border-primary) 0.8px, transparent 0.8px)',
-        backgroundSize: '20px 20px',
-      }}
-    >
-      <svg
-        width="100%"
-        height="100%"
-        className="block"
-        role="img"
-        aria-label="Conversation outline graph"
-        style={{ touchAction: 'none' }}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerEnd}
-        onPointerCancel={handlePointerEnd}
+    <div className="h-[70vh] rounded-md border border-(--border-primary)">
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodeClick={(_, node) => {
+          if (!disabled) onSelect(Number(node.id));
+        }}
+        fitView
+        fitViewOptions={{ padding: 0.15, maxZoom: 1.5 }}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={false}
+        minZoom={0.15}
+        maxZoom={3}
+        style={{ background: "var(--surface-primary)" }}
       >
-        <g
-          transform={`translate(${translateX} ${translateY}) scale(${camera.zoom})`}
-          style={{
-            transition: useTransition ? 'transform 200ms ease-out' : 'none',
-          }}
-        >
-          <g transform={`translate(${CANVAS_PADDING} ${CANVAS_PADDING})`}>
-            <defs>
-              <filter
-                id="node-shadow"
-                x="-10%"
-                y="-10%"
-                width="120%"
-                height="130%"
-              >
-                <feDropShadow
-                  dx="0"
-                  dy="1"
-                  stdDeviation="2"
-                  floodColor="#000"
-                  floodOpacity="0.08"
-                />
-              </filter>
-            </defs>
-
-            {layout.edges.map((edge) => {
-              const isCurrentPathEdge = currentEdgeSet.has(
-                edgeKey(edge.fromId, edge.toId),
-              )
-              return (
-                <path
-                  key={edgeKey(edge.fromId, edge.toId)}
-                  d={buildCurvePath(edge.x1, edge.y1, edge.x2, edge.y2)}
-                  fill="none"
-                  stroke={
-                    isCurrentPathEdge
-                      ? 'var(--interactive-primary)'
-                      : 'var(--border-primary)'
-                  }
-                  strokeWidth={isCurrentPathEdge ? 2 : 1.2}
-                  strokeOpacity={isCurrentPathEdge ? 1 : 0.5}
-                />
-              )
-            })}
-
-            {layout.nodes.map((node) => {
-              if (node.isVirtualRoot) {
-                return (
-                  <g
-                    key="virtual-root"
-                    transform={`translate(${node.x} ${node.y})`}
-                  >
-                    <circle
-                      cx={ROOT_R}
-                      cy={ROOT_R}
-                      r={ROOT_R}
-                      fill="var(--text-tertiary)"
-                    />
-                  </g>
-                )
-              }
-
-              const isCurrentPathNode = currentPathSet.has(node.messageId)
-              const isHoveredNode = hoveredNodeId === node.messageId
-              const roleLabel = roleLabelMap[node.role]
-              const nodeFill = isCurrentPathNode
-                ? 'color-mix(in srgb, var(--interactive-primary) 12%, var(--surface-primary))'
-                : 'var(--surface-secondary)'
-              const nodeHoverFill = isCurrentPathNode
-                ? 'color-mix(in srgb, var(--interactive-primary) 16%, var(--surface-primary))'
-                : 'color-mix(in srgb, var(--surface-secondary) 84%, white)'
-              const nodeMetaText = isCurrentPathNode
-                ? 'color-mix(in srgb, var(--text-primary) 72%, var(--surface-primary))'
-                : 'var(--text-tertiary)'
-              const nodePreviewText = isCurrentPathNode
-                ? 'var(--text-primary)'
-                : 'var(--text-secondary)'
-
-              return (
-                <g
-                  key={node.messageId}
-                  transform={`translate(${node.x} ${node.y})`}
-                  role="button"
-                  tabIndex={disabled ? -1 : 0}
-                  style={{
-                    cursor: disabled ? 'not-allowed' : 'pointer',
-                    opacity: disabled ? 0.65 : 1,
-                  }}
-                  onPointerEnter={() => {
-                    if (!disabled) {
-                      setHoveredNodeId(node.messageId)
-                    }
-                  }}
-                  onPointerLeave={() =>
-                    setHoveredNodeId((current) =>
-                      current === node.messageId ? null : current,
-                    )
-                  }
-                  onClick={() => {
-                    if (disabled || didPanRef.current) {
-                      return
-                    }
-                    onSelect(node.messageId)
-                  }}
-                >
-                  <title>{`#${node.messageId} ${roleLabel} ${node.fullPreview}`}</title>
-
-                  <rect
-                    x={0}
-                    y={0}
-                    width={NODE_W}
-                    height={NODE_H}
-                    rx={10}
-                    fill={isHoveredNode ? nodeHoverFill : nodeFill}
-                    filter="url(#node-shadow)"
-                    style={{ transition: 'fill 120ms ease-out' }}
-                  />
-
-                  <text
-                    x={14}
-                    y={19}
-                    fill={nodeMetaText}
-                    fontSize={10}
-                    fontWeight={600}
-                    fontFamily="system-ui, sans-serif"
-                  >
-                    {roleLabel}
-                  </text>
-
-                  {node.siblingCount > 1 ? (
-                    <>
-                      <rect
-                        x={NODE_W - 44}
-                        y={8}
-                        width={36}
-                        height={16}
-                        rx={8}
-                        fill={isHoveredNode ? nodeHoverFill : nodeFill}
-                        style={{ transition: 'fill 120ms ease-out' }}
-                      />
-                      <text
-                        x={NODE_W - 26}
-                        y={19}
-                        fill={nodeMetaText}
-                        fontSize={9}
-                        textAnchor="middle"
-                        fontFamily="system-ui, sans-serif"
-                      >
-                        {node.siblingIndex}/{node.siblingCount}
-                      </text>
-                    </>
-                  ) : null}
-
-                  <text
-                    x={14}
-                    y={40}
-                    fill={nodePreviewText}
-                    fontSize={11}
-                    fontWeight={500}
-                    fontFamily="system-ui, sans-serif"
-                  >
-                    {trimPreview(node.preview)}
-                  </text>
-                </g>
-              )
-            })}
-          </g>
-        </g>
-      </svg>
+        <Background
+          variant={BackgroundVariant.Dots}
+          gap={20}
+          size={0.8}
+          color="var(--border-primary)"
+        />
+      </ReactFlow>
     </div>
-  )
+  );
 }
 
 export function OutlineButton() {
-  const [open, setOpen] = useState(false)
-  const messages = useChatSessionStore((state) => state.messages)
-  const currentPath = useChatSessionStore((state) => state.currentPath)
-  const latestRootId = useChatSessionStore((state) => state.latestRootId)
-  const selectMessage = useChatSessionStore((state) => state.selectMessage)
-  const status = useChatRequestStore((state) => state.status)
-  const isBusy = status !== 'idle'
+  const [open, setOpen] = useState(false);
+  const messages = useChatSessionStore((s) => s.messages);
+  const currentPath = useChatSessionStore((s) => s.currentPath);
+  const latestRootId = useChatSessionStore((s) => s.latestRootId);
+  const selectMessage = useChatSessionStore((s) => s.selectMessage);
+  const isBusy = useChatRequestStore((s) => s.status) !== "idle";
 
-  const outline = (() => {
-    if (!open) {
-      return null
-    }
-
-    const nextOutline = buildOutlineTree(messages, latestRootId)
-    return {
-      ...nextOutline,
-      layout: computeTreeLayout(nextOutline.roots),
-    }
-  })()
+  const roots = open ? buildOutlineTree(messages, latestRootId).roots : null;
 
   const handleSelect = (targetMessageId: number) => {
-    if (!currentPath.includes(targetMessageId)) {
-      selectMessage(targetMessageId)
-    }
+    if (!currentPath.includes(targetMessageId)) selectMessage(targetMessageId);
+    setOpen(false);
+    scrollToMessage(targetMessageId);
+  };
 
-    setOpen(false)
-    scrollToMessage(targetMessageId)
-  }
-
-  if (currentPath.length === 0) {
-    return null
-  }
+  if (currentPath.length === 0) return null;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -750,8 +299,8 @@ export function OutlineButton() {
           aria-label="Open conversation outline"
           title={
             isBusy
-              ? 'Outline is unavailable while a response is streaming.'
-              : 'Open conversation outline'
+              ? "Outline is unavailable while a response is streaming."
+              : "Open conversation outline"
           }
           disabled={isBusy}
         >
@@ -762,14 +311,15 @@ export function OutlineButton() {
         className="w-[min(94vw,72rem)] p-3 sm:max-w-4xl"
         showCloseButton
       >
-        <OutlineGraph
-          open={open}
-          layout={outline?.layout ?? null}
-          currentPath={currentPath}
-          onSelect={handleSelect}
-          disabled={isBusy}
-        />
+        {roots && (
+          <OutlineGraph
+            roots={roots}
+            currentPath={currentPath}
+            onSelect={handleSelect}
+            disabled={isBusy}
+          />
+        )}
       </DialogContent>
     </Dialog>
-  )
+  );
 }
