@@ -256,3 +256,5 @@ Never commit real secrets.
 ## Code Standards
 
 - Never typecast. Never use `as`
+
+- DO NOT Calling setState synchronously within an effect body

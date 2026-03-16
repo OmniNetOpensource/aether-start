@@ -1,82 +1,35 @@
-import { useEffect } from "react";
+/**
+ * useConversationLoader
+ *
+ * 对话加载器 Hook：负责从服务端拉取对话详情，并同步到各 Zustand store。
+ *
+ * 职责：
+ * 1. 根据 loadingConversationId 拉取对话（消息树、artifacts、currentPath 等）
+ * 2. 若当前 store 已是该对话，则尝试恢复断点续传（resume streaming）
+ * 3. 切换/离开对话时执行清理（abort 请求、清空 composer/editing 等）
+ * 4. 根据对话标题更新 document.title
+ *
+ * 使用场景：/app/c/$conversationId 路由下的 ConversationPage
+ */
+import { useEffect, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import {
   resetLastEventId,
-  resumeRunningConversation,
+  stopActiveChatRequest,
 } from "@/lib/chat/api/chat-orchestrator";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { getConversationFn } from "@/server/functions/conversations";
 import { buildCurrentPath } from "@/lib/conversation/tree/message-tree";
-import type { Attachment, Message } from "@/types/message";
+import type { Message } from "@/types/message";
 
-const restoreAttachments = (
-  attachments: Array<
-    Attachment & {
-      displayUrl?: string;
-      thumbnailUrl?: string;
-      thumbnailStorageKey?: string;
-    }
-  >,
-): Attachment[] =>
-  attachments
-    .map((att) => ({
-      id: att.id,
-      kind: att.kind,
-      name: att.name,
-      size: att.size,
-      mimeType: att.mimeType,
-      url: att.url ?? att.displayUrl ?? "",
-      storageKey: att.storageKey,
-      thumbnailUrl: att.thumbnailUrl,
-      thumbnailStorageKey: att.thumbnailStorageKey,
-    }))
-    .filter((att) => att.mimeType?.startsWith("image/") && !!att.url);
-
-const hydrateBlocks = (blocks: Message["blocks"]) =>
-  Array.isArray(blocks)
-    ? blocks.map((block) =>
-        block.type === "research"
-          ? {
-              ...block,
-              items: block.items.map((item) => ({ ...item })),
-            }
-          : block.type === "attachments"
-            ? {
-                ...block,
-                attachments: restoreAttachments(
-                  Array.isArray(block.attachments) ? block.attachments : [],
-                ),
-              }
-            : { ...block },
-      )
-    : [];
-
-const hydrateMessage = (msg: Message): Message =>
-  ({
-    id: msg.id,
-    parentId: msg.parentId ?? null,
-    role: msg.role,
-    blocks: hydrateBlocks(msg.blocks),
-    prevSibling: msg.prevSibling ?? null,
-    nextSibling: msg.nextSibling ?? null,
-    latestChild: msg.latestChild ?? null,
-    createdAt: msg.createdAt ?? new Date().toISOString(),
-  }) as Message;
-
-export type ConversationLoaderPayload = NonNullable<
-  Awaited<ReturnType<typeof getConversationFn>>
->;
-
-export type LoaderData =
-  | { newChat: boolean }
-  | { conversation: ConversationLoaderPayload };
-
-export function useConversationLoader(
-  loadingConversationId: string | undefined,
-  loaderData: LoaderData | undefined,
-) {
+/**
+ * @param loadingConversationId - 当前路由参数中的对话 ID（来自 /app/c/$conversationId）
+ * @returns { isLoading } - 是否处于加载中（拉取对话详情时为 true）
+ */
+export function useConversationLoader(loadingConversationId: string) {
+  const navigate = useNavigate();
   const currentConversationId = useChatSessionStore(
     (state) => state.conversationId,
   );
@@ -86,117 +39,100 @@ export function useConversationLoader(
   );
   const setArtifacts = useChatSessionStore((state) => state.setArtifacts);
 
+  const [isLoading, setIsLoading] = useState(
+    currentConversationId !== loadingConversationId,
+  );
+
+  /**
+   * 主 effect：加载对话或恢复流式续传
+   * - 若 store 中已是该对话：尝试 resume（页面刷新后重新进入时）
+   * - 否则：拉取对话详情，hydrate 消息树，写入 store
+   * - cleanup：abort 进行中的 resume 请求，标记 cancelled 避免竞态
+   */
   useEffect(() => {
-    if (!loadingConversationId) return;
-    if (loaderData && "newChat" in loaderData && loaderData.newChat) return;
-    if (currentConversationId === loadingConversationId) return;
-
-    const conversation =
-      loaderData && "conversation" in loaderData
-        ? loaderData.conversation
-        : null;
-    if (!conversation) return;
-
-    useComposerStore.getState().clear();
-
-    const rawMessages: Message[] = Array.isArray(conversation.messages)
-      ? (conversation.messages as Message[])
-      : [];
-    const rawCurrentPath = (conversation as { currentPath?: unknown })
-      .currentPath;
-    let currentPath =
-      Array.isArray(rawCurrentPath) &&
-      rawCurrentPath.every((id) => typeof id === "number")
-        ? rawCurrentPath
-        : [];
-    const mappedMessages = rawMessages.map((msg) => hydrateMessage(msg));
-
-    if (currentPath.length === 0 && mappedMessages.length > 0) {
-      const rawLatestRootId = (conversation as { latestRootId?: unknown })
-        .latestRootId;
-      const latestRootId =
-        typeof rawLatestRootId === "number"
-          ? rawLatestRootId
-          : mappedMessages[0].id;
-      currentPath = buildCurrentPath(mappedMessages, latestRootId);
+    /**
+     * 如果当前对话ID与加载的对话ID相同，则不进行加载
+     */
+    if (currentConversationId === loadingConversationId) {
+      return;
     }
 
-    useEditingStore.getState().clear();
-    setConversationId(loadingConversationId);
-    initializeTree(mappedMessages, currentPath);
-    setArtifacts(
-      Array.isArray(conversation.artifacts) ? conversation.artifacts : [],
-    );
-    const store = useChatSessionStore.getState();
-    const roleId =
-      conversation.role ??
-      store.currentRole ??
-      store.availableRoles[0]?.id ??
-      "";
-    store.setCurrentRole(roleId);
+    let cancelled = false;
+
+    /* 拉取新对话：getConversationFn 返回 messages、currentPath、artifacts、role 等 */
+    void getConversationFn({ data: { id: loadingConversationId } })
+      .then((conversation) => {
+        if (cancelled) return;
+
+        if (!conversation) {
+          navigate({ to: "/404", replace: true });
+          return;
+        }
+
+        const messages = (conversation.messages ?? []) as Message[];
+        let currentPath = conversation.currentPath ?? [];
+        if (currentPath.length === 0 && messages.length > 0) {
+          currentPath = buildCurrentPath(messages, messages[0].id);
+        }
+
+        setConversationId(loadingConversationId);
+        initializeTree(messages, currentPath);
+        setArtifacts(conversation.artifacts ?? []);
+        const store = useChatSessionStore.getState();
+        const roleId =
+          conversation.role ??
+          store.currentRole ??
+          store.availableRoles[0]?.id ??
+          "";
+        store.setCurrentRole(roleId);
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        console.error("Failed to load conversation:", error);
+        navigate({ to: "/404", replace: true });
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     loadingConversationId,
     currentConversationId,
-    loaderData,
+    navigate,
     setConversationId,
     initializeTree,
     setArtifacts,
   ]);
 
-  useEffect(() => {
-    if (
-      !loadingConversationId ||
-      currentConversationId !== loadingConversationId
-    ) {
-      return;
-    }
+  const title = useChatSessionStore(
+    (state) =>
+      state.conversations.find((c) => c.id === loadingConversationId)?.title,
+  );
 
-    const requestStatus = useChatRequestStore.getState().status;
-    if (requestStatus === "sending" || requestStatus === "streaming") {
-      return;
-    }
-
-    resetLastEventId();
-
-    const abortController = new AbortController();
-
-    resumeRunningConversation(
-      loadingConversationId,
-      abortController.signal,
-    ).catch(() => {});
-
-    return () => {
-      abortController.abort();
-    };
-  }, [loadingConversationId, currentConversationId]);
-
-  const conversations = useChatSessionStore((state) => state.conversations);
-  const title = conversations.find(
-    (item) => item.id === loadingConversationId,
-  )?.title;
-
+  /** 根据对话标题更新 document.title，离开时恢复默认 */
   useEffect(() => {
     const defaultTitle = "Aether";
-
-    if (title) {
-      const truncatedTitle =
-        title.length > 50 ? `${title.slice(0, 50)}...` : title;
-      document.title = `${truncatedTitle} - Aether`;
-    } else {
-      document.title = defaultTitle;
-    }
-
+    document.title = title
+      ? `${title.length > 50 ? `${title.slice(0, 50)}...` : title} - Aether`
+      : defaultTitle;
     return () => {
       document.title = defaultTitle;
     };
   }, [title]);
 
+  /**
+   * 切换/离开对话时的清理 effect
+   * 当 loadingConversationId 变化（切换对话）或组件卸载（离开页面）时执行
+   */
   useEffect(() => {
     return () => {
       resetLastEventId();
-      useChatRequestStore.getState().setStatus("idle");
+      stopActiveChatRequest(); /* 中止 SSE 流并通知服务端 /abort */
+      useComposerStore.getState().clear();
+      useEditingStore.getState().clear();
     };
   }, [loadingConversationId]);
 
-  return { isLoading: loadingConversationId !== currentConversationId };
+  return { isLoading };
 }

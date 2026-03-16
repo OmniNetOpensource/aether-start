@@ -1,126 +1,126 @@
-import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from '@tanstack/react-router'
-import { Loader2, Search } from 'lucide-react'
-import type { ConversationSearchItem } from '@/types/conversation'
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { Loader2, Search } from "lucide-react";
+import type { ConversationSearchItem } from "@/types/conversation";
 import {
   searchConversationsFn,
   type ConversationSearchCursor,
-} from '@/server/functions/conversations'
+} from "@/server/functions/conversations";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog'
+} from "@/components/ui/dialog";
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 20;
 
 const formatUpdatedAt = (value: string) => {
-  const date = new Date(value)
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return value
+    return value;
   }
 
-  return date.toLocaleString('zh-CN', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+  return date.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
     hour12: false,
-  })
-}
+  });
+};
 
 export type ConversationSearchDialogProps = {
-  open: boolean
-  onOpenChange: (next: boolean) => void
-}
+  open: boolean;
+  onOpenChange: (next: boolean) => void;
+};
 
 export function ConversationSearchDialog({
   open,
   onOpenChange,
 }: ConversationSearchDialogProps) {
-  const navigate = useNavigate()
-  const [query, setQuery] = useState('')
-  const [debouncedQuery, setDebouncedQuery] = useState('')
-  const [items, setItems] = useState<ConversationSearchItem[]>([])
-  const [cursor, setCursor] = useState<ConversationSearchCursor>(null)
-  const [loading, setLoading] = useState(false)
-  const [loadingMore, setLoadingMore] = useState(false)
-  const [hasSearched, setHasSearched] = useState(false)
+  const navigate = useNavigate();
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [items, setItems] = useState<ConversationSearchItem[]>([]);
+  const [cursor, setCursor] = useState<ConversationSearchCursor>(null);
+  const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  const requestIdRef = useRef(0)
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
-  const listRootRef = useRef<HTMLDivElement | null>(null)
+  const requestIdRef = useRef(0);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const listRootRef = useRef<HTMLDivElement | null>(null);
 
-  const hasMore = cursor !== null
+  const hasMore = cursor !== null;
 
   const resetSearchState = () => {
-    requestIdRef.current += 1
-    setDebouncedQuery('')
-    setItems([])
-    setCursor(null)
-    setLoading(false)
-    setLoadingMore(false)
-    setHasSearched(false)
-  }
+    requestIdRef.current += 1;
+    setDebouncedQuery("");
+    setItems([]);
+    setCursor(null);
+    setLoading(false);
+    setLoadingMore(false);
+    setHasSearched(false);
+  };
 
   const closeAndClear = () => {
-    onOpenChange(false)
-    setQuery('')
-    resetSearchState()
-  }
+    onOpenChange(false);
+    setQuery("");
+    resetSearchState();
+  };
 
   const handleDialogOpenChange = (next: boolean) => {
     if (next) {
-      onOpenChange(true)
-      return
+      onOpenChange(true);
+      return;
     }
 
-    closeAndClear()
-  }
+    closeAndClear();
+  };
 
   useEffect(() => {
     if (!open) {
-      setQuery('')
-      requestIdRef.current += 1
-      setDebouncedQuery('')
-      setItems([])
-      setCursor(null)
-      setLoading(false)
-      setLoadingMore(false)
-      setHasSearched(false)
-      return
+      setQuery("");
+      requestIdRef.current += 1;
+      setDebouncedQuery("");
+      setItems([]);
+      setCursor(null);
+      setLoading(false);
+      setLoadingMore(false);
+      setHasSearched(false);
+      return;
     }
 
     const timer = window.setTimeout(() => {
-      setDebouncedQuery(query.trim())
-    }, 250)
+      setDebouncedQuery(query.trim());
+    }, 250);
 
-    return () => window.clearTimeout(timer)
-  }, [open, query])
+    return () => window.clearTimeout(timer);
+  }, [open, query]);
 
   useEffect(() => {
     if (!open) {
-      return
+      return;
     }
 
     if (!debouncedQuery) {
-      setItems([])
-      setCursor(null)
-      setLoading(false)
-      setLoadingMore(false)
-      setHasSearched(false)
-      return
+      setItems([]);
+      setCursor(null);
+      setLoading(false);
+      setLoadingMore(false);
+      setHasSearched(false);
+      return;
     }
 
-    const currentRequestId = requestIdRef.current + 1
-    requestIdRef.current = currentRequestId
+    const currentRequestId = requestIdRef.current + 1;
+    requestIdRef.current = currentRequestId;
 
-    setLoading(true)
-    setLoadingMore(false)
-    setItems([])
-    setCursor(null)
-    setHasSearched(false)
+    setLoading(true);
+    setLoadingMore(false);
+    setItems([]);
+    setCursor(null);
+    setHasSearched(false);
 
     void searchConversationsFn({
       data: {
@@ -131,45 +131,45 @@ export function ConversationSearchDialog({
     })
       .then((page) => {
         if (requestIdRef.current !== currentRequestId) {
-          return
+          return;
         }
 
-        setItems(page.items)
-        setCursor(page.nextCursor)
-        setHasSearched(true)
+        setItems(page.items);
+        setCursor(page.nextCursor);
+        setHasSearched(true);
       })
       .catch((error) => {
         if (requestIdRef.current !== currentRequestId) {
-          return
+          return;
         }
 
-        console.error('Failed to search conversations:', error)
-        setItems([])
-        setCursor(null)
-        setHasSearched(true)
+        console.error("Failed to search conversations:", error);
+        setItems([]);
+        setCursor(null);
+        setHasSearched(true);
       })
       .finally(() => {
         if (requestIdRef.current !== currentRequestId) {
-          return
+          return;
         }
 
-        setLoading(false)
-      })
-  }, [open, debouncedQuery])
+        setLoading(false);
+      });
+  }, [open, debouncedQuery]);
 
   useEffect(() => {
     if (!open || !hasMore || loading || loadingMore) {
-      return
+      return;
     }
 
     const loadMore = async () => {
       if (!open || !debouncedQuery || loading || loadingMore || !cursor) {
-        return
+        return;
       }
 
-      const currentRequestId = requestIdRef.current + 1
-      requestIdRef.current = currentRequestId
-      setLoadingMore(true)
+      const currentRequestId = requestIdRef.current + 1;
+      requestIdRef.current = currentRequestId;
+      setLoadingMore(true);
 
       try {
         const page = await searchConversationsFn({
@@ -178,136 +178,140 @@ export function ConversationSearchDialog({
             limit: PAGE_SIZE,
             cursor,
           },
-        })
+        });
 
         if (requestIdRef.current !== currentRequestId) {
-          return
+          return;
         }
 
-        setItems((prev) => [...prev, ...page.items])
-        setCursor(page.nextCursor)
-        setHasSearched(true)
+        setItems((prev) => [...prev, ...page.items]);
+        setCursor(page.nextCursor);
+        setHasSearched(true);
       } catch (error) {
         if (requestIdRef.current !== currentRequestId) {
-          return
+          return;
         }
 
-        console.error('Failed to load more search results:', error)
+        console.error("Failed to load more search results:", error);
       } finally {
         if (requestIdRef.current === currentRequestId) {
-          setLoadingMore(false)
+          setLoadingMore(false);
         }
       }
-    }
+    };
 
-    const target = sentinelRef.current
+    const target = sentinelRef.current;
     if (!target) {
-      return
+      return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) {
-          return
+          return;
         }
 
-        void loadMore()
+        void loadMore();
       },
       {
         root: listRootRef.current,
-        rootMargin: '120px',
+        rootMargin: "120px",
       },
-    )
+    );
 
-    observer.observe(target)
+    observer.observe(target);
 
-    return () => observer.disconnect()
-  }, [open, hasMore, loading, loadingMore, debouncedQuery, cursor])
+    return () => observer.disconnect();
+  }, [open, hasMore, loading, loadingMore, debouncedQuery, cursor]);
 
   const handleSelect = (item: ConversationSearchItem) => {
-    closeAndClear()
+    closeAndClear();
     navigate({
-      to: '/app/c/$conversationId',
+      to: "/app/c/$conversationId",
       params: { conversationId: item.id },
-      search: { new_chat: false },
-    })
-  }
+    });
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleDialogOpenChange}>
-      <DialogContent 
-        className='max-h-[80vh] overflow-hidden border-0 bg-white p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl dark:bg-(--surface-primary)' 
+      <DialogContent
+        className="max-h-[80vh] overflow-hidden border-0 bg-white p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl dark:bg-(--surface-primary)"
         showCloseButton={false}
       >
-        <DialogHeader className='sr-only'>
+        <DialogHeader className="sr-only">
           <DialogTitle>搜索聊天记录</DialogTitle>
         </DialogHeader>
 
-        <div className='flex items-center px-4 py-4'>
-          <Search className='size-6 text-(--text-secondary)' />
+        <div className="flex items-center px-4 py-4">
+          <Search className="size-6 text-(--text-secondary)" />
           <input
             autoFocus
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder='你想找什么？'
-            className='ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-(--text-tertiary)'
+            placeholder="你想找什么？"
+            className="ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-(--text-tertiary)"
           />
-          {loading && <Loader2 className='size-5 animate-spin text-(--text-secondary)' />}
+          {loading && (
+            <Loader2 className="size-5 animate-spin text-(--text-secondary)" />
+          )}
         </div>
 
-        <div className='h-[1px] w-full bg-(--surface-muted) dark:bg-(--surface-muted)' />
+        <div className="h-[1px] w-full bg-(--surface-muted) dark:bg-(--surface-muted)" />
 
-        <div ref={listRootRef} className='max-h-[60vh] overflow-y-auto p-2'>
+        <div ref={listRootRef} className="max-h-[60vh] overflow-y-auto p-2">
           {!debouncedQuery ? (
-            <p className='px-3 py-10 text-center text-sm text-(--text-tertiary)'>
+            <p className="px-3 py-10 text-center text-sm text-(--text-tertiary)">
               输入关键词搜索聊天记录
             </p>
           ) : null}
 
           {debouncedQuery && !loading && hasSearched && items.length === 0 ? (
-            <p className='px-3 py-10 text-center text-sm text-(--text-tertiary)'>
+            <p className="px-3 py-10 text-center text-sm text-(--text-tertiary)">
               没有找到相关会话
             </p>
           ) : null}
 
           {items.length > 0 ? (
-            <div className='flex flex-col gap-0.5'>
+            <div className="flex flex-col gap-0.5">
               {items.map((item) => {
-                const title = item.title || '未命名会话'
+                const title = item.title || "未命名会话";
 
                 return (
                   <button
                     key={item.id}
-                    type='button'
-                    className='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-(--surface-muted) active:scale-[0.98]'
+                    type="button"
+                    className="group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-(--surface-muted) active:scale-[0.98]"
                     onClick={() => handleSelect(item)}
                   >
-                    <div className='flex w-full items-baseline justify-between'>
-                      <span className='truncate text-base font-medium text-(--text-primary)'>
+                    <div className="flex w-full items-baseline justify-between">
+                      <span className="truncate text-base font-medium text-(--text-primary)">
                         {title}
                       </span>
-                      <span className='ml-4 shrink-0 text-xs text-(--text-tertiary) opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100'>
+                      <span className="ml-4 shrink-0 text-xs text-(--text-tertiary) opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100">
                         {formatUpdatedAt(item.updated_at)}
                       </span>
                     </div>
-                    <span className='mt-0.5 truncate text-sm text-(--text-tertiary)'>
-                      {item.excerpt || '暂无可展示内容'}
+                    <span className="mt-0.5 truncate text-sm text-(--text-tertiary)">
+                      {item.excerpt || "暂无可展示内容"}
                     </span>
                   </button>
-                )
+                );
               })}
             </div>
           ) : null}
 
           {items.length > 0 && (hasMore || loadingMore) ? (
-            <div ref={sentinelRef} className='flex items-center justify-center py-2 text-(--text-tertiary)'>
+            <div
+              ref={sentinelRef}
+              className="flex items-center justify-center py-2 text-(--text-tertiary)"
+            >
               {loadingMore ? (
-                <Loader2 className='size-4 animate-spin text-(--text-secondary)' />
+                <Loader2 className="size-4 animate-spin text-(--text-secondary)" />
               ) : null}
             </div>
           ) : null}
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

@@ -1,47 +1,47 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from '@tanstack/react-router'
-import { MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react'
-import { Shimmer } from '@/components/ai-elements/shimmer'
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { MoreHorizontal, Pin, PinOff, Trash2 } from "lucide-react";
+import { Shimmer } from "@/components/ai-elements/shimmer";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
-import type { ConversationMeta } from '@/types/conversation'
+} from "@/components/ui/dropdown-menu";
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import type { ConversationMeta } from "@/types/conversation";
 
-const PLACEHOLDER_TITLES = ['New Chat', 'Untitled Chat']
+const PLACEHOLDER_TITLES = ["New Chat", "Untitled Chat"];
 
 function isPlaceholderTitle(title: string | null): boolean {
   if (!title || !title.trim()) {
-    return true
+    return true;
   }
 
-  return PLACEHOLDER_TITLES.includes(title.trim())
+  return PLACEHOLDER_TITLES.includes(title.trim());
 }
 
 type ConversationItemProps = {
-  conversation: ConversationMeta
-  isActive: boolean
-  onDropdownOpenChange: (open: boolean) => void
-}
+  conversation: ConversationMeta;
+  isActive: boolean;
+  onDropdownOpenChange: (open: boolean) => void;
+};
 
 export function ConversationItem({
   conversation,
   isActive,
   onDropdownOpenChange,
 }: ConversationItemProps) {
-  const title = conversation.title || 'Untitled Chat'
-  const useShimmer = isPlaceholderTitle(conversation.title)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const navigate = useNavigate()
+  const title = conversation.title || "Untitled Chat";
+  const useShimmer = isPlaceholderTitle(conversation.title);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
   const deleteConversation = useChatSessionStore(
     (state) => state.deleteConversation,
-  )
+  );
   const setConversationPinned = useChatSessionStore(
     (state) => state.setConversationPinned,
-  )
+  );
 
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (
@@ -51,55 +51,54 @@ export function ConversationItem({
       event.altKey ||
       event.button !== 0
     ) {
-      return
+      return;
     }
-  }
+  };
 
   const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault()
-    event.stopPropagation()
-  }
+    event.preventDefault();
+    event.stopPropagation();
+  };
 
   const handleDelete = async () => {
     const confirmed = window.confirm(
-      'Delete this conversation? This action cannot be undone.',
-    )
+      "Delete this conversation? This action cannot be undone.",
+    );
     if (!confirmed) {
-      return
+      return;
     }
 
-    await deleteConversation(conversation.id)
+    await deleteConversation(conversation.id);
 
     if (isActive) {
-      navigate({ to: '/app' })
+      navigate({ to: "/app" });
     }
-  }
+  };
 
   const handleSetPinned = async (pinned: boolean) => {
-    await setConversationPinned(conversation.id, pinned)
-  }
+    await setConversationPinned(conversation.id, pinned);
+  };
 
   const handleMenuOpenChange = (open: boolean) => {
-    setMenuOpen(open)
-    onDropdownOpenChange(open)
-  }
+    setMenuOpen(open);
+    onDropdownOpenChange(open);
+  };
 
   useEffect(() => {
     return () => {
-      onDropdownOpenChange(false)
-    }
-  }, [onDropdownOpenChange])
+      onDropdownOpenChange(false);
+    };
+  }, [onDropdownOpenChange]);
 
   return (
     <div
       className={`group relative flex-col w-full items-start justify-center gap-3 rounded-sm p-0.5 text-left transition-all hover:bg-(--surface-hover) ${
-        isActive ? 'bg-(--surface-active)' : 'bg-transparent'
+        isActive ? "bg-(--surface-active)" : "bg-transparent"
       }`}
     >
       <Link
         to="/app/c/$conversationId"
         params={{ conversationId: conversation.id }}
-        search={{ new_chat: false }}
         onClick={handleClick}
         className="absolute inset-0 z-0"
         aria-label={title}
@@ -148,7 +147,7 @@ export function ConversationItem({
             >
               <DropdownMenuItem
                 onSelect={() => {
-                  void handleSetPinned(!conversation.is_pinned)
+                  void handleSetPinned(!conversation.is_pinned);
                 }}
               >
                 {conversation.is_pinned ? (
@@ -156,11 +155,11 @@ export function ConversationItem({
                 ) : (
                   <Pin className="size-4" />
                 )}
-                {conversation.is_pinned ? 'Unpin' : 'Pin'}
+                {conversation.is_pinned ? "Unpin" : "Pin"}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => {
-                  void handleDelete()
+                  void handleDelete();
                 }}
                 variant="destructive"
               >
@@ -172,5 +171,5 @@ export function ConversationItem({
         </div>
       </div>
     </div>
-  )
+  );
 }

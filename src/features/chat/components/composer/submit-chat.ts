@@ -30,10 +30,7 @@ export async function submitMessage(
     return;
   }
 
-  sessionStore.addMessage(
-    "user",
-    buildUserBlocks(input, pendingAttachments),
-  );
+  sessionStore.addMessage("user", buildUserBlocks(input, pendingAttachments));
 
   composerStore.clear();
 

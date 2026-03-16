@@ -82,7 +82,6 @@ export function ComposerToolbar() {
         navigate({
           to: "/app/c/$conversationId",
           params: { conversationId },
-          search: { new_chat: true },
         }),
       );
     }

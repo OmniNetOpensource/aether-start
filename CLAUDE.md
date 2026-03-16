@@ -391,3 +391,5 @@ When working on public share routes, preserve read-only behavior and noindex sem
 ## Code Standards
 
 - Never typecast. Never use `as`
+
+- DO NOT Calling setState synchronously within an effect body
