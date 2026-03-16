@@ -252,26 +252,47 @@ export function ArtifactPanel() {
     return null;
   }
 
+  const DRAG_THRESHOLD = 10;
+
   return (
     <aside className="relative hidden h-full w-[min(44vw,38rem)] min-w-88 shrink-0 bg-(--sidebar-surface) px-5 py-4 lg:block">
       <div
-        className="group absolute -left-1.5 top-0 z-10 flex h-full w-3 cursor-col-resize items-center justify-center"
+        className="group absolute left-0 top-0 z-10 flex h-full w-2 cursor-col-resize items-center justify-center"
         onPointerDown={(e) => {
-          e.currentTarget.setPointerCapture(e.pointerId);
-          document.body.style.cursor = "col-resize";
-          document.body.style.userSelect = "none";
-        }}
-        onPointerMove={(e) => {
-          if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
-          const main = e.currentTarget.closest("main");
-          if (!main) return;
-          const rect = main.getBoundingClientRect();
-          const newWidth = Math.min(
-            Math.max(352, rect.right - e.clientX),
-            rect.width - 400,
-          );
-          (e.currentTarget.parentElement as HTMLElement).style.width =
-            `${newWidth}px`;
+          const target = e.currentTarget;
+          const pointerId = e.pointerId;
+          target.setPointerCapture(pointerId);
+          const startX = e.clientX;
+          let active = false;
+          const onMove = (moveEvent: PointerEvent) => {
+            if (!target.hasPointerCapture(pointerId)) return;
+            if (!active) {
+              if (Math.abs(moveEvent.clientX - startX) < DRAG_THRESHOLD) return;
+              active = true;
+              document.body.style.cursor = "col-resize";
+              document.body.style.userSelect = "none";
+            }
+            const main = target.closest("main");
+            if (!main) return;
+            const rect = main.getBoundingClientRect();
+            const newWidth = Math.min(
+              Math.max(352, rect.right - moveEvent.clientX),
+              rect.width - 400,
+            );
+            (target.parentElement as HTMLElement).style.width = `${newWidth}px`;
+          };
+          const onUp = () => {
+            target.removeEventListener("pointermove", onMove);
+            target.removeEventListener("pointerup", onUp);
+            target.removeEventListener("pointercancel", onUp);
+            if (active) {
+              document.body.style.cursor = "";
+              document.body.style.userSelect = "";
+            }
+          };
+          target.addEventListener("pointermove", onMove);
+          target.addEventListener("pointerup", onUp);
+          target.addEventListener("pointercancel", onUp);
         }}
         onLostPointerCapture={() => {
           document.body.style.cursor = "";

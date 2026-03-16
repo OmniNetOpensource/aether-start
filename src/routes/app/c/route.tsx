@@ -1,12 +1,12 @@
-import { Outlet, createFileRoute } from '@tanstack/react-router'
-import { NewChatButton } from '@/features/chat/components/NewChatButton'
-import { ArtifactToggleButton } from '@/features/chat/components/artifact/ArtifactPanel'
-import { OutlineButton } from '@/features/chat/components/outline'
-import { ShareButton } from '@/features/share/components/ShareButton'
+import { Outlet, createFileRoute } from "@tanstack/react-router";
+import { NewChatButton } from "@/features/chat/components/NewChatButton";
+import { ArtifactToggleButton } from "@/features/chat/components/artifact/ArtifactPanel";
+import { OutlineButton } from "@/features/chat/components/outline";
+import { ShareButton } from "@/features/share/components/ShareButton";
 
-export const Route = createFileRoute('/app/c')({
+export const Route = createFileRoute("/app/c")({
   component: ChatRoomLayout,
-})
+});
 
 function ChatRoomLayout() {
   return (
@@ -22,5 +22,5 @@ function ChatRoomLayout() {
         <Outlet />
       </div>
     </div>
-  )
+  );
 }

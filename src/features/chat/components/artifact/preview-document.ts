@@ -1,9 +1,9 @@
-import { ARTIFACT_PREVIEW_MESSAGE_TYPE } from './preview-protocol';
+import { ARTIFACT_PREVIEW_MESSAGE_TYPE } from "./preview-protocol";
 
 const BABEL_CDN_URL =
-  'https://cdn.jsdelivr.net/npm/@babel/standalone@7.29.1/babel.min.js';
-const REACT_CDN_URL = 'https://esm.sh/react@19.2.4';
-const REACT_DOM_CDN_URL = 'https://esm.sh/react-dom@19.2.4/client';
+  "https://cdn.jsdelivr.net/npm/@babel/standalone@7.29.1/babel.min.js";
+const REACT_CDN_URL = "https://esm.sh/react@19.2.4";
+const REACT_DOM_CDN_URL = "https://esm.sh/react-dom@19.2.4/client";
 
 export const ARTIFACT_PREVIEW_DOCUMENT = String.raw`<!doctype html>
 <html lang="en">
@@ -40,7 +40,7 @@ export const ARTIFACT_PREVIEW_DOCUMENT = String.raw`<!doctype html>
       }
 
       #mount {
-        min-height: 100vh;
+        height: 100vh;
         width: 100%;
         overflow: auto;
       }
