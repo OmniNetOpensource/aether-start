@@ -16,7 +16,7 @@ import { toast } from "@/hooks/useToast";
 import { applyChatEventToTree } from "@/lib/chat/api/event-handlers";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
-import type { Message, SerializedMessage } from "@/types/message";
+import type { SerializedMessage } from "@/types/message";
 import type { ChatAgentStatus, MessageTreeSnapshot } from "@/types/chat-api";
 import type { ChatServerToClientEvent } from "@/types/chat-event-types";
 
@@ -257,11 +257,7 @@ export const checkAgentStatus = async (
  *
  * 异常：AbortError 静默忽略；TypeError（如网络错误）调用 finalizeStream；其他恢复 idle。
  */
-export const startChatRequest = async ({
-  messages,
-}: {
-  messages: Message[];
-}) => {
+export const startChatRequest = async () => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
@@ -274,6 +270,7 @@ export const startChatRequest = async ({
     return;
   }
 
+  const messages = sessionStore.getMessagesFromPath();
   const conversationId = sessionStore.conversationId;
   const idempotencyKey = generateId("msg"); /* 幂等键，防止重复提交 */
 

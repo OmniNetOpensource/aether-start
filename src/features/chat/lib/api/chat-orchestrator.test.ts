@@ -6,7 +6,6 @@ import {
 
 const {
   addConversationMock,
-  appNavigateMock,
   applyChatEventToTreeMock,
   messageTreeState,
   fetchMock,
@@ -28,11 +27,11 @@ const {
       latestRootId: null,
       nextId: 1,
     })),
+    getMessagesFromPath: vi.fn(() => [{ role: "user", blocks: [] }]),
   };
 
   return {
     addConversationMock: vi.fn(),
-    appNavigateMock: vi.fn(),
     applyChatEventToTreeMock: vi.fn(),
     messageTreeState,
     fetchMock: vi.fn(),
@@ -56,10 +55,6 @@ vi.mock("@/stores/zustand/useChatSessionStore", () => ({
 
 vi.mock("@/lib/chat/api/event-handlers", () => ({
   applyChatEventToTree: applyChatEventToTreeMock,
-}));
-
-vi.mock("@/lib/navigation", () => ({
-  appNavigate: appNavigateMock,
 }));
 
 vi.stubGlobal("fetch", fetchMock);
@@ -116,7 +111,6 @@ const sseStream = (
 describe("chat-orchestrator SSE model", () => {
   beforeEach(async () => {
     addConversationMock.mockReset();
-    appNavigateMock.mockReset();
     applyChatEventToTreeMock.mockReset();
     fetchMock.mockReset();
 
@@ -129,6 +123,7 @@ describe("chat-orchestrator SSE model", () => {
     messageTreeState.setConversationId.mockClear();
     messageTreeState.setCurrentRole.mockClear();
     messageTreeState.getTreeState.mockClear();
+    messageTreeState.getMessagesFromPath.mockClear();
 
     const orchestrator = await import("./chat-orchestrator");
     orchestrator.resetLastEventId();
@@ -155,9 +150,7 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    await orchestrator.startChatRequest({
-      messages: [{ role: "user", blocks: [] } as never],
-    });
+    await orchestrator.startChatRequest();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, opts] = fetchMock.mock.calls[0] as [string, RequestInit];
@@ -183,9 +176,7 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    await orchestrator.startChatRequest({
-      messages: [{ role: "user", blocks: [] } as never],
-    });
+    await orchestrator.startChatRequest();
 
     expect(fetchMock).toHaveBeenCalled();
   });
@@ -214,9 +205,7 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    await orchestrator.startChatRequest({
-      messages: [{ role: "user", blocks: [] } as never],
-    });
+    await orchestrator.startChatRequest();
 
     expect(applyChatEventToTreeMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: "content", content: "hello crlf" }),
@@ -244,9 +233,7 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    await orchestrator.startChatRequest({
-      messages: [{ role: "user", blocks: [] } as never],
-    });
+    await orchestrator.startChatRequest();
 
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -266,9 +253,7 @@ describe("chat-orchestrator SSE model", () => {
       ]),
     });
 
-    await orchestrator.startChatRequest({
-      messages: [{ role: "user", blocks: [] } as never],
-    });
+    await orchestrator.startChatRequest();
 
     expect(applyChatEventToTreeMock).toHaveBeenCalledWith(
       expect.objectContaining({ type: "content", content: "fresh stream" }),
@@ -283,9 +268,7 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    await orchestrator.startChatRequest({
-      messages: [{ role: "user", blocks: [] } as never],
-    });
+    await orchestrator.startChatRequest();
 
     expect(useChatRequestStore.getState().status).toBe("streaming");
   });
@@ -298,9 +281,7 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    await orchestrator.startChatRequest({
-      messages: [{ role: "user", blocks: [] } as never],
-    });
+    await orchestrator.startChatRequest();
 
     expect(useChatRequestStore.getState().status).toBe("disconnected");
   });
@@ -315,9 +296,7 @@ describe("chat-orchestrator SSE model", () => {
 
     const orchestrator = await import("./chat-orchestrator");
     // Start request (it will resolve immediately due to empty stream)
-    await orchestrator.startChatRequest({
-      messages: [{ role: "user", blocks: [] } as never],
-    });
+    await orchestrator.startChatRequest();
 
     // Reset mock for the abort call
     fetchMock.mockResolvedValueOnce({

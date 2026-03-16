@@ -401,7 +401,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         title,
         role: message.role ?? existing?.role ?? null,
         currentPath: message.treeSnapshot.currentPath,
-        messages: message.treeSnapshot.messages as unknown as object[],
+        messages: message.treeSnapshot.messages,
         created_at: existing?.created_at ?? now,
         updated_at: now,
       });
@@ -863,7 +863,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       title: resolvedTitle,
       role: role ?? existing?.role ?? null,
       currentPath: snapshot.currentPath,
-      messages: snapshot.messages as unknown as object[],
+      messages: snapshot.messages,
       created_at: existing?.created_at ?? now,
       updated_at: now,
     });

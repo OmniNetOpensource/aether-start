@@ -2,23 +2,16 @@ import {
   ClipboardEvent,
   DragEvent,
   KeyboardEvent,
-  MouseEvent,
   useEffect,
   useRef,
 } from "react";
-import {
-  startChatRequest,
-  stopActiveChatRequest,
-} from "@/lib/chat/api/chat-orchestrator";
-import { ensureConversation } from "@/features/chat/components/composer/ensure-conversation";
+import { useNavigate } from "@tanstack/react-router";
+import { submitMessage } from "@/features/chat/components/composer/submit-chat";
 import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { setComposerTextarea } from "@/lib/chat/composer-focus";
-import { buildUserBlocks } from "@/lib/conversation/tree/block-operations";
-import { computeMessagesFromPath } from "@/lib/conversation/tree/message-tree";
 import { useResponsive } from "@/components/ResponsiveContext";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/useToast";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import {
   useChatSessionStore,
@@ -28,52 +21,18 @@ import { AttachmentStack } from "../AttachmentStack";
 import { ComposerToolbar } from "./ComposerToolbar";
 
 export function Composer() {
+  const navigate = useNavigate();
   const input = useComposerStore((state) => state.input);
-  const status = useChatRequestStore((state) => state.status);
   const pendingAttachments = useComposerStore(
     (state) => state.pendingAttachments,
   );
   const uploading = useComposerStore((state) => state.uploading);
-  const currentRole = useChatSessionStore((state) => state.currentRole);
   const deviceType = useResponsive();
   const isDesktop = deviceType === "desktop";
   const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
-  const isBusy = status !== "idle";
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  const submitMessage = async () => {
-    const trimmed = input.trim();
-    const hasContent = trimmed.length > 0;
-    const hasAttachment = pendingAttachments.length > 0;
-    const hasRole = !!currentRole;
-
-    if (isBusy || (!hasContent && !hasAttachment) || !hasRole) {
-      if (!hasRole) {
-        toast.warning("Select a role before sending a message.");
-      }
-      return;
-    }
-
-    const treeStore = useChatSessionStore.getState();
-    const result = treeStore.addMessage(
-      "user",
-      buildUserBlocks(input, pendingAttachments),
-    );
-    const pathMessages = computeMessagesFromPath(
-      result.messages,
-      result.currentPath,
-    );
-
-    useComposerStore.getState().clear();
-
-    try {
-      ensureConversation();
-    } finally {
-      await startChatRequest({ messages: pathMessages });
-    }
-  };
 
   const textareaCallbackRef = (element: HTMLTextAreaElement | null) => {
     textareaRef.current = element;
@@ -120,7 +79,13 @@ export function Composer() {
 
     if (event.key === "Enter" && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
-      void submitMessage();
+      void submitMessage((conversationId) =>
+        navigate({
+          to: "/app/c/$conversationId",
+          params: { conversationId },
+          search: { new_chat: true },
+        }),
+      );
     }
   };
 
@@ -177,23 +142,11 @@ export function Composer() {
     void addAttachments(files);
   };
 
-  const handleSendButtonClick = (event: MouseEvent<HTMLButtonElement>) => {
-    if (isBusy) {
-      event.preventDefault();
-      stopActiveChatRequest();
-    } else {
-      void submitMessage();
-    }
-  };
-
-  const hasText = input.trim().length > 0;
-  const hasRole = !!currentRole;
-  const hasAttachments = pendingAttachments.length > 0;
-  const sendDisabled = isBusy
-    ? false
-    : (!hasText && !hasAttachments) || !hasRole || uploading;
   const isNewChat = useIsNewChat();
   const narrow = useChatRoomNarrow();
+
+  const composerBoxClass =
+    "relative z-10 flex w-full flex-col gap-2 rounded-xl bg-(--sidebar-surface) p-2 shadow-sm transition-shadow duration-200 focus-within:shadow-md";
 
   const textarea = (
     <Textarea
@@ -209,17 +162,17 @@ export function Composer() {
       rows={1}
       placeholder="Type your message..."
       enterKeyHint={isDesktop ? undefined : "enter"}
-      className="min-h-10 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent py-2.5 text-sm focus-visible:ring-0 sm:text-base"
+      className="min-h-9 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:text-base"
     />
   );
 
-  const widthClass = narrow ? "w-[90%]" : "w-[50%]";
+  const widthClass = narrow ? "w-[90%] max-w-full" : "w-[50%] max-w-2xl";
 
   if (isNewChat) {
     return (
       <div
         key="composer-initial"
-        className={`mx-auto flex flex-1 flex-col items-center justify-center py-12 ${widthClass}`}
+        className={`mx-auto flex flex-1 flex-col items-center justify-center py-8 ${widthClass}`}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
@@ -227,13 +180,9 @@ export function Composer() {
           items={pendingAttachments}
           onRemove={removeAttachment}
         />
-        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-sidebar p-2 transition-all">
+        <div className={composerBoxClass}>
           <div className="flex w-full items-end gap-2">{textarea}</div>
-          <ComposerToolbar
-            status={status}
-            sendDisabled={sendDisabled}
-            onSendButtonClick={handleSendButtonClick}
-          />
+          <ComposerToolbar />
         </div>
       </div>
     );
@@ -242,11 +191,11 @@ export function Composer() {
   return (
     <div
       key="composer-wrapper"
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-(--z-composer) pb-4 md:pb-6"
+      className="pointer-events-none absolute inset-x-0 bottom-0 z-(--z-composer) pb-3 md:pb-4"
     >
       <div
         key="composer-bottom"
-        className={`pointer-events-auto relative mx-auto flex flex-col gap-3 ${widthClass}`}
+        className={`pointer-events-auto relative mx-auto flex flex-col gap-2 ${widthClass}`}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
@@ -254,13 +203,9 @@ export function Composer() {
           items={pendingAttachments}
           onRemove={removeAttachment}
         />
-        <div className="relative z-10 flex w-full flex-col gap-1 rounded-xl bg-sidebar p-2 transition-all">
+        <div className={composerBoxClass}>
           <div className="flex w-full items-end gap-2">{textarea}</div>
-          <ComposerToolbar
-            status={status}
-            sendDisabled={sendDisabled}
-            onSendButtonClick={handleSendButtonClick}
-          />
+          <ComposerToolbar />
         </div>
       </div>
     </div>

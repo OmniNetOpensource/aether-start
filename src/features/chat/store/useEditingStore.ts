@@ -5,7 +5,6 @@ import { toast } from "@/hooks/useToast";
 import { startChatRequest, stopActiveChatRequest } from "@/lib/chat/api/chat-orchestrator";
 import {
   cloneBlocks,
-  computeMessagesFromPath,
   editMessage,
 } from "@/lib/conversation/tree/message-tree";
 import {
@@ -147,12 +146,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         });
         set({ editingState: null }, false, "submitEdit/success");
 
-        const pathMessages = computeMessagesFromPath(
-          result.messages,
-          result.currentPath
-        );
-
-        await startChatRequest({ messages: pathMessages });
+        await startChatRequest();
       },
       retryFromMessage: async (messageId, depth) => {
         const treeStore = useChatSessionStore.getState();
@@ -192,12 +186,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           });
           set({ editingState: null }, false, "retryFromMessage/user");
 
-          const pathMessages = computeMessagesFromPath(
-            result.messages,
-            result.currentPath
-          );
-
-          await startChatRequest({ messages: pathMessages });
+          await startChatRequest();
           return;
         }
 
@@ -210,9 +199,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         treeStore.setTreeState({ currentPath: nextPath });
         set({ editingState: null }, false, "retryFromMessage/assistant");
 
-        const pathMessages = computeMessagesFromPath(treeState.messages, nextPath);
-
-        await startChatRequest({ messages: pathMessages });
+        await startChatRequest();
       },
       clear: () => set({ editingState: null }, false, "clear"),
     }),

@@ -288,12 +288,7 @@ Playwright:
 - config: `playwright.config.ts`
 - test dir: `tests/e2e`
 
-Prefer updating or adding tests near the touched module. Relevant examples for current architecture:
-
-- `src/features/chat/server/agents/services/render-artifact-stream.test.ts`
-- `src/features/sidebar/server/conversations-db.artifacts.test.ts`
-- `src/features/sidebar/hooks/useConversationLoader.test.tsx`
-- `src/routes/app/c/-$conversationId.test.tsx`
+**Do not create new test files.** Only the existing 14 curated tests are kept; they cover message-tree, block-operations, chat-orchestrator, useMessageTreeStore, useConversationsStore, useEditingStore, chat-agent, render-artifact-stream, openai-responses, provider-error, executor, logger, preview-text, and MessageItem.
 
 ## Migrations
 

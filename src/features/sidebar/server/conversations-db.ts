@@ -780,7 +780,7 @@ export const upsertConversation = async (
   db: D1Database,
   payload: ConversationPayload,
 ) => {
-  const messages = (payload.messages ?? []) as object[];
+  const messages = payload.messages ?? [];
   const searchBody = extractSearchText(messages);
 
   await db.batch([

@@ -1,15 +1,18 @@
-import { useEffect, useRef, useState } from 'react'
-import { createFileRoute, useNavigate } from '@tanstack/react-router'
-import { Lightbulb, Loader2, Plus } from 'lucide-react'
-import { buildAttachmentsFromFiles } from '@/features/chat/lib/attachments'
-import { collectClipboardFiles } from '@/lib/utils/file'
-import { NoteCard } from '@/features/notes/components/NoteCard'
-import { NoteEditDialog } from '@/features/notes/components/NoteEditDialog'
-import { useChatRequestStore } from '@/features/chat/store/useChatRequestStore'
-import { useComposerStore } from '@/features/chat/store/useComposerStore'
-import { useEditingStore } from '@/features/chat/store/useEditingStore'
-import { useNotesStore, type NoteItem } from '@/features/notes/store/useNotesStore'
-import { useChatSessionStore } from '@/features/sidebar/store/useChatSessionStore'
+import { useEffect, useRef, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Lightbulb, Loader2, Plus } from "lucide-react";
+import { buildAttachmentsFromFiles } from "@/features/chat/lib/attachments";
+import { collectClipboardFiles } from "@/lib/utils/file";
+import { NoteCard } from "@/features/notes/components/NoteCard";
+import { NoteEditDialog } from "@/features/notes/components/NoteEditDialog";
+import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
+import { useComposerStore } from "@/features/chat/store/useComposerStore";
+import { useEditingStore } from "@/features/chat/store/useEditingStore";
+import {
+  useNotesStore,
+  type NoteItem,
+} from "@/features/notes/store/useNotesStore";
+import { useChatSessionStore } from "@/features/sidebar/store/useChatSessionStore";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,168 +22,168 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
-import { Button } from '@/components/ui/button'
-import { toast } from '@/hooks/useToast'
+} from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/hooks/useToast";
 
-export const Route = createFileRoute('/app/notes')({
+export const Route = createFileRoute("/app/notes")({
   component: NotesPage,
-})
+});
 
 const generateNoteId = () =>
-  typeof crypto !== 'undefined' && crypto.randomUUID
+  typeof crypto !== "undefined" && crypto.randomUUID
     ? crypto.randomUUID()
-    : `note_${Date.now()}_${Math.random().toString(16).slice(2)}`
+    : `note_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 const createEmptyNote = (): NoteItem => {
-  const now = new Date().toISOString()
+  const now = new Date().toISOString();
   return {
     id: generateNoteId(),
-    content: '',
+    content: "",
     attachments: [],
     created_at: now,
     updated_at: now,
-  }
-}
+  };
+};
 
 function NotesPage() {
-  const navigate = useNavigate()
-  const notes = useNotesStore((state) => state.notes)
-  const loading = useNotesStore((state) => state.loading)
-  const loadingMore = useNotesStore((state) => state.loadingMore)
-  const hasLoaded = useNotesStore((state) => state.hasLoaded)
-  const hasMore = useNotesStore((state) => state.hasMore)
-  const loadInitialNotes = useNotesStore((state) => state.loadInitialNotes)
-  const loadMoreNotes = useNotesStore((state) => state.loadMoreNotes)
-  const upsertNote = useNotesStore((state) => state.upsertNote)
-  const deleteNote = useNotesStore((state) => state.deleteNote)
+  const navigate = useNavigate();
+  const notes = useNotesStore((state) => state.notes);
+  const loading = useNotesStore((state) => state.loading);
+  const loadingMore = useNotesStore((state) => state.loadingMore);
+  const hasLoaded = useNotesStore((state) => state.hasLoaded);
+  const hasMore = useNotesStore((state) => state.hasMore);
+  const loadInitialNotes = useNotesStore((state) => state.loadInitialNotes);
+  const loadMoreNotes = useNotesStore((state) => state.loadMoreNotes);
+  const upsertNote = useNotesStore((state) => state.upsertNote);
+  const deleteNote = useNotesStore((state) => state.deleteNote);
 
-  const [editingNote, setEditingNote] = useState<NoteItem | null>(null)
-  const [noteToDelete, setNoteToDelete] = useState<NoteItem | null>(null)
-  const [creatingByPaste, setCreatingByPaste] = useState(false)
-  const scrollRootRef = useRef<HTMLDivElement | null>(null)
-  const sentinelRef = useRef<HTMLDivElement | null>(null)
+  const [editingNote, setEditingNote] = useState<NoteItem | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<NoteItem | null>(null);
+  const [creatingByPaste, setCreatingByPaste] = useState(false);
+  const scrollRootRef = useRef<HTMLDivElement | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
-  const isDialogOpen = editingNote !== null
-  const emptyStateVisible = hasLoaded && notes.length === 0 && !loading
+  const isDialogOpen = editingNote !== null;
+  const emptyStateVisible = hasLoaded && notes.length === 0 && !loading;
 
   useEffect(() => {
-    void loadInitialNotes()
-  }, [loadInitialNotes])
+    void loadInitialNotes();
+  }, [loadInitialNotes]);
 
   useEffect(() => {
     if (!hasMore) {
-      return
+      return;
     }
 
-    const sentinel = sentinelRef.current
+    const sentinel = sentinelRef.current;
     if (!sentinel) {
-      return
+      return;
     }
 
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) {
-          return
+          return;
         }
 
         if (loadingMore || !hasMore) {
-          return
+          return;
         }
 
-        void loadMoreNotes()
+        void loadMoreNotes();
       },
       {
         root: scrollRootRef.current,
-        rootMargin: '160px',
+        rootMargin: "160px",
       },
-    )
+    );
 
-    observer.observe(sentinel)
-    return () => observer.disconnect()
-  }, [hasMore, loadingMore, loadMoreNotes])
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loadingMore, loadMoreNotes]);
 
   useEffect(() => {
     const handlePaste = (event: ClipboardEvent) => {
       if (isDialogOpen || creatingByPaste) {
-        return
+        return;
       }
 
-      const text = event.clipboardData?.getData('text/plain')?.trim() ?? ''
-      const files = collectClipboardFiles(event.clipboardData)
+      const text = event.clipboardData?.getData("text/plain")?.trim() ?? "";
+      const files = collectClipboardFiles(event.clipboardData);
       if (!text && files.length === 0) {
-        return
+        return;
       }
 
-      event.preventDefault()
-      setCreatingByPaste(true)
+      event.preventDefault();
+      setCreatingByPaste(true);
 
       void (async () => {
         try {
           const attachments =
-            files.length > 0 ? await buildAttachmentsFromFiles(files) : []
+            files.length > 0 ? await buildAttachmentsFromFiles(files) : [];
           if (!text && attachments.length === 0) {
-            return
+            return;
           }
 
-          const now = new Date().toISOString()
+          const now = new Date().toISOString();
           await upsertNote({
             id: generateNoteId(),
             content: text,
             attachments,
             created_at: now,
             updated_at: now,
-          })
+          });
 
-          toast.success('Note created from clipboard')
+          toast.success("Note created from clipboard");
         } finally {
-          setCreatingByPaste(false)
+          setCreatingByPaste(false);
         }
-      })()
-    }
+      })();
+    };
 
-    window.addEventListener('paste', handlePaste)
-    return () => window.removeEventListener('paste', handlePaste)
-  }, [creatingByPaste, isDialogOpen, upsertNote])
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [creatingByPaste, isDialogOpen, upsertNote]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && isDialogOpen) {
-        setEditingNote(null)
-        return
+      if (event.key === "Escape" && isDialogOpen) {
+        setEditingNote(null);
+        return;
       }
 
-      if ((event.metaKey || event.ctrlKey) && event.key === 'n') {
-        event.preventDefault()
+      if ((event.metaKey || event.ctrlKey) && event.key === "n") {
+        event.preventDefault();
         if (!isDialogOpen) {
-          setEditingNote(createEmptyNote())
+          setEditingNote(createEmptyNote());
         }
       }
-    }
+    };
 
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isDialogOpen])
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isDialogOpen]);
 
   const selectedNote = editingNote
-    ? notes.find((item) => item.id === editingNote.id) ?? editingNote
-    : null
+    ? (notes.find((item) => item.id === editingNote.id) ?? editingNote)
+    : null;
 
   const handleStartConversation = (note: NoteItem) => {
-    useChatRequestStore.getState().setStatus("idle")
-    useEditingStore.getState().clear()
-    useChatSessionStore.getState().clearSession()
+    useChatRequestStore.getState().setStatus("idle");
+    useEditingStore.getState().clear();
+    useChatSessionStore.getState().clearSession();
 
-    const composer = useComposerStore.getState()
-    composer.setInput(note.content ?? '')
-    composer.setPendingAttachments(note.attachments ?? [])
+    const composer = useComposerStore.getState();
+    composer.setInput(note.content ?? "");
+    composer.setPendingAttachments(note.attachments ?? []);
 
-    void navigate({ to: '/app' })
-  }
+    void navigate({ to: "/app" });
+  };
 
   const handleCreateNote = () => {
-    setEditingNote(createEmptyNote())
-  }
+    setEditingNote(createEmptyNote());
+  };
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
@@ -218,8 +221,8 @@ function NotesPage() {
                   No notes yet.
                 </p>
                 <p className="mt-2 text-sm text-(--text-secondary)">
-                  Create a note or paste text and images with Ctrl+V to turn your
-                  clipboard into a note instantly.
+                  Create a note or paste text and images with Ctrl+V to turn
+                  your clipboard into a note instantly.
                 </p>
                 <Button
                   type="button"
@@ -265,17 +268,20 @@ function NotesPage() {
       </div>
 
       <NoteEditDialog
-        key={selectedNote?.id ?? 'new'}
+        key={selectedNote?.id ?? "new"}
         open={isDialogOpen}
         note={selectedNote}
-        isNew={selectedNote !== null && !notes.some((item) => item.id === selectedNote.id)}
+        isNew={
+          selectedNote !== null &&
+          !notes.some((item) => item.id === selectedNote.id)
+        }
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
-            setEditingNote(null)
+            setEditingNote(null);
           }
         }}
         onSave={async (note) => {
-          await upsertNote(note)
+          await upsertNote(note);
         }}
       />
 
@@ -283,7 +289,7 @@ function NotesPage() {
         open={noteToDelete !== null}
         onOpenChange={(nextOpen) => {
           if (!nextOpen) {
-            setNoteToDelete(null)
+            setNoteToDelete(null);
           }
         }}
       >
@@ -291,8 +297,8 @@ function NotesPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Delete note</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. The selected note will be permanently
-              removed.
+              This action cannot be undone. The selected note will be
+              permanently removed.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -301,8 +307,8 @@ function NotesPage() {
               className="bg-(--status-destructive) text-(--status-destructive-foreground) hover:bg-(--status-destructive)/90"
               onClick={() => {
                 if (noteToDelete) {
-                  void deleteNote(noteToDelete.id)
-                  setNoteToDelete(null)
+                  void deleteNote(noteToDelete.id);
+                  setNoteToDelete(null);
                 }
               }}
             >
@@ -312,5 +318,5 @@ function NotesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )
+  );
 }

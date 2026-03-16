@@ -1,26 +1,33 @@
 import { ChangeEvent, MouseEvent, useRef } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { ArrowUp, Loader2, Paperclip, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ensureConversation } from "@/features/chat/components/composer/ensure-conversation";
+import { stopActiveChatRequest } from "@/lib/chat/api/chat-orchestrator";
+import { submitMessage } from "@/features/chat/components/composer/submit-chat";
 import { cn } from "@/lib/utils";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
-import type { ChatStatus } from "@/stores/zustand/useChatRequestStore";
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { ModelSelector } from "./ModelSelector";
 import { PromptSelector } from "./PromptSelector";
 
-type ComposerToolbarProps = {
-  status: ChatStatus;
-  sendDisabled: boolean;
-  onSendButtonClick: (event: MouseEvent<HTMLButtonElement>) => void;
-};
-
-export function ComposerToolbar({
-  status,
-  sendDisabled,
-  onSendButtonClick,
-}: ComposerToolbarProps) {
-  // Store state
+export function ComposerToolbar() {
+  const navigate = useNavigate();
+  const status = useChatRequestStore((state) => state.status);
+  const input = useComposerStore((state) => state.input);
+  const pendingAttachments = useComposerStore(
+    (state) => state.pendingAttachments,
+  );
   const uploading = useComposerStore((state) => state.uploading);
+  const currentRole = useChatSessionStore((state) => state.currentRole);
+
+  const isBusy = status !== "idle";
+  const hasText = input.trim().length > 0;
+  const hasAttachments = pendingAttachments.length > 0;
+  const hasRole = !!currentRole;
+  const sendDisabled = isBusy
+    ? false
+    : (!hasText && !hasAttachments) || !hasRole || uploading;
   const addAttachments = useComposerStore((state) => state.addAttachments);
 
   // Local state
@@ -67,16 +74,22 @@ export function ComposerToolbar({
       triggerBlockedSendAnimation(event.currentTarget);
       return;
     }
-
-    try {
-      ensureConversation();
-    } finally {
-      onSendButtonClick(event);
+    if (isBusy) {
+      event.preventDefault();
+      stopActiveChatRequest();
+    } else {
+      void submitMessage((conversationId) =>
+        navigate({
+          to: "/app/c/$conversationId",
+          params: { conversationId },
+          search: { new_chat: true },
+        }),
+      );
     }
   };
 
   return (
-    <div className="flex items-center justify-between px-1">
+    <div className="flex items-center justify-between px-0.5">
       {/* Left group: Attachments + Prompt */}
       <div className="flex items-center gap-1">
         {/* File picker */}

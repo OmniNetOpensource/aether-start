@@ -4,11 +4,8 @@ import {
   Scripts,
   createRootRoute,
 } from "@tanstack/react-router";
-import { useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
 import { Sentry } from "@/lib/sentry";
 
-import { setNavigate } from "@/lib/navigation";
 import { useViewportHeight } from "@/hooks/useViewportHeight";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ToastContainer } from "@/components/ui/toast-container";
@@ -43,12 +40,7 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-  const navigate = useNavigate();
   useViewportHeight();
-
-  useEffect(() => {
-    setNavigate((path) => navigate({ to: path }));
-  }, [navigate]);
 
   return (
     <Sentry.ErrorBoundary

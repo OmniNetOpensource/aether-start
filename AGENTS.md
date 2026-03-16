@@ -194,11 +194,7 @@ Public shares should stay noindex and must never mutate live conversations.
 
 - Unit and component tests use Vitest with `happy-dom`; config is in `vitest.config.ts`.
 - E2E tests use Playwright; config is in `playwright.config.ts`, tests live in `tests/e2e`.
-- When changing chat orchestration, provider adapters, tools, route loaders, or DB helpers, update nearby `*.test.ts` / `*.test.tsx` files.
-- Recent high-value tests live near:
-  - `src/features/chat/server/agents/services/render-artifact-stream.test.ts`
-  - `src/features/sidebar/server/conversations-db.artifacts.test.ts`
-  - `src/routes/app/c/-$conversationId.test.tsx`
+- **Do not create new test files.** Only the existing 14 curated tests are kept; they cover message-tree, block-operations, chat-orchestrator, useMessageTreeStore, useConversationsStore, useEditingStore, chat-agent, render-artifact-stream, openai-responses, provider-error, executor, logger, preview-text, and MessageItem.
 
 ## Configuration & Secrets
 
