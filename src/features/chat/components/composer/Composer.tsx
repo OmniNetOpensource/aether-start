@@ -28,6 +28,7 @@ export function Composer() {
   );
   const uploading = useComposerStore((state) => state.uploading);
   const deviceType = useResponsive();
+  const isMobile = deviceType === "mobile";
   const isDesktop = deviceType === "desktop";
   const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
@@ -165,7 +166,8 @@ export function Composer() {
     />
   );
 
-  const widthClass = narrow ? "w-[90%] max-w-full" : "w-[50%] max-w-2xl";
+  const widthClass =
+    narrow || isMobile ? "w-[90%] max-w-full" : "w-[50%] max-w-2xl";
 
   if (isNewChat) {
     return (

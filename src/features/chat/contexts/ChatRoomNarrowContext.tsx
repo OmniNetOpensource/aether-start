@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import { useResponsive } from "@/components/ResponsiveContext";
 
-const CHAT_ROOM_NARROW_THRESHOLD = 760;
+const CHAT_ROOM_NARROW_THRESHOLD = 920;
 
 const ChatRoomNarrowContext = createContext<boolean>(true);
 
