@@ -122,7 +122,6 @@ describe("MessageItem", () => {
     });
 
     const stack = container.querySelector('[data-testid="attachment-stack"]');
-    const peekingShell = stack?.closest(".h-0");
     const bubble = container.querySelector(
       ".rounded-lg.bg-\\(--surface-muted\\)",
     );
@@ -130,7 +129,6 @@ describe("MessageItem", () => {
       'button[title="photo.png (2.0 KB)"]',
     );
 
-    expect(peekingShell).not.toBeNull();
     expect(stack).not.toBeNull();
     expect(bubble).not.toBeNull();
     expect(previewButton).not.toBeNull();

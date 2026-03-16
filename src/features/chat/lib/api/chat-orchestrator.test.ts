@@ -41,6 +41,7 @@ const {
 vi.mock("@/hooks/useToast", () => ({
   toast: {
     warning: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -273,7 +274,8 @@ describe("chat-orchestrator SSE model", () => {
     expect(useChatRequestStore.getState().status).toBe("streaming");
   });
 
-  it("marks the request as disconnected when the stream breaks mid-response", async () => {
+  it("sets status to idle and toasts when the stream breaks mid-response", async () => {
+    const { toast } = await import("@/hooks/useToast");
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -283,11 +285,11 @@ describe("chat-orchestrator SSE model", () => {
     const orchestrator = await import("./chat-orchestrator");
     await orchestrator.startChatRequest();
 
-    expect(useChatRequestStore.getState().status).toBe("disconnected");
+    expect(useChatRequestStore.getState().status).toBe("idle");
+    expect(toast.error).toHaveBeenCalledWith("连接中断");
   });
 
-  it("stopActiveChatRequest aborts and sends abort to server", async () => {
-    // Set up an in-flight request
+  it("cancelStreamSubscription aborts controller and sets status to idle", async () => {
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -295,25 +297,35 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    // Start request (it will resolve immediately due to empty stream)
     await orchestrator.startChatRequest();
 
-    // Reset mock for the abort call
+    orchestrator.cancelStreamSubscription();
+
+    expect(useChatRequestStore.getState().status).toBe("idle");
+  });
+
+  it("cancelAnswering aborts locally and POSTs /abort when conversationId exists", async () => {
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      body: emptyStream(),
+    });
     fetchMock.mockResolvedValueOnce({
       ok: true,
       status: 200,
       json: async () => ({ ok: true }),
     });
 
-    orchestrator.stopActiveChatRequest();
+    const orchestrator = await import("./chat-orchestrator");
+    await orchestrator.startChatRequest();
+    orchestrator.cancelAnswering();
 
-    // Abort POST should have been made
+    expect(useChatRequestStore.getState().status).toBe("idle");
     const abortCall = fetchMock.mock.calls.find(
       (call: unknown[]) =>
         typeof call[0] === "string" && (call[0] as string).includes("/abort"),
     );
     expect(abortCall).toBeDefined();
-    expect(useChatRequestStore.getState().status).toBe("idle");
   });
 
   it("resumeRunningConversation connects to events stream when agent is running", async () => {
@@ -339,8 +351,7 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    const ac = new AbortController();
-    await orchestrator.resumeRunningConversation("conv-1", ac.signal);
+    await orchestrator.resumeRunningConversation("conv-1");
 
     expect(useChatRequestStore.getState().status).toBe("idle");
 
@@ -354,8 +365,8 @@ describe("chat-orchestrator SSE model", () => {
     expect(calls.some(([url]) => url.includes("/conv-1/events"))).toBe(true);
   });
 
-  it("resumeRunningConversation resets request state when agent is idle", async () => {
-    useChatRequestStore.getState().setStatus("disconnected");
+  it("resumeRunningConversation returns early when agent is idle", async () => {
+    useChatRequestStore.getState().setStatus("streaming");
 
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -364,28 +375,13 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    const ac = new AbortController();
-    await orchestrator.resumeRunningConversation("conv-1", ac.signal);
+    await orchestrator.resumeRunningConversation("conv-1");
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(useChatRequestStore.getState().status).toBe("idle");
   });
 
-  it("resumeRunningConversation exits immediately when the signal is already aborted", async () => {
-    useChatRequestStore.getState().setStatus("disconnected");
-
-    const orchestrator = await import("./chat-orchestrator");
-    const ac = new AbortController();
-    ac.abort();
-
-    await orchestrator.resumeRunningConversation("conv-1", ac.signal);
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(useChatRequestStore.getState().status).toBe("disconnected");
-  });
-
-  it("clears stale request state when recovery finds no running agent", async () => {
-    useChatRequestStore.getState().setStatus("disconnected");
+  it("resumeRunningConversation returns early when recovery finds no running agent", async () => {
+    useChatRequestStore.getState().setStatus("streaming");
 
     fetchMock.mockResolvedValueOnce({
       ok: true,
@@ -394,9 +390,6 @@ describe("chat-orchestrator SSE model", () => {
     });
 
     const orchestrator = await import("./chat-orchestrator");
-    const ac = new AbortController();
-    await orchestrator.resumeRunningConversation("conv-1", ac.signal);
-
-    expect(useChatRequestStore.getState().status).toBe("idle");
+    await orchestrator.resumeRunningConversation("conv-1");
   });
 });

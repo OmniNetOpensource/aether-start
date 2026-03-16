@@ -17,7 +17,7 @@ function HomePage() {
   const chatAreaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    useChatRequestStore.getState().setStatus("idle");
+    useChatRequestStore.getState().setStatus("idle", "new_chat/mount");
     useEditingStore.getState().clear();
     const composer = useComposerStore.getState();
     const hasPrefill =

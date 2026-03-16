@@ -170,7 +170,7 @@ function NotesPage() {
     : null;
 
   const handleStartConversation = (note: NoteItem) => {
-    useChatRequestStore.getState().setStatus("idle");
+    useChatRequestStore.getState().setStatus("idle", "notes/startConversation");
     useEditingStore.getState().clear();
     useChatSessionStore.getState().clearSession();
 

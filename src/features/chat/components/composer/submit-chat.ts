@@ -42,6 +42,7 @@ export async function submitMessage(
     const now = new Date().toISOString();
 
     sessionStore.setConversationId(conversationId);
+    navigateToNewChat(conversationId);
     sessionStore.addConversation({
       id: conversationId,
       title: "New Chat",
@@ -51,7 +52,6 @@ export async function submitMessage(
       created_at: now,
       updated_at: now,
     });
-    navigateToNewChat(conversationId);
   }
 
   await startChatRequest();

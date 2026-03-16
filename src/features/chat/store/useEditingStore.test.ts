@@ -10,16 +10,16 @@ import {
   useChatSessionStore,
 } from '@/stores/zustand/useChatSessionStore'
 
-const { startChatRequestMock, stopActiveChatRequestMock, warningMock } = vi.hoisted(() => ({
+const { startChatRequestMock, cancelAnsweringMock, warningMock } = vi.hoisted(() => ({
   startChatRequestMock: vi.fn(),
-  stopActiveChatRequestMock: vi.fn(),
+  cancelAnsweringMock: vi.fn(),
   warningMock: vi.fn(),
 }))
 
 vi.mock('@/lib/chat/api/chat-orchestrator', () => ({
   startChatRequest: startChatRequestMock,
   resumeRunningConversation: vi.fn(),
-  stopActiveChatRequest: stopActiveChatRequestMock,
+  cancelAnswering: cancelAnsweringMock,
 }))
 
 vi.mock('@/hooks/useToast', () => ({
@@ -62,7 +62,7 @@ describe('useEditingStore', () => {
   beforeEach(() => {
     startChatRequestMock.mockReset()
     startChatRequestMock.mockResolvedValue(undefined)
-    stopActiveChatRequestMock.mockReset()
+    cancelAnsweringMock.mockReset()
     warningMock.mockReset()
 
     useEditingStore.setState({ editingState: null })
@@ -133,9 +133,9 @@ describe('useEditingStore', () => {
     expect(useEditingStore.getState().editingState).toBeNull()
     expect(startChatRequestMock).toHaveBeenCalledTimes(1)
 
-    const requestArg = startChatRequestMock.mock.calls[0][0]
-    expect(requestArg.messages).toHaveLength(1)
-    expect(requestArg.messages[0].role).toBe('user')
+    const messages = useChatSessionStore.getState().getMessagesFromPath()
+    expect(messages).toHaveLength(1)
+    expect(messages[0].role).toBe('user')
     expect(useChatSessionStore.getState().currentPath[0]).toBe(3)
   })
 
@@ -147,8 +147,7 @@ describe('useEditingStore', () => {
     expect(useChatSessionStore.getState().currentPath).toEqual([1])
     expect(useEditingStore.getState().editingState).toBeNull()
     expect(startChatRequestMock).toHaveBeenCalledTimes(1)
-    expect(startChatRequestMock.mock.calls[0][0].messages.map((m: { id: number }) => m.id)).toEqual(
-      [1],
-    )
+    const messages = useChatSessionStore.getState().getMessagesFromPath()
+    expect(messages.map((m) => m.id)).toEqual([1])
   })
 })

@@ -5,7 +5,7 @@
  *
  * 职责：
  * - 发起聊天请求（startChatRequest）
- * - 停止进行中的请求（stopActiveChatRequest）
+ * - 取消正在进行的 AI 回复（cancelAnswering）
  * - 恢复正在进行的对话流（resumeRunningConversation）
  * - 消费 SSE 流并分发事件到消息树
  *
@@ -76,12 +76,13 @@ const isAbortError = (error: unknown) =>
 
 /**
  * 流结束后的收尾逻辑。
- * 若当前状态不是 idle（说明流异常结束），则设为 disconnected。
+ * 若当前状态不是 idle（说明流异常结束），则设为 idle 并 toast 提示。
  */
 const finalizeStream = () => {
   if (useChatRequestStore.getState().status !== "idle") {
-    useChatRequestStore.getState().setStatus("disconnected");
+    toast.error("连接中断");
   }
+  useChatRequestStore.getState().setStatus("idle", "finalizeStream");
 };
 
 /**
@@ -105,19 +106,22 @@ const handleSSEMessage = (event: string, raw: string) => {
       if (typeof payload.eventId !== "number") return;
       if (payload.eventId <= lastEventId) return;
       lastEventId = payload.eventId;
-      setStatus("streaming");
+      setStatus("streaming", "chat_event");
       applyChatEventToTree(payload.event as ChatServerToClientEvent);
       return;
     }
     case "chat_started":
-      setStatus("streaming");
+      setStatus("streaming", "chat_started");
       return;
     case "chat_finished":
-      setStatus("idle");
+      setStatus("idle", "chat_finished");
       return;
     case "sync_response": {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
-      setStatus(payload.status === "running" ? "streaming" : "idle");
+      setStatus(
+        payload.status === "running" ? "streaming" : "idle",
+        "sync_response",
+      );
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
           const record = item as Record<string, unknown>;
@@ -134,7 +138,7 @@ const handleSSEMessage = (event: string, raw: string) => {
     }
     case "busy":
       toast.warning(BUSY_WARNING);
-      setStatus("streaming");
+      setStatus("streaming", "busy");
       return;
     case "conversation_update":
       /* 对话元数据更新（如标题），转为 conversation_updated 事件应用 */
@@ -296,7 +300,7 @@ export const startChatRequest = async () => {
 
   activeController?.abort(); /* 取消之前的请求，保证同一时刻只有一个在跑 */
   activeController = new AbortController();
-  requestStore.setStatus("sending");
+  requestStore.setStatus("sending", "startChatRequest");
 
   try {
     const response = await fetch(
@@ -314,7 +318,9 @@ export const startChatRequest = async () => {
       /* 服务端已有该对话的活跃流，视为 busy */
       await response.json().catch(() => ({}));
       toast.warning(BUSY_WARNING);
-      useChatRequestStore.getState().setStatus("streaming");
+      useChatRequestStore
+        .getState()
+        .setStatus("streaming", "startChatRequest/409_busy");
       return;
     }
 
@@ -328,49 +334,56 @@ export const startChatRequest = async () => {
             ? data.message
             : QUOTA_EXCEEDED_MESSAGE,
       });
-      useChatRequestStore.getState().setStatus("idle");
+      useChatRequestStore
+        .getState()
+        .setStatus("idle", "startChatRequest/402_quota");
       return;
     }
 
     await consumeStreamResponse(response);
-
     finalizeStream();
   } catch (error) {
     if (isAbortError(error)) return;
 
-    if (error instanceof TypeError) {
-      finalizeStream();
-      return;
-    }
-
-    useChatRequestStore.getState().setStatus("idle");
+    useChatRequestStore.getState().setStatus("idle", "startChatRequest/error");
+    toast.error(
+      error instanceof TypeError
+        ? "连接中断"
+        : error instanceof Error
+          ? error.message
+          : "请求失败",
+    );
   } finally {
     activeController = null;
   }
 };
 
 /**
- * 停止当前活跃的聊天请求。
- * 1. abort 本地 activeController
- * 2. 若有 conversationId，POST /agents/chat-agent/:conversationId/abort 通知服务端
- * 3. 将 status 设为 idle
+ * 取消订阅流式输出。
+ * abort 本地 activeController，将 status 设为 idle。
  */
-export const stopActiveChatRequest = () => {
-  const conversationId = useChatSessionStore.getState().conversationId;
-
+export const cancelStreamSubscription = () => {
   activeController?.abort();
   activeController = null;
 
+  useChatRequestStore.getState().setStatus("idle", "cancelStreamSubscription");
+};
+
+/**
+ * 取消正在进行的 AI 回复。
+ * 集成 cancelStreamSubscription 与 POST /abort 通知服务端。
+ */
+export const cancelAnswering = () => {
+  cancelStreamSubscription();
+  const conversationId = useChatSessionStore.getState().conversationId;
   if (conversationId) {
     fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       credentials: "include",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     }).catch(() => {});
   }
-
-  useChatRequestStore.getState().setStatus("idle");
 };
 
 /**
@@ -378,46 +391,32 @@ export const stopActiveChatRequest = () => {
  *
  * 流程：
  * 1. 调用 checkAgentStatus，若不为 running 则直接设为 idle 返回
- * 2. 创建新 AbortController，并监听 linkedSignal（如路由卸载）以便同步 abort
+ * 2. 创建新 AbortController，通过 activeController 与 cancelStreamSubscription 联动
  * 3. POST /agents/chat-agent/:conversationId/events，body 为 { lastEventId }
  * 4. 消费返回的 SSE 流（sync_response + 后续 chat_event）
- * 5. 结束时 finalizeStream，并移除 linkedSignal 的 abort 监听
+ * 5. 结束时 finalizeStream
+ *
+ * 取消方式：useConversationLoader 切换/离开对话时调用 cancelStreamSubscription 即可 abort
  */
-export const resumeRunningConversation = async (
-  conversationId: string,
-  linkedSignal: AbortSignal,
-) => {
-  if (!conversationId || linkedSignal.aborted) return;
-
+export const resumeRunningConversation = async (conversationId: string) => {
   let agentStatus: { status: ChatAgentStatus };
 
   try {
     agentStatus = await checkAgentStatus(conversationId);
   } catch {
-    if (!linkedSignal.aborted) {
-      finalizeStream();
-    }
     return;
   }
 
   if (agentStatus.status !== "running") {
-    useChatRequestStore.getState().setStatus("idle");
     return;
   }
 
-  activeController?.abort();
   const controller = new AbortController();
   activeController = controller;
 
-  /* 外部 signal（如路由卸载）abort 时，同步取消本次请求 */
-  const handleLinkedAbort = () => controller.abort();
-  if (linkedSignal.aborted) {
-    controller.abort();
-  } else {
-    linkedSignal.addEventListener("abort", handleLinkedAbort);
-  }
-
-  useChatRequestStore.getState().setStatus("sending");
+  useChatRequestStore
+    .getState()
+    .setStatus("sending", "resumeRunningConversation");
 
   try {
     const response = await fetch(
@@ -437,14 +436,17 @@ export const resumeRunningConversation = async (
   } catch (error) {
     if (isAbortError(error)) return;
 
-    if (error instanceof TypeError) {
-      finalizeStream();
-      return;
-    }
-
-    useChatRequestStore.getState().setStatus("idle");
+    useChatRequestStore
+      .getState()
+      .setStatus("idle", "resumeRunningConversation/error");
+    toast.error(
+      error instanceof TypeError
+        ? "连接中断"
+        : error instanceof Error
+          ? error.message
+          : "请求失败",
+    );
   } finally {
-    linkedSignal.removeEventListener("abort", handleLinkedAbort);
     if (activeController === controller) {
       activeController = null;
     }

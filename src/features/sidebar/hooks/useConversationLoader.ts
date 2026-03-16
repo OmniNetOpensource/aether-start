@@ -15,9 +15,9 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import {
   resetLastEventId,
-  stopActiveChatRequest,
+  cancelStreamSubscription,
+  resumeRunningConversation,
 } from "@/lib/chat/api/chat-orchestrator";
-import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { getConversationFn } from "@/server/functions/conversations";
@@ -50,10 +50,8 @@ export function useConversationLoader(loadingConversationId: string) {
    * - cleanup：abort 进行中的 resume 请求，标记 cancelled 避免竞态
    */
   useEffect(() => {
-    /**
-     * 如果当前对话ID与加载的对话ID相同，则不进行加载
-     */
     if (currentConversationId === loadingConversationId) {
+      void resumeRunningConversation(loadingConversationId);
       return;
     }
 
@@ -86,6 +84,7 @@ export function useConversationLoader(loadingConversationId: string) {
           "";
         store.setCurrentRole(roleId);
         setIsLoading(false);
+        void resumeRunningConversation(loadingConversationId);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -128,8 +127,7 @@ export function useConversationLoader(loadingConversationId: string) {
   useEffect(() => {
     return () => {
       resetLastEventId();
-      stopActiveChatRequest(); /* 中止 SSE 流并通知服务端 /abort */
-      useComposerStore.getState().clear();
+      cancelStreamSubscription();
       useEditingStore.getState().clear();
     };
   }, [loadingConversationId]);

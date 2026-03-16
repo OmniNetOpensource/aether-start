@@ -1,8 +1,7 @@
 import { create } from "zustand";
-import { devtools } from "zustand/middleware";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { toast } from "@/hooks/useToast";
-import { startChatRequest, stopActiveChatRequest } from "@/lib/chat/api/chat-orchestrator";
+import { startChatRequest, cancelAnswering } from "@/lib/chat/api/chat-orchestrator";
 import {
   cloneBlocks,
   editMessage,
@@ -40,7 +39,7 @@ type EditingStoreActions = {
 };
 
 export const useEditingStore = create<EditingStoreState & EditingStoreActions>()(
-  devtools((set, get) => ({
+  (set, get) => ({
       editingState: null,
       startEditing: (messageId) => {
         const messages = useChatSessionStore.getState().messages;
@@ -55,53 +54,40 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           (attachment) => ({ ...attachment })
         );
 
-        set(
-          {
-            editingState: {
-              messageId,
-              originalBlocks,
-              editedContent,
-              editedAttachments,
-            },
+        set({
+          editingState: {
+            messageId,
+            originalBlocks,
+            editedContent,
+            editedAttachments,
           },
-          false,
-          "startEditing"
-        );
+        });
       },
       updateEditContent: (content) =>
-        set(
-          (state) => {
-            if (!state.editingState) {
-              return state;
-            }
-            return {
-              editingState: {
-                ...state.editingState,
-                editedContent: content,
-              },
-            };
-          },
-          false,
-          "updateEditContent"
-        ),
+        set((state) => {
+          if (!state.editingState) {
+            return state;
+          }
+          return {
+            editingState: {
+              ...state.editingState,
+              editedContent: content,
+            },
+          };
+        }),
       updateEditAttachments: (attachments) =>
-        set(
-          (state) => {
-            if (!state.editingState) {
-              return state;
-            }
-
-            return {
-              editingState: {
-                ...state.editingState,
-                editedAttachments: attachments,
-              },
-            };
-          },
-          false,
-          "updateEditAttachments"
-        ),
-      cancelEditing: () => set({ editingState: null }, false, "cancelEditing"),
+        set((state) => {
+          if (!state.editingState) {
+            return state;
+          }
+          return {
+            editingState: {
+              ...state.editingState,
+              editedAttachments: attachments,
+            },
+          };
+        }),
+      cancelEditing: () => set({ editingState: null }),
       submitEdit: async (depth) => {
         const editingState = get().editingState;
         if (!editingState) {
@@ -115,7 +101,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         if (useChatRequestStore.getState().status !== "idle") {
-          stopActiveChatRequest();
+          cancelAnswering();
         }
 
         const trimmed = editingState.editedContent.trim();
@@ -134,7 +120,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         );
 
         if (!result) {
-          set({ editingState: null }, false, "submitEdit/reset");
+          set({ editingState: null });
           return;
         }
 
@@ -144,7 +130,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           latestRootId: result.latestRootId,
           nextId: result.nextId,
         });
-        set({ editingState: null }, false, "submitEdit/success");
+        set({ editingState: null });
 
         await startChatRequest();
       },
@@ -163,7 +149,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         if (useChatRequestStore.getState().status !== "idle") {
-          stopActiveChatRequest();
+          cancelAnswering();
         }
 
         if (targetNode.role === "user") {
@@ -184,7 +170,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
             latestRootId: result.latestRootId,
             nextId: result.nextId,
           });
-          set({ editingState: null }, false, "retryFromMessage/user");
+          set({ editingState: null });
 
           await startChatRequest();
           return;
@@ -197,11 +183,10 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         treeStore.setTreeState({ currentPath: nextPath });
-        set({ editingState: null }, false, "retryFromMessage/assistant");
+        set({ editingState: null });
 
         await startChatRequest();
       },
-      clear: () => set({ editingState: null }, false, "clear"),
+      clear: () => set({ editingState: null }),
     }),
-    { name: "EditingStore" })
 );

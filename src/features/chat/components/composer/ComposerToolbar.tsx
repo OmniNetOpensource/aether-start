@@ -2,7 +2,7 @@ import { ChangeEvent, MouseEvent, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUp, Loader2, Paperclip, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { stopActiveChatRequest } from "@/lib/chat/api/chat-orchestrator";
+import { cancelAnswering } from "@/lib/chat/api/chat-orchestrator";
 import { submitMessage } from "@/features/chat/components/composer/submit-chat";
 import { cn } from "@/lib/utils";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
@@ -76,7 +76,7 @@ export function ComposerToolbar() {
     }
     if (isBusy) {
       event.preventDefault();
-      stopActiveChatRequest();
+      cancelAnswering();
     } else {
       void submitMessage((conversationId) =>
         navigate({
@@ -145,7 +145,7 @@ export function ComposerToolbar() {
         >
           {status === "sending" ? (
             <Loader2 className="h-4 w-4 animate-spin" />
-          ) : status === "streaming" || status === "disconnected" ? (
+          ) : status === "streaming" ? (
             <Square className="h-4 w-4 fill-current" />
           ) : (
             <ArrowUp
