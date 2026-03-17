@@ -258,3 +258,26 @@ Never commit real secrets.
 - Never typecast. Never use `as`
 
 - DO NOT Calling setState synchronously within an effect body
+
+## Cursor Cloud specific instructions
+
+### Services
+
+This is a single-service TanStack Start application. Everything (D1, R2, Durable Objects) is emulated locally by the `@cloudflare/vite-plugin` / miniflare when running `pnpm dev`.
+
+### Running the dev server
+
+1. Ensure `.dev.vars` exists with at least `BETTER_AUTH_SECRET` (any random string) and `BETTER_AUTH_URL` (set to the local dev server origin). The Cloudflare vite plugin reads secrets from `.dev.vars`, not `.env.local`.
+2. Apply D1 migrations locally: `pnpm cf:migrate:local`
+3. Start the dev server: `pnpm dev` (port 3000)
+
+### Gotchas
+
+- **Build scripts must be approved**: After a fresh `pnpm install`, critical native dependencies (`esbuild`, `workerd`, etc.) won't work until `pnpm approve-builds --all` is run. Without this, `pnpm dev` will fail.
+- **Email verification on registration**: No `RESEND_API_KEY` means email OTP won't be sent. To bypass, manually verify the user in D1: `npx wrangler d1 execute DB --local --command "UPDATE user SET email_verified = 1 WHERE email = '<email>'"`.
+- **Chat requires LLM API keys**: Without at least one provider key (e.g. `ANTHROPIC_API_KEY_IKUNCODE`), chat messages will send but the AI response will fail with a missing-key error. This is expected in a credential-free dev setup.
+- **Vitest mocks `cloudflare:workers`**: Tests don't need wrangler running. The mock lives at `src/shared/test/mocks/cloudflare-workers.ts`.
+
+### Standard commands
+
+See `CLAUDE.md` or `README.md` for the full command list. Key ones: `pnpm lint`, `pnpm type-check`, `pnpm test`, `pnpm dev`.
