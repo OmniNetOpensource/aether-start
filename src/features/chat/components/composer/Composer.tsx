@@ -7,7 +7,6 @@ import {
 } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { submitMessage } from "@/features/chat/components/composer/submit-chat";
-import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { setComposerTextarea } from "@/lib/chat/composer-focus";
 import { useResponsive } from "@/components/ResponsiveContext";
 import { Textarea } from "@/components/ui/textarea";
@@ -28,7 +27,6 @@ export function Composer() {
   );
   const uploading = useComposerStore((state) => state.uploading);
   const deviceType = useResponsive();
-  const isMobile = deviceType === "mobile";
   const isDesktop = deviceType === "desktop";
   const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
@@ -143,7 +141,6 @@ export function Composer() {
   };
 
   const isNewChat = useIsNewChat();
-  const narrow = useChatRoomNarrow();
 
   const composerBoxClass =
     "relative z-10 flex w-full flex-col gap-2 rounded-xl bg-(--sidebar-surface) p-2 shadow-sm transition-shadow duration-200 focus-within:shadow-md";
@@ -167,7 +164,7 @@ export function Composer() {
   );
 
   const widthClass =
-    narrow || isMobile ? "w-[90%] max-w-full" : "w-[50%] max-w-2xl";
+    "w-[90%] max-w-full @[921px]:w-[50%] @[921px]:max-w-2xl";
 
   if (isNewChat) {
     return (

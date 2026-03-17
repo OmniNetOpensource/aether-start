@@ -2,7 +2,6 @@ import { useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { SelectionToolbar } from "./SelectionToolbar";
 
 type MessageListProps = {
@@ -16,10 +15,9 @@ export function MessageList({
 }: MessageListProps = {}) {
   const currentPath = useChatSessionStore((state) => state.currentPath);
   const status = useChatRequestStore((s) => s.status);
-  const narrow = useChatRoomNarrow();
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  const widthClass = narrow ? "w-[90%]" : "w-[60%]";
+  const widthClass = "w-[90%] @[921px]:w-[60%]";
 
   return (
     <div className={`relative w-full h-full ${className ?? ""}`.trim()}>

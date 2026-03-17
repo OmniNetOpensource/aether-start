@@ -10,11 +10,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 
 export function PromptSelector() {
-  const narrow = useChatRoomNarrow();
   const currentPrompt = useChatSessionStore((state) => state.currentPrompt);
   const prompts = useChatSessionStore((state) => state.availablePrompts);
   const loadAvailablePrompts = useChatSessionStore(
@@ -45,18 +43,14 @@ export function PromptSelector() {
           title={currentPromptName}
           className={cn(
             toolButtonBaseClass,
-            narrow
-              ? "w-8 px-0 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground"
-              : "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
+            "w-8 px-0 @[921px]:w-auto @[921px]:px-2.5 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
           )}
         >
           <MessageSquareText className="h-3.5 w-3.5" />
-          {!narrow && (
-            <>
-              <span className="max-w-20 truncate">{currentPromptName}</span>
-              <ChevronDown className="h-3 w-3 transition-transform duration-300" />
-            </>
-          )}
+          <span className="hidden @[921px]:inline-flex items-center gap-1.5">
+            <span className="max-w-20 truncate">{currentPromptName}</span>
+            <ChevronDown className="h-3 w-3 transition-transform duration-300" />
+          </span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" sideOffset={4}>

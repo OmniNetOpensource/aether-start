@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useChatRoomNarrow } from "@/features/chat/contexts/ChatRoomNarrowContext";
+import { useResponsive } from "@/components/ResponsiveContext";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 
 /** 根据 role id/name 推断 provider，用于分组 */
@@ -32,7 +32,7 @@ function getProviderFromRole(roleId: string, roleName: string): string {
 
 export function ModelSelector() {
   const [open, setOpen] = React.useState(false);
-  const narrow = useChatRoomNarrow();
+  const isMobile = useResponsive() === "mobile";
   const currentRole = useChatSessionStore((state) => state.currentRole);
   const roles = useChatSessionStore((state) => state.availableRoles);
   const loadAvailableRoles = useChatSessionStore(
@@ -75,23 +75,20 @@ export function ModelSelector() {
         title={currentRoleName || '选择模型'}
         className={cn(
           toolButtonBaseClass,
-          narrow
-            ? "w-8 px-0 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground"
-            : "group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
+          "w-8 px-0 @[921px]:w-auto @[921px]:px-2.5 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground",
         )}
       >
-        {narrow ? (
+        <span className="flex @[921px]:hidden">
           <Bot className="h-3.5 w-3.5" />
-        ) : (
-          <>
-            <span className="max-w-40 truncate">{currentRoleName}</span>
-            <ChevronDown className="h-3 w-3 transition-transform duration-300" />
-          </>
-        )}
+        </span>
+        <span className="hidden @[921px]:flex items-center gap-1.5">
+          <span className="max-w-40 truncate">{currentRoleName}</span>
+          <ChevronDown className="h-3 w-3 transition-transform duration-300" />
+        </span>
       </Button>
       <CommandDialog open={open} onOpenChange={setOpen} label="选择模型">
         <Command className="rounded-lg border-0" loop>
-          <CommandInput placeholder="搜索模型..." autoFocus={!narrow} />
+          <CommandInput placeholder="搜索模型..." autoFocus={!isMobile} />
           <CommandList>
             <CommandEmpty>未找到匹配的模型</CommandEmpty>
             {grouped.map(([provider, items]) => (
