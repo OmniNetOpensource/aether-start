@@ -61,6 +61,14 @@
   background-color: var(--color-background);
 }
 
+/* Tooltip - Emil Design Engineering: ease-out, 125ms, origin-aware, @starting-style for enter */
+@starting-style {
+  [data-slot="tooltip-content"] {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
 /* Remove border from inner code block body */
 [data-streamdown="code-block-body"] {
   border: none;

@@ -6,10 +6,10 @@
  * - 朗读：调用 TTS 播放选中文本
  *
  * 依赖 useSelectionToolbar 做选区检测与定位，useTtsPlayback 做朗读逻辑。
+ * 使用 CSS transitions 替代 Framer Motion，实现硬件加速 (Emil Design Engineering)。
  */
 
-import type { RefObject } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
+import { useEffect, useState, type RefObject } from 'react'
 import { Quote, Volume2, Loader2, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { insertQuoteAtCursor } from '@/lib/chat/composer-focus'
@@ -25,6 +25,14 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
   const { text, hasSelection, clearSelection, floatingRef, floatingStyles } =
     useSelectionToolbar(containerRef)
   const { ttsState, handleTts } = useTtsPlayback(text)
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    if (hasSelection && !mounted) {
+      const id = requestAnimationFrame(() => setMounted(true))
+      return () => cancelAnimationFrame(id)
+    }
+  }, [hasSelection, mounted])
 
   /** 根据 TTS 状态显示不同图标：加载中旋转、播放中方块、默认喇叭 */
   const ttsIcon =
@@ -44,25 +52,22 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
     }
   }
 
+  if (!hasSelection) return null
+
   return (
-    <AnimatePresence>
-      {hasSelection && (
-        <motion.div
-          ref={floatingRef}
-          style={floatingStyles}
-          initial={{ opacity: 0, y: 4, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 4, scale: 0.95 }}
-          transition={{ duration: 0.15 }}
-          className="flex gap-1 rounded-lg bg-background p-1 shadow-lg backdrop-blur-md border border-border"
-          data-selection-toolbar
-        >
+    <div
+      ref={floatingRef}
+      style={floatingStyles}
+      data-mounted={mounted}
+      className="flex gap-1 rounded-lg bg-background p-1 shadow-lg backdrop-blur-md border border-border transition-[opacity,transform] duration-150 ease-[var(--ease-out)] data-[mounted=false]:opacity-0 data-[mounted=false]:translate-y-1 data-[mounted=false]:scale-[0.95]"
+      data-selection-toolbar
+    >
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={handleQuote}
-            className="h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700"
+            className="h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-(--surface-hover)"
           >
             <Quote className="h-3.5 w-3.5" />
             引用
@@ -73,13 +78,11 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
             size="sm"
             onClick={handleTts}
             disabled={ttsState === 'loading'}
-            className="h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-neutral-200 dark:hover:bg-neutral-700"
+            className="h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-(--surface-hover)"
           >
             {ttsIcon}
             {ttsState === 'playing' ? '停止' : '朗读'}
           </Button>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </div>
   )
 }

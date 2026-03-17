@@ -12,7 +12,7 @@ function Switch({
     <SwitchPrimitive.Root
       data-slot="switch"
       className={cn(
-        "peer data-[state=checked]:bg-ring data-[state=unchecked]:bg-(--surface-muted) focus-visible:border-ring focus-visible:ring-(--interactive-primary) dark:data-[state=unchecked]:bg-(--surface-muted) inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-all outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed",
+        "peer data-[state=checked]:bg-ring data-[state=unchecked]:bg-(--surface-muted) focus-visible:border-ring focus-visible:ring-(--interactive-primary) dark:data-[state=unchecked]:bg-(--surface-muted) inline-flex h-[1.15rem] w-8 shrink-0 items-center rounded-full border border-transparent shadow-xs transition-[background-color,transform,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed",
         className
       )}
       {...props}

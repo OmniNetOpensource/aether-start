@@ -32,6 +32,7 @@ const Command = React.forwardRef<
 ));
 Command.displayName = "Command";
 
+/* Command is keyboard-initiated (100+ times/day) - no animation per Emil Design Engineering */
 const CommandDialog = ({
   children,
   label = "Command menu",
@@ -42,13 +43,11 @@ const CommandDialog = ({
     <DialogContent
       className={cn(
         "fixed top-[50%] left-[50%] w-full max-w-[calc(100vw-2rem)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2",
-        "overflow-hidden p-0 gap-0 rounded-lg border bg-(--surface-primary) shadow-lg",
-        "data-[state=open]:animate-in data-[state=closed]:animate-out",
-        "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
-        "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 sm:max-w-md",
+        "overflow-hidden p-0 gap-0 rounded-lg border bg-(--surface-primary) shadow-lg sm:max-w-md",
         contentClassName,
       )}
       showCloseButton={false}
+      animated={false}
     >
       <VisuallyHidden>
         <DialogTitle>{label}</DialogTitle>

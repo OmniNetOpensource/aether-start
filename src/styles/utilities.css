@@ -33,15 +33,20 @@
   animation: mobile-sidebar-slide-in 220ms var(--transition-smooth);
 }
 
-/* Interactive elements */
+/* Interactive elements - specific properties, no transition-all */
 button,
 input,
 select,
 textarea,
 [role="button"] {
-  transition-property: background-color, color, border-color, box-shadow, opacity;
-  transition-duration: 0.3s;
-  transition-timing-function: var(--transition-smooth);
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: var(--ease-out);
+}
+
+button:active,
+[role="button"]:active {
+  transform: scale(0.97);
 }
 
 .horizontal-scroll {
