@@ -183,6 +183,18 @@ export const extractSearchText = (messages: object[]) => {
         continue;
       }
 
+      if (block.type === "quotes" && Array.isArray(block.quotes)) {
+        for (const q of block.quotes) {
+          if (isRecord(q) && typeof q.text === "string") {
+            const text = (q.text as string).trim();
+            if (text) {
+              chunks.push(text);
+            }
+          }
+        }
+        continue;
+      }
+
       if (block.type === "error" && typeof block.message === "string") {
         const messageText = block.message.trim();
         if (messageText) {

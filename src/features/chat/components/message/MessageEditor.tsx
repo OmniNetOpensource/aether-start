@@ -1,15 +1,12 @@
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from "react";
 import { ArrowUp, ImagePlus, X } from "lucide-react";
-import { ImagePreview } from "@/components/ImagePreview";
+import { AttachmentStack } from "@/features/chat/components/AttachmentStack";
 import { useResponsive } from "@/components/ResponsiveContext";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
-import {
-  buildAttachmentsFromFiles,
-  getAttachmentPreviewUrl,
-} from "@/lib/chat/attachments";
+import { buildAttachmentsFromFiles } from "@/lib/chat/attachments";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useComposerStore } from "@/stores/zustand/useComposerStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
@@ -23,6 +20,7 @@ type MessageEditorProps = {
 export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const editingState = useEditingStore((state) => state.editingState);
   const updateEditContent = useEditingStore((state) => state.updateEditContent);
+  const updateEditQuotes = useEditingStore((state) => state.updateEditQuotes);
   const updateEditAttachments = useEditingStore(
     (state) => state.updateEditAttachments,
   );
@@ -76,11 +74,15 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
     return null;
   }
 
-  const { editedContent, editedAttachments } = state;
+  const { editedContent, editedQuotes, editedAttachments } = state;
   const hasText = editedContent.trim().length > 0;
+  const hasQuotes = editedQuotes.length > 0;
   const hasAttachments = editedAttachments.length > 0;
   const sendDisabled =
-    isBusy || uploading || (!hasText && !hasAttachments) || !currentRole;
+    isBusy ||
+    uploading ||
+    (!hasText && !hasQuotes && !hasAttachments) ||
+    !currentRole;
 
   const handleAddAttachments = async (files: File[]) => {
     if (!files.length) {
@@ -98,6 +100,16 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
     }
 
     updateEditAttachments([...editedAttachments, ...attachments]);
+  };
+
+  const handleRemoveQuote = (id: string) => {
+    updateEditQuotes(editedQuotes.filter((q) => q.id !== id));
+  };
+
+  const handleRemoveAttachment = (id: string) => {
+    updateEditAttachments(
+      editedAttachments.filter((a) => a.id !== id),
+    );
   };
 
   const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -152,35 +164,13 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
         <X className="h-4 w-4" />
       </Button>
 
-      {hasAttachments ? (
-        <div className="flex flex-wrap gap-2">
-          {editedAttachments.map((attachment) => (
-            <div key={attachment.id} className="group relative">
-              <ImagePreview
-                url={attachment.url}
-                previewUrl={getAttachmentPreviewUrl(attachment)}
-                name={attachment.name}
-                size={attachment.size}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label="Remove attachment"
-                onClick={() =>
-                  updateEditAttachments(
-                    editedAttachments.filter(
-                      (item) => item.id !== attachment.id,
-                    ),
-                  )
-                }
-                className="absolute right-1 top-1 h-6 w-6 rounded-full bg-(--interactive-primary) text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-(--interactive-primary-hover) hover:text-(--status-destructive)"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          ))}
-        </div>
+      {(hasQuotes || hasAttachments) ? (
+        <AttachmentStack
+          items={editedAttachments}
+          quotes={editedQuotes}
+          onRemove={handleRemoveAttachment}
+          onRemoveQuote={handleRemoveQuote}
+        />
       ) : null}
 
       <Textarea

@@ -40,8 +40,11 @@ type ResearchBlock = {
 
 // --- Role-specific block types ---
 
+export type QuoteItem = { id: string; text: string };
+
 export type UserContentBlock =
   | { type: "content"; content: string }
+  | { type: "quotes"; quotes: QuoteItem[] }
   | { type: "attachments"; attachments: Attachment[] };
 
 export type AssistantContentBlock =

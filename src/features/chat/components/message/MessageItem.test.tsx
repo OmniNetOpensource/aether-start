@@ -174,4 +174,59 @@ describe("MessageItem", () => {
       ),
     ).not.toBeNull();
   });
+
+  it("renders quote cards for user message with quotes block", async () => {
+    useChatSessionStore.setState({
+      messages: [
+        createUserMessage([
+          { type: "quotes", quotes: [{ id: "q1", text: "quoted text" }] },
+          { type: "content", content: "my question" },
+        ]),
+      ],
+      currentPath: [1],
+      latestRootId: 1,
+      nextId: 2,
+    });
+
+    await act(async () => {
+      root.render(
+        <MessageItem messageId={1} index={0} depth={1} isStreaming={false} />,
+      );
+      await flush();
+    });
+
+    const stack = container.querySelector('[data-testid="attachment-stack"]');
+    expect(stack).not.toBeNull();
+    expect(stack?.textContent).toContain("quoted text");
+    const bubble = container.querySelector(
+      ".rounded-lg.bg-\\(--surface-muted\\)",
+    );
+    expect(bubble).not.toBeNull();
+    expect(bubble?.textContent).toContain("my question");
+  });
+
+  it("renders bubble for quote-only user message without duplicating quote in content", async () => {
+    useChatSessionStore.setState({
+      messages: [
+        createUserMessage([
+          { type: "quotes", quotes: [{ id: "q1", text: "only quote" }] },
+        ]),
+      ],
+      currentPath: [1],
+      latestRootId: 1,
+      nextId: 2,
+    });
+
+    await act(async () => {
+      root.render(
+        <MessageItem messageId={1} index={0} depth={1} isStreaming={false} />,
+      );
+      await flush();
+    });
+
+    const stack = container.querySelector('[data-testid="attachment-stack"]');
+    expect(stack).not.toBeNull();
+    expect(stack?.textContent).toContain("only quote");
+    expect(container.textContent).not.toContain("> only quote");
+  });
 });

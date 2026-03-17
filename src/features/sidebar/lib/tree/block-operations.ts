@@ -3,6 +3,7 @@ import type {
   Attachment,
   ContentBlock,
   Message,
+  QuoteItem,
   ResearchItem,
   UserContentBlock,
 } from "@/types/message";
@@ -30,6 +31,22 @@ export const extractContentFromBlocks = (blocks: ContentBlock[]) =>
     .map((block) => block.content)
     .join("\n\n");
 
+export const extractQuotesFromBlocks = (blocks: ContentBlock[]) =>
+  blocks.flatMap((block) =>
+    block.type === "quotes" ? block.quotes : []
+  );
+
+/** 将 quotes 转为发给模型时的引用文本格式：多行逐行加 >，多条之间空一段 */
+export const quotesToModelText = (quotes: QuoteItem[]): string =>
+  quotes
+    .map((q) =>
+      q.text
+        .split(/\r?\n/)
+        .map((line) => `> ${line}`)
+        .join("\n"),
+    )
+    .join("\n\n");
+
 export const extractAttachmentsFromBlocks = (blocks: ContentBlock[]) =>
   blocks.flatMap((block) =>
     block.type === "attachments" ? block.attachments : []
@@ -46,15 +63,19 @@ export const collectAttachmentIds = (blocks: ContentBlock[]) =>
 
 export const buildUserBlocks = (
   content: string,
+  quotes: QuoteItem[],
   attachments: Attachment[]
 ): UserContentBlock[] => {
   const blocks: UserContentBlock[] = [];
-  const trimmed = content.trim();
-  if (trimmed) {
-    blocks.push({ type: "content", content: trimmed });
+  if (quotes.length > 0) {
+    blocks.push({ type: "quotes", quotes });
   }
   if (attachments.length > 0) {
     blocks.push({ type: "attachments", attachments });
+  }
+  const trimmed = content.trim();
+  if (trimmed) {
+    blocks.push({ type: "content", content: trimmed });
   }
   return blocks;
 };

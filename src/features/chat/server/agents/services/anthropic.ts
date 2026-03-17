@@ -5,6 +5,7 @@ import {
 } from "@/server/agents/services/model-provider-config";
 import { log, logProviderCommunication } from "./logger";
 import { buildProviderErrorEvent } from "./provider-error";
+import { quotesToModelText } from "@/lib/conversation/tree/block-operations";
 import { resolveAttachmentToBase64 } from "./attachment-utils";
 import { RenderArtifactStreamParser } from "./render-artifact-stream";
 import type {
@@ -147,7 +148,12 @@ export async function convertToAnthropicMessages(
       const contentBlocks: AnthropicContentBlock[] = [];
 
       for (const block of message.blocks) {
-        if (block.type === "content" && block.content) {
+        if (block.type === "quotes" && block.quotes.length > 0) {
+          const quoteText = quotesToModelText(block.quotes);
+          if (quoteText) {
+            contentBlocks.push({ type: "text", text: quoteText });
+          }
+        } else if (block.type === "content" && block.content) {
           contentBlocks.push({ type: "text", text: block.content });
         } else if (block.type === "attachments") {
           for (const attachment of block.attachments) {

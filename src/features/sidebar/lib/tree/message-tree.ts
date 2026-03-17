@@ -64,6 +64,12 @@ export const cloneBlocks = (blocks: ContentBlock[]): ContentBlock[] =>
         attachments: block.attachments.map((attachment) => ({ ...attachment })),
       };
     }
+    if (block.type === "quotes") {
+      return {
+        ...block,
+        quotes: block.quotes.map((q) => ({ ...q })),
+      };
+    }
     return { ...block };
   });
 

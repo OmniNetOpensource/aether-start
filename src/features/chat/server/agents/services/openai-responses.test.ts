@@ -112,6 +112,37 @@ describe('openai-responses provider', () => {
     ])
   })
 
+  it('converts quotes block to input_text before content', async () => {
+    const history: SerializedMessage[] = [
+      {
+        role: 'user',
+        blocks: [
+          {
+            type: 'quotes',
+            quotes: [
+              { id: 'q1', text: 'line1\nline2' },
+              { id: 'q2', text: 'second quote' },
+            ],
+          },
+          { type: 'content', content: 'my question' },
+        ],
+      },
+    ]
+
+    const converted = await convertToOpenAIResponsesMessages(history)
+
+    expect(converted).toEqual([
+      {
+        type: 'message',
+        role: 'user',
+        content: [
+          { type: 'input_text', text: '> line1\n> line2\n\n> second quote' },
+          { type: 'input_text', text: 'my question' },
+        ],
+      },
+    ])
+  })
+
   it('formats assistant text, function_call and function_call_output in order', () => {
     const continuation = formatOpenAIResponsesToolContinuation(
       'tool call incoming',

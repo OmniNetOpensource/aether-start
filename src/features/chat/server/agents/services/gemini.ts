@@ -9,6 +9,7 @@ import {
   type BackendConfig,
 } from "@/server/agents/services/model-provider-config";
 import { log, logProviderCommunication } from "./logger";
+import { quotesToModelText } from "@/lib/conversation/tree/block-operations";
 import { buildProviderErrorEvent } from "./provider-error";
 import { resolveAttachmentToBase64 } from "./attachment-utils";
 import { parseToolResultImage } from "./tool-result-images";
@@ -68,7 +69,12 @@ export async function convertToGeminiMessages(
       const parts: genai.Part[] = [];
 
       for (const block of message.blocks) {
-        if (block.type === "content" && block.content) {
+        if (block.type === "quotes" && block.quotes.length > 0) {
+          const quoteText = quotesToModelText(block.quotes);
+          if (quoteText) {
+            parts.push({ text: quoteText });
+          }
+        } else if (block.type === "content" && block.content) {
           parts.push({ text: block.content });
         } else if (block.type === "attachments") {
           for (const attachment of block.attachments) {

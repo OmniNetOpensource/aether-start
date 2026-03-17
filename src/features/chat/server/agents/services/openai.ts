@@ -8,6 +8,7 @@ import {
   logProviderCommunication,
   shouldLogProviderCommunication,
 } from "./logger";
+import { quotesToModelText } from "@/lib/conversation/tree/block-operations";
 import { buildProviderErrorEvent } from "./provider-error";
 import { resolveAttachmentToBase64 } from "./attachment-utils";
 import { parseToolResultImage } from "./tool-result-images";
@@ -198,7 +199,12 @@ export async function convertToOpenAIMessages(
       const contentParts: OpenAIContentPart[] = [];
 
       for (const block of message.blocks) {
-        if (block.type === "content" && block.content) {
+        if (block.type === "quotes" && block.quotes.length > 0) {
+          const quoteText = quotesToModelText(block.quotes);
+          if (quoteText) {
+            contentParts.push({ type: "text", text: quoteText });
+          }
+        } else if (block.type === "content" && block.content) {
           contentParts.push({ type: "text", text: block.content });
         } else if (block.type === "attachments") {
           for (const attachment of block.attachments) {

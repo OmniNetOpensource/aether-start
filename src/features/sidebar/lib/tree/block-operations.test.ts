@@ -10,6 +10,8 @@ import {
   collectAttachmentIds,
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
+  extractQuotesFromBlocks,
+  quotesToModelText,
 } from './block-operations'
 
 const textBlock = (text: string): ContentBlock => ({
@@ -46,6 +48,47 @@ describe('extractContentFromBlocks', () => {
       { type: 'attachments', attachments: [attachment('1')] },
     ]
     expect(extractContentFromBlocks(blocks)).toBe('hello')
+  })
+
+  it('does not mix quotes into content', () => {
+    const blocks: ContentBlock[] = [
+      { type: 'quotes', quotes: [{ id: 'q1', text: 'quoted text' }] },
+      textBlock('hello'),
+    ]
+    expect(extractContentFromBlocks(blocks)).toBe('hello')
+  })
+})
+
+describe('extractQuotesFromBlocks', () => {
+  it('returns empty for no quote blocks', () => {
+    expect(extractQuotesFromBlocks([textBlock('hi')])).toEqual([])
+  })
+
+  it('extracts quotes', () => {
+    const blocks: ContentBlock[] = [
+      { type: 'quotes', quotes: [{ id: 'q1', text: 'a' }, { id: 'q2', text: 'b' }] },
+    ]
+    const result = extractQuotesFromBlocks(blocks)
+    expect(result).toHaveLength(2)
+    expect(result[0]).toEqual({ id: 'q1', text: 'a' })
+    expect(result[1]).toEqual({ id: 'q2', text: 'b' })
+  })
+})
+
+describe('quotesToModelText', () => {
+  it('formats single quote with > prefix per line', () => {
+    expect(quotesToModelText([{ id: '1', text: 'line1\nline2' }])).toBe(
+      '> line1\n> line2',
+    )
+  })
+
+  it('separates multiple quotes with blank line', () => {
+    expect(
+      quotesToModelText([
+        { id: '1', text: 'a' },
+        { id: '2', text: 'b' },
+      ]),
+    ).toBe('> a\n\n> b')
   })
 })
 
@@ -84,32 +127,40 @@ describe('collectAttachmentIds', () => {
 })
 
 describe('buildUserBlocks', () => {
-  it('returns empty for empty content and no attachments', () => {
-    expect(buildUserBlocks('', [])).toEqual([])
-    expect(buildUserBlocks('   ', [])).toEqual([])
+  it('returns empty for empty content, no quotes, no attachments', () => {
+    expect(buildUserBlocks('', [], [])).toEqual([])
+    expect(buildUserBlocks('   ', [], [])).toEqual([])
   })
 
   it('returns content block for text only', () => {
-    const blocks = buildUserBlocks('hello', [])
+    const blocks = buildUserBlocks('hello', [], [])
     expect(blocks).toEqual([{ type: 'content', content: 'hello' }])
+  })
+
+  it('returns quotes block for quotes only', () => {
+    const quotes = [{ id: 'q1', text: 'quoted' }]
+    const blocks = buildUserBlocks('', quotes, [])
+    expect(blocks).toEqual([{ type: 'quotes', quotes }])
   })
 
   it('returns attachment block for attachments only', () => {
     const a = attachment('1')
-    const blocks = buildUserBlocks('', [a])
+    const blocks = buildUserBlocks('', [], [a])
     expect(blocks).toEqual([{ type: 'attachments', attachments: [a] }])
   })
 
-  it('returns both blocks for content + attachments', () => {
+  it('returns quotes then attachments then content in order', () => {
     const a = attachment('1')
-    const blocks = buildUserBlocks('hello', [a])
-    expect(blocks).toHaveLength(2)
-    expect(blocks[0].type).toBe('content')
+    const quotes = [{ id: 'q1', text: 'quoted' }]
+    const blocks = buildUserBlocks('hello', quotes, [a])
+    expect(blocks).toHaveLength(3)
+    expect(blocks[0].type).toBe('quotes')
     expect(blocks[1].type).toBe('attachments')
+    expect(blocks[2].type).toBe('content')
   })
 
   it('trims content', () => {
-    const blocks = buildUserBlocks('  hello  ', [])
+    const blocks = buildUserBlocks('  hello  ', [], [])
     expect(blocks).toEqual([{ type: 'content', content: 'hello' }])
   })
 })

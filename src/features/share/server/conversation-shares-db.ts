@@ -55,6 +55,20 @@ const toSharedMessageBlock = (value: unknown): SharedMessageBlock | null => {
     }
   }
 
+  if (value.type === 'quotes' && Array.isArray(value.quotes)) {
+    const quotes = value.quotes
+      .filter(
+        (q): q is { id: string; text: string } =>
+          isRecord(q) &&
+          typeof q.id === 'string' &&
+          typeof q.text === 'string',
+      )
+      .map((q) => ({ id: q.id, text: q.text }))
+    if (quotes.length > 0) {
+      return { type: 'quotes', quotes }
+    }
+  }
+
   if (value.type !== 'attachments' || !Array.isArray(value.attachments)) {
     return null
   }

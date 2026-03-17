@@ -1,7 +1,6 @@
 import { AlertCircle } from "lucide-react";
 import Markdown from "@/components/Markdown";
-import { ImagePreview } from "@/components/ImagePreview";
-import { getAttachmentPreviewUrl } from "@/lib/chat/attachments";
+import { AttachmentStack } from "@/features/chat/components/AttachmentStack";
 import { ResearchBlock } from "@/features/chat/components/research/ResearchBlock";
 import type { Message } from "@/types/message";
 
@@ -26,6 +25,12 @@ export function ReadonlyMessageList({
     >
       {messages.map((message, index) => {
         const isUser = message.role === "user";
+        const quoteBlocks = message.blocks.filter(
+          (
+            block,
+          ): block is Extract<Message["blocks"][number], { type: "quotes" }> =>
+            block.type === "quotes",
+        );
         const attachmentBlocks = message.blocks.filter(
           (
             block,
@@ -35,10 +40,16 @@ export function ReadonlyMessageList({
           > => block.type === "attachments",
         );
         const contentBlocks = message.blocks.filter(
-          (block) => block.type !== "attachments",
+          (block) => block.type === "content",
         );
+        const assistantBlocks = !isUser ? message.blocks : [];
+        const quotes = quoteBlocks.flatMap((block) => block.quotes);
+        const attachments = attachmentBlocks.flatMap((block) => block.attachments);
         const shouldRenderBody =
-          !isUser || contentBlocks.length > 0 || attachmentBlocks.length > 0;
+          !isUser ||
+          contentBlocks.length > 0 ||
+          quoteBlocks.length > 0 ||
+          attachmentBlocks.length > 0;
 
         return (
           <div
@@ -52,22 +63,7 @@ export function ReadonlyMessageList({
                 {shouldRenderBody &&
                   (isUser ? (
                     <div className="rounded-lg bg-(--surface-muted) px-4 py-3">
-                      {attachmentBlocks.length > 0 && (
-                        <div className="mb-6 flex gap-3 overflow-x-auto">
-                          {attachmentBlocks.flatMap((block) =>
-                            block.attachments.map((attachment) => (
-                              <ImagePreview
-                                key={attachment.id}
-                                url={attachment.url}
-                                previewUrl={getAttachmentPreviewUrl(attachment)}
-                                name={attachment.name}
-                                size={attachment.size}
-                                className="shrink-0"
-                              />
-                            )),
-                          )}
-                        </div>
-                      )}
+                      <AttachmentStack items={attachments} quotes={quotes} />
                       <div className="text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
                         {contentBlocks.map((block, blockIndex) =>
                           block.type === "content" ? (
@@ -81,7 +77,7 @@ export function ReadonlyMessageList({
                     </div>
                   ) : (
                     <div className="flex min-w-0 w-full flex-col space-y-3 text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
-                      {contentBlocks.map((block, blockIndex) => {
+                      {assistantBlocks.map((block, blockIndex) => {
                         const blockKey = `${index}-${blockIndex}`;
 
                         if (block.type === "research") {

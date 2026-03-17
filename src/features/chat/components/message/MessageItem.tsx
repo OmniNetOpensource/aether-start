@@ -127,6 +127,12 @@ export function MessageItem({
 
   if (!message) return null;
   const isUser = message.role === "user";
+  const quoteBlocks = message.blocks.filter(
+    (
+      block,
+    ): block is Extract<Message["blocks"][number], { type: "quotes" }> =>
+      block.type === "quotes",
+  );
   const attachmentBlocks = message.blocks.filter(
     (
       block,
@@ -134,13 +140,17 @@ export function MessageItem({
       block.type === "attachments",
   );
   const contentBlocks = message.blocks.filter(
-    (block) => block.type !== "attachments",
+    (block) => block.type === "content",
   );
+  const assistantBlocks =
+    !isUser ? message.blocks : [];
+  const quotes = quoteBlocks.flatMap((block) => block.quotes);
   const attachments = attachmentBlocks.flatMap((block) => block.attachments);
   const shouldRenderBody =
     isEditing ||
     !isUser ||
     contentBlocks.length > 0 ||
+    quoteBlocks.length > 0 ||
     attachmentBlocks.length > 0;
   const contentWidthClass = isUser ? "w-full max-w-[90%]" : "w-full";
 
@@ -161,7 +171,7 @@ export function MessageItem({
                 <MessageEditor messageId={messageId} depth={depth} />
               ) : isUser ? (
                 <div>
-                  <AttachmentStack items={attachments} />
+                  <AttachmentStack items={attachments} quotes={quotes} />
                   <div className="relative z-10 overflow-visible rounded-lg bg-(--surface-muted) px-4 py-3">
                     <div className="text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
                       {contentBlocks.map((block, blockIndex) => {
@@ -180,7 +190,7 @@ export function MessageItem({
                 </div>
               ) : (
                 <div className="flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal">
-                  {contentBlocks.map((block, blockIndex) => {
+                  {assistantBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;
                     if (block.type === "research") {
                       return (
@@ -213,7 +223,7 @@ export function MessageItem({
                         key={blockKey}
                         content={block.content}
                         isAnimating={
-                          isStreaming && blockIndex === contentBlocks.length - 1
+                          isStreaming && blockIndex === assistantBlocks.length - 1
                         }
                       />
                     );

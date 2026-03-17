@@ -12,8 +12,11 @@ export type SharedAttachmentSnapshot = {
   thumbnailStorageKey?: string;
 };
 
+export type SharedQuoteItem = { id: string; text: string };
+
 export type SharedUserBlock =
   | { type: "content"; content: string }
+  | { type: "quotes"; quotes: SharedQuoteItem[] }
   | { type: "attachments"; attachments: SharedAttachmentSnapshot[] };
 
 export type SharedAssistantBlock =
@@ -40,8 +43,11 @@ export type PublicSharedAttachment = Omit<
   "storageKey" | "thumbnailStorageKey"
 >;
 
+export type PublicSharedQuoteItem = { id: string; text: string };
+
 export type PublicSharedMessageBlock =
   | { type: "content"; content: string }
+  | { type: "quotes"; quotes: PublicSharedQuoteItem[] }
   | { type: "attachments"; attachments: PublicSharedAttachment[] }
   | { type: "research"; items: ResearchItem[] }
   | { type: "error"; message: string };

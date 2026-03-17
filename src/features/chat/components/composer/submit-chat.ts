@@ -32,21 +32,9 @@ export async function submitMessage(
     return;
   }
 
-  const quotePrefix =
-    pendingQuotes.length > 0
-      ? pendingQuotes
-          .map((q) =>
-            q.text
-              .split(/\r?\n/)
-              .map((line) => `> ${line}`)
-              .join("\n"),
-          )
-          .join("\n\n") + "\n\n"
-      : "";
-  const fullContent = quotePrefix + input;
   sessionStore.addMessage(
     "user",
-    buildUserBlocks(fullContent, pendingAttachments),
+    buildUserBlocks(input, pendingQuotes, pendingAttachments),
   );
 
   composerStore.clear();

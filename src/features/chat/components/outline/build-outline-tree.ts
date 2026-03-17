@@ -105,6 +105,15 @@ export const getPreview = (message: Message): string => {
     }
   }
 
+  for (const block of message.blocks) {
+    if (block.type === "quotes" && block.quotes.length > 0) {
+      const firstQuote = normalizeText(block.quotes[0].text);
+      if (firstQuote) {
+        return truncateText(firstQuote);
+      }
+    }
+  }
+
   let attachmentCount = 0;
   let errorMessage: string | null = null;
   let hasResearch = false;

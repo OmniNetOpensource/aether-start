@@ -10,6 +10,7 @@ import {
   buildUserBlocks,
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
+  extractQuotesFromBlocks,
 } from "@/lib/conversation/tree/block-operations";
 import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
 import type { Attachment, UserContentBlock } from "@/types/message";
@@ -18,6 +19,7 @@ type EditingState = {
   messageId: number;
   originalBlocks: UserContentBlock[];
   editedContent: string;
+  editedQuotes: { id: string; text: string }[];
   editedAttachments: Attachment[];
 };
 
@@ -28,6 +30,7 @@ type EditingStoreState = {
 type EditingStoreActions = {
   startEditing: (messageId: number) => void;
   updateEditContent: (content: string) => void;
+  updateEditQuotes: (quotes: { id: string; text: string }[]) => void;
   updateEditAttachments: (attachments: Attachment[]) => void;
   cancelEditing: () => void;
   submitEdit: (depth: number) => Promise<void>;
@@ -50,6 +53,9 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
 
         const originalBlocks = cloneBlocks(target.blocks ?? []) as UserContentBlock[];
         const editedContent = extractContentFromBlocks(originalBlocks);
+        const editedQuotes = extractQuotesFromBlocks(originalBlocks).map(
+          (q) => ({ ...q })
+        );
         const editedAttachments = extractAttachmentsFromBlocks(originalBlocks).map(
           (attachment) => ({ ...attachment })
         );
@@ -59,6 +65,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
             messageId,
             originalBlocks,
             editedContent,
+            editedQuotes,
             editedAttachments,
           },
         });
@@ -72,6 +79,18 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
             editingState: {
               ...state.editingState,
               editedContent: content,
+            },
+          };
+        }),
+      updateEditQuotes: (quotes) =>
+        set((state) => {
+          if (!state.editingState) {
+            return state;
+          }
+          return {
+            editingState: {
+              ...state.editingState,
+              editedQuotes: quotes,
             },
           };
         }),
@@ -105,8 +124,9 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         const trimmed = editingState.editedContent.trim();
+        const quotes = editingState.editedQuotes;
         const attachments = editingState.editedAttachments;
-        if (!trimmed && attachments.length === 0) {
+        if (!trimmed && quotes.length === 0 && attachments.length === 0) {
           toast.warning('请输入内容或添加附件');
           return;
         }
@@ -116,7 +136,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           treeStore.getTreeState(),
           depth,
           editingState.messageId,
-          buildUserBlocks(editingState.editedContent, attachments)
+          buildUserBlocks(editingState.editedContent, quotes, attachments)
         );
 
         if (!result) {

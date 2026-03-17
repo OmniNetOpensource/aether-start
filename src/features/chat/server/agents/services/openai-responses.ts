@@ -4,6 +4,7 @@ import {
   type BackendConfig,
 } from "@/server/agents/services/model-provider-config";
 import { log, logProviderCommunication } from "./logger";
+import { quotesToModelText } from "@/lib/conversation/tree/block-operations";
 import { buildProviderErrorEvent } from "./provider-error";
 import { resolveAttachmentToBase64 } from "./attachment-utils";
 import { parseToolResultImage } from "./tool-result-images";
@@ -60,7 +61,15 @@ export async function convertToOpenAIResponsesMessages(
       const contentItems: OpenAI.Responses.ResponseInputContent[] = [];
 
       for (const block of message.blocks) {
-        if (block.type === "content" && block.content) {
+        if (block.type === "quotes" && block.quotes.length > 0) {
+          const quoteText = quotesToModelText(block.quotes);
+          if (quoteText) {
+            contentItems.push({
+              type: "input_text",
+              text: quoteText,
+            });
+          }
+        } else if (block.type === "content" && block.content) {
           contentItems.push({
             type: "input_text",
             text: block.content,

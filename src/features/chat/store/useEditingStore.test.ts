@@ -84,6 +84,7 @@ describe('useEditingStore', () => {
     expect(useEditingStore.getState().editingState).toMatchObject({
       messageId: 1,
       editedContent: 'original content',
+      editedQuotes: [],
       editedAttachments: [],
     })
 
@@ -107,8 +108,59 @@ describe('useEditingStore', () => {
 
     expect(useEditingStore.getState().editingState).toMatchObject({
       editedContent: 'changed content',
+      editedQuotes: [],
       editedAttachments: [attachment('att-1')],
     })
+  })
+
+  it('extracts editedQuotes from user message with quotes block', () => {
+    const userState = addMessage(
+      createEmptyMessageState(),
+      'user',
+      [
+        { type: 'quotes', quotes: [{ id: 'q1', text: 'quoted text' }] },
+        { type: 'content', content: 'my question' },
+      ],
+      '2024-01-01',
+    )
+    useChatSessionStore.getState().setTreeState(userState)
+
+    useEditingStore.getState().startEditing(1)
+
+    expect(useEditingStore.getState().editingState).toMatchObject({
+      messageId: 1,
+      editedContent: 'my question',
+      editedQuotes: [{ id: 'q1', text: 'quoted text' }],
+      editedAttachments: [],
+    })
+  })
+
+  it('submitEdit rebuilds blocks with quotes preserved', async () => {
+    const userState = addMessage(
+      createEmptyMessageState(),
+      'user',
+      [
+        { type: 'quotes', quotes: [{ id: 'q1', text: 'quoted' }] },
+        { type: 'content', content: 'original' },
+      ],
+      '2024-01-01',
+    )
+    useChatSessionStore.getState().setTreeState(userState)
+
+    useEditingStore.getState().startEditing(1)
+    useEditingStore.getState().updateEditContent('edited')
+    await useEditingStore.getState().submitEdit(1)
+
+    const messages = useChatSessionStore.getState().getMessagesFromPath()
+    const userMsg = messages[0]
+    expect(userMsg.role).toBe('user')
+    const quoteBlock = userMsg.blocks.find((b) => b.type === 'quotes')
+    expect(quoteBlock).toBeDefined()
+    if (quoteBlock && quoteBlock.type === 'quotes') {
+      expect(quoteBlock.quotes).toEqual([{ id: 'q1', text: 'quoted' }])
+    }
+    const contentBlock = userMsg.blocks.find((b) => b.type === 'content')
+    expect(contentBlock && contentBlock.type === 'content' ? contentBlock.content : '').toBe('edited')
   })
 
   it('submitEdit warns when role is missing', async () => {
