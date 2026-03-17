@@ -286,7 +286,7 @@ export function OutlineButton() {
     scrollToMessage(targetMessageId);
   };
 
-  if (currentPath.length === 0) return null;
+  const hasMessages = currentPath.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -294,7 +294,7 @@ export function OutlineButton() {
         <Button
           type="button"
           variant="ghost"
-          size="icon-lg"
+          size="icon-sm"
           className="rounded-lg"
           aria-label="Open conversation outline"
           title={
@@ -302,14 +302,15 @@ export function OutlineButton() {
               ? "Outline is unavailable while a response is streaming."
               : "Open conversation outline"
           }
-          disabled={isBusy}
+          disabled={!hasMessages || isBusy}
         >
-          <GitBranch className="h-5 w-5" />
+          <GitBranch className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent
         className="w-[min(94vw,72rem)] p-3 sm:max-w-4xl"
         showCloseButton
+        data-outline-dialog
       >
         {roots && (
           <OutlineGraph

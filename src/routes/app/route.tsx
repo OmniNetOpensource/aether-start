@@ -9,7 +9,6 @@ import Sidebar from "@/components/sidebar/Sidebar";
 import { getSessionStateFn } from "@/server/functions/auth/session-state";
 import { NewChatButton } from "@/features/chat/components/NewChatButton";
 import { ArtifactToggleButton } from "@/features/chat/components/artifact/ArtifactPanel";
-import { OutlineButton } from "@/features/chat/components/outline";
 import { ShareButton } from "@/features/share/components/ShareButton";
 
 export function getNormalizedAppTarget(
@@ -50,7 +49,6 @@ function AppLayout() {
             <div className="flex h-16 items-center gap-3 px-4 bg-transparent">
               <div className="flex-1" />
               <ArtifactToggleButton />
-              <OutlineButton />
               <ShareButton />
               <NewChatButton variant="topbar" className="rounded-lg" />
             </div>

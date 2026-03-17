@@ -1,4 +1,4 @@
-import { act } from "react";
+import { act, useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Message, UserContentBlock } from "@/types/message";
@@ -6,6 +6,7 @@ import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { useEditingStore } from "@/stores/zustand/useEditingStore";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { MessageItem } from "./MessageItem";
+import { MessageList } from "./MessageList";
 (
   globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }
 ).IS_REACT_ACT_ENVIRONMENT = true;
@@ -40,6 +41,43 @@ vi.mock("framer-motion", () => ({
   },
 }));
 
+vi.mock("./selection-toolbar", () => ({
+  SelectionToolbar: () => null,
+}));
+
+vi.mock("@/components/ResponsiveContext", () => ({
+  useResponsive: () => "mobile",
+}));
+
+vi.mock("@/features/chat/components/message/outline", async (importOriginal) => {
+  const mod =
+    await importOriginal<
+      typeof import("@/features/chat/components/message/outline")
+    >();
+  return {
+    ...mod,
+    OutlineButton: () => {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            aria-label="Open conversation outline"
+          >
+            Outline
+          </button>
+          {open && (
+            <div data-outline-dialog role="dialog">
+              Outline dialog
+            </div>
+          )}
+        </>
+      );
+    },
+  };
+});
+
 function createAttachment(id: string) {
   return {
     id,
@@ -62,6 +100,19 @@ function createUserMessage(blocks: UserContentBlock[]): Message {
     latestChild: null,
     createdAt: "2026-03-13T00:00:00.000Z",
     blocks,
+  };
+}
+
+function createAssistantMessage(id: number, content: string): Message {
+  return {
+    id,
+    role: "assistant",
+    parentId: 1,
+    prevSibling: null,
+    nextSibling: null,
+    latestChild: null,
+    createdAt: "2026-03-13T00:00:01.000Z",
+    blocks: [{ type: "content", content }],
   };
 }
 
@@ -228,5 +279,290 @@ describe("MessageItem", () => {
     expect(stack).not.toBeNull();
     expect(stack?.textContent).toContain("only quote");
     expect(container.textContent).not.toContain("> only quote");
+  });
+});
+
+describe("MessageList rail", () => {
+  let container: HTMLDivElement;
+  let root: Root;
+
+  beforeEach(() => {
+    container = document.createElement("div");
+    container.style.width = "800px";
+    container.style.height = "600px";
+    document.body.appendChild(container);
+    root = createRoot(container);
+
+    useChatRequestStore.setState({ status: "idle" });
+    useEditingStore.setState({ editingState: null });
+    useChatSessionStore.setState({
+      messages: [],
+      currentPath: [],
+      latestRootId: null,
+      nextId: 1,
+    });
+  });
+
+  afterEach(async () => {
+    await act(async () => {
+      root.unmount();
+      await flush();
+    });
+
+    container.remove();
+    document.body.innerHTML = "";
+  });
+
+  it("renders rail collapsed by default and expands on click", async () => {
+    useChatSessionStore.setState({
+      messages: [
+        createUserMessage([{ type: "content", content: "hi" }]),
+        createAssistantMessage(2, "hello"),
+      ],
+      currentPath: [1, 2],
+      latestRootId: 1,
+      nextId: 3,
+    });
+
+    await act(async () => {
+      root.render(
+        <div style={{ width: 800, height: 600 }}>
+          <MessageList />
+
+        </div>,
+      );
+      await flush();
+    });
+
+    const rail = container.querySelector("[data-chat-actions-rail]");
+    expect(rail).not.toBeNull();
+
+    const expandButtons = container.querySelectorAll(
+      '[aria-label="展开聊天操作"]',
+    );
+    expect(expandButtons.length).toBeGreaterThan(0);
+
+    const toggleBtn = container.querySelector(
+      '[aria-label="展开聊天操作"]',
+    ) as HTMLButtonElement;
+
+    expect(container.querySelector('[aria-label="Previous message"]')).toBeNull();
+
+    await act(async () => {
+      toggleBtn?.click();
+      await flush();
+    });
+
+    expect(
+      container.querySelector('[aria-label="展开聊天操作"]'),
+    ).not.toBeNull();
+    expect(container.querySelector('[aria-label="Previous message"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Next message"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Scroll to bottom"]')).not.toBeNull();
+  });
+
+  it("shows four actions in order: outline, previous, next, bottom", async () => {
+    useChatSessionStore.setState({
+      messages: [
+        createUserMessage([{ type: "content", content: "hi" }]),
+        createAssistantMessage(2, "hello"),
+      ],
+      currentPath: [1, 2],
+      latestRootId: 1,
+      nextId: 3,
+    });
+
+    await act(async () => {
+      root.render(
+        <div style={{ width: 800, height: 600 }}>
+          <MessageList />
+        </div>,
+      );
+      await flush();
+    });
+
+    const toggleBtn = container.querySelector(
+      '[aria-label="展开聊天操作"]',
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggleBtn?.click();
+      await flush();
+    });
+
+    const buttons = container.querySelectorAll(
+      "[data-chat-actions-rail] [data-slot='button'], [data-chat-actions-rail] button[aria-label]",
+    );
+    const labels = Array.from(buttons)
+      .map((b) => b.getAttribute("aria-label"))
+      .filter(Boolean);
+    expect(labels).toContain("Open conversation outline");
+    expect(labels).toContain("Previous message");
+    expect(labels).toContain("Next message");
+    expect(labels).toContain("Scroll to bottom");
+  });
+
+  it("disables outline, previous, next when path is empty", async () => {
+    useChatSessionStore.setState({
+      messages: [],
+      currentPath: [],
+      latestRootId: null,
+      nextId: 1,
+    });
+
+    await act(async () => {
+      root.render(
+        <div style={{ width: 800, height: 600 }}>
+          <MessageList />
+        </div>,
+      );
+      await flush();
+    });
+
+    const toggleBtn = container.querySelector(
+      '[aria-label="展开聊天操作"]',
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggleBtn?.click();
+      await flush();
+    });
+
+    const outlineBtn = container.querySelector(
+      '[aria-label="Open conversation outline"]',
+    ) as HTMLButtonElement;
+    const prevBtn = container.querySelector(
+      '[aria-label="Previous message"]',
+    ) as HTMLButtonElement;
+    const nextBtn = container.querySelector(
+      '[aria-label="Next message"]',
+    ) as HTMLButtonElement;
+
+    expect(outlineBtn?.disabled ?? true).toBe(true);
+    expect(prevBtn?.disabled ?? true).toBe(true);
+    expect(nextBtn?.disabled ?? true).toBe(true);
+  });
+
+  it("disables previous and next when path has single message", async () => {
+    useChatSessionStore.setState({
+      messages: [createUserMessage([{ type: "content", content: "hi" }])],
+      currentPath: [1],
+      latestRootId: 1,
+      nextId: 2,
+    });
+
+    await act(async () => {
+      root.render(
+        <div style={{ width: 800, height: 600 }}>
+          <MessageList />
+        </div>,
+      );
+      await flush();
+    });
+
+    const toggleBtn = container.querySelector(
+      '[aria-label="展开聊天操作"]',
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggleBtn?.click();
+      await flush();
+    });
+
+    const prevBtn = container.querySelector(
+      '[aria-label="Previous message"]',
+    ) as HTMLButtonElement;
+    const nextBtn = container.querySelector(
+      '[aria-label="Next message"]',
+    ) as HTMLButtonElement;
+
+    expect(prevBtn?.disabled ?? true).toBe(true);
+    expect(nextBtn?.disabled ?? true).toBe(true);
+  });
+
+  it("bottom button scrolls container to scrollHeight", async () => {
+    const scrollToMock = vi.fn();
+    useChatSessionStore.setState({
+      messages: [
+        createUserMessage([{ type: "content", content: "hi" }]),
+        createAssistantMessage(2, "hello"),
+      ],
+      currentPath: [1, 2],
+      latestRootId: 1,
+      nextId: 3,
+    });
+
+    await act(async () => {
+      root.render(
+        <div style={{ width: 800, height: 600 }}>
+          <MessageList />
+        </div>,
+      );
+      await flush();
+    });
+
+    const scrollContainer = container.querySelector(".overflow-y-auto");
+    if (scrollContainer) {
+      scrollContainer.scrollTo = scrollToMock;
+    }
+
+    const toggleBtn = container.querySelector(
+      '[aria-label="展开聊天操作"]',
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggleBtn?.click();
+      await flush();
+    });
+
+    const bottomBtn = container.querySelector(
+      '[aria-label="Scroll to bottom"]',
+    ) as HTMLButtonElement;
+    await act(async () => {
+      bottomBtn?.click();
+      await flush();
+    });
+
+    expect(scrollToMock).toHaveBeenCalledWith({
+      top: expect.any(Number),
+      behavior: "smooth",
+    });
+  });
+
+  it("outline action opens the outline dialog", async () => {
+    useChatSessionStore.setState({
+      messages: [
+        createUserMessage([{ type: "content", content: "hi" }]),
+        createAssistantMessage(2, "hello"),
+      ],
+      currentPath: [1, 2],
+      latestRootId: 1,
+      nextId: 3,
+    });
+
+    await act(async () => {
+      root.render(
+        <div style={{ width: 800, height: 600 }}>
+          <MessageList />
+        </div>,
+      );
+      await flush();
+    });
+
+    const toggleBtn = container.querySelector(
+      '[aria-label="展开聊天操作"]',
+    ) as HTMLButtonElement;
+    await act(async () => {
+      toggleBtn?.click();
+      await flush();
+    });
+
+    const outlineBtn = container.querySelector(
+      '[aria-label="Open conversation outline"]',
+    ) as HTMLButtonElement;
+    expect(outlineBtn).not.toBeNull();
+
+    await act(async () => {
+      outlineBtn?.click();
+      await flush();
+    });
+
+    expect(document.body.querySelector("[data-outline-dialog]")).not.toBeNull();
   });
 });

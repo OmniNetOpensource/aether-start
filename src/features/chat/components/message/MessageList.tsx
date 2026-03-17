@@ -1,8 +1,9 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { MessageItem } from "./MessageItem";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
 import { SelectionToolbar } from "./selection-toolbar";
+import { ChatActionsRail } from "./outline";
 
 type MessageListProps = {
   className?: string;
@@ -16,12 +17,19 @@ export function MessageList({
   const currentPath = useChatSessionStore((state) => state.currentPath);
   const status = useChatRequestStore((s) => s.status);
   const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [hasScrollContainer, setHasScrollContainer] = useState(false);
 
   const widthClass = "w-[90%] @[921px]:w-[60%]";
 
   return (
     <div className={`relative w-full h-full ${className ?? ""}`.trim()}>
-      <div ref={scrollRef} className="w-full h-full overflow-y-auto">
+      <div
+        ref={(el) => {
+          scrollRef.current = el;
+          setHasScrollContainer(Boolean(el));
+        }}
+        className="w-full h-full overflow-y-auto"
+      >
         <div
           role="log"
           aria-live="polite"
@@ -46,6 +54,10 @@ export function MessageList({
       </div>
 
       <SelectionToolbar containerRef={scrollRef} />
+      <ChatActionsRail
+        scrollRef={scrollRef}
+        hasScrollContainer={hasScrollContainer}
+      />
     </div>
   );
 }
