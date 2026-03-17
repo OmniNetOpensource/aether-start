@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { MessageItem } from "./MessageItem";
 import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { SelectionToolbar } from "./SelectionToolbar";
+import { SelectionToolbar } from "./selection-toolbar";
 
 type MessageListProps = {
   className?: string;
