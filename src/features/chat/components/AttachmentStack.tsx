@@ -77,7 +77,7 @@ export function AttachmentStack({
           >
             <div className={cardStyle} style={cardSize}>
               {entry.kind === "quote" ? (
-                <p className="line-clamp-3 h-full w-full overflow-hidden p-1.5 text-[10px] leading-tight text-muted-foreground">
+                <p className="line-clamp-3 h-full w-full select-none overflow-hidden p-1.5 text-[10px] leading-tight text-muted-foreground">
                   {entry.text}
                 </p>
               ) : (

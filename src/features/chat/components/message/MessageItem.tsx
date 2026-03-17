@@ -20,7 +20,7 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopy = async () => {
-    const text = blocks
+    let text = blocks
       .filter((b) => b.type === "content")
       .map((b) => b.content)
       .join("\n\n");
@@ -28,6 +28,11 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
     if (!text) return;
 
     try {
+      try {
+        text = decodeURIComponent(text);
+      } catch {
+        // 非 URL 编码，保持原样
+      }
       await navigator.clipboard.writeText(text);
       setIsCopied(true);
       setTimeout(() => setIsCopied(false), 2000);
