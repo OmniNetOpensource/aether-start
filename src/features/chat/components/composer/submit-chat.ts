@@ -15,22 +15,39 @@ export async function submitMessage(
 
   const input = composerStore.input;
   const pendingAttachments = composerStore.pendingAttachments;
+  const pendingQuotes = composerStore.pendingQuotes;
   const currentRole = sessionStore.currentRole;
   const isBusy = requestStore.status !== "idle";
 
   const trimmed = input.trim();
   const hasContent = trimmed.length > 0;
   const hasAttachment = pendingAttachments.length > 0;
+  const hasQuotes = pendingQuotes.length > 0;
   const hasRole = !!currentRole;
 
-  if (isBusy || (!hasContent && !hasAttachment) || !hasRole) {
+  if (isBusy || (!hasContent && !hasAttachment && !hasQuotes) || !hasRole) {
     if (!hasRole) {
       toast.warning("Select a role before sending a message.");
     }
     return;
   }
 
-  sessionStore.addMessage("user", buildUserBlocks(input, pendingAttachments));
+  const quotePrefix =
+    pendingQuotes.length > 0
+      ? pendingQuotes
+          .map((q) =>
+            q.text
+              .split(/\r?\n/)
+              .map((line) => `> ${line}`)
+              .join("\n"),
+          )
+          .join("\n\n") + "\n\n"
+      : "";
+  const fullContent = quotePrefix + input;
+  sessionStore.addMessage(
+    "user",
+    buildUserBlocks(fullContent, pendingAttachments),
+  );
 
   composerStore.clear();
 

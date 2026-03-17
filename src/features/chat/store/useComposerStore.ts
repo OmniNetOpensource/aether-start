@@ -4,9 +4,12 @@ import { uploadAttachmentFile } from "@/lib/chat/attachments";
 
 const UPLOAD_CONCURRENCY = 4;
 
+type PendingQuote = { id: string; text: string };
+
 type ComposerState = {
   input: string;
   pendingAttachments: Attachment[];
+  pendingQuotes: PendingQuote[];
   uploading: boolean;
   _uploadGeneration: number;
 };
@@ -16,6 +19,8 @@ type ComposerActions = {
   setPendingAttachments: (attachments: Attachment[]) => void;
   addAttachments: (files: File[]) => Promise<void>;
   removeAttachment: (id: string) => void;
+  addQuote: (text: string) => void;
+  removeQuote: (id: string) => void;
   clearInput: () => void;
   clearAttachments: () => void;
   clear: () => void;
@@ -25,6 +30,7 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
   (set, get) => ({
     input: "",
     pendingAttachments: [],
+    pendingQuotes: [],
     uploading: false,
     _uploadGeneration: 0,
     setInput: (value) => set({ input: value }),
@@ -74,13 +80,26 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
       set({ uploading: false });
     },
     removeAttachment: (id) =>
-      set((state) => {
-        return {
-          pendingAttachments: state.pendingAttachments.filter(
-            (item) => item.id !== id,
-          ),
-        };
-      }),
+      set((state) => ({
+        pendingAttachments: state.pendingAttachments.filter(
+          (item) => item.id !== id,
+        ),
+      })),
+    addQuote: (text) => {
+      const trimmed = text.trim();
+      if (!trimmed) return;
+      const id =
+        typeof crypto !== "undefined" && crypto.randomUUID
+          ? crypto.randomUUID()
+          : `quote_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+      set((state) => ({
+        pendingQuotes: [...state.pendingQuotes, { id, text: trimmed }],
+      }));
+    },
+    removeQuote: (id) =>
+      set((state) => ({
+        pendingQuotes: state.pendingQuotes.filter((q) => q.id !== id),
+      })),
     clearInput: () => set({ input: "" }),
     clearAttachments: () =>
       set((state) => ({
@@ -92,6 +111,7 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
       set((state) => ({
         input: "",
         pendingAttachments: [],
+        pendingQuotes: [],
         uploading: false,
         _uploadGeneration: state._uploadGeneration + 1,
       })),

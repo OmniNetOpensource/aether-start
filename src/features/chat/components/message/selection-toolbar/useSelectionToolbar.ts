@@ -2,11 +2,10 @@
  * 选区工具栏 - 选区检测与定位 Hook
  *
  * 负责：
- * 1. 监听 mouseup/touchend 检测用户选区
+ * 1. 监听 selectionchange 检测用户选区（250ms 防抖，避免拖动过程中频繁触发）
  * 2. 校验选区是否在消息区域内（仅对 assistant 消息生效）
  * 3. 点击工具栏外时清除选区
- * 4. 监听 selectionchange 处理选区被浏览器收起的情况
- * 5. 根据选区矩形计算浮动工具栏的 top/left，优先选上方、水平居中、不超出视口
+ * 4. 根据选区矩形计算浮动工具栏的 top/left，优先选上方、水平居中、不超出视口
  */
 
 import { useState, useRef, useEffect } from "react";
@@ -44,28 +43,35 @@ export function useSelectionToolbar(
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
   };
 
-  // 在容器内 mouseup/touchend 时检测选区，250ms 防抖避免快速点击误触
+  // selectionchange：选区为空立即清除；选区有内容则 250ms 防抖后校验并显示（避免拖动过程中频繁触发）
   useEffect(() => {
-    const updateSelection = () => {
+    const handleSelectionChange = () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
       if (typeof window === "undefined") return;
 
+      const current = window.getSelection();
+      if (!current || current.isCollapsed || current.rangeCount === 0) {
+        setText("");
+        setRect(null);
+        return;
+      }
+
       timeoutRef.current = setTimeout(() => {
-        const current = window.getSelection();
-        if (!current || current.isCollapsed || current.rangeCount === 0) {
+        const sel = window.getSelection();
+        if (!sel || sel.isCollapsed || sel.rangeCount === 0) {
           setText("");
           setRect(null);
           return;
         }
 
-        const selectedText = current.toString().trim();
+        const selectedText = sel.toString().trim();
         if (!selectedText) {
           setText("");
           setRect(null);
           return;
         }
 
-        const range = current.getRangeAt(0);
+        const range = sel.getRangeAt(0);
         const container = getSelectionContainer(range);
         const root = containerRef.current;
 
@@ -94,13 +100,10 @@ export function useSelectionToolbar(
       }, 250);
     };
 
-    const el = containerRef.current;
-    if (!el) return;
-    el.addEventListener("mouseup", updateSelection);
-    el.addEventListener("touchend", updateSelection);
+    document.addEventListener("selectionchange", handleSelectionChange);
     return () => {
-      el.removeEventListener("mouseup", updateSelection);
-      el.removeEventListener("touchend", updateSelection);
+      document.removeEventListener("selectionchange", handleSelectionChange);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, [containerRef]);
 
@@ -136,25 +139,6 @@ export function useSelectionToolbar(
     document.addEventListener("mousedown", handleMouseDown);
     return () => document.removeEventListener("mousedown", handleMouseDown);
   }, [text, containerRef]);
-
-  // 全局 selectionchange：用户通过键盘或点击别处收起选区时同步清除状态
-  useEffect(() => {
-    const handleSelectionChange = () => {
-      if (typeof window === "undefined") return;
-      const current = window.getSelection();
-      if (!current || current.isCollapsed || current.rangeCount === 0) {
-        setText("");
-        setRect(null);
-        if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      }
-    };
-
-    document.addEventListener("selectionchange", handleSelectionChange);
-    return () => {
-      document.removeEventListener("selectionchange", handleSelectionChange);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    };
-  }, []);
 
   // 根据选区矩形计算工具栏位置：优先选上方，水平居中，限制在视口内
   useEffect(() => {

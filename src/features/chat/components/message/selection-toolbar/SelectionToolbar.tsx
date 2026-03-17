@@ -12,7 +12,7 @@
 import { useEffect, useState, type RefObject } from 'react'
 import { Quote, Volume2, Loader2, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { insertQuoteAtCursor } from '@/lib/chat/composer-focus'
+import { useComposerStore } from '@/stores/zustand/useComposerStore'
 import { useSelectionToolbar } from './useSelectionToolbar'
 import { useTtsPlayback } from './useTtsPlayback'
 
@@ -44,10 +44,9 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
       <Volume2 className="h-4 w-4" />
     )
 
-  /** 将选中文本插入到 Composer 光标处，并清除选区 */
   const handleQuote = () => {
     if (text) {
-      insertQuoteAtCursor(text)
+      useComposerStore.getState().addQuote(text)
       clearSelection()
     }
   }

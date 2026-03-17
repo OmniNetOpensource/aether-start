@@ -32,12 +32,14 @@ export function Composer() {
   const pendingAttachments = useComposerStore(
     (state) => state.pendingAttachments,
   );
+  const pendingQuotes = useComposerStore((state) => state.pendingQuotes);
   const uploading = useComposerStore((state) => state.uploading);
   const deviceType = useResponsive();
   const isDesktop = deviceType === "desktop";
   const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
+  const removeQuote = useComposerStore((state) => state.removeQuote);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   const textareaCallbackRef = (element: HTMLTextAreaElement | null) => {
@@ -194,7 +196,9 @@ export function Composer() {
       >
         <AttachmentStack
           items={pendingAttachments}
+          quotes={pendingQuotes}
           onRemove={removeAttachment}
+          onRemoveQuote={removeQuote}
         />
         <div className={composerBoxClass}>
           <div className="flex w-full items-end gap-2">{textarea}</div>
@@ -217,7 +221,9 @@ export function Composer() {
       >
         <AttachmentStack
           items={pendingAttachments}
+          quotes={pendingQuotes}
           onRemove={removeAttachment}
+          onRemoveQuote={removeQuote}
         />
         <div className={composerBoxClass}>
           <div className="flex w-full items-end gap-2">{textarea}</div>
