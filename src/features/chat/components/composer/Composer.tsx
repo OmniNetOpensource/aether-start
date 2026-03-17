@@ -5,6 +5,13 @@ import {
   useEffect,
   useRef,
 } from "react";
+
+declare global {
+  interface Window {
+    __preHydrationInput?: string;
+    __preHydrationInputHandler?: (e: Event) => void;
+  }
+}
 import { useNavigate } from "@tanstack/react-router";
 import { submitMessage } from "@/features/chat/components/composer/submit-chat";
 import { setComposerTextarea } from "@/lib/chat/composer-focus";
@@ -37,6 +44,18 @@ export function Composer() {
     textareaRef.current = element;
     setComposerTextarea(element);
   };
+
+  useEffect(() => {
+    const saved = window.__preHydrationInput;
+    if (saved) {
+      setInput(saved);
+    }
+    delete window.__preHydrationInput;
+    if (window.__preHydrationInputHandler) {
+      document.removeEventListener("input", window.__preHydrationInputHandler);
+      delete window.__preHydrationInputHandler;
+    }
+  }, [setInput]);
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -163,8 +182,7 @@ export function Composer() {
     />
   );
 
-  const widthClass =
-    "w-[90%] max-w-full @[921px]:w-[50%] @[921px]:max-w-2xl";
+  const widthClass = "w-[90%] max-w-full @[921px]:w-[50%] @[921px]:max-w-2xl";
 
   if (isNewChat) {
     return (

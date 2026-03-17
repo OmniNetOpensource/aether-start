@@ -28,7 +28,8 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
     uploading: false,
     _uploadGeneration: 0,
     setInput: (value) => set({ input: value }),
-    setPendingAttachments: (attachments) => set({ pendingAttachments: attachments }),
+    setPendingAttachments: (attachments) =>
+      set({ pendingAttachments: attachments }),
     addAttachments: async (files) => {
       if (files.length === 0 || get().uploading) {
         return;
@@ -76,7 +77,7 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
       set((state) => {
         return {
           pendingAttachments: state.pendingAttachments.filter(
-            (item) => item.id !== id
+            (item) => item.id !== id,
           ),
         };
       }),
@@ -94,5 +95,5 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
         uploading: false,
         _uploadGeneration: state._uploadGeneration + 1,
       })),
-  })
+  }),
 );

@@ -2,10 +2,10 @@ import { useEffect, useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Composer } from "@/components/chat/composer/Composer";
 import { MessageList } from "@/components/chat/message/MessageList";
-import { useComposerStore } from '@/stores/zustand/useComposerStore'
-import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
-import { useEditingStore } from '@/stores/zustand/useEditingStore'
-import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
+import { useComposerStore } from "@/stores/zustand/useComposerStore";
+import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
+import { useEditingStore } from "@/stores/zustand/useEditingStore";
+import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
 export const Route = createFileRoute("/app/")({
   component: HomePage,
 });
@@ -31,7 +31,10 @@ function HomePage() {
   return (
     <div className="flex h-full w-full flex-col">
       <main className="relative flex-1 min-h-0 flex">
-        <div ref={chatAreaRef} className="@container flex-1 min-w-0 flex flex-col relative">
+        <div
+          ref={chatAreaRef}
+          className="@container flex-1 min-w-0 flex flex-col relative"
+        >
           {hasMessages && (
             <div className="flex-1 min-h-0 flex flex-col">
               <div className="flex-1 min-h-0 overflow-y-auto">
