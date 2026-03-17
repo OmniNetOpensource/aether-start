@@ -393,3 +393,5 @@ When working on public share routes, preserve read-only behavior and noindex sem
 - Never typecast. Never use `as`
 
 - DO NOT Calling setState synchronously within an effect body
+
+- 用尽可能少的tailwind css 以及div来达成同样的效果
