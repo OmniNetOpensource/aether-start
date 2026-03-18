@@ -109,16 +109,12 @@ export function useConversationLoader(loadingConversationId: string) {
       state.conversations.find((c) => c.id === loadingConversationId)?.title,
   );
 
-  /** 根据对话标题更新 document.title，离开时恢复默认 */
-  useEffect(() => {
-    const defaultTitle = "Aether";
-    document.title = title
-      ? `${title.length > 50 ? `${title.slice(0, 50)}...` : title} - Aether`
-      : defaultTitle;
-    return () => {
-      document.title = defaultTitle;
-    };
-  }, [title]);
+  const defaultTitle = "Aether";
+  // 同步更新 document.title，离开时由下方 effect cleanup 恢复
+  // eslint-disable-next-line -- intentionally sync
+  document.title = title
+    ? `${title.length > 50 ? `${title.slice(0, 50)}...` : title} - Aether`
+    : defaultTitle;
 
   /**
    * 切换/离开对话时的清理 effect
@@ -126,6 +122,7 @@ export function useConversationLoader(loadingConversationId: string) {
    */
   useEffect(() => {
     return () => {
+      document.title = defaultTitle;
       resetLastEventId();
       cancelStreamSubscription();
       useEditingStore.getState().clear();

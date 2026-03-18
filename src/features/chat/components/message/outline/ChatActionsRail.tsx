@@ -133,7 +133,6 @@ export function ChatActionsRail({
       `[data-message-id="${prevId}"]`,
     );
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    closeRail();
   };
 
   const handleNext = () => {
@@ -148,7 +147,6 @@ export function ChatActionsRail({
       `[data-message-id="${nextId}"]`,
     );
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    closeRail();
   };
 
   const handleBottom = () => {
@@ -159,7 +157,6 @@ export function ChatActionsRail({
       top: container.scrollHeight,
       behavior: "smooth",
     });
-    closeRail();
   };
 
   return (
