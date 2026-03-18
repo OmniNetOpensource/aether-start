@@ -56,6 +56,18 @@ export function useTheme() {
     applyHtmlClass(theme);
   }, [theme]);
 
+  useEffect(() => {
+    const onStorage = (event: StorageEvent) => {
+      if (event.key !== THEME_STORAGE_KEY) return;
+      const next = event.newValue;
+      if (next !== "light" && next !== "dark") return;
+      setThemeState(next);
+      applyHtmlClass(next);
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+
   const setTheme = (next: Theme) => {
     setThemeState(next);
 
