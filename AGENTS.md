@@ -260,3 +260,5 @@ Never commit real secrets.
 - DO NOT Calling setState synchronously within an effect body
 
 - 用尽可能少的tailwind css 以及div来达成同样的效果
+
+- write extremely easy to consume code, optimize for how easy the code is to read. make the code skimmable. avoid cleverness. use early returns.reduce the number of possible states a function can be in with distriminated unions, remove any optionality that is not actual optional, never pass params for overriding code except strictly necessary

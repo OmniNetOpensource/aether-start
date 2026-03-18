@@ -95,7 +95,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ResponsiveProvider initialDeviceType="desktop">
+        <ResponsiveProvider>
           <TooltipProvider>
             {children}
             <ToastContainer />

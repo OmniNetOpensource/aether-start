@@ -197,10 +197,10 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "openai",
     backend: "dmx",
   },
-  minimaxM25Free: {
-    id: "minimaxM25Free",
-    name: "MiniMax-M2.5-free+dmx",
-    model: "MiniMax-M2.5-free",
+  minimaxM27Free: {
+    id: "minimaxM27Free",
+    name: "MiniMax-M2.7-free+dmx",
+    model: "MiniMax-M2.7-free",
     format: "openai",
     backend: "dmx",
   },
