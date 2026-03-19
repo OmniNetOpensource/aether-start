@@ -127,14 +127,10 @@ export function MessageList({
       }
     };
 
-    const handleScroll = () => {
-      cancelPendingScroll();
-    };
-
-    container.addEventListener("scroll", handleScroll);
+    container.addEventListener("scroll", cancelPendingScroll);
     container.addEventListener("click", cancelPendingScroll);
     return () => {
-      container.removeEventListener("scroll", handleScroll);
+      container.removeEventListener("scroll", cancelPendingScroll);
       container.removeEventListener("click", cancelPendingScroll);
     };
   }, []);
