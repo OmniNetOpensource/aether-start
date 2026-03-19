@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import type { ConversationMeta } from "@/types/conversation";
 
 const PLACEHOLDER_TITLES = ["New Chat", "Untitled Chat"];

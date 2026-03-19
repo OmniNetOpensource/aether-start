@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
-import { buildAttachmentsFromFiles } from "@/lib/chat/attachments";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useComposerStore } from "@/stores/zustand/useComposerStore";
-import { useEditingStore } from "@/stores/zustand/useEditingStore";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { buildAttachmentsFromFiles } from "@/shared/attachments";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useComposerStore } from "@/features/chat/composer/useComposerStore";
+import { useEditingStore } from "@/features/chat/editing/useEditingStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 
 type MessageEditorProps = {
   messageId: number;

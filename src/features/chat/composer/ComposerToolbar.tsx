@@ -2,12 +2,12 @@ import { ChangeEvent, MouseEvent, useRef } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ArrowUp, Loader2, Paperclip, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cancelAnswering } from "@/lib/chat/api/chat-orchestrator";
-import { submitMessage } from "@/features/chat/components/composer/submit-chat";
+import { cancelAnswering } from "@/features/chat/request/chat-orchestrator";
+import { submitMessage } from "./submit-chat";
 import { cn } from "@/lib/utils";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useComposerStore } from "@/stores/zustand/useComposerStore";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
+import { useComposerStore } from "./useComposerStore";
 import { ModelSelector } from "./ModelSelector";
 import { PromptSelector } from "./PromptSelector";
 

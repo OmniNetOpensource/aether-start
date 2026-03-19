@@ -1,6 +1,6 @@
 import { Send, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { NoteItem } from '@/stores/zustand/useNotesStore'
+import type { NoteItem } from "@/features/notes/useNotesStore";
 
 type NoteCardProps = {
   note: NoteItem

@@ -1,11 +1,11 @@
-import { startChatRequest } from "@/lib/chat/api/chat-orchestrator";
-import { buildUserBlocks } from "@/lib/conversation/tree/block-operations";
+import { startChatRequest } from "@/features/chat/request/chat-orchestrator";
+import { buildUserBlocks } from "@/features/sidebar/tree/block-operations";
 import { toast } from "@/hooks/useToast";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useComposerStore } from "@/stores/zustand/useComposerStore";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
+import { useComposerStore } from "./useComposerStore";
 
-/** 校验、写入消息、清空输入、确保对话存在并发起聊天请求 */
+// 校验输入、清空草稿，并在必要时创建新会话后发起聊天请求
 export async function submitMessage(
   navigateToNewChat: (conversationId: string) => void,
 ) {

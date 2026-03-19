@@ -44,7 +44,7 @@ function RootComponent() {
 
   return (
     <Sentry.ErrorBoundary
-      fallback={({ error, resetError }) => (
+      fallback={({ error }) => (
         <div className="flex h-screen items-center justify-center">
           <div className="text-center space-y-4">
             <h1 className="text-2xl font-semibold">出了点问题</h1>
@@ -54,7 +54,7 @@ function RootComponent() {
             <button
               type="button"
               className="px-4 py-2 rounded-md bg-(--interactive-primary) text-(--surface-primary) text-sm"
-              onClick={resetError}
+              onClick={() => window.location.reload()}
             >
               重试
             </button>

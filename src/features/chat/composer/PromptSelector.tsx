@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 
 export function PromptSelector() {
   const currentPrompt = useChatSessionStore((state) => state.currentPrompt);

@@ -17,11 +17,11 @@ import {
   resetLastEventId,
   cancelStreamSubscription,
   resumeRunningConversation,
-} from "@/lib/chat/api/chat-orchestrator";
-import { useEditingStore } from "@/stores/zustand/useEditingStore";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+} from "@/features/chat/request/chat-orchestrator";
+import { useEditingStore } from "@/features/chat/editing/useEditingStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import { getConversationFn } from "@/server/functions/conversations";
-import { buildCurrentPath } from "@/lib/conversation/tree/message-tree";
+import { buildCurrentPath } from "./tree/message-tree";
 import type { Message } from "@/types/message";
 
 /**

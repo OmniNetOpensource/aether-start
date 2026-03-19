@@ -1,7 +1,10 @@
 import { ChatTool, ToolDefinition, ToolHandler } from "./types";
-import { stringifySearchClientPayload, type SearchClientResult } from '@/lib/chat/search-result-payload'
+import {
+  stringifySearchClientPayload,
+  type SearchClientResult,
+} from "@/features/chat/research/search-result-payload";
 import { log } from "@/server/agents/services/logger";
-import { getServerEnv } from '@/server/env'
+import { getServerEnv } from "@/server/env";
 
 type SearchArgs = {
   query: string;

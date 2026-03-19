@@ -5,6 +5,18 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { useNavigate } from "@tanstack/react-router";
+import { useResponsive } from "@/components/ResponsiveContext";
+import { AttachmentStack } from "@/features/chat/components/AttachmentStack";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/hooks/useToast";
+import {
+  useChatSessionStore,
+  useIsNewChat,
+} from "@/features/sidebar/useChatSessionStore";
+import { submitMessage } from "./submit-chat";
+import { useComposerStore } from "./useComposerStore";
+import { ComposerToolbar } from "./ComposerToolbar";
 
 declare global {
   interface Window {
@@ -12,19 +24,6 @@ declare global {
     __preHydrationInputHandler?: (e: Event) => void;
   }
 }
-import { useNavigate } from "@tanstack/react-router";
-import { submitMessage } from "@/features/chat/components/composer/submit-chat";
-import { setComposerTextarea } from "@/lib/chat/composer-focus";
-import { useResponsive } from "@/components/ResponsiveContext";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/useToast";
-import { useComposerStore } from "@/stores/zustand/useComposerStore";
-import {
-  useChatSessionStore,
-  useIsNewChat,
-} from "@/stores/zustand/useChatSessionStore";
-import { AttachmentStack } from "../AttachmentStack";
-import { ComposerToolbar } from "./ComposerToolbar";
 
 export function Composer() {
   const navigate = useNavigate();
@@ -41,11 +40,6 @@ export function Composer() {
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
   const removeQuote = useComposerStore((state) => state.removeQuote);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  const textareaCallbackRef = (element: HTMLTextAreaElement | null) => {
-    textareaRef.current = element;
-    setComposerTextarea(element);
-  };
 
   useEffect(() => {
     const saved = window.__preHydrationInput;
@@ -168,7 +162,7 @@ export function Composer() {
 
   const textarea = (
     <Textarea
-      ref={isNewChat ? textareaCallbackRef : textareaRef}
+      ref={textareaRef}
       id="message-input"
       name="message"
       value={input}

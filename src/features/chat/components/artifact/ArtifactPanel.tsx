@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Braces, ChevronDown, Eye, PanelRightOpen } from "lucide-react";
+import { Braces, ChevronDown, Eye, Folder, FolderOpen } from "lucide-react";
 import { useResponsive } from "@/components/ResponsiveContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/shared/ui/popover";
 import { cn } from "@/lib/utils";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import {
   ARTIFACT_PREVIEW_MESSAGE_TYPE,
   type ArtifactPreviewPayload,
 } from "./preview-protocol";
 import { ARTIFACT_PREVIEW_DOCUMENT } from "./preview-document";
+import { ArtifactCodeBlock } from "./ArtifactCodeBlock";
 
 function ArtifactPreviewFrame({
   artifactId,
@@ -177,9 +178,11 @@ function ArtifactPanelBody() {
                 {selectedArtifact.errorMessage}
               </div>
             ) : null}
-            <pre className="min-h-0 flex-1 overflow-auto rounded-md bg-(--surface-muted) p-4 text-xs leading-relaxed text-foreground">
-              <code>{selectedArtifact.code}</code>
-            </pre>
+            <ArtifactCodeBlock
+              key={selectedArtifact.id}
+              code={selectedArtifact.code}
+              language={selectedArtifact.language}
+            />
           </div>
         )}
       </div>
@@ -213,7 +216,11 @@ export function ArtifactToggleButton() {
       title={artifactPanelOpen ? "Close artifacts" : "Open artifacts"}
       onClick={() => setArtifactPanelOpen(!artifactPanelOpen)}
     >
-      <PanelRightOpen className="h-5 w-5" />
+      {artifactPanelOpen ? (
+        <FolderOpen className="h-5 w-5" />
+      ) : (
+        <Folder className="h-5 w-5" />
+      )}
     </Button>
   );
 }
@@ -228,6 +235,14 @@ export function ArtifactPanel() {
   const setArtifactPanelOpen = useChatSessionStore(
     (state) => state.setArtifactPanelOpen,
   );
+  const [isResizing, setIsResizing] = useState(false);
+  const asideRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!artifactPanelOpen && asideRef.current) {
+      asideRef.current.style.width = "";
+    }
+  }, [artifactPanelOpen]);
 
   if (artifacts.length === 0) {
     return null;
@@ -248,14 +263,23 @@ export function ArtifactPanel() {
     );
   }
 
-  if (!artifactPanelOpen) {
-    return null;
-  }
-
   const DRAG_THRESHOLD = 10;
 
   return (
-    <aside className="relative hidden h-full w-[min(44vw,38rem)] min-w-88 shrink-0 bg-(--sidebar-surface) px-5 py-4 lg:block">
+    <aside
+      ref={asideRef}
+      className={cn(
+        "relative hidden shrink-0 overflow-hidden lg:block",
+        !isResizing && "transition-[width] duration-200",
+        artifactPanelOpen
+          ? "w-[min(44vw,38rem)] min-w-88 px-5"
+          : "w-0 min-w-0 ",
+        "h-full bg-(--sidebar-surface)  py-4",
+      )}
+      style={{
+        transitionTimingFunction: "cubic-bezier(0.23, 1, 0.32, 1)",
+      }}
+    >
       <div
         className="group absolute left-0 top-0 z-10 flex h-full w-2 cursor-col-resize items-center justify-center"
         onPointerDown={(e) => {
@@ -269,6 +293,7 @@ export function ArtifactPanel() {
             if (!active) {
               if (Math.abs(moveEvent.clientX - startX) < DRAG_THRESHOLD) return;
               active = true;
+              setIsResizing(true);
               document.body.style.cursor = "col-resize";
               document.body.style.userSelect = "none";
             }
@@ -279,13 +304,17 @@ export function ArtifactPanel() {
               Math.max(352, rect.right - moveEvent.clientX),
               rect.width - 400,
             );
-            (target.parentElement as HTMLElement).style.width = `${newWidth}px`;
+            const panel = target.parentElement;
+            if (panel instanceof HTMLElement) {
+              panel.style.width = `${newWidth}px`;
+            }
           };
           const onUp = () => {
             target.removeEventListener("pointermove", onMove);
             target.removeEventListener("pointerup", onUp);
             target.removeEventListener("pointercancel", onUp);
             if (active) {
+              setIsResizing(false);
               document.body.style.cursor = "";
               document.body.style.userSelect = "";
             }

@@ -12,7 +12,7 @@
 import { useEffect, useState, type RefObject } from 'react'
 import { Quote, Volume2, Loader2, Square } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useComposerStore } from '@/stores/zustand/useComposerStore'
+import { useComposerStore } from '@/features/chat/composer/useComposerStore'
 import { useSelectionToolbar } from './useSelectionToolbar'
 import { useTtsPlayback } from './useTtsPlayback'
 

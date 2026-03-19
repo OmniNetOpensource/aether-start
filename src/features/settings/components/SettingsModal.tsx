@@ -3,12 +3,12 @@ import { useNavigate } from "@tanstack/react-router";
 import { Ban, Gift, Loader2, LogOut, Plus } from "lucide-react";
 import { authClient } from "@/features/auth/client/auth-client";
 import { getSessionStateFn } from "@/features/auth/server/session-state";
-import { resetLastEventId } from "@/features/chat/lib/api/chat-orchestrator";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
-import { useComposerStore } from "@/features/chat/store/useComposerStore";
-import { useEditingStore } from "@/features/chat/store/useEditingStore";
-import { useNotesStore } from "@/features/notes/store/useNotesStore";
-import { useChatSessionStore } from "@/features/sidebar/store/useChatSessionStore";
+import { resetLastEventId } from "@/features/chat/request/chat-orchestrator";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useComposerStore } from "@/features/chat/composer/useComposerStore";
+import { useEditingStore } from "@/features/chat/editing/useEditingStore";
+import { useNotesStore } from "@/features/notes/useNotesStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

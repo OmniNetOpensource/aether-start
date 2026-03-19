@@ -3,7 +3,7 @@ import type {
   ChatErrorInfo,
   ChatServerToClientEvent,
 } from "@/types/chat-event-types";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 
 const ERROR_COPY: Record<
   ChatErrorCode,

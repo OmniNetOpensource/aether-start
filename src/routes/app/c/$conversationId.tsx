@@ -1,9 +1,9 @@
 import { useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Composer } from "@/features/chat/components/composer/Composer";
+import { Composer } from "@/features/chat/composer/Composer";
 import { ArtifactPanel } from "@/features/chat/components/artifact/ArtifactPanel";
 import { MessageList } from "@/features/chat/components/message/MessageList";
-import { useConversationLoader } from "@/features/sidebar/hooks/useConversationLoader";
+import { useConversationLoader } from "@/features/sidebar/useConversationLoader";
 
 export const Route = createFileRoute("/app/c/$conversationId")({
   component: ConversationPage,

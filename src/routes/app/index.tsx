@@ -1,11 +1,11 @@
 import { useRef } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { Composer } from "@/components/chat/composer/Composer";
+import { Composer } from "@/features/chat/composer/Composer";
 import { MessageList } from "@/components/chat/message/MessageList";
-import { useComposerStore } from "@/stores/zustand/useComposerStore";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useEditingStore } from "@/stores/zustand/useEditingStore";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useComposerStore } from "@/features/chat/composer/useComposerStore";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useEditingStore } from "@/features/chat/editing/useEditingStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 
 function initNewChatPage() {
   if (typeof window === "undefined") return;

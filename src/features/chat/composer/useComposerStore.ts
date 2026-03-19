@@ -1,6 +1,6 @@
 import { create } from "zustand";
-import type { Attachment } from "@/types/message";
-import { uploadAttachmentFile } from "@/lib/chat/attachments";
+import { uploadAttachmentFile } from "@/shared/attachments";
+import type { Attachment } from "@/features/chat/types/message";
 
 const UPLOAD_CONCURRENCY = 4;
 

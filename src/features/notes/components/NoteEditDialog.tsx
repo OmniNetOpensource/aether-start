@@ -12,10 +12,10 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/useToast";
-import { getAttachmentPreviewUrl } from "@/lib/chat/attachments";
+import { getAttachmentPreviewUrl } from "@/shared/attachments";
 import { collectClipboardFiles } from "@/lib/utils/file";
-import { useAttachmentUpload } from "@/features/chat/hooks/useAttachmentUpload";
-import type { NoteItem } from "@/stores/zustand/useNotesStore";
+import { useAttachmentUpload } from "@/features/notes/useAttachmentUpload";
+import type { NoteItem } from "@/features/notes/useNotesStore";
 
 type NoteEditDialogProps = {
   open: boolean;

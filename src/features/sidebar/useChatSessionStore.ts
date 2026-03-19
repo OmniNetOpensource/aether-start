@@ -21,11 +21,11 @@ import {
   getBranchInfo,
   normalizeMessageParentIds,
   switchBranch,
-} from "@/lib/conversation/tree/message-tree";
+} from "./tree/message-tree";
 import {
   applyAssistantAddition,
   type AssistantAddition,
-} from "@/lib/conversation/tree/block-operations";
+} from "./tree/block-operations";
 import type {
   ConversationArtifact,
   ConversationDetail,

@@ -6,8 +6,8 @@ import {
 } from "react";
 import { ChevronUp, ChevronDown, ArrowDown } from "lucide-react";
 import { MessageItem } from "./MessageItem";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
 import { SelectionToolbar } from "./selection-toolbar";
 import { OutlineButton } from "./outline";
 import { Button } from "@/components/ui/button";
@@ -55,7 +55,6 @@ export function MessageList({
 
   const [expanded, setExpanded] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(-1);
-  const [hasScrollContainer, setHasScrollContainer] = useState(false);
 
   const isMobile = deviceType === "mobile";
   const hasMessages = currentPath.length > 0;
@@ -65,7 +64,6 @@ export function MessageList({
     currentPath.length > 1 &&
     currentIdx >= 0 &&
     currentIdx < currentPath.length - 1;
-  const canScrollBottom = hasScrollContainer;
 
   const followBottom = () => {
     const el = scrollRef.current;
@@ -127,10 +125,17 @@ export function MessageList({
       }
     };
 
-    container.addEventListener("scroll", cancelPendingScroll);
+    let prevScrollTop = container.scrollTop;
+    const handleScroll = () => {
+      const top = container.scrollTop;
+      if (top < prevScrollTop) cancelPendingScroll();
+      prevScrollTop = top;
+    };
+
+    container.addEventListener("scroll", handleScroll);
     container.addEventListener("click", cancelPendingScroll);
     return () => {
-      container.removeEventListener("scroll", cancelPendingScroll);
+      container.removeEventListener("scroll", handleScroll);
       container.removeEventListener("click", cancelPendingScroll);
     };
   }, []);
@@ -141,7 +146,6 @@ export function MessageList({
 
     const updateState = () => {
       setCurrentIdx(findCurrentMessageIndex(container));
-      setHasScrollContainer(container.scrollHeight > container.clientHeight);
     };
 
     updateState();
@@ -153,7 +157,7 @@ export function MessageList({
       container.removeEventListener("scroll", updateState);
       ro.disconnect();
     };
-  }, [currentPath]);
+  }, []);
 
   useEffect(() => {
     if (!expanded) return;
@@ -213,15 +217,17 @@ export function MessageList({
         data-chat-actions-rail
       >
         <div
-          className="absolute right-0 top-0 z-(--z-sidebar) h-full w-4"
+          className={`absolute right-0 top-0 z-(--z-sidebar) h-full w-4 ${!isMobile && "pointer-events-none"}`}
+        />
+        <div
+          className="absolute right-0 top-1/2 z-(--z-sidebar) h-24 w-1.5 -translate-y-1/2 rounded-l-md bg-border transition-all duration-300 group-hover/rail-trigger:w-2 "
           onClick={isMobile ? handleTriggerClick : undefined}
           onMouseEnter={isMobile ? undefined : openRail}
           aria-label="展开聊天操作"
         />
-        <div className="pointer-events-none absolute right-0 top-1/2 z-(--z-sidebar) h-24 w-1.5 -translate-y-1/2 rounded-l-md bg-border transition-all duration-300 group-hover/rail-trigger:w-2 " />
         {expanded && (
           <div
-            className="absolute right-4 top-0 z-(--z-sidebar) flex h-full flex-col justify-center gap-1  bg-transparent p-1 shadow-lg transition-transform duration-300 ease-(--transition-smooth)"
+            className="absolute right-4 top-0 z-(--z-sidebar) flex h-full flex-col justify-center gap-1 bg-transparent p-1 transition-transform duration-300 ease-(--transition-smooth) pointer-events-auto"
             onMouseLeave={isMobile ? undefined : handleMouseLeave}
           >
             <OutlineButton />
@@ -229,7 +235,6 @@ export function MessageList({
               type="button"
               variant="ghost"
               size="icon-sm"
-              disabled={!canPrev}
               onClick={handlePrev}
               aria-label="Previous message"
               title="Previous message"
@@ -240,7 +245,6 @@ export function MessageList({
               type="button"
               variant="ghost"
               size="icon-sm"
-              disabled={!canNext}
               onClick={handleNext}
               aria-label="Next message"
               title="Next message"
@@ -251,7 +255,6 @@ export function MessageList({
               type="button"
               variant="ghost"
               size="icon-sm"
-              disabled={!canScrollBottom}
               onClick={followBottom}
               aria-label="Scroll to bottom"
               title="Scroll to bottom"

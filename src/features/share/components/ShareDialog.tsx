@@ -14,8 +14,8 @@ import {
   getConversationShareFn,
   revokeConversationShareFn,
 } from "@/server/functions/shares";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import type { ConversationShareStatus } from "@/types/share";
 
 export type ShareDialogProps = {

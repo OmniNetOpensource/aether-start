@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import { ConversationItem } from "./ConversationItem";
 
 type ConversationListProps = {
@@ -73,7 +73,6 @@ export function ConversationList({
     );
   }
 
-  const isEmpty = conversations.length === 0;
   const pinnedConversations = conversations.filter((item) => item.is_pinned);
   const historyConversations = conversations.filter((item) => !item.is_pinned);
   const showHistorySection =
@@ -119,11 +118,6 @@ export function ConversationList({
                   onDropdownOpenChange={onDropdownOpenChange}
                 />
               ))}
-              {isEmpty ? (
-                <p className="px-1 py-8 text-center text-sm text-(--text-tertiary)">
-                  开始一次新对话
-                </p>
-              ) : null}
               {hasMore || loadingMore ? (
                 <div
                   ref={sentinelRef}

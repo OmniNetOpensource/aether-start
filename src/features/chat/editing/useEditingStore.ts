@@ -1,18 +1,21 @@
 import { create } from "zustand";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
 import { toast } from "@/hooks/useToast";
-import { startChatRequest, cancelAnswering } from "@/lib/chat/api/chat-orchestrator";
+import {
+  startChatRequest,
+  cancelAnswering,
+} from "@/features/chat/request/chat-orchestrator";
 import {
   cloneBlocks,
   editMessage,
-} from "@/lib/conversation/tree/message-tree";
+} from "@/features/sidebar/tree/message-tree";
 import {
   buildUserBlocks,
   extractAttachmentsFromBlocks,
   extractContentFromBlocks,
   extractQuotesFromBlocks,
-} from "@/lib/conversation/tree/block-operations";
-import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
+} from "@/features/sidebar/tree/block-operations";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import type { Attachment, UserContentBlock } from "@/types/message";
 
 type EditingState = {

@@ -4,7 +4,7 @@ import {
   parseSearchClientPayload,
   SEARCH_TOOL_NAMES,
   type SearchClientResult,
-} from "@/lib/chat/search-result-payload";
+} from "@/features/chat/research/search-result-payload";
 import type { ResearchItem, Tool } from "@/types/message";
 import type { StepStatus } from "@/components/ui/chain-of-thought";
 import {

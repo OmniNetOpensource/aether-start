@@ -3,7 +3,7 @@ import {
   stringifyFetchClientPayload,
   parseSearchClientPayload,
   stringifySearchClientPayload,
-} from "@/lib/chat/search-result-payload";
+} from "@/features/chat/research/search-result-payload";
 import { searchTool } from "./search";
 import { renderTool } from "./render";
 import { getServerEnv } from "@/server/env";

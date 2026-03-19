@@ -5,9 +5,9 @@ import { getBranchInfo as getBranchInfoFn } from "@/lib/conversation/tree/messag
 import { ResearchBlock } from "../research/ResearchBlock";
 import { Copy, Check, AlertCircle, Pencil, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useEditingStore } from "@/stores/zustand/useEditingStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useEditingStore } from "@/features/chat/editing/useEditingStore";
 import { MessageEditor } from "./MessageEditor";
 import { BranchNavigator } from "./BranchNavigator";
 import { AttachmentStack } from "../AttachmentStack";

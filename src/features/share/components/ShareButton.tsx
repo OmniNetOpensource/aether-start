@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useChatRequestStore } from '@/stores/zustand/useChatRequestStore'
-import { useChatSessionStore } from '@/stores/zustand/useChatSessionStore'
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import { ShareDialog } from './ShareDialog'
 
 export function ShareButton() {

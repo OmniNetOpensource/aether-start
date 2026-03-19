@@ -14,7 +14,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useResponsive } from "@/components/ResponsiveContext";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 
 /** 根据 role id/name 推断 provider，用于分组 */
 function getProviderFromRole(roleId: string, roleName: string): string {

@@ -13,9 +13,9 @@
  * 并调用 event-handlers 中的 applyChatEventToTree 更新 UI 状态。
  */
 import { toast } from "@/hooks/useToast";
-import { applyChatEventToTree } from "@/lib/chat/api/event-handlers";
-import { useChatRequestStore } from "@/stores/zustand/useChatRequestStore";
-import { useChatSessionStore } from "@/stores/zustand/useChatSessionStore";
+import { applyChatEventToTree } from "./event-handlers";
+import { useChatRequestStore } from "./useChatRequestStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import type { SerializedMessage } from "@/types/message";
 import type { ChatAgentStatus, MessageTreeSnapshot } from "@/types/chat-api";
 import type { ChatServerToClientEvent } from "@/types/chat-event-types";

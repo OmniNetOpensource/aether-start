@@ -1,18 +1,18 @@
 import { useEffect, useRef, useState } from "react";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Lightbulb, Loader2, Plus } from "lucide-react";
-import { buildAttachmentsFromFiles } from "@/features/chat/lib/attachments";
+import { buildAttachmentsFromFiles } from "@/shared/attachments";
 import { collectClipboardFiles } from "@/lib/utils/file";
 import { NoteCard } from "@/features/notes/components/NoteCard";
 import { NoteEditDialog } from "@/features/notes/components/NoteEditDialog";
-import { useChatRequestStore } from "@/features/chat/store/useChatRequestStore";
-import { useComposerStore } from "@/features/chat/store/useComposerStore";
-import { useEditingStore } from "@/features/chat/store/useEditingStore";
+import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
+import { useComposerStore } from "@/features/chat/composer/useComposerStore";
+import { useEditingStore } from "@/features/chat/editing/useEditingStore";
 import {
   useNotesStore,
   type NoteItem,
-} from "@/features/notes/store/useNotesStore";
-import { useChatSessionStore } from "@/features/sidebar/store/useChatSessionStore";
+} from "@/features/notes/useNotesStore";
+import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
 import {
   AlertDialog,
   AlertDialogAction,
