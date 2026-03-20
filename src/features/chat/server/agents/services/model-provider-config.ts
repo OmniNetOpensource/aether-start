@@ -9,7 +9,10 @@ export type ChatBackend =
   | "dmx"
   | "ikun"
   | "ikun-gemini"
-  | "openrouter";
+  | "openrouter"
+  | "cubence-claude"
+  | "cubence-gemini"
+  | "cubence-openai";
 
 export type BackendConfig = {
   apiKey: string;
@@ -253,6 +256,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "gemini",
     backend: "rightcode-gemini",
   },
+  gemini31ProCubence: {
+    id: "gemini31ProCubence",
+    name: "gemini-3.1-pro+cubence",
+    model: "gemini-3.1-pro-preview",
+    format: "gemini",
+    backend: "cubence-gemini",
+  },
   gemini31ProIkun: {
     id: "gemini31ProIkun",
     name: "gemini-3.1-pro+ikun",
@@ -274,12 +284,26 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: "openai-responses",
     backend: "rightcode-openai",
   },
+  gpt54Cubence: {
+    id: "gpt54Cubence",
+    name: "gpt-5.4+cubence",
+    model: "gpt-5.4-high",
+    format: "openai-responses",
+    backend: "cubence-openai",
+  },
   claudeOpus46Rightcode: {
     id: "claudeOpus46Rightcode",
     name: "opus-4-6+rightcode",
     model: "claude-opus-4-6",
     format: "anthropic",
     backend: "rightcode-claude",
+  },
+  claudeOpus46Cubence: {
+    id: "claudeOpus46Cubence",
+    name: "opus-4-6+cubence",
+    model: "claude-opus-4-6",
+    format: "anthropic",
+    backend: "cubence-claude",
   },
   claudeSonnet46Ikun: {
     id: "claudeSonnet46Ikun",
@@ -516,6 +540,45 @@ export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
     return {
       apiKey,
       baseURL: "https://openrouter.ai/api/v1",
+      defaultHeaders: { "User-Agent": "aether" },
+    };
+  }
+
+  if (backend === "cubence-claude") {
+    const apiKey = env.CUBENCE_API_KEY;
+    const baseURL = env.CUBENCE_BASE_URL;
+    if (!apiKey) throw new Error("Missing CUBENCE_API_KEY");
+    if (!baseURL) throw new Error("Missing CUBENCE_BASE_URL");
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: {
+        "User-Agent": "aether",
+        "anthropic-beta": "interleaved-thinking-2025-05-14",
+      },
+    };
+  }
+
+  if (backend === "cubence-gemini") {
+    const apiKey = env.CUBENCE_API_KEY;
+    const baseURL = env.CUBENCE_BASE_URL;
+    if (!apiKey) throw new Error("Missing CUBENCE_API_KEY");
+    if (!baseURL) throw new Error("Missing CUBENCE_BASE_URL");
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: { "User-Agent": "aether" },
+    };
+  }
+
+  if (backend === "cubence-openai") {
+    const apiKey = env.CUBENCE_API_KEY;
+    const baseURL = env.CUBENCE_BASE_URL;
+    if (!apiKey) throw new Error("Missing CUBENCE_API_KEY");
+    if (!baseURL) throw new Error("Missing CUBENCE_BASE_URL");
+    return {
+      apiKey,
+      baseURL,
       defaultHeaders: { "User-Agent": "aether" },
     };
   }

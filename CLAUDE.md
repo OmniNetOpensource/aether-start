@@ -194,6 +194,7 @@ Current backends include:
 - `ikun`
 - `ikun-gemini`
 - `openrouter`
+- `cubence-claude`, `cubence-gemini`, `cubence-openai` (shared `CUBENCE_API_KEY` / `CUBENCE_BASE_URL`)
 
 If you add or rename a model/backend/provider, update `model-provider-config.ts` and the corresponding adapter/factory code together.
 
@@ -327,6 +328,8 @@ Important env keys include:
 - `DMX_APIKEY`
 - `DMX_BASEURL`
 - `OPENROUTER_API_KEY`
+- `CUBENCE_API_KEY`
+- `CUBENCE_BASE_URL`
 - `ANTHROPIC_API_KEY_RIGHTCODE`
 - `ANTHROPIC_BASE_URL_RIGHTCODE`
 - `ANTHROPIC_API_KEY_RIGHTCODE_SALE`

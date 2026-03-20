@@ -213,7 +213,7 @@ export function MessageList({
 
       <div
         ref={railRef}
-        className="absolute right-0 top-0 bottom-0 z-(--z-sidebar) flex w-0 shrink-0 group/rail-trigger max-md:hidden"
+        className="absolute right-0 top-0 bottom-0 z-(--z-sidebar) flex w-0 shrink-0 group/rail-trigger"
         data-chat-actions-rail
       >
         <div

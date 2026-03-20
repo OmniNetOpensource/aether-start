@@ -21,6 +21,8 @@ type ServerEnv = {
   DMX_APIKEY?: string
   DMX_BASEURL?: string
   OPENROUTER_API_KEY?: string
+  CUBENCE_API_KEY?: string
+  CUBENCE_BASE_URL?: string
   SERP_API_KEY?: string
   SUPADATA_API_KEY?: string
   JINA_API_KEY?: string
@@ -118,6 +120,12 @@ export const getServerEnv = (): ServerEnv => {
     OPENROUTER_API_KEY:
       readString((bindings as Record<string, unknown>).OPENROUTER_API_KEY) ??
       readStringFromProcess('OPENROUTER_API_KEY'),
+    CUBENCE_API_KEY:
+      readString((bindings as Record<string, unknown>).CUBENCE_API_KEY) ??
+      readStringFromProcess('CUBENCE_API_KEY'),
+    CUBENCE_BASE_URL:
+      readString((bindings as Record<string, unknown>).CUBENCE_BASE_URL) ??
+      readStringFromProcess('CUBENCE_BASE_URL'),
     SERP_API_KEY:
       readString(bindings.SERP_API_KEY) ?? readStringFromProcess('SERP_API_KEY'),
     SUPADATA_API_KEY:

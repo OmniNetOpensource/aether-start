@@ -271,6 +271,7 @@ export function ArtifactPanel() {
       className={cn(
         "relative hidden shrink-0 overflow-hidden lg:block",
         !isResizing && "transition-[width] duration-200",
+        isResizing && "[&_iframe]:pointer-events-none",
         artifactPanelOpen
           ? "w-[min(44vw,38rem)] min-w-88 px-5"
           : "w-0 min-w-0 ",

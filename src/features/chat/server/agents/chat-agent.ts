@@ -60,6 +60,8 @@ type ChatAgentEnv = Cloudflare.Env & {
   DMX_APIKEY?: string;
   DMX_BASEURL?: string;
   OPENROUTER_API_KEY?: string;
+  CUBENCE_API_KEY?: string;
+  CUBENCE_BASE_URL?: string;
   SERP_API_KEY?: string;
   SUPADATA_API_KEY?: string;
 };

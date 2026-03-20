@@ -97,7 +97,7 @@ export function useSelectionToolbar(
 
         setText(selectedText);
         setRect(selRect);
-      }, 250);
+      }, 300);
     };
 
     document.addEventListener("selectionchange", handleSelectionChange);
