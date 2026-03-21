@@ -290,6 +290,8 @@ Playwright:
 
 - config: `playwright.config.ts`
 - test dir: `tests/e2e`
+- **Flexible auth / port**: optional `BETTER_AUTH_TRUSTED_ORIGINS` in `.env.local` — comma-separated origins (each entry expands `localhost` ↔ `127.0.0.1` for the same port). Use when the dev URL differs from `BETTER_AUTH_URL` (e.g. Playwright on another port).
+- **Optional bundled dev server**: `E2E_WEB_SERVER=1 pnpm test:e2e` starts Vite on `E2E_PORT` (default `3010`) and sets `baseURL` to `http://127.0.0.1:<port>` unless `E2E_BASE_URL` is set. Add matching origins to `BETTER_AUTH_TRUSTED_ORIGINS` (e.g. `http://127.0.0.1:3010` or list one host; the other is paired automatically).
 
 **Do not create new test files.** Only the existing 14 curated tests are kept; they cover message-tree, block-operations, chat-orchestrator, useMessageTreeStore, useConversationsStore, useEditingStore, chat-agent, render-artifact-stream, openai-responses, provider-error, executor, logger, preview-text, and MessageItem.
 
@@ -320,6 +322,7 @@ Important env keys include:
 
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
+- `BETTER_AUTH_TRUSTED_ORIGINS` (optional; comma-separated extra origins for Better Auth)
 - `ADMIN_EMAIL_ALLOWLIST`
 - `RESEND_API_KEY`
 - `SERP_API_KEY`
@@ -402,3 +405,6 @@ When working on public share routes, preserve read-only behavior and noindex sem
 - 用尽可能少的tailwind css 以及div来达成同样的效果
 
 - write extremely easy to consume code, optimize for how easy the code is to read. make the code skimmable. avoid cleverness. use early returns.reduce the number of possible states a function can be in with distriminated unions, remove any optionality that is not actual optional, never pass params for overriding code except strictly necessary
+
+
+- For React code, prefer modern patterns including useEffectEvent, startTransition, and useDeferredValue when appropriate if used by the team. Do not add useMemo /useCallback by default unless already used; follow the repo's React Compiler guidance.

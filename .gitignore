@@ -20,3 +20,4 @@ resume-project.html
 coverage/
 test-results/
 playwright-report/
+tests/e2e/.auth/state.json

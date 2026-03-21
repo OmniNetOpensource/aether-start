@@ -3,6 +3,8 @@ import { env as workerEnv } from 'cloudflare:workers';
 type ServerEnv = {
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
+  /** Comma-separated origins, e.g. `http://127.0.0.1:3010,http://localhost:3010` */
+  BETTER_AUTH_TRUSTED_ORIGINS?: string;
   ADMIN_EMAIL_ALLOWLIST?: string;
   LLM_STREAM_LOGGING?: string;
   LLM_STREAM_LOGGING_MAX_CHARS?: string;
@@ -64,6 +66,9 @@ export const getServerEnv = (): ServerEnv => {
       readString(bindings.BETTER_AUTH_SECRET) ?? readStringFromProcess('BETTER_AUTH_SECRET'),
     BETTER_AUTH_URL:
       readString(bindings.BETTER_AUTH_URL) ?? readStringFromProcess('BETTER_AUTH_URL'),
+    BETTER_AUTH_TRUSTED_ORIGINS:
+      readString((bindings as Record<string, unknown>).BETTER_AUTH_TRUSTED_ORIGINS) ??
+      readStringFromProcess('BETTER_AUTH_TRUSTED_ORIGINS'),
     ADMIN_EMAIL_ALLOWLIST:
       readString((bindings as Record<string, unknown>).ADMIN_EMAIL_ALLOWLIST) ??
       readStringFromProcess('ADMIN_EMAIL_ALLOWLIST'),

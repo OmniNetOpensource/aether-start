@@ -112,7 +112,7 @@ export default function Sidebar() {
         onMouseEnter={isMobile ? undefined : openSidebar}
         aria-label='展开侧边栏'
       />
-      <div className='pointer-events-none absolute left-0 top-1/2 z-(--z-sidebar) h-24 w-1.5 -translate-y-1/2 rounded-r-md bg-border transition-all duration-300 group-hover/sidebar-trigger:w-2 group-hover/sidebar-trigger:bg-(--border-primary)' />
+      <div className='pointer-events-none absolute left-0 top-1/2 z-(--z-sidebar) h-24 w-2 -translate-y-1/2 rounded-r-md bg-border transition-all duration-300 group-hover/sidebar-trigger:w-2.5 group-hover/sidebar-trigger:bg-(--border-primary)' />
 
       <aside
         ref={sidebarRef}

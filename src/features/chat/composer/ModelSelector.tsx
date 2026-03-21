@@ -70,6 +70,7 @@ export function ModelSelector() {
         onClick={() => setOpen(true)}
         aria-label={currentRoleName ? `选择模型，当前为 ${currentRoleName}` : '选择模型'}
         title={currentRoleName || '选择模型'}
+        data-testid='model-selector'
         className={cn(
           toolButtonBaseClass,
           'w-8 px-0 @[921px]:w-auto @[921px]:px-2.5 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground',

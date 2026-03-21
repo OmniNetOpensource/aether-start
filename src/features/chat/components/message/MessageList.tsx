@@ -197,14 +197,11 @@ export function MessageList({ className, listClassName }: MessageListProps = {})
 
       <div
         ref={railRef}
-        className='absolute right-0 top-0 bottom-0 z-(--z-sidebar) flex w-0 shrink-0 group/rail-trigger'
+        className='fixed right-0 top-0 bottom-0 z-(--z-sidebar) flex w-0 shrink-0 group/rail-trigger'
         data-chat-actions-rail
       >
         <div
-          className={`absolute right-0 top-0 z-(--z-sidebar) h-full w-4 ${!isMobile && 'pointer-events-none'}`}
-        />
-        <div
-          className='absolute right-0 top-1/2 z-(--z-sidebar) h-24 w-1.5 -translate-y-1/2 rounded-l-md bg-border transition-all duration-300 group-hover/rail-trigger:w-2 '
+          className='absolute right-0 top-1/2 z-(--z-sidebar) h-24 w-2 -translate-y-1/2 rounded-l-md bg-border transition-all duration-300 group-hover/rail-trigger:w-2.5'
           onClick={isMobile ? handleTriggerClick : undefined}
           onMouseEnter={isMobile ? undefined : openRail}
           aria-label='展开聊天操作'

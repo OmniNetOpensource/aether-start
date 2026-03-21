@@ -197,6 +197,7 @@ Public shares should stay noindex and must never mutate live conversations.
 
 - Unit and component tests use Vitest with `happy-dom`; config is in `vitest.config.ts`.
 - E2E tests use Playwright; config is in `playwright.config.ts`, tests live in `tests/e2e`.
+- E2E: set `E2E_EMAIL`/`E2E_PASSWORD` or `E2E_USER_EMAIL`/`E2E_USER_PASSWORD`. If the browser origin differs from `BETTER_AUTH_URL`, set optional `BETTER_AUTH_TRUSTED_ORIGINS` (comma-separated). Use `E2E_WEB_SERVER=1` to let Playwright start Vite on `E2E_PORT` (default `3010`); align `BETTER_AUTH_TRUSTED_ORIGINS` with that URL.
 - **Do not create new test files.** Only the existing 14 curated tests are kept; they cover message-tree, block-operations, chat-orchestrator, useMessageTreeStore, useConversationsStore, useEditingStore, chat-agent, render-artifact-stream, openai-responses, provider-error, executor, logger, preview-text, and MessageItem.
 
 ## Configuration & Secrets
@@ -210,6 +211,7 @@ Common env keys include:
 
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
+- `BETTER_AUTH_TRUSTED_ORIGINS` (optional; comma-separated extra allowed origins for Better Auth)
 - `ADMIN_EMAIL_ALLOWLIST`
 - `RESEND_API_KEY`
 - `SERP_API_KEY`

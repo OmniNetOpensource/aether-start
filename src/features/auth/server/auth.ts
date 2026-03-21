@@ -34,6 +34,45 @@ const toOrigin = (value: string) => {
   }
 };
 
+const trustedOriginsForBaseURL = (value: string) => {
+  const primary = toOrigin(value);
+  const origins = [primary];
+  try {
+    const u = new URL(primary);
+    if (!u.port) {
+      return origins;
+    }
+    if (u.hostname === 'localhost') {
+      origins.push(`${u.protocol}//127.0.0.1:${u.port}`);
+    } else if (u.hostname === '127.0.0.1') {
+      origins.push(`${u.protocol}//localhost:${u.port}`);
+    }
+  } catch {
+    // keep primary only
+  }
+  return origins;
+};
+
+const mergeTrustedOrigins = (baseURL: string, extrasCsv: string | undefined) => {
+  const set = new Set<string>();
+  for (const o of trustedOriginsForBaseURL(baseURL)) {
+    set.add(o);
+  }
+  if (!extrasCsv) {
+    return [...set];
+  }
+  for (const part of extrasCsv.split(',')) {
+    const piece = part.trim();
+    if (!piece) {
+      continue;
+    }
+    for (const o of trustedOriginsForBaseURL(piece)) {
+      set.add(o);
+    }
+  }
+  return [...set];
+};
+
 const getRequestIp = (headers: Headers | undefined) => {
   if (!headers) {
     return null;
@@ -97,7 +136,7 @@ const createAuth = () => {
     baseURL,
     basePath: '/api/auth',
     secret,
-    trustedOrigins: [toOrigin(baseURL)],
+    trustedOrigins: mergeTrustedOrigins(baseURL, serverEnv.BETTER_AUTH_TRUSTED_ORIGINS),
     user: {
       additionalFields: {
         registrationIp: {
