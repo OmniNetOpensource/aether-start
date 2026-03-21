@@ -46,6 +46,47 @@ export const resetLastEventId = () => {
  */
 let activeController: AbortController | null = null;
 
+let reconnectAttempt = 0;
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectConversationId: string | null = null;
+const MAX_RECONNECT_ATTEMPTS = 5;
+/** 退避序列: 1s, 2s, 4s, 8s, 16s */
+const BASE_RECONNECT_DELAY = 1000;
+
+const clearReconnectState = () => {
+  reconnectAttempt = 0;
+  reconnectConversationId = null;
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+};
+
+const scheduleAutoReconnect = (conversationId: string) => {
+  if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
+    clearReconnectState();
+    toast.error('连接已断开');
+    useChatRequestStore.getState().setStatus('idle', 'reconnect/maxAttempts');
+    return;
+  }
+
+  reconnectConversationId = conversationId;
+  const delay = BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempt);
+  reconnectAttempt++;
+
+  reconnectTimer = setTimeout(async () => {
+    reconnectTimer = null;
+
+    const currentId = useChatSessionStore.getState().conversationId;
+    if (currentId !== conversationId || reconnectConversationId !== conversationId) {
+      clearReconnectState();
+      return;
+    }
+
+    await resumeRunningConversation(conversationId);
+  }, delay);
+};
+
 /**
  * 解析 Agent 的 base URL。
  * 根据当前页面的 protocol 和 host 拼接，SSR 时回退到 localhost:3000。
@@ -73,13 +114,18 @@ const isAbortError = (error: unknown) =>
 
 /**
  * 流结束后的收尾逻辑。
- * 若当前状态不是 idle（说明流异常结束），则设为 idle 并 toast 提示。
+ * 异常结束时尝试自动重连；正常 idle 或无法重连时清理重连状态。
  */
 const finalizeStream = () => {
   if (useChatRequestStore.getState().status !== 'idle') {
-    toast.error('连接中断');
+    const conversationId = useChatSessionStore.getState().conversationId;
+    if (conversationId) {
+      scheduleAutoReconnect(conversationId);
+      return;
+    }
+    useChatRequestStore.getState().setStatus('idle', 'finalizeStream');
   }
-  useChatRequestStore.getState().setStatus('idle', 'finalizeStream');
+  clearReconnectState();
 };
 
 /**
@@ -111,6 +157,7 @@ const handleSSEMessage = (event: string, raw: string) => {
       setStatus('streaming', 'chat_started');
       return;
     case 'chat_finished':
+      clearReconnectState();
       setStatus('idle', 'chat_finished');
       return;
     case 'sync_response': {
@@ -323,6 +370,14 @@ export const startChatRequest = async () => {
   } catch (error) {
     if (isAbortError(error)) return;
 
+    const currentStatus = useChatRequestStore.getState().status;
+    const convId = useChatSessionStore.getState().conversationId;
+
+    if (error instanceof TypeError && currentStatus === 'streaming' && convId) {
+      scheduleAutoReconnect(convId);
+      return;
+    }
+
     useChatRequestStore.getState().setStatus('idle', 'startChatRequest/error');
     toast.error(
       error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败',
@@ -337,6 +392,7 @@ export const startChatRequest = async () => {
  * abort 本地 activeController，将 status 设为 idle。
  */
 export const cancelStreamSubscription = () => {
+  clearReconnectState();
   activeController?.abort();
   activeController = null;
 
@@ -378,10 +434,17 @@ export const resumeRunningConversation = async (conversationId: string) => {
   try {
     agentStatus = await checkAgentStatus(conversationId);
   } catch {
+    if (reconnectConversationId === conversationId) {
+      scheduleAutoReconnect(conversationId);
+    }
     return;
   }
 
   if (agentStatus.status !== 'running') {
+    clearReconnectState();
+    if (useChatRequestStore.getState().status !== 'idle') {
+      useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/agentDone');
+    }
     return;
   }
 
@@ -404,6 +467,11 @@ export const resumeRunningConversation = async (conversationId: string) => {
     finalizeStream();
   } catch (error) {
     if (isAbortError(error)) return;
+
+    if (error instanceof TypeError && reconnectConversationId === conversationId) {
+      scheduleAutoReconnect(conversationId);
+      return;
+    }
 
     useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/error');
     toast.error(
