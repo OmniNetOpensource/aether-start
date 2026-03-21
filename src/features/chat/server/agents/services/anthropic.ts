@@ -1,54 +1,54 @@
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic from '@anthropic-ai/sdk';
 import {
   buildSystemPrompt,
   type BackendConfig,
-} from "@/server/agents/services/model-provider-config";
-import { log, logProviderCommunication } from "./logger";
-import { buildProviderErrorEvent } from "./provider-error";
-import { quotesToModelText } from "@/lib/conversation/tree/block-operations";
-import { resolveAttachmentToBase64 } from "./attachment-utils";
-import { RenderArtifactStreamParser } from "./render-artifact-stream";
+} from '@/server/agents/services/model-provider-config';
+import { log, logProviderCommunication } from './logger';
+import { buildProviderErrorEvent } from './provider-error';
+import { quotesToModelText } from '@/lib/conversation/tree/block-operations';
+import { resolveAttachmentToBase64 } from './attachment-utils';
+import { RenderArtifactStreamParser } from './render-artifact-stream';
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
-} from "@/types/chat-api";
-import type { ChatTool } from "@/server/agents/tools/types";
-import type { SerializedMessage } from "@/types/message";
-import type { ChatProvider, ChatProviderConfig } from "./provider-types";
+} from '@/types/chat-api';
+import type { ChatTool } from '@/server/agents/tools/types';
+import type { SerializedMessage } from '@/types/message';
+import type { ChatProvider, ChatProviderConfig } from './provider-types';
 
 type AnthropicImageSource = {
-  type: "base64";
+  type: 'base64';
   media_type: string;
   data: string;
 };
 
 type AnthropicToolResultContentItem =
-  | { type: "text"; text: string }
-  | { type: "image"; source: AnthropicImageSource };
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: AnthropicImageSource };
 
 const SUPPORTED_TOOL_RESULT_IMAGE_MEDIA_TYPES = new Set([
-  "image/jpeg",
-  "image/png",
-  "image/gif",
-  "image/webp",
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
 ]);
 
 export type ThinkingBlockData =
-  | { type: "thinking"; thinking: string; signature: string }
-  | { type: "redacted_thinking"; data: string };
+  | { type: 'thinking'; thinking: string; signature: string }
+  | { type: 'redacted_thinking'; data: string };
 
 export type AnthropicContentBlock =
-  | { type: "text"; text: string }
-  | { type: "image"; source: AnthropicImageSource }
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: AnthropicImageSource }
   | {
-      type: "tool_use";
+      type: 'tool_use';
       id: string;
       name: string;
       input: Record<string, unknown>;
     }
   | {
-      type: "tool_result";
+      type: 'tool_result';
       tool_use_id: string;
       content: string | AnthropicToolResultContentItem[];
       is_error?: boolean;
@@ -56,7 +56,7 @@ export type AnthropicContentBlock =
   | ThinkingBlockData;
 
 export type AnthropicMessage = {
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   content: string | AnthropicContentBlock[];
 };
 
@@ -67,17 +67,17 @@ type AnthropicTool = {
 };
 
 type AnthropicStreamChunk =
-  | { type: "text"; text: string }
-  | { type: "thinking"; thinking: string }
-  | { type: "tool_use_start"; id: string; name: string }
-  | { type: "tool_use_delta"; partial_json: string }
-  | { type: "stop"; stop_reason: string }
-  | { type: "thinking_blocks"; blocks: ThinkingBlockData[] };
+  | { type: 'text'; text: string }
+  | { type: 'thinking'; thinking: string }
+  | { type: 'tool_use_start'; id: string; name: string }
+  | { type: 'tool_use_delta'; partial_json: string }
+  | { type: 'stop'; stop_reason: string }
+  | { type: 'thinking_blocks'; blocks: ThinkingBlockData[] };
 
 const ANTHROPIC_MAX_TOKENS = 64000;
 const THINKING_BUDGET_RATIO = 0.8;
 const THINKING_MIN_BUDGET_TOKENS = 1024;
-const ADAPTIVE_THINKING_MODEL = "claude-opus-4-6";
+const ADAPTIVE_THINKING_MODEL = 'claude-opus-4-6';
 
 const getClient = (config: BackendConfig) => {
   return new Anthropic({
@@ -90,15 +90,15 @@ const getClient = (config: BackendConfig) => {
 type AnthropicThinkingParams =
   | {
       thinking: {
-        type: "adaptive";
+        type: 'adaptive';
       };
       output_config: {
-        effort: "high";
+        effort: 'high';
       };
     }
   | {
       thinking: {
-        type: "enabled";
+        type: 'enabled';
         budget_tokens: number;
       };
     };
@@ -117,24 +117,21 @@ const getThinkingBudgetTokens = (maxTokens: number): number => {
   );
 };
 
-const buildThinkingParams = (
-  model: string,
-  maxTokens: number,
-): AnthropicThinkingParams => {
+const buildThinkingParams = (model: string, maxTokens: number): AnthropicThinkingParams => {
   if (model === ADAPTIVE_THINKING_MODEL) {
     return {
       thinking: {
-        type: "adaptive",
+        type: 'adaptive',
       },
       output_config: {
-        effort: "high",
+        effort: 'high',
       },
     };
   }
 
   return {
     thinking: {
-      type: "enabled",
+      type: 'enabled',
       budget_tokens: getThinkingBudgetTokens(maxTokens),
     },
   };
@@ -148,17 +145,17 @@ export async function convertToAnthropicMessages(
       const contentBlocks: AnthropicContentBlock[] = [];
 
       for (const block of message.blocks) {
-        if (block.type === "quotes" && block.quotes.length > 0) {
+        if (block.type === 'quotes' && block.quotes.length > 0) {
           const quoteText = quotesToModelText(block.quotes);
           if (quoteText) {
-            contentBlocks.push({ type: "text", text: quoteText });
+            contentBlocks.push({ type: 'text', text: quoteText });
           }
-        } else if (block.type === "content" && block.content) {
-          contentBlocks.push({ type: "text", text: block.content });
-        } else if (block.type === "attachments") {
+        } else if (block.type === 'content' && block.content) {
+          contentBlocks.push({ type: 'text', text: block.content });
+        } else if (block.type === 'attachments') {
           for (const attachment of block.attachments) {
-            if (attachment.kind === "image") {
-              const resolved = await resolveAttachmentToBase64("ANTHROPIC", {
+            if (attachment.kind === 'image') {
+              const resolved = await resolveAttachmentToBase64('ANTHROPIC', {
                 name: attachment.name,
                 mimeType: attachment.mimeType,
                 url: attachment.url,
@@ -167,18 +164,15 @@ export async function convertToAnthropicMessages(
 
               if (resolved) {
                 contentBlocks.push({
-                  type: "image",
+                  type: 'image',
                   source: {
-                    type: "base64",
+                    type: 'base64',
                     media_type: resolved.media_type,
                     data: resolved.data,
                   },
                 });
               } else {
-                log(
-                  "ANTHROPIC",
-                  `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`,
-                );
+                log('ANTHROPIC', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`);
               }
             }
           }
@@ -187,7 +181,7 @@ export async function convertToAnthropicMessages(
 
       return {
         role: message.role,
-        content: contentBlocks.length > 0 ? contentBlocks : "",
+        content: contentBlocks.length > 0 ? contentBlocks : '',
       };
     }),
   );
@@ -195,7 +189,7 @@ export async function convertToAnthropicMessages(
 
 function convertToolsToAnthropic(tools: ChatTool[]): AnthropicTool[] {
   return tools
-    .filter((tool) => tool.type === "function")
+    .filter((tool) => tool.type === 'function')
     .map((tool) => ({
       name: tool.function.name,
       description: tool.function.description,
@@ -207,15 +201,12 @@ async function* streamAnthropicCompletion(requestParams: {
   model: string;
   backendConfig: BackendConfig;
   messages: AnthropicMessage[];
-  system?: Array<{ type: "text"; text: string }>;
+  system?: Array<{ type: 'text'; text: string }>;
   tools?: AnthropicTool[];
   signal?: AbortSignal;
 }): AsyncGenerator<AnthropicStreamChunk> {
   const client = getClient(requestParams.backendConfig);
-  const thinkingParams = buildThinkingParams(
-    requestParams.model,
-    ANTHROPIC_MAX_TOKENS,
-  );
+  const thinkingParams = buildThinkingParams(requestParams.model, ANTHROPIC_MAX_TOKENS);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamParams: any = {
@@ -227,7 +218,7 @@ async function* streamAnthropicCompletion(requestParams: {
     ...thinkingParams,
   };
 
-  logProviderCommunication("anthropic", "Messages request", {
+  logProviderCommunication('anthropic', 'Messages request', {
     model: requestParams.model,
     body: streamParams,
   });
@@ -238,41 +229,39 @@ async function* streamAnthropicCompletion(requestParams: {
 
   for await (const event of stream) {
     if (requestParams.signal?.aborted) {
-      throw new DOMException("Aborted", "AbortError");
+      throw new DOMException('Aborted', 'AbortError');
     }
 
-    logProviderCommunication("anthropic", "Stream event", {
+    logProviderCommunication('anthropic', 'Stream event', {
       model: requestParams.model,
       event,
     });
 
-    if (event.type === "content_block_start") {
-      if (event.content_block.type === "tool_use") {
+    if (event.type === 'content_block_start') {
+      if (event.content_block.type === 'tool_use') {
         yield {
-          type: "tool_use_start",
+          type: 'tool_use_start',
           id: event.content_block.id,
           name: event.content_block.name,
         };
       }
-    } else if (event.type === "content_block_delta") {
-      if (event.delta.type === "text_delta") {
-        yield { type: "text", text: event.delta.text };
-      } else if (event.delta.type === "input_json_delta") {
+    } else if (event.type === 'content_block_delta') {
+      if (event.delta.type === 'text_delta') {
+        yield { type: 'text', text: event.delta.text };
+      } else if (event.delta.type === 'input_json_delta') {
         yield {
-          type: "tool_use_delta",
+          type: 'tool_use_delta',
           partial_json: event.delta.partial_json,
         };
-      } else if (event.delta.type === "thinking_delta") {
+      } else if (event.delta.type === 'thinking_delta') {
         yield {
-          type: "thinking",
-          thinking: (
-            event.delta as { type: "thinking_delta"; thinking: string }
-          ).thinking,
+          type: 'thinking',
+          thinking: (event.delta as { type: 'thinking_delta'; thinking: string }).thinking,
         };
       }
-    } else if (event.type === "message_delta") {
+    } else if (event.type === 'message_delta') {
       if (event.delta.stop_reason) {
-        yield { type: "stop", stop_reason: event.delta.stop_reason };
+        yield { type: 'stop', stop_reason: event.delta.stop_reason };
       }
     }
   }
@@ -281,18 +270,18 @@ async function* streamAnthropicCompletion(requestParams: {
     const finalMessage = await stream.finalMessage();
     const thinkingBlocks: ThinkingBlockData[] = [];
     for (const block of finalMessage.content) {
-      if (block.type === "thinking") {
+      if (block.type === 'thinking') {
         thinkingBlocks.push({
-          type: "thinking",
+          type: 'thinking',
           thinking: block.thinking,
           signature: block.signature,
         });
-      } else if (block.type === "redacted_thinking") {
-        thinkingBlocks.push({ type: "redacted_thinking", data: block.data });
+      } else if (block.type === 'redacted_thinking') {
+        thinkingBlocks.push({ type: 'redacted_thinking', data: block.data });
       }
     }
     if (thinkingBlocks.length > 0) {
-      yield { type: "thinking_blocks", blocks: thinkingBlocks };
+      yield { type: 'thinking_blocks', blocks: thinkingBlocks };
     }
   } catch {
     // finalMessage may fail if stream was aborted
@@ -312,12 +301,12 @@ export function formatToolContinuation(
   }
 
   if (assistantText) {
-    assistantContent.push({ type: "text", text: assistantText });
+    assistantContent.push({ type: 'text', text: assistantText });
   }
 
   for (const toolCall of pendingToolCalls) {
     assistantContent.push({
-      type: "tool_use",
+      type: 'tool_use',
       id: toolCall.id,
       name: toolCall.name,
       input: toolCall.args,
@@ -325,45 +314,41 @@ export function formatToolContinuation(
   }
 
   const toolResultContent: Array<{
-    type: "tool_result";
+    type: 'tool_result';
     tool_use_id: string;
     content: string | AnthropicToolResultContentItem[];
     is_error?: boolean;
   }> = toolResults.map((toolResult) => {
     try {
       const parsed = JSON.parse(toolResult.result);
-      if (parsed.type === "image" && parsed.data_url) {
+      if (parsed.type === 'image' && parsed.data_url) {
         const base64Match = parsed.data_url.match(/^data:([^;]+);base64,(.+)$/);
         if (base64Match) {
           const mediaType = base64Match[1];
           if (!SUPPORTED_TOOL_RESULT_IMAGE_MEDIA_TYPES.has(mediaType)) {
-            log(
-              "ANTHROPIC",
-              "Skipping unsupported tool_result image media type",
-              {
-                toolUseId: toolResult.id,
-                mediaType,
-                toolName: toolResult.name,
-              },
-            );
+            log('ANTHROPIC', 'Skipping unsupported tool_result image media type', {
+              toolUseId: toolResult.id,
+              mediaType,
+              toolName: toolResult.name,
+            });
             return {
-              type: "tool_result" as const,
+              type: 'tool_result' as const,
               tool_use_id: toolResult.id,
               is_error: true,
               content:
                 `Unsupported image format for Anthropic tool_result: ${mediaType}. ` +
-                "Anthropic supports image/jpeg, image/png, image/gif, and image/webp.",
+                'Anthropic supports image/jpeg, image/png, image/gif, and image/webp.',
             };
           }
 
           return {
-            type: "tool_result" as const,
+            type: 'tool_result' as const,
             tool_use_id: toolResult.id,
             content: [
               {
-                type: "image" as const,
+                type: 'image' as const,
                 source: {
-                  type: "base64" as const,
+                  type: 'base64' as const,
                   media_type: mediaType,
                   data: base64Match[2],
                 },
@@ -377,15 +362,15 @@ export function formatToolContinuation(
     }
 
     return {
-      type: "tool_result" as const,
+      type: 'tool_result' as const,
       tool_use_id: toolResult.id,
       content: toolResult.result,
     };
   });
 
   return [
-    { role: "assistant", content: assistantContent },
-    { role: "user", content: toolResultContent as AnthropicMessage["content"] },
+    { role: 'assistant', content: assistantContent },
+    { role: 'user', content: toolResultContent as AnthropicMessage['content'] },
   ];
 }
 
@@ -412,29 +397,27 @@ export class AnthropicChatProvider {
     this.backendConfig = config.backendConfig;
     this.systemPrompt = config.systemPrompt;
     this.anthropicTools =
-      config.tools.length > 0
-        ? convertToolsToAnthropic(config.tools)
-        : undefined;
+      config.tools.length > 0 ? convertToolsToAnthropic(config.tools) : undefined;
   }
 
   async *run(
     messages: AnthropicMessage[],
     signal?: AbortSignal,
   ): AsyncGenerator<ChatServerToClientEvent, ProviderRunResult> {
-    const systemBlocks: Array<{ type: "text"; text: string }> = [
-      { type: "text", text: buildSystemPrompt() },
+    const systemBlocks: Array<{ type: 'text'; text: string }> = [
+      { type: 'text', text: buildSystemPrompt() },
     ];
     if (this.systemPrompt.trim()) {
-      systemBlocks.push({ type: "text", text: this.systemPrompt.trim() });
+      systemBlocks.push({ type: 'text', text: this.systemPrompt.trim() });
     }
 
     const pendingToolCalls: PendingToolInvocation[] = [];
     let thinkingBlocks: ThinkingBlockData[] = [];
-    let currentToolId = "";
-    let currentToolName = "";
-    let currentToolJson = "";
+    let currentToolId = '';
+    let currentToolName = '';
+    let currentToolJson = '';
     let currentRenderParser: RenderArtifactStreamParser | null = null;
-    let stopReason = "";
+    let stopReason = '';
 
     const emptyResult: ProviderRunResult = {
       pendingToolCalls: [],
@@ -451,45 +434,41 @@ export class AnthropicChatProvider {
         signal,
       })) {
         if (signal?.aborted) {
-          throw new DOMException("Aborted", "AbortError");
+          throw new DOMException('Aborted', 'AbortError');
         }
 
-        if (chunk.type === "text") {
-          yield { type: "content", content: chunk.text };
-        } else if (chunk.type === "thinking") {
-          yield { type: "thinking", content: chunk.thinking };
-        } else if (chunk.type === "thinking_blocks") {
+        if (chunk.type === 'text') {
+          yield { type: 'content', content: chunk.text };
+        } else if (chunk.type === 'thinking') {
+          yield { type: 'thinking', content: chunk.thinking };
+        } else if (chunk.type === 'thinking_blocks') {
           thinkingBlocks = chunk.blocks;
-        } else if (chunk.type === "tool_use_start") {
+        } else if (chunk.type === 'tool_use_start') {
           currentToolId = chunk.id;
           currentToolName = chunk.name;
-          currentToolJson = "";
+          currentToolJson = '';
           currentRenderParser =
-            chunk.name === "render"
-              ? new RenderArtifactStreamParser(chunk.id)
-              : null;
+            chunk.name === 'render' ? new RenderArtifactStreamParser(chunk.id) : null;
           if (currentRenderParser) {
             for (const event of currentRenderParser.start()) {
               yield event;
             }
           }
-        } else if (chunk.type === "tool_use_delta") {
+        } else if (chunk.type === 'tool_use_delta') {
           currentToolJson += chunk.partial_json;
           if (currentRenderParser) {
-            for (const event of currentRenderParser.append(
-              chunk.partial_json,
-            )) {
+            for (const event of currentRenderParser.append(chunk.partial_json)) {
               yield event;
             }
           }
-        } else if (chunk.type === "stop") {
+        } else if (chunk.type === 'stop') {
           stopReason = chunk.stop_reason;
           if (currentToolId && currentToolName) {
             let toolArguments: Record<string, unknown> = {};
             try {
-              toolArguments = JSON.parse(currentToolJson || "{}");
+              toolArguments = JSON.parse(currentToolJson || '{}');
             } catch (error) {
-              log("ANTHROPIC", "Failed to parse tool arguments on stop chunk", {
+              log('ANTHROPIC', 'Failed to parse tool arguments on stop chunk', {
                 error,
                 currentToolId,
                 currentToolName,
@@ -507,7 +486,7 @@ export class AnthropicChatProvider {
               args: toolArguments,
             });
           }
-          log("ANTHROPIC", "Received stop chunk", {
+          log('ANTHROPIC', 'Received stop chunk', {
             chunk,
             pendingTools: pendingToolCalls,
           });
@@ -515,29 +494,29 @@ export class AnthropicChatProvider {
       }
     } catch (error) {
       if (
-        (error instanceof DOMException && error.name === "AbortError") ||
-        (error instanceof Error && error.name === "AbortError") ||
+        (error instanceof DOMException && error.name === 'AbortError') ||
+        (error instanceof Error && error.name === 'AbortError') ||
         signal?.aborted
       ) {
         return emptyResult;
       }
 
-      log("ANTHROPIC", "Anthropic provider run failed", {
+      log('ANTHROPIC', 'Anthropic provider run failed', {
         error,
         model: this.model,
       });
 
       yield buildProviderErrorEvent({
-        provider: "anthropic",
+        provider: 'anthropic',
         model: this.model,
         backendConfig: this.backendConfig,
         error,
-        fallbackMessage: "Failed to start Anthropic completion",
+        fallbackMessage: 'Failed to start Anthropic completion',
       });
       return emptyResult;
     }
 
-    if (stopReason === "end_turn" || pendingToolCalls.length === 0) {
+    if (stopReason === 'end_turn' || pendingToolCalls.length === 0) {
       return emptyResult;
     }
 
@@ -545,19 +524,12 @@ export class AnthropicChatProvider {
   }
 }
 
-export function createAnthropicAdapter(
-  config: ChatProviderConfig,
-): ChatProvider<AnthropicMessage> {
+export function createAnthropicAdapter(config: ChatProviderConfig): ChatProvider<AnthropicMessage> {
   const provider = new AnthropicChatProvider(config);
   return {
     convertMessages: (history) => convertToAnthropicMessages(history),
     run: (messages, signal) => provider.run(messages, signal),
-    formatToolContinuation: (
-      assistantText,
-      runResult,
-      pendingToolCalls,
-      toolResults,
-    ) =>
+    formatToolContinuation: (assistantText, runResult, pendingToolCalls, toolResults) =>
       formatToolContinuation(
         assistantText,
         runResult.thinkingBlocks as ThinkingBlockData[],

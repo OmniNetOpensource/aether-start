@@ -1,8 +1,5 @@
-import { create } from "zustand";
-import {
-  getAvailableModelsFn,
-  getAvailablePromptsFn,
-} from "@/server/functions/chat/models";
+import { create } from 'zustand';
+import { getAvailableModelsFn, getAvailablePromptsFn } from '@/server/functions/chat/models';
 import {
   listConversationsPageFn,
   type ConversationListCursor,
@@ -10,7 +7,7 @@ import {
   deleteConversationFn,
   setConversationPinnedFn,
   updateConversationTitleFn,
-} from "@/server/functions/conversations";
+} from '@/server/functions/conversations';
 import {
   addMessage,
   buildCurrentPath,
@@ -21,23 +18,15 @@ import {
   getBranchInfo,
   normalizeMessageParentIds,
   switchBranch,
-} from "./tree/message-tree";
-import {
-  applyAssistantAddition,
-  type AssistantAddition,
-} from "./tree/block-operations";
+} from './tree/message-tree';
+import { applyAssistantAddition, type AssistantAddition } from './tree/block-operations';
 import type {
   ConversationArtifact,
   ConversationDetail,
   ConversationMeta,
-} from "@/types/conversation";
-import type { ArtifactLanguage } from "@/types/chat-api";
-import type {
-  AssistantMessage,
-  BranchInfo,
-  ContentBlock,
-  Message,
-} from "@/types/message";
+} from '@/types/conversation';
+import type { ArtifactLanguage } from '@/types/chat-api';
+import type { AssistantMessage, BranchInfo, ContentBlock, Message } from '@/types/message';
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 
@@ -54,8 +43,8 @@ type ConversationListState = {
   conversationsCursor: ConversationListCursor;
 };
 
-export type ArtifactStatus = "streaming" | "completed" | "failed";
-export type ArtifactView = "code" | "preview";
+export type ArtifactStatus = 'streaming' | 'completed' | 'failed';
+export type ArtifactView = 'code' | 'preview';
 
 export type ArtifactRecord = ConversationArtifact & {
   status: ArtifactStatus;
@@ -75,7 +64,7 @@ const initialArtifactState: ArtifactState = {
   selectedArtifactId: null,
   artifactPanelOpen: false,
   activeStreamingArtifactId: null,
-  artifactView: "code",
+  artifactView: 'code',
 };
 
 export const initialConversationListState: ConversationListState = {
@@ -87,12 +76,12 @@ export const initialConversationListState: ConversationListState = {
   conversationsCursor: null,
 };
 
-const MODEL_STORAGE_KEY = "aether_current_role";
-const PROMPT_STORAGE_KEY = "aether_current_prompt";
+const MODEL_STORAGE_KEY = 'aether_current_role';
+const PROMPT_STORAGE_KEY = 'aether_current_prompt';
 const PAGE_SIZE = 10;
 
 const getStoredValue = (key: string) => {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return null;
   }
 
@@ -104,7 +93,7 @@ const getStoredValue = (key: string) => {
 };
 
 const setStoredValue = (key: string, value: string) => {
-  if (typeof window === "undefined") {
+  if (typeof window === 'undefined') {
     return;
   }
 
@@ -125,10 +114,10 @@ export type ChatSessionSelectionState = {
 };
 
 export const initialChatSessionSelectionState: ChatSessionSelectionState = {
-  currentRole: "",
+  currentRole: '',
   availableRoles: [],
   rolesLoading: false,
-  currentPrompt: "",
+  currentPrompt: '',
   availablePrompts: [],
   promptsLoading: false,
 };
@@ -156,11 +145,7 @@ type ChatSessionActions = {
   selectMessage: (messageId: number) => void;
   appendToAssistant: (addition: AssistantAddition) => void;
   getBranchInfo: (messageId: number) => BranchInfo | null;
-  navigateBranch: (
-    messageId: number,
-    depth: number,
-    direction: "prev" | "next",
-  ) => void;
+  navigateBranch: (messageId: number, depth: number, direction: 'prev' | 'next') => void;
   setCurrentRole: (role: string) => void;
   setAvailableRoles: (roles: RoleInfo[]) => void;
   setRolesLoading: (loading: boolean) => void;
@@ -176,10 +161,7 @@ type ChatSessionActions = {
   setArtifactView: (view: ArtifactView) => void;
   startArtifact: (artifactId: string) => void;
   updateArtifactTitle: (artifactId: string, title: string) => void;
-  updateArtifactLanguage: (
-    artifactId: string,
-    language: ArtifactLanguage,
-  ) => void;
+  updateArtifactLanguage: (artifactId: string, language: ArtifactLanguage) => void;
   appendArtifactCode: (artifactId: string, delta: string) => void;
   completeArtifact: (artifactId: string) => void;
   failArtifact: (artifactId: string, message: string) => void;
@@ -187,7 +169,7 @@ type ChatSessionActions = {
   getTreeState: () => TreeSnapshot;
   setTreeState: (partial: Partial<TreeSnapshot>) => void;
   addMessage: (
-    role: Message["role"],
+    role: Message['role'],
     blocks: ContentBlock[],
     createdAt?: string,
   ) => ReturnType<typeof addMessage>;
@@ -198,9 +180,7 @@ type ChatSessionActions = {
   ) => ReturnType<typeof editMessage> | null;
 };
 
-const sortConversations = (
-  conversations: ConversationMeta[],
-): ConversationMeta[] => {
+const sortConversations = (conversations: ConversationMeta[]): ConversationMeta[] => {
   const sorted = [...conversations];
   sorted.sort((a, b) => {
     if (a.is_pinned !== b.is_pinned) {
@@ -226,10 +206,7 @@ const sortConversations = (
   return sorted;
 };
 
-const upsertConversations = (
-  conversations: ConversationMeta[],
-  incoming: ConversationMeta[],
-) => {
+const upsertConversations = (conversations: ConversationMeta[], incoming: ConversationMeta[]) => {
   const map = new Map<string, ConversationMeta>();
 
   for (const conversation of conversations) {
@@ -254,9 +231,7 @@ const mapDetailToMeta = (detail: ConversationDetail): ConversationMeta => ({
   user_id: detail.user_id,
 });
 
-export const useChatSessionStore = create<
-  ChatSessionState & ChatSessionActions
->()((set, get) => ({
+export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>()((set, get) => ({
   ...createEmptyMessageState(),
   ...initialConversationListState,
   conversationId: null,
@@ -282,9 +257,7 @@ export const useChatSessionStore = create<
       const page = await listConversationsPageFn({
         data: { limit: PAGE_SIZE, cursor: null },
       });
-      const conversations = (page.items as ConversationDetail[]).map(
-        mapDetailToMeta,
-      );
+      const conversations = (page.items as ConversationDetail[]).map(mapDetailToMeta);
 
       set((state) => ({
         conversations: upsertConversations(state.conversations, conversations),
@@ -294,7 +267,7 @@ export const useChatSessionStore = create<
         conversationsCursor: page.nextCursor,
       }));
     } catch (error) {
-      console.error("Failed to load conversations:", error);
+      console.error('Failed to load conversations:', error);
       set({
         hasLoaded: true,
         conversationsLoading: false,
@@ -304,13 +277,7 @@ export const useChatSessionStore = create<
     }
   },
   loadMoreConversations: async () => {
-    const {
-      hasLoaded,
-      conversationsLoading,
-      loadingMore,
-      hasMore,
-      conversationsCursor,
-    } = get();
+    const { hasLoaded, conversationsLoading, loadingMore, hasMore, conversationsCursor } = get();
     if (!hasLoaded || conversationsLoading || loadingMore || !hasMore) {
       return;
     }
@@ -321,9 +288,7 @@ export const useChatSessionStore = create<
       const page = await listConversationsPageFn({
         data: { limit: PAGE_SIZE, cursor: conversationsCursor },
       });
-      const conversations = (page.items as ConversationDetail[]).map(
-        mapDetailToMeta,
-      );
+      const conversations = (page.items as ConversationDetail[]).map(mapDetailToMeta);
 
       set((state) => ({
         conversations: upsertConversations(state.conversations, conversations),
@@ -332,7 +297,7 @@ export const useChatSessionStore = create<
         conversationsCursor: page.nextCursor,
       }));
     } catch (error) {
-      console.error("Failed to load more conversations:", error);
+      console.error('Failed to load more conversations:', error);
       set({
         loadingMore: false,
         hasMore: false,
@@ -344,7 +309,7 @@ export const useChatSessionStore = create<
     try {
       await clearConversationsFn();
     } catch (error) {
-      console.error("Failed to clear conversations:", error);
+      console.error('Failed to clear conversations:', error);
     }
 
     set({
@@ -368,7 +333,7 @@ export const useChatSessionStore = create<
     try {
       await deleteConversationFn({ data: { id } });
     } catch (error) {
-      console.error("Failed to delete conversation:", error);
+      console.error('Failed to delete conversation:', error);
     }
   },
   updateConversationTitle: async (id, title) => {
@@ -386,7 +351,7 @@ export const useChatSessionStore = create<
     try {
       await updateConversationTitleFn({ data: { id, title } });
     } catch (error) {
-      console.error("Failed to update conversation title:", error);
+      console.error('Failed to update conversation title:', error);
     }
   },
   setConversationPinned: async (id, pinned) => {
@@ -419,7 +384,7 @@ export const useChatSessionStore = create<
         ]),
       }));
     } catch (error) {
-      console.error("Failed to update conversation pin state:", error);
+      console.error('Failed to update conversation pin state:', error);
       set((state) => ({
         conversations: upsertConversations(state.conversations, [target]),
       }));
@@ -444,22 +409,17 @@ export const useChatSessionStore = create<
   initializeTree: (messages = [], currentPath = []) => {
     const normalizedMessages = normalizeMessageParentIds(messages);
     const resolvedCurrentPath =
-      Array.isArray(currentPath) &&
-      currentPath.every((id) => typeof id === "number")
+      Array.isArray(currentPath) && currentPath.every((id) => typeof id === 'number')
         ? currentPath
         : [];
-    const fallbackRootId =
-      normalizedMessages.length > 0 ? normalizedMessages[0].id : null;
+    const fallbackRootId = normalizedMessages.length > 0 ? normalizedMessages[0].id : null;
     const nextPath =
       resolvedCurrentPath.length > 0
         ? resolvedCurrentPath
         : buildCurrentPath(normalizedMessages, fallbackRootId);
     const latestRootId = nextPath[0] ?? fallbackRootId;
     const nextId =
-      normalizedMessages.reduce(
-        (maxId, message) => Math.max(maxId, message.id),
-        0,
-      ) + 1;
+      normalizedMessages.reduce((maxId, message) => Math.max(maxId, message.id), 0) + 1;
 
     set({
       messages: normalizedMessages,
@@ -468,8 +428,7 @@ export const useChatSessionStore = create<
       nextId,
     });
   },
-  getMessagesFromPath: () =>
-    computeMessagesFromPath(get().messages, get().currentPath),
+  getMessagesFromPath: () => computeMessagesFromPath(get().messages, get().currentPath),
   setConversationId: (conversationId) => set({ conversationId }),
   selectMessage: (messageId) => {
     const state = get();
@@ -517,7 +476,7 @@ export const useChatSessionStore = create<
       let nextId = state.nextId;
       let assistantId = lastId;
 
-      if (!lastMessage || lastMessage.role !== "assistant") {
+      if (!lastMessage || lastMessage.role !== 'assistant') {
         const result = addMessage(
           {
             messages: state.messages,
@@ -525,7 +484,7 @@ export const useChatSessionStore = create<
             latestRootId: state.latestRootId,
             nextId: state.nextId,
           },
-          "assistant",
+          'assistant',
           [],
         );
         nextMessages = result.messages;
@@ -561,8 +520,7 @@ export const useChatSessionStore = create<
       return;
     }
 
-    const nextIndex =
-      direction === "prev" ? info.currentIndex - 1 : info.currentIndex + 1;
+    const nextIndex = direction === 'prev' ? info.currentIndex - 1 : info.currentIndex + 1;
     if (nextIndex < 0 || nextIndex >= info.total) {
       return;
     }
@@ -581,22 +539,20 @@ export const useChatSessionStore = create<
     set({
       artifacts: artifacts.map((artifact) => ({
         ...artifact,
-        status: "completed",
+        status: 'completed',
         errorMessage: null,
       })),
       selectedArtifactId: artifacts[0]?.id ?? null,
       artifactPanelOpen: artifacts.length > 0,
       activeStreamingArtifactId: null,
-      artifactView: artifacts.length > 0 ? "preview" : "code",
+      artifactView: artifacts.length > 0 ? 'preview' : 'code',
     }),
   selectArtifact: (selectedArtifactId) =>
     set((state) => {
-      const target = state.artifacts.find(
-        (artifact) => artifact.id === selectedArtifactId,
-      );
+      const target = state.artifacts.find((artifact) => artifact.id === selectedArtifactId);
       return {
         selectedArtifactId,
-        artifactView: target?.status === "completed" ? "preview" : "code",
+        artifactView: target?.status === 'completed' ? 'preview' : 'code',
       };
     }),
   setArtifactPanelOpen: (artifactPanelOpen) => set({ artifactPanelOpen }),
@@ -604,25 +560,23 @@ export const useChatSessionStore = create<
   startArtifact: (artifactId) =>
     set((state) => {
       const now = new Date().toISOString();
-      const existing = state.artifacts.find(
-        (artifact) => artifact.id === artifactId,
-      );
+      const existing = state.artifacts.find((artifact) => artifact.id === artifactId);
       const nextArtifact: ArtifactRecord = existing ?? {
         id: artifactId,
-        conversation_id: state.conversationId ?? "",
-        title: "Untitled Artifact",
-        language: "html",
-        code: "",
+        conversation_id: state.conversationId ?? '',
+        title: 'Untitled Artifact',
+        language: 'html',
+        code: '',
         created_at: now,
         updated_at: now,
-        status: "streaming",
+        status: 'streaming',
         errorMessage: null,
       };
 
       const nextArtifacts: ArtifactRecord[] = [
         {
           ...nextArtifact,
-          status: "streaming",
+          status: 'streaming',
           errorMessage: null,
           updated_at: now,
         },
@@ -634,7 +588,7 @@ export const useChatSessionStore = create<
         selectedArtifactId: artifactId,
         artifactPanelOpen: true,
         activeStreamingArtifactId: artifactId,
-        artifactView: "code",
+        artifactView: 'code',
       };
     }),
   updateArtifactTitle: (artifactId, title) =>
@@ -675,7 +629,7 @@ export const useChatSessionStore = create<
         artifact.id === artifactId
           ? {
               ...artifact,
-              status: "completed",
+              status: 'completed',
               errorMessage: null,
               updated_at: new Date().toISOString(),
             }
@@ -684,10 +638,8 @@ export const useChatSessionStore = create<
       selectedArtifactId: artifactId,
       artifactPanelOpen: true,
       activeStreamingArtifactId:
-        state.activeStreamingArtifactId === artifactId
-          ? null
-          : state.activeStreamingArtifactId,
-      artifactView: "preview",
+        state.activeStreamingArtifactId === artifactId ? null : state.activeStreamingArtifactId,
+      artifactView: 'preview',
     })),
   failArtifact: (artifactId, message) =>
     set((state) => ({
@@ -695,7 +647,7 @@ export const useChatSessionStore = create<
         artifact.id === artifactId
           ? {
               ...artifact,
-              status: "failed",
+              status: 'failed',
               errorMessage: message,
               updated_at: new Date().toISOString(),
             }
@@ -704,10 +656,8 @@ export const useChatSessionStore = create<
       selectedArtifactId: artifactId,
       artifactPanelOpen: true,
       activeStreamingArtifactId:
-        state.activeStreamingArtifactId === artifactId
-          ? null
-          : state.activeStreamingArtifactId,
-      artifactView: "code",
+        state.activeStreamingArtifactId === artifactId ? null : state.activeStreamingArtifactId,
+      artifactView: 'code',
     })),
   setCurrentRole: (currentRole) => {
     set({ currentRole });
@@ -728,10 +678,9 @@ export const useChatSessionStore = create<
 
     try {
       const roles = await getAvailableModelsFn();
-      const firstId = roles[0]?.id ?? "";
+      const firstId = roles[0]?.id ?? '';
       const stored = getStoredValue(MODEL_STORAGE_KEY);
-      const roleToUse =
-        stored && roles.some((role) => role.id === stored) ? stored : firstId;
+      const roleToUse = stored && roles.some((role) => role.id === stored) ? stored : firstId;
 
       if (roleToUse) {
         get().setCurrentRole(roleToUse);
@@ -763,12 +712,10 @@ export const useChatSessionStore = create<
 
     try {
       const prompts = await getAvailablePromptsFn();
-      const firstId = prompts[0]?.id ?? "aether";
+      const firstId = prompts[0]?.id ?? 'aether';
       const stored = getStoredValue(PROMPT_STORAGE_KEY);
       const promptToUse =
-        stored && prompts.some((prompt) => prompt.id === stored)
-          ? stored
-          : firstId;
+        stored && prompts.some((prompt) => prompt.id === stored) ? stored : firstId;
 
       if (promptToUse) {
         get().setCurrentPrompt(promptToUse);
@@ -790,8 +737,7 @@ export const useChatSessionStore = create<
     const currentIndex = state.availablePrompts.findIndex(
       (prompt) => prompt.id === state.currentPrompt,
     );
-    const nextIndex =
-      currentIndex < 0 ? 0 : (currentIndex + 1) % state.availablePrompts.length;
+    const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % state.availablePrompts.length;
 
     get().setCurrentPrompt(state.availablePrompts[nextIndex].id);
   },
@@ -820,9 +766,7 @@ export const useChatSessionStore = create<
   },
   setTreeState: (partial) =>
     set((state) => ({
-      messages: partial.messages
-        ? normalizeMessageParentIds(partial.messages)
-        : state.messages,
+      messages: partial.messages ? normalizeMessageParentIds(partial.messages) : state.messages,
       currentPath: partial.currentPath ?? state.currentPath,
       latestRootId: partial.latestRootId ?? state.latestRootId,
       nextId: partial.nextId ?? state.nextId,
@@ -855,6 +799,4 @@ export const useChatSessionStore = create<
 }));
 
 export const useIsNewChat = () =>
-  useChatSessionStore(
-    (state) => state.conversationId === null && state.messages.length === 0,
-  );
+  useChatSessionStore((state) => state.conversationId === null && state.messages.length === 0);

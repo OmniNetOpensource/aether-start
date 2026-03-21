@@ -22,9 +22,11 @@ Use `pnpm` for everything.
 - `pnpm install` - install dependencies
 - `pnpm dev` - start local dev server on port 3000
 - `pnpm build` - production build
-- `pnpm lint` - run ESLint
+- `pnpm lint` - run Oxlint
+- `pnpm format` - format with Oxfmt
+- `pnpm format:check` - verify formatting (Oxfmt, no writes)
 - `pnpm type-check` - run TypeScript without emit
-- `pnpm check` - run type-check, lint, and build
+- `pnpm check` - run type-check, lint, format check, and build
 - `pnpm test` - run Vitest once
 - `pnpm test:watch` - run Vitest in watch mode
 - `pnpm test:coverage` - run coverage

@@ -1,22 +1,13 @@
-import {
-  ClipboardEvent,
-  DragEvent,
-  KeyboardEvent,
-  useEffect,
-  useRef,
-} from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { useResponsive } from "@/components/ResponsiveContext";
-import { AttachmentStack } from "@/features/chat/components/AttachmentStack";
-import { Textarea } from "@/components/ui/textarea";
-import { toast } from "@/hooks/useToast";
-import {
-  useChatSessionStore,
-  useIsNewChat,
-} from "@/features/sidebar/useChatSessionStore";
-import { submitMessage } from "./submit-chat";
-import { useComposerStore } from "./useComposerStore";
-import { ComposerToolbar } from "./ComposerToolbar";
+import { ClipboardEvent, DragEvent, KeyboardEvent, useEffect, useRef } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { useResponsive } from '@/components/ResponsiveContext';
+import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
+import { Textarea } from '@/components/ui/textarea';
+import { toast } from '@/hooks/useToast';
+import { useChatSessionStore, useIsNewChat } from '@/features/sidebar/useChatSessionStore';
+import { submitMessage } from './submit-chat';
+import { useComposerStore } from './useComposerStore';
+import { ComposerToolbar } from './ComposerToolbar';
 
 declare global {
   interface Window {
@@ -28,13 +19,11 @@ declare global {
 export function Composer() {
   const navigate = useNavigate();
   const input = useComposerStore((state) => state.input);
-  const pendingAttachments = useComposerStore(
-    (state) => state.pendingAttachments,
-  );
+  const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
   const pendingQuotes = useComposerStore((state) => state.pendingQuotes);
   const uploading = useComposerStore((state) => state.uploading);
   const deviceType = useResponsive();
-  const isDesktop = deviceType === "desktop";
+  const isDesktop = deviceType === 'desktop';
   const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
@@ -48,7 +37,7 @@ export function Composer() {
     }
     delete window.__preHydrationInput;
     if (window.__preHydrationInputHandler) {
-      document.removeEventListener("input", window.__preHydrationInputHandler);
+      document.removeEventListener('input', window.__preHydrationInputHandler);
       delete window.__preHydrationInputHandler;
     }
   }, [setInput]);
@@ -64,7 +53,7 @@ export function Composer() {
       }
 
       const tag = (event.target as HTMLElement)?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
         return;
       }
 
@@ -75,27 +64,22 @@ export function Composer() {
       textareaRef.current?.focus();
     };
 
-    document.addEventListener("keydown", handleGlobalKeyDown);
-    return () => document.removeEventListener("keydown", handleGlobalKeyDown);
+    document.addEventListener('keydown', handleGlobalKeyDown);
+    return () => document.removeEventListener('keydown', handleGlobalKeyDown);
   }, []);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (
-      event.key === "Tab" &&
-      event.shiftKey &&
-      !event.ctrlKey &&
-      !event.metaKey
-    ) {
+    if (event.key === 'Tab' && event.shiftKey && !event.ctrlKey && !event.metaKey) {
       event.preventDefault();
       useChatSessionStore.getState().cyclePrompt();
       return;
     }
 
-    if (event.key === "Enter" && event.ctrlKey && !event.shiftKey) {
+    if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       void submitMessage((conversationId) =>
         navigate({
-          to: "/app/c/$conversationId",
+          to: '/app/c/$conversationId',
           params: { conversationId },
         }),
       );
@@ -114,7 +98,7 @@ export function Composer() {
       pastedFiles.push(...Array.from(clipboardData.files));
     } else if (clipboardData.items?.length) {
       for (const item of Array.from(clipboardData.items)) {
-        if (item.kind !== "file") {
+        if (item.kind !== 'file') {
           continue;
         }
 
@@ -132,7 +116,7 @@ export function Composer() {
     event.preventDefault();
 
     if (uploading) {
-      toast.info("Attachments are still uploading. Please wait.");
+      toast.info('Attachments are still uploading. Please wait.');
       return;
     }
 
@@ -141,7 +125,7 @@ export function Composer() {
 
   const handleDragOver = (event: DragEvent) => {
     event.preventDefault();
-    event.dataTransfer.dropEffect = "copy";
+    event.dataTransfer.dropEffect = 'copy';
   };
 
   const handleDrop = (event: DragEvent) => {
@@ -149,7 +133,7 @@ export function Composer() {
     const files = Array.from(event.dataTransfer.files ?? []);
     if (!files.length) return;
     if (uploading) {
-      toast.info("Attachments are still uploading. Please wait.");
+      toast.info('Attachments are still uploading. Please wait.');
       return;
     }
     void addAttachments(files);
@@ -158,13 +142,13 @@ export function Composer() {
   const isNewChat = useIsNewChat();
 
   const composerBoxClass =
-    "relative z-10 flex w-full flex-col gap-2 rounded-xl bg-(--sidebar-surface) p-2 shadow-sm transition-shadow duration-200 focus-within:shadow-md";
+    'relative z-10 flex w-full flex-col gap-2 rounded-xl bg-(--sidebar-surface) p-2 shadow-sm transition-shadow duration-200 focus-within:shadow-md';
 
   const textarea = (
     <Textarea
       ref={textareaRef}
-      id="message-input"
-      name="message"
+      id='message-input'
+      name='message'
       value={input}
       onChange={(event) => {
         setInput(event.target.value);
@@ -172,18 +156,18 @@ export function Composer() {
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
       rows={1}
-      placeholder="Type your message..."
-      enterKeyHint={isDesktop ? undefined : "enter"}
-      className="min-h-9 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:text-base"
+      placeholder='Type your message...'
+      enterKeyHint={isDesktop ? undefined : 'enter'}
+      className='min-h-9 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:text-base'
     />
   );
 
-  const widthClass = "w-[90%] max-w-full @[921px]:w-[50%] @[921px]:max-w-2xl";
+  const widthClass = 'w-[90%] max-w-full @[921px]:w-[50%] @[921px]:max-w-2xl';
 
   if (isNewChat) {
     return (
       <div
-        key="composer-initial"
+        key='composer-initial'
         className={`mx-auto flex flex-1 flex-col items-center justify-center py-8 ${widthClass}`}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -195,7 +179,7 @@ export function Composer() {
           onRemoveQuote={removeQuote}
         />
         <div className={composerBoxClass}>
-          <div className="flex w-full items-end gap-2">{textarea}</div>
+          <div className='flex w-full items-end gap-2'>{textarea}</div>
           <ComposerToolbar />
         </div>
       </div>
@@ -204,11 +188,11 @@ export function Composer() {
 
   return (
     <div
-      key="composer-wrapper"
-      className="pointer-events-none absolute inset-x-0 bottom-0 z-(--z-composer) pb-3 md:pb-4"
+      key='composer-wrapper'
+      className='pointer-events-none absolute inset-x-0 bottom-0 z-(--z-composer) pb-3 md:pb-4'
     >
       <div
-        key="composer-bottom"
+        key='composer-bottom'
         className={`pointer-events-auto relative mx-auto flex flex-col gap-2 ${widthClass}`}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -220,7 +204,7 @@ export function Composer() {
           onRemoveQuote={removeQuote}
         />
         <div className={composerBoxClass}>
-          <div className="flex w-full items-end gap-2">{textarea}</div>
+          <div className='flex w-full items-end gap-2'>{textarea}</div>
           <ComposerToolbar />
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { getServerEnv } from "@/server/env";
+import { getServerEnv } from '@/server/env';
 
 const toJsonSafe = (value: unknown): unknown => {
   if (value instanceof Error) {
@@ -17,7 +17,7 @@ const toJsonSafe = (value: unknown): unknown => {
     try {
       return String(value);
     } catch {
-      return "[Unserializable]";
+      return '[Unserializable]';
     }
   }
 };
@@ -40,43 +40,39 @@ export const log = (category: string, message: string, data?: unknown) => {
   emitLog(entry);
 };
 
-export type LlmProvider =
-  | "anthropic"
-  | "openai"
-  | "openai-responses"
-  | "gemini";
+export type LlmProvider = 'anthropic' | 'openai' | 'openai-responses' | 'gemini';
 
 const LLM_PROVIDER_CATEGORY: Record<LlmProvider, string> = {
-  anthropic: "ANTHROPIC",
-  openai: "OPENAI",
-  "openai-responses": "OPENAI_RESPONSES",
-  gemini: "GEMINI",
+  anthropic: 'ANTHROPIC',
+  openai: 'OPENAI',
+  'openai-responses': 'OPENAI_RESPONSES',
+  gemini: 'GEMINI',
 };
 
-const ALL_PROVIDER_TOKENS = new Set(["1", "true", "yes", "on", "all", "*"]);
-const DISABLED_PROVIDER_TOKENS = new Set(["0", "false", "no", "off"]);
+const ALL_PROVIDER_TOKENS = new Set(['1', 'true', 'yes', 'on', 'all', '*']);
+const DISABLED_PROVIDER_TOKENS = new Set(['0', 'false', 'no', 'off']);
 
 const normalizeProviderToken = (value: string): string => {
   return value
     .trim()
     .toLowerCase()
-    .replace(/[_\s]+/g, "-");
+    .replace(/[_\s]+/g, '-');
 };
 
 const parseProviderToken = (value: string): LlmProvider | null => {
   const token = normalizeProviderToken(value);
 
   if (
-    token === "anthropic" ||
-    token === "openai" ||
-    token === "openai-responses" ||
-    token === "gemini"
+    token === 'anthropic' ||
+    token === 'openai' ||
+    token === 'openai-responses' ||
+    token === 'gemini'
   ) {
     return token;
   }
 
-  if (token === "openairesponses" || token === "responses") {
-    return "openai-responses";
+  if (token === 'openairesponses' || token === 'responses') {
+    return 'openai-responses';
   }
 
   return null;
@@ -91,28 +87,26 @@ const redactSensitiveData = (value: unknown): unknown => {
     return value.map((item) => redactSensitiveData(item));
   }
 
-  if (!value || typeof value !== "object") {
+  if (!value || typeof value !== 'object') {
     return value;
   }
 
   return Object.fromEntries(
     Object.entries(value).map(([key, itemValue]) => [
       key,
-      shouldRedactKey(key) ? "[REDACTED]" : redactSensitiveData(itemValue),
+      shouldRedactKey(key) ? '[REDACTED]' : redactSensitiveData(itemValue),
     ]),
   );
 };
 
-export const shouldLogProviderCommunication = (
-  provider: LlmProvider,
-): boolean => {
+export const shouldLogProviderCommunication = (provider: LlmProvider): boolean => {
   const rawValue = getServerEnv().LLM_STREAM_LOGGING;
   if (!rawValue) {
     return false;
   }
 
   const tokens = rawValue
-    .split(",")
+    .split(',')
     .map((item) => normalizeProviderToken(item))
     .filter((item) => item.length > 0);
 

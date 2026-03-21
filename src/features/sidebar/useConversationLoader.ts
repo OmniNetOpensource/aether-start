@@ -11,18 +11,18 @@
  *
  * 使用场景：/app/c/$conversationId 路由下的 ConversationPage
  */
-import { useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import {
   resetLastEventId,
   cancelStreamSubscription,
   resumeRunningConversation,
-} from "@/features/chat/request/chat-orchestrator";
-import { useEditingStore } from "@/features/chat/editing/useEditingStore";
-import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
-import { getConversationFn } from "@/server/functions/conversations";
-import { buildCurrentPath } from "./tree/message-tree";
-import type { Message } from "@/types/message";
+} from '@/features/chat/request/chat-orchestrator';
+import { useEditingStore } from '@/features/chat/editing/useEditingStore';
+import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import { getConversationFn } from '@/server/functions/conversations';
+import { buildCurrentPath } from './tree/message-tree';
+import type { Message } from '@/types/message';
 
 /**
  * @param loadingConversationId - 当前路由参数中的对话 ID（来自 /app/c/$conversationId）
@@ -30,18 +30,12 @@ import type { Message } from "@/types/message";
  */
 export function useConversationLoader(loadingConversationId: string) {
   const navigate = useNavigate();
-  const currentConversationId = useChatSessionStore(
-    (state) => state.conversationId,
-  );
+  const currentConversationId = useChatSessionStore((state) => state.conversationId);
   const initializeTree = useChatSessionStore((state) => state.initializeTree);
-  const setConversationId = useChatSessionStore(
-    (state) => state.setConversationId,
-  );
+  const setConversationId = useChatSessionStore((state) => state.setConversationId);
   const setArtifacts = useChatSessionStore((state) => state.setArtifacts);
 
-  const [isLoading, setIsLoading] = useState(
-    currentConversationId !== loadingConversationId,
-  );
+  const [isLoading, setIsLoading] = useState(currentConversationId !== loadingConversationId);
 
   /**
    * 主 effect：加载对话或恢复流式续传
@@ -63,7 +57,7 @@ export function useConversationLoader(loadingConversationId: string) {
         if (cancelled) return;
 
         if (!conversation) {
-          navigate({ to: "/404", replace: true });
+          navigate({ to: '/404', replace: true });
           return;
         }
 
@@ -77,19 +71,15 @@ export function useConversationLoader(loadingConversationId: string) {
         initializeTree(messages, currentPath);
         setArtifacts(conversation.artifacts ?? []);
         const store = useChatSessionStore.getState();
-        const roleId =
-          conversation.role ??
-          store.currentRole ??
-          store.availableRoles[0]?.id ??
-          "";
+        const roleId = conversation.role ?? store.currentRole ?? store.availableRoles[0]?.id ?? '';
         store.setCurrentRole(roleId);
         setIsLoading(false);
         void resumeRunningConversation(loadingConversationId);
       })
       .catch((error) => {
         if (cancelled) return;
-        console.error("Failed to load conversation:", error);
-        navigate({ to: "/404", replace: true });
+        console.error('Failed to load conversation:', error);
+        navigate({ to: '/404', replace: true });
       });
 
     return () => {
@@ -105,11 +95,10 @@ export function useConversationLoader(loadingConversationId: string) {
   ]);
 
   const title = useChatSessionStore(
-    (state) =>
-      state.conversations.find((c) => c.id === loadingConversationId)?.title,
+    (state) => state.conversations.find((c) => c.id === loadingConversationId)?.title,
   );
 
-  const defaultTitle = "Aether";
+  const defaultTitle = 'Aether';
   // 同步更新 document.title，离开时由下方 effect cleanup 恢复
   // eslint-disable-next-line -- intentionally sync
   document.title = title

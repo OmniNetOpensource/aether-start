@@ -17,11 +17,7 @@ const isWideCodePoint = (value: number) =>
     (value >= 0x1f200 && value <= 0x1f251) ||
     (value >= 0x20000 && value <= 0x3fffd));
 
-export const truncateTextByWidth = (
-  value: string,
-  limit: number,
-  suffix = '',
-) => {
+export const truncateTextByWidth = (value: string, limit: number, suffix = '') => {
   let width = 0;
   let result = '';
 

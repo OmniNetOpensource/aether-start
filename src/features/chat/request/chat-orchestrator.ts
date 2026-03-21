@@ -12,22 +12,22 @@
  * 与 chat-agent 服务端配合，通过 SSE 接收 chat_event、chat_started、chat_finished 等事件，
  * 并调用 event-handlers 中的 applyChatEventToTree 更新 UI 状态。
  */
-import { toast } from "@/hooks/useToast";
-import { applyChatEventToTree } from "./event-handlers";
-import { useChatRequestStore } from "./useChatRequestStore";
-import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
-import type { SerializedMessage } from "@/types/message";
-import type { ChatAgentStatus, MessageTreeSnapshot } from "@/types/chat-api";
-import type { ChatServerToClientEvent } from "@/types/chat-event-types";
+import { toast } from '@/hooks/useToast';
+import { applyChatEventToTree } from './event-handlers';
+import { useChatRequestStore } from './useChatRequestStore';
+import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import type { SerializedMessage } from '@/types/message';
+import type { ChatAgentStatus, MessageTreeSnapshot } from '@/types/chat-api';
+import type { ChatServerToClientEvent } from '@/types/chat-event-types';
 
 /** Agent 路由名，对应 /agents/chat-agent */
-const AGENT_NAME = "chat-agent";
+const AGENT_NAME = 'chat-agent';
 /** 对话已在生成回复时的提示文案 */
-const BUSY_WARNING = "This conversation is already generating a response.";
+const BUSY_WARNING = 'This conversation is already generating a response.';
 /** 未选择角色时的提示文案 */
-const SELECT_ROLE_WARNING = "Select a role before sending a message.";
+const SELECT_ROLE_WARNING = 'Select a role before sending a message.';
 /** 配额超限时的默认提示文案 */
-const QUOTA_EXCEEDED_MESSAGE = "Quota exceeded.";
+const QUOTA_EXCEEDED_MESSAGE = 'Quota exceeded.';
 
 /**
  * 已处理的最大 eventId，用于去重和断点续传。
@@ -52,11 +52,8 @@ let activeController: AbortController | null = null;
  */
 const resolveAgentBaseUrl = () => {
   const protocol =
-    typeof window !== "undefined" && window.location.protocol === "https:"
-      ? "https"
-      : "http";
-  const host =
-    typeof window !== "undefined" ? window.location.host : "localhost:3000";
+    typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'https' : 'http';
+  const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3000';
   return `${protocol}://${host}/agents/${AGENT_NAME}`;
 };
 
@@ -64,25 +61,25 @@ const resolveAgentBaseUrl = () => {
  * 生成唯一 ID。
  * 优先用 crypto.randomUUID()，不支持时用 prefix + 时间戳 + 随机数。
  */
-const generateId = (prefix = "id") =>
-  typeof crypto !== "undefined" && crypto.randomUUID
+const generateId = (prefix = 'id') =>
+  typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `${prefix}_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 /** 判断是否为 AbortController 触发的取消错误，用于静默忽略用户主动停止 */
 const isAbortError = (error: unknown) =>
-  (error instanceof DOMException && error.name === "AbortError") ||
-  (error instanceof Error && error.name === "AbortError");
+  (error instanceof DOMException && error.name === 'AbortError') ||
+  (error instanceof Error && error.name === 'AbortError');
 
 /**
  * 流结束后的收尾逻辑。
  * 若当前状态不是 idle（说明流异常结束），则设为 idle 并 toast 提示。
  */
 const finalizeStream = () => {
-  if (useChatRequestStore.getState().status !== "idle") {
-    toast.error("连接中断");
+  if (useChatRequestStore.getState().status !== 'idle') {
+    toast.error('连接中断');
   }
-  useChatRequestStore.getState().setStatus("idle", "finalizeStream");
+  useChatRequestStore.getState().setStatus('idle', 'finalizeStream');
 };
 
 /**
@@ -101,34 +98,28 @@ const handleSSEMessage = (event: string, raw: string) => {
   const { setStatus } = useChatRequestStore.getState();
 
   switch (event) {
-    case "chat_event": {
+    case 'chat_event': {
       /* 单条聊天事件：需带 eventId 且大于 lastEventId 才处理，避免重复 */
-      if (typeof payload.eventId !== "number") return;
+      if (typeof payload.eventId !== 'number') return;
       if (payload.eventId <= lastEventId) return;
       lastEventId = payload.eventId;
-      setStatus("streaming", "chat_event");
+      setStatus('streaming', 'chat_event');
       applyChatEventToTree(payload.event as ChatServerToClientEvent);
       return;
     }
-    case "chat_started":
-      setStatus("streaming", "chat_started");
+    case 'chat_started':
+      setStatus('streaming', 'chat_started');
       return;
-    case "chat_finished":
-      setStatus("idle", "chat_finished");
+    case 'chat_finished':
+      setStatus('idle', 'chat_finished');
       return;
-    case "sync_response": {
+    case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
-      setStatus(
-        payload.status === "running" ? "streaming" : "idle",
-        "sync_response",
-      );
+      setStatus(payload.status === 'running' ? 'streaming' : 'idle', 'sync_response');
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
           const record = item as Record<string, unknown>;
-          if (
-            typeof record.eventId === "number" &&
-            record.eventId > lastEventId
-          ) {
+          if (typeof record.eventId === 'number' && record.eventId > lastEventId) {
             lastEventId = record.eventId;
             applyChatEventToTree(record.event as ChatServerToClientEvent);
           }
@@ -136,19 +127,19 @@ const handleSSEMessage = (event: string, raw: string) => {
       }
       return;
     }
-    case "busy":
+    case 'busy':
       toast.warning(BUSY_WARNING);
-      setStatus("streaming", "busy");
+      setStatus('streaming', 'busy');
       return;
-    case "conversation_update":
+    case 'conversation_update':
       /* 对话元数据更新（如标题），转为 conversation_updated 事件应用 */
       if (
-        typeof payload.conversationId === "string" &&
-        typeof payload.title === "string" &&
-        typeof payload.updated_at === "string"
+        typeof payload.conversationId === 'string' &&
+        typeof payload.title === 'string' &&
+        typeof payload.updated_at === 'string'
       ) {
         applyChatEventToTree({
-          type: "conversation_updated",
+          type: 'conversation_updated',
           conversationId: payload.conversationId,
           title: payload.title,
           updated_at: payload.updated_at,
@@ -171,33 +162,33 @@ const consumeStreamResponse = async (response: Response) => {
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
-  let buffer = "";
+  let buffer = '';
 
   /** 从 buffer 中按 \n\n 切出完整事件块，解析并分发 */
   const flush = () => {
-    let boundaryIndex = buffer.indexOf("\n\n");
+    let boundaryIndex = buffer.indexOf('\n\n');
     while (boundaryIndex >= 0) {
       const block = buffer.slice(0, boundaryIndex);
       buffer = buffer.slice(boundaryIndex + 2);
-      boundaryIndex = buffer.indexOf("\n\n");
+      boundaryIndex = buffer.indexOf('\n\n');
 
       if (!block.trim()) continue;
 
-      let event = "message";
+      let event = 'message';
       const dataLines: string[] = [];
 
-      for (const line of block.split("\n")) {
-        if (line.startsWith("event:")) {
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event:')) {
           event = line.slice(6).trimStart();
           continue;
         }
-        if (line.startsWith("data:")) {
+        if (line.startsWith('data:')) {
           dataLines.push(line.slice(5).trimStart());
         }
       }
 
       if (dataLines.length > 0) {
-        handleSSEMessage(event, dataLines.join("\n"));
+        handleSSEMessage(event, dataLines.join('\n'));
       }
     }
   };
@@ -206,10 +197,10 @@ const consumeStreamResponse = async (response: Response) => {
     while (!signal?.aborted) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, "\n");
+      buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
       flush();
     }
-    buffer += decoder.decode().replace(/\r\n/g, "\n");
+    buffer += decoder.decode().replace(/\r\n/g, '\n');
     flush();
   } finally {
     reader.cancel().catch(() => {});
@@ -225,26 +216,25 @@ export const checkAgentStatus = async (
   conversationId: string,
 ): Promise<{ status: ChatAgentStatus }> => {
   const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}`, {
-    method: "GET",
-    credentials: "include",
+    method: 'GET',
+    credentials: 'include',
   });
 
-  if (response.status === 404) return { status: "idle" };
-  if (!response.ok)
-    throw new Error(`Agent status probe failed: ${response.status}`);
+  if (response.status === 404) return { status: 'idle' };
+  if (!response.ok) throw new Error(`Agent status probe failed: ${response.status}`);
 
   const data = (await response.json()) as Record<string, unknown>;
   const status = data.status;
 
   return {
     status:
-      status === "idle" ||
-      status === "running" ||
-      status === "completed" ||
-      status === "aborted" ||
-      status === "error"
+      status === 'idle' ||
+      status === 'running' ||
+      status === 'completed' ||
+      status === 'aborted' ||
+      status === 'error'
         ? status
-        : "idle",
+        : 'idle',
   };
 };
 
@@ -265,7 +255,7 @@ export const startChatRequest = async () => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
-  if (requestStore.status !== "idle") return;
+  if (requestStore.status !== 'idle') return;
 
   resetLastEventId();
 
@@ -276,12 +266,10 @@ export const startChatRequest = async () => {
 
   const messages = sessionStore.getMessagesFromPath();
   const conversationId = sessionStore.conversationId;
-  const idempotencyKey = generateId("msg"); /* 幂等键，防止重复提交 */
+  const idempotencyKey = generateId('msg'); /* 幂等键，防止重复提交 */
 
   /* 消息树快照，供服务端做分支/上下文对齐 */
-  const treeSnapshot: MessageTreeSnapshot = useChatSessionStore
-    .getState()
-    .getTreeState();
+  const treeSnapshot: MessageTreeSnapshot = useChatSessionStore.getState().getTreeState();
 
   const body = {
     idempotencyKey,
@@ -300,27 +288,22 @@ export const startChatRequest = async () => {
 
   activeController?.abort(); /* 取消之前的请求，保证同一时刻只有一个在跑 */
   activeController = new AbortController();
-  requestStore.setStatus("sending", "startChatRequest");
+  requestStore.setStatus('sending', 'startChatRequest');
 
   try {
-    const response = await fetch(
-      `${resolveAgentBaseUrl()}/${conversationId}/chat`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify(body),
-        signal: activeController.signal,
-      },
-    );
+    const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify(body),
+      signal: activeController.signal,
+    });
 
     if (response.status === 409) {
       /* 服务端已有该对话的活跃流，视为 busy */
       await response.json().catch(() => ({}));
       toast.warning(BUSY_WARNING);
-      useChatRequestStore
-        .getState()
-        .setStatus("streaming", "startChatRequest/409_busy");
+      useChatRequestStore.getState().setStatus('streaming', 'startChatRequest/409_busy');
       return;
     }
 
@@ -328,15 +311,10 @@ export const startChatRequest = async () => {
       /* 配额超限，写入 error 事件并恢复 idle */
       const data = (await response.json()) as Record<string, unknown>;
       applyChatEventToTree({
-        type: "error",
-        message:
-          typeof data.message === "string"
-            ? data.message
-            : QUOTA_EXCEEDED_MESSAGE,
+        type: 'error',
+        message: typeof data.message === 'string' ? data.message : QUOTA_EXCEEDED_MESSAGE,
       });
-      useChatRequestStore
-        .getState()
-        .setStatus("idle", "startChatRequest/402_quota");
+      useChatRequestStore.getState().setStatus('idle', 'startChatRequest/402_quota');
       return;
     }
 
@@ -345,13 +323,9 @@ export const startChatRequest = async () => {
   } catch (error) {
     if (isAbortError(error)) return;
 
-    useChatRequestStore.getState().setStatus("idle", "startChatRequest/error");
+    useChatRequestStore.getState().setStatus('idle', 'startChatRequest/error');
     toast.error(
-      error instanceof TypeError
-        ? "连接中断"
-        : error instanceof Error
-          ? error.message
-          : "请求失败",
+      error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败',
     );
   } finally {
     activeController = null;
@@ -366,7 +340,7 @@ export const cancelStreamSubscription = () => {
   activeController?.abort();
   activeController = null;
 
-  useChatRequestStore.getState().setStatus("idle", "cancelStreamSubscription");
+  useChatRequestStore.getState().setStatus('idle', 'cancelStreamSubscription');
 };
 
 /**
@@ -378,9 +352,9 @@ export const cancelAnswering = () => {
   const conversationId = useChatSessionStore.getState().conversationId;
   if (conversationId) {
     fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     }).catch(() => {});
   }
@@ -407,28 +381,23 @@ export const resumeRunningConversation = async (conversationId: string) => {
     return;
   }
 
-  if (agentStatus.status !== "running") {
+  if (agentStatus.status !== 'running') {
     return;
   }
 
   const controller = new AbortController();
   activeController = controller;
 
-  useChatRequestStore
-    .getState()
-    .setStatus("sending", "resumeRunningConversation");
+  useChatRequestStore.getState().setStatus('sending', 'resumeRunningConversation');
 
   try {
-    const response = await fetch(
-      `${resolveAgentBaseUrl()}/${conversationId}/events`,
-      {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ lastEventId }),
-        signal: controller.signal,
-      },
-    );
+    const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/events`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lastEventId }),
+      signal: controller.signal,
+    });
 
     await consumeStreamResponse(response);
 
@@ -436,15 +405,9 @@ export const resumeRunningConversation = async (conversationId: string) => {
   } catch (error) {
     if (isAbortError(error)) return;
 
-    useChatRequestStore
-      .getState()
-      .setStatus("idle", "resumeRunningConversation/error");
+    useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/error');
     toast.error(
-      error instanceof TypeError
-        ? "连接中断"
-        : error instanceof Error
-          ? error.message
-          : "请求失败",
+      error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败',
     );
   } finally {
     if (activeController === controller) {

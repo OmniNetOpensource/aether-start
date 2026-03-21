@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Background,
   BackgroundVariant,
@@ -8,16 +8,16 @@ import {
   type Edge,
   type Node,
   type NodeProps,
-} from "@xyflow/react";
-import "@xyflow/react/dist/style.css";
-import { GitBranch } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
-import { useChatRequestStore } from "@/features/chat/request/useChatRequestStore";
-import { useChatSessionStore } from "@/features/sidebar/useChatSessionStore";
-import type { Message } from "@/types/message";
-import { buildOutlineTree, type OutlineNode } from "./build-outline-tree";
-import { truncateTextByWidth } from "./preview-text";
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import { GitBranch } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
+import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import type { Message } from '@/types/message';
+import { buildOutlineTree, type OutlineNode } from './build-outline-tree';
+import { truncateTextByWidth } from './preview-text';
 
 const NODE_W = 160;
 const NODE_H = 56;
@@ -26,7 +26,7 @@ const GAP_Y = 56;
 const SCROLL_RETRY_FRAMES = 4;
 
 type MessageNodeData = {
-  role: Message["role"];
+  role: Message['role'];
   preview: string;
   fullPreview: string;
   siblingIndex: number;
@@ -36,10 +36,7 @@ type MessageNodeData = {
 
 // ── Layout ──────────────────────────────────────────────────────────
 
-const measureWidth = (
-  node: OutlineNode,
-  cache: Map<number, number>,
-): number => {
+const measureWidth = (node: OutlineNode, cache: Map<number, number>): number => {
   const cached = cache.get(node.messageId);
   if (cached !== undefined) return cached;
 
@@ -69,8 +66,7 @@ const buildFlowElements = (
 
     if (node.children.length > 0) {
       const childrenW = node.children.reduce(
-        (s, c, i) =>
-          s + (i > 0 ? GAP_X : 0) + (cache.get(c.messageId) ?? NODE_W),
+        (s, c, i) => s + (i > 0 ? GAP_X : 0) + (cache.get(c.messageId) ?? NODE_W),
         0,
       );
       let cursor = startX + (subtreeW - childrenW) / 2;
@@ -93,13 +89,13 @@ const buildFlowElements = (
 
     nodes.push({
       id: String(node.messageId),
-      type: "message",
+      type: 'message',
       position: { x, y },
       width: NODE_W,
       height: NODE_H,
       data: {
         role: node.role,
-        preview: truncateTextByWidth(node.preview, 20, "..."),
+        preview: truncateTextByWidth(node.preview, 20, '...'),
         fullPreview: node.fullPreview,
         siblingIndex: node.siblingIndex,
         siblingCount: node.siblingCount,
@@ -115,9 +111,7 @@ const buildFlowElements = (
         source: String(node.messageId),
         target: String(child.id),
         style: {
-          stroke: pathEdge
-            ? "var(--interactive-primary)"
-            : "var(--border-primary)",
+          stroke: pathEdge ? 'var(--interactive-primary)' : 'var(--border-primary)',
           strokeWidth: pathEdge ? 2 : 1.2,
           opacity: pathEdge ? 1 : 0.5,
         },
@@ -140,61 +134,53 @@ const buildFlowElements = (
 
 const invisibleHandle: React.CSSProperties = {
   opacity: 0,
-  pointerEvents: "none",
+  pointerEvents: 'none',
   width: 1,
   height: 1,
 };
 
-const roleLabel: Record<Message["role"], string> = {
-  user: "User",
-  assistant: "Assistant",
+const roleLabel: Record<Message['role'], string> = {
+  user: 'User',
+  assistant: 'Assistant',
 };
 
-function MessageNode({
-  data,
-}: NodeProps<Node<MessageNodeData, "message">>) {
+function MessageNode({ data }: NodeProps<Node<MessageNodeData, 'message'>>) {
   const meta = data.isOnPath
-    ? "color-mix(in srgb, var(--text-primary) 72%, var(--surface-primary))"
-    : "var(--text-tertiary)";
+    ? 'color-mix(in srgb, var(--text-primary) 72%, var(--surface-primary))'
+    : 'var(--text-tertiary)';
 
   return (
     <div
-      className="cursor-pointer rounded-[10px] px-3.5 py-2 shadow-sm transition-shadow hover:shadow-md"
+      className='cursor-pointer rounded-[10px] px-3.5 py-2 shadow-sm transition-shadow hover:shadow-md'
       style={{
         width: NODE_W,
         height: NODE_H,
         background: data.isOnPath
-          ? "color-mix(in srgb, var(--interactive-primary) 12%, var(--surface-primary))"
-          : "var(--surface-secondary)",
+          ? 'color-mix(in srgb, var(--interactive-primary) 12%, var(--surface-primary))'
+          : 'var(--surface-secondary)',
       }}
       title={`${roleLabel[data.role]}: ${data.fullPreview}`}
     >
-      <Handle type="target" position={Position.Top} style={invisibleHandle} />
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-semibold" style={{ color: meta }}>
+      <Handle type='target' position={Position.Top} style={invisibleHandle} />
+      <div className='flex items-center justify-between'>
+        <span className='text-[10px] font-semibold' style={{ color: meta }}>
           {roleLabel[data.role]}
         </span>
         {data.siblingCount > 1 && (
-          <span className="text-[9px]" style={{ color: meta }}>
+          <span className='text-[9px]' style={{ color: meta }}>
             {data.siblingIndex}/{data.siblingCount}
           </span>
         )}
       </div>
       <div
-        className="mt-0.5 truncate text-[11px] font-medium"
+        className='mt-0.5 truncate text-[11px] font-medium'
         style={{
-          color: data.isOnPath
-            ? "var(--text-primary)"
-            : "var(--text-secondary)",
+          color: data.isOnPath ? 'var(--text-primary)' : 'var(--text-secondary)',
         }}
       >
         {data.preview}
       </div>
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        style={invisibleHandle}
-      />
+      <Handle type='source' position={Position.Bottom} style={invisibleHandle} />
     </div>
   );
 }
@@ -206,11 +192,9 @@ const nodeTypes = { message: MessageNode };
 const scrollToMessage = (messageId: number) => {
   let attempts = 0;
   const tryScroll = () => {
-    const el = document.querySelector<HTMLElement>(
-      `[data-message-id="${messageId}"]`,
-    );
+    const el = document.querySelector<HTMLElement>(`[data-message-id="${messageId}"]`);
     if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
       return;
     }
     if (attempts++ < SCROLL_RETRY_FRAMES) requestAnimationFrame(tryScroll);
@@ -235,14 +219,14 @@ function OutlineGraph({
 
   if (nodes.length === 0) {
     return (
-      <div className="flex h-60 items-center justify-center rounded-md border border-(--border-primary) text-xs text-(--text-tertiary)">
+      <div className='flex h-60 items-center justify-center rounded-md border border-(--border-primary) text-xs text-(--text-tertiary)'>
         No messages yet.
       </div>
     );
   }
 
   return (
-    <div className="h-[70vh] rounded-md border border-(--border-primary)">
+    <div className='h-[70vh] rounded-md border border-(--border-primary)'>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -257,13 +241,13 @@ function OutlineGraph({
         elementsSelectable={false}
         minZoom={0.15}
         maxZoom={3}
-        style={{ background: "var(--surface-primary)" }}
+        style={{ background: 'var(--surface-primary)' }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}
           size={0.8}
-          color="var(--border-primary)"
+          color='var(--border-primary)'
         />
       </ReactFlow>
     </div>
@@ -276,7 +260,7 @@ export function OutlineButton() {
   const currentPath = useChatSessionStore((s) => s.currentPath);
   const latestRootId = useChatSessionStore((s) => s.latestRootId);
   const selectMessage = useChatSessionStore((s) => s.selectMessage);
-  const isBusy = useChatRequestStore((s) => s.status) !== "idle";
+  const isBusy = useChatRequestStore((s) => s.status) !== 'idle';
 
   const roots = open ? buildOutlineTree(messages, latestRootId).roots : null;
 
@@ -292,23 +276,23 @@ export function OutlineButton() {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button
-          type="button"
-          variant="ghost"
-          size="icon-sm"
-          className="rounded-lg"
-          aria-label="Open conversation outline"
+          type='button'
+          variant='ghost'
+          size='icon-sm'
+          className='rounded-lg'
+          aria-label='Open conversation outline'
           title={
             isBusy
-              ? "Outline is unavailable while a response is streaming."
-              : "Open conversation outline"
+              ? 'Outline is unavailable while a response is streaming.'
+              : 'Open conversation outline'
           }
           disabled={!hasMessages || isBusy}
         >
-          <GitBranch className="h-4 w-4" />
+          <GitBranch className='h-4 w-4' />
         </Button>
       </DialogTrigger>
       <DialogContent
-        className="w-[min(94vw,72rem)] p-3 sm:max-w-4xl"
+        className='w-[min(94vw,72rem)] p-3 sm:max-w-4xl'
         showCloseButton
         data-outline-dialog
       >

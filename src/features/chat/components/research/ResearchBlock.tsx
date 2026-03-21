@@ -1,12 +1,12 @@
-import { Search, Globe, Wrench } from "lucide-react";
-import Markdown from "@/components/Markdown";
+import { Search, Globe, Wrench } from 'lucide-react';
+import Markdown from '@/components/Markdown';
 import {
   parseSearchClientPayload,
   SEARCH_TOOL_NAMES,
   type SearchClientResult,
-} from "@/features/chat/research/search-result-payload";
-import type { ResearchItem, Tool } from "@/types/message";
-import type { StepStatus } from "@/components/ui/chain-of-thought";
+} from '@/features/chat/research/search-result-payload';
+import type { ResearchItem, Tool } from '@/types/message';
+import type { StepStatus } from '@/components/ui/chain-of-thought';
 import {
   ChainOfThought,
   ChainOfThoughtHeader,
@@ -15,8 +15,8 @@ import {
   ChainOfThoughtSearchResults,
   ChainOfThoughtSearchResult,
   ChainOfThoughtImage,
-} from "@/components/ui/chain-of-thought";
-import { getToolLifecycle, getSearchResultCount } from "./research-utils";
+} from '@/components/ui/chain-of-thought';
+import { getToolLifecycle, getSearchResultCount } from './research-utils';
 
 type SearchResultBadge = SearchClientResult;
 
@@ -29,63 +29,53 @@ function parseSearchResults(rawResult: string): SearchResultBadge[] {
 function getStepStatus(tool: Tool, isActive: boolean): StepStatus {
   const { result } = getToolLifecycle(tool);
   if (!result) {
-    return isActive ? "active" : "pending";
+    return isActive ? 'active' : 'pending';
   }
-  return "complete";
+  return 'complete';
 }
 
 // Get status text for a tool
-function getStatusText(
-  tool: Tool,
-  isActive: boolean,
-  toolName: string,
-): string {
+function getStatusText(tool: Tool, isActive: boolean, toolName: string): string {
   const { result } = getToolLifecycle(tool);
 
   if (!result) {
-    if (!isActive) return "等待中...";
-    if (SEARCH_TOOL_NAMES.has(toolName)) return "搜索中...";
-    if (toolName === "fetch_url") return "获取中...";
-    return "执行中...";
+    if (!isActive) return '等待中...';
+    if (SEARCH_TOOL_NAMES.has(toolName)) return '搜索中...';
+    if (toolName === 'fetch_url') return '获取中...';
+    return '执行中...';
   }
 
-  const resultText = typeof result.result === "string" ? result.result : "";
+  const resultText = typeof result.result === 'string' ? result.result : '';
   const isError =
-    resultText.startsWith("Error") ||
-    (resultText.startsWith("[系统提示:") &&
-      (resultText.includes("内容过长") || resultText.includes("已省略不返回")));
+    resultText.startsWith('Error') ||
+    (resultText.startsWith('[系统提示:') &&
+      (resultText.includes('内容过长') || resultText.includes('已省略不返回')));
 
   if (isError) {
-    const errorSummary = resultText.startsWith("Error")
-      ? resultText.replace(/^Error:\s*/, "").split("\n")[0]
-      : "失败";
+    const errorSummary = resultText.startsWith('Error')
+      ? resultText.replace(/^Error:\s*/, '').split('\n')[0]
+      : '失败';
     return `失败 · ${errorSummary}`;
   }
 
   if (SEARCH_TOOL_NAMES.has(toolName)) {
     const count = getSearchResultCount(resultText);
-    if (typeof count === "number") {
+    if (typeof count === 'number') {
       return `完成 · ${count} 个结果`;
     }
   }
 
-  return "完成";
+  return '完成';
 }
 
 // Render a thinking step
-function ThinkingStep({
-  text,
-  hideConnector,
-}: {
-  text: string;
-  hideConnector: boolean;
-}) {
+function ThinkingStep({ text, hideConnector }: { text: string; hideConnector: boolean }) {
   return (
     <ChainOfThoughtStep
-      icon={<div className="h-2 w-2 rounded-full bg-current" />}
+      icon={<div className='h-2 w-2 rounded-full bg-current' />}
       hideConnector={hideConnector}
     >
-      <div className="text-xs text-(--text-secondary) [&_p]:m-0">
+      <div className='text-xs text-(--text-secondary) [&_p]:m-0'>
         <Markdown content={text} />
       </div>
     </ChainOfThoughtStep>
@@ -105,19 +95,19 @@ function SearchStep({
   stepKey: string;
 }) {
   const args = tool.call.args as Record<string, unknown>;
-  const query = typeof args.query === "string" ? args.query : "";
-  const description = query ? `Reading the web · ${query}` : "Reading the web";
+  const query = typeof args.query === 'string' ? args.query : '';
+  const description = query ? `Reading the web · ${query}` : 'Reading the web';
 
   const { result } = getToolLifecycle(tool);
   let searchResults: SearchResultBadge[] = [];
   if (result) {
-    const resultText = typeof result.result === "string" ? result.result : "";
+    const resultText = typeof result.result === 'string' ? result.result : '';
     searchResults = parseSearchResults(resultText);
   }
 
   return (
     <ChainOfThoughtStep
-      icon={<Search className="h-full w-full" />}
+      icon={<Search className='h-full w-full' />}
       description={description}
       status={getStepStatus(tool, isActive)}
       hideConnector={hideConnector}
@@ -125,11 +115,7 @@ function SearchStep({
       {searchResults.length > 0 && (
         <ChainOfThoughtSearchResults>
           {searchResults.map((r, i) => (
-            <ChainOfThoughtSearchResult
-              key={`${stepKey}-result-${i}`}
-              href={r.url}
-              url={r.url}
-            >
+            <ChainOfThoughtSearchResult key={`${stepKey}-result-${i}`} href={r.url} url={r.url}>
               {r.title}
             </ChainOfThoughtSearchResult>
           ))}
@@ -145,7 +131,7 @@ function parseFetchImageResult(tool: Tool): string | null {
   if (!result) return null;
   try {
     const parsed = JSON.parse(result.result);
-    if (parsed.type === "image" && typeof parsed.data_url === "string") {
+    if (parsed.type === 'image' && typeof parsed.data_url === 'string') {
       return parsed.data_url;
     }
   } catch {
@@ -165,30 +151,24 @@ function FetchStep({
   hideConnector: boolean;
 }) {
   const args = tool.call.args as Record<string, unknown>;
-  const url = typeof args.url === "string" ? args.url : "";
+  const url = typeof args.url === 'string' ? args.url : '';
   const stepStatus = getStepStatus(tool, isActive);
   const imageDataUrl = parseFetchImageResult(tool);
 
   const { result } = getToolLifecycle(tool);
-  const resultText = result
-    ? typeof result.result === "string"
-      ? result.result
-      : ""
-    : "";
+  const resultText = result ? (typeof result.result === 'string' ? result.result : '') : '';
   const isError =
     result &&
-    (resultText.startsWith("Error") ||
-      (resultText.startsWith("[系统提示:") &&
-        (resultText.includes("内容过长") ||
-          resultText.includes("已省略不返回"))));
+    (resultText.startsWith('Error') ||
+      (resultText.startsWith('[系统提示:') &&
+        (resultText.includes('内容过长') || resultText.includes('已省略不返回'))));
 
-  const suffix =
-    stepStatus === "complete" ? (isError ? "...failed." : "...done!") : "";
+  const suffix = stepStatus === 'complete' ? (isError ? '...failed.' : '...done!') : '';
   const description = `Take a closer look${suffix}`;
 
   return (
     <ChainOfThoughtStep
-      icon={<Globe className="h-full w-full" />}
+      icon={<Globe className='h-full w-full' />}
       description={description}
       status={stepStatus}
       hideConnector={hideConnector}
@@ -196,9 +176,9 @@ function FetchStep({
       {url && (
         <a
           href={url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-muted-foreground hover:text-(--interactive-primary-hover) transition-colors break-all"
+          target='_blank'
+          rel='noopener noreferrer'
+          className='text-xs text-muted-foreground hover:text-(--interactive-primary-hover) transition-colors break-all'
         >
           {url}
         </a>
@@ -224,7 +204,7 @@ function GenericToolStep({
 
   return (
     <ChainOfThoughtStep
-      icon={<Wrench className="h-full w-full" />}
+      icon={<Wrench className='h-full w-full' />}
       description={description}
       status={getStepStatus(tool, isActive)}
       hideConnector={hideConnector}
@@ -253,14 +233,8 @@ export function ResearchBlock({
           const stepKey = `${messageIndex}-${blockIndex}-${index}`;
           const isLastStep = index === items.length - 1;
 
-          if (item.kind === "thinking") {
-            return (
-              <ThinkingStep
-                key={stepKey}
-                text={item.text}
-                hideConnector={isLastStep}
-              />
-            );
+          if (item.kind === 'thinking') {
+            return <ThinkingStep key={stepKey} text={item.text} hideConnector={isLastStep} />;
           }
 
           const tool = item.data;
@@ -280,7 +254,7 @@ export function ResearchBlock({
             );
           }
 
-          if (toolName === "fetch_url") {
+          if (toolName === 'fetch_url') {
             return (
               <FetchStep
                 key={stepKey}

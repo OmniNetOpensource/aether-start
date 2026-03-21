@@ -1,9 +1,9 @@
-import { create } from "zustand";
-import { devtools } from "zustand/middleware";
+import { create } from 'zustand';
+import { devtools } from 'zustand/middleware';
 
-export type ChatStatus = "idle" | "sending" | "streaming";
+export type ChatStatus = 'idle' | 'sending' | 'streaming';
 
-export const initialChatRequestState = { status: "idle" as ChatStatus };
+export const initialChatRequestState = { status: 'idle' as ChatStatus };
 
 export const useChatRequestStore = create<{
   status: ChatStatus;
@@ -12,9 +12,8 @@ export const useChatRequestStore = create<{
   devtools(
     (set) => ({
       ...initialChatRequestState,
-      setStatus: (status, actionName) =>
-        set({ status }, false, actionName ?? "setStatus"),
+      setStatus: (status, actionName) => set({ status }, false, actionName ?? 'setStatus'),
     }),
-    { name: "ChatRequestStore" },
+    { name: 'ChatRequestStore' },
   ),
 );

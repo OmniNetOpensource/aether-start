@@ -1,69 +1,66 @@
-import Anthropic from '@anthropic-ai/sdk'
+import Anthropic from '@anthropic-ai/sdk';
 import {
   getModelConfig,
   getBackendConfig,
   TITLE_GENERATION_MODEL_ID,
-} from '@/server/agents/services/model-provider-config'
-import { getOpenAIClient } from '@/server/agents/services/openai'
-import { log } from '@/server/agents/services/logger'
+} from '@/server/agents/services/model-provider-config';
+import { getOpenAIClient } from '@/server/agents/services/openai';
+import { log } from '@/server/agents/services/logger';
 
-const FALLBACK_TITLE = 'New Chat'
+const FALLBACK_TITLE = 'New Chat';
 
 const sanitizeTitle = (value: string) => {
   return value
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/\s+/g, ' ')
-    .trim()
-}
-const CONVERSATION_TITLE_TIMEOUT_MS = 60_000
+    .trim();
+};
+const CONVERSATION_TITLE_TIMEOUT_MS = 60_000;
 
 const TITLE_PROMPT =
-  'Based on this conversation, generate a short title (max 10 chars, no quotes). Use the same language as the conversation.'
+  'Based on this conversation, generate a short title (max 10 chars, no quotes). Use the same language as the conversation.';
 
 export const generateTitleFromConversation = async (
   conversationTranscript: string,
 ): Promise<string> => {
-  const completeTitleGeneration = (
-    title: string,
-    data?: Record<string, unknown>,
-  ) => {
+  const completeTitleGeneration = (title: string, data?: Record<string, unknown>) => {
     log('TITLE', 'Title generation completed', {
       title,
       ...data,
-    })
-    return title
-  }
+    });
+    return title;
+  };
 
   if (!conversationTranscript.trim()) {
     return completeTitleGeneration(FALLBACK_TITLE, {
       usedFallback: true,
       reason: 'empty_transcript',
-    })
+    });
   }
 
-  const modelConfig = getModelConfig(TITLE_GENERATION_MODEL_ID)
+  const modelConfig = getModelConfig(TITLE_GENERATION_MODEL_ID);
   if (!modelConfig) {
     return completeTitleGeneration(FALLBACK_TITLE, {
       usedFallback: true,
       reason: 'missing_model_config',
       modelId: TITLE_GENERATION_MODEL_ID,
-    })
+    });
   }
 
-  let backendConfig: ReturnType<typeof getBackendConfig>
+  let backendConfig: ReturnType<typeof getBackendConfig>;
   try {
-    backendConfig = getBackendConfig(modelConfig.backend)
+    backendConfig = getBackendConfig(modelConfig.backend);
   } catch {
     return completeTitleGeneration(FALLBACK_TITLE, {
       usedFallback: true,
       reason: 'invalid_backend_config',
       modelId: modelConfig.id,
       backend: modelConfig.backend,
-    })
+    });
   }
 
-  const prompt = [TITLE_PROMPT, conversationTranscript].join('\n')
-  const signal = AbortSignal.timeout(CONVERSATION_TITLE_TIMEOUT_MS)
+  const prompt = [TITLE_PROMPT, conversationTranscript].join('\n');
+  const signal = AbortSignal.timeout(CONVERSATION_TITLE_TIMEOUT_MS);
   const requestLog = {
     modelId: modelConfig.id,
     model: modelConfig.model,
@@ -72,17 +69,17 @@ export const generateTitleFromConversation = async (
     max_tokens: 64,
     temperature: 0.2,
     prompt,
-  }
+  };
 
   try {
     if (modelConfig.format === 'anthropic') {
-      log('TITLE', 'Sending title generation request', requestLog)
+      log('TITLE', 'Sending title generation request', requestLog);
 
       const client = new Anthropic({
         apiKey: backendConfig.apiKey,
         baseURL: backendConfig.baseURL,
         defaultHeaders: backendConfig.defaultHeaders,
-      })
+      });
 
       const message = await client.messages.create(
         {
@@ -91,15 +88,11 @@ export const generateTitleFromConversation = async (
           messages: [{ role: 'user', content: prompt }],
         },
         { signal },
-      )
+      );
 
-      const textBlock = message.content.find((block) => block.type === 'text')
-      const rawTitle =
-        textBlock && 'text' in textBlock
-          ? String(textBlock.text).trim()
-          : ''
-      const title =
-        typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : ''
+      const textBlock = message.content.find((block) => block.type === 'text');
+      const rawTitle = textBlock && 'text' in textBlock ? String(textBlock.text).trim() : '';
+      const title = typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : '';
 
       log('TITLE', 'Received title generation response', {
         ...requestLog,
@@ -113,20 +106,20 @@ export const generateTitleFromConversation = async (
         },
         rawTitle,
         title,
-      })
+      });
 
-      const resolvedTitle = title || FALLBACK_TITLE
+      const resolvedTitle = title || FALLBACK_TITLE;
       return completeTitleGeneration(resolvedTitle, {
         modelId: modelConfig.id,
         backend: modelConfig.backend,
         usedFallback: !title,
         reason: title ? 'success' : 'empty_model_output',
-      })
+      });
     }
 
-    log('TITLE', 'Sending title generation request', requestLog)
+    log('TITLE', 'Sending title generation request', requestLog);
 
-    const client = getOpenAIClient(backendConfig)
+    const client = getOpenAIClient(backendConfig);
     const response = await client.chat.completions.create(
       {
         model: modelConfig.model,
@@ -138,11 +131,10 @@ export const generateTitleFromConversation = async (
         }),
       },
       { signal },
-    )
+    );
 
-    const rawTitle = response.choices?.[0]?.message?.content?.trim() ?? ''
-    const title =
-      typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : ''
+    const rawTitle = response.choices?.[0]?.message?.content?.trim() ?? '';
+    const title = typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : '';
 
     log('TITLE', 'Received title generation response', {
       ...requestLog,
@@ -159,28 +151,27 @@ export const generateTitleFromConversation = async (
       },
       rawTitle,
       title,
-    })
+    });
 
-    const resolvedTitle = title || FALLBACK_TITLE
+    const resolvedTitle = title || FALLBACK_TITLE;
     return completeTitleGeneration(resolvedTitle, {
       modelId: modelConfig.id,
       backend: modelConfig.backend,
       usedFallback: !title,
       reason: title ? 'success' : 'empty_model_output',
-    })
+    });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error)
+    const message = error instanceof Error ? error.message : String(error);
     log('TITLE', 'Title generation from conversation failed', {
       error: message,
       fullError: error,
-    })
+    });
     return completeTitleGeneration(FALLBACK_TITLE, {
       modelId: modelConfig.id,
       backend: modelConfig.backend,
       usedFallback: true,
       reason: 'request_failed',
       error: message,
-    })
+    });
   }
-}
+};

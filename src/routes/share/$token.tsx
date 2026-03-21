@@ -1,20 +1,20 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
-import { ReadonlyMessageList } from "@/features/share/components/ReadonlyMessageList";
-import { getPublicConversationShareFn } from "@/features/share/server/shares";
-import type { Message } from "@/types/message";
+import { Link, createFileRoute } from '@tanstack/react-router';
+import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
+import { ReadonlyMessageList } from '@/features/share/components/ReadonlyMessageList';
+import { getPublicConversationShareFn } from '@/features/share/server/shares';
+import type { Message } from '@/types/message';
 
 type PublicShareData = Awaited<ReturnType<typeof getPublicConversationShareFn>>;
-type ActivePublicShare = Extract<PublicShareData, { status: "active" }>;
-type SharedPageMessage = ActivePublicShare["snapshot"]["messages"][number];
+type ActivePublicShare = Extract<PublicShareData, { status: 'active' }>;
+type SharedPageMessage = ActivePublicShare['snapshot']['messages'][number];
 
 const toReadonlyMessage = (message: SharedPageMessage): Message =>
-  message.role === "user"
+  message.role === 'user'
     ? {
         id: message.id,
-        role: "user",
-        blocks: message.blocks as Extract<Message, { role: "user" }>["blocks"],
+        role: 'user',
+        blocks: message.blocks as Extract<Message, { role: 'user' }>['blocks'],
         createdAt: message.createdAt,
         parentId: null,
         prevSibling: null,
@@ -23,11 +23,8 @@ const toReadonlyMessage = (message: SharedPageMessage): Message =>
       }
     : {
         id: message.id,
-        role: "assistant",
-        blocks: message.blocks as Extract<
-          Message,
-          { role: "assistant" }
-        >["blocks"],
+        role: 'assistant',
+        blocks: message.blocks as Extract<Message, { role: 'assistant' }>['blocks'],
         createdAt: message.createdAt,
         parentId: null,
         prevSibling: null,
@@ -35,15 +32,15 @@ const toReadonlyMessage = (message: SharedPageMessage): Message =>
         latestChild: null,
       };
 
-export const Route = createFileRoute("/share/$token")({
+export const Route = createFileRoute('/share/$token')({
   head: () => ({
     meta: [
       {
-        name: "robots",
-        content: "noindex,nofollow",
+        name: 'robots',
+        content: 'noindex,nofollow',
       },
       {
-        title: "Aether 分享",
+        title: 'Aether 分享',
       },
     ],
   }),
@@ -55,9 +52,7 @@ function SharedConversationPage() {
   const [data, setData] = useState<PublicShareData | null>(null);
   const [loading, setLoading] = useState(true);
   const readonlyMessages: Message[] =
-    data?.status === "active"
-      ? data.snapshot.messages.map(toReadonlyMessage)
-      : [];
+    data?.status === 'active' ? data.snapshot.messages.map(toReadonlyMessage) : [];
 
   useEffect(() => {
     let cancelled = false;
@@ -72,9 +67,9 @@ function SharedConversationPage() {
           setData(result as PublicShareData);
         }
       } catch (error) {
-        console.error("Failed to load public share", error);
+        console.error('Failed to load public share', error);
         if (!cancelled) {
-          setData({ status: "not_found" } as PublicShareData);
+          setData({ status: 'not_found' } as PublicShareData);
         }
       } finally {
         if (!cancelled) {
@@ -92,28 +87,24 @@ function SharedConversationPage() {
 
   if (loading || !data) {
     return (
-      <main className="flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6">
-        <div className="flex items-center gap-2 text-(--text-secondary)">
-          <Loader2 className="h-4 w-4 animate-spin" />
+      <main className='flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6'>
+        <div className='flex items-center gap-2 text-(--text-secondary)'>
+          <Loader2 className='h-4 w-4 animate-spin' />
           加载分享中...
         </div>
       </main>
     );
   }
 
-  if (data.status === "not_found") {
+  if (data.status === 'not_found') {
     return (
-      <main className="flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6">
-        <div className="w-full max-w-md rounded-xl border border-border bg-background p-8 text-center">
-          <h1 className="text-2xl font-semibold text-(--text-primary)">
-            分享不存在
-          </h1>
-          <p className="mt-3 text-sm text-(--text-secondary)">
-            该链接无效，或已被删除。
-          </p>
+      <main className='flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6'>
+        <div className='w-full max-w-md rounded-xl border border-border bg-background p-8 text-center'>
+          <h1 className='text-2xl font-semibold text-(--text-primary)'>分享不存在</h1>
+          <p className='mt-3 text-sm text-(--text-secondary)'>该链接无效，或已被删除。</p>
           <Link
-            to="/"
-            className="mt-6 inline-flex items-center rounded-lg bg-(--interactive-primary) px-4 py-2 text-sm text-(--surface-primary) hover:opacity-90"
+            to='/'
+            className='mt-6 inline-flex items-center rounded-lg bg-(--interactive-primary) px-4 py-2 text-sm text-(--surface-primary) hover:opacity-90'
           >
             返回首页
           </Link>
@@ -122,19 +113,15 @@ function SharedConversationPage() {
     );
   }
 
-  if (data.status === "revoked") {
+  if (data.status === 'revoked') {
     return (
-      <main className="flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6">
-        <div className="w-full max-w-md rounded-xl border border-border bg-background p-8 text-center">
-          <h1 className="text-2xl font-semibold text-(--text-primary)">
-            该分享已取消
-          </h1>
-          <p className="mt-3 text-sm text-(--text-secondary)">
-            分享者已关闭此链接访问。
-          </p>
+      <main className='flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6'>
+        <div className='w-full max-w-md rounded-xl border border-border bg-background p-8 text-center'>
+          <h1 className='text-2xl font-semibold text-(--text-primary)'>该分享已取消</h1>
+          <p className='mt-3 text-sm text-(--text-secondary)'>分享者已关闭此链接访问。</p>
           <Link
-            to="/"
-            className="mt-6 inline-flex items-center rounded-lg bg-(--interactive-primary) px-4 py-2 text-sm text-(--surface-primary) hover:opacity-90"
+            to='/'
+            className='mt-6 inline-flex items-center rounded-lg bg-(--interactive-primary) px-4 py-2 text-sm text-(--surface-primary) hover:opacity-90'
           >
             返回首页
           </Link>
@@ -144,14 +131,14 @@ function SharedConversationPage() {
   }
 
   return (
-    <main className="h-screen w-full bg-(--surface-primary) overflow-y-auto">
-      <div className="pt-12 flex flex-col items-center">
-        <div className="w-full max-w-[390px] px-4 mb-8">
-          <h1 className="text-2xl font-semibold text-(--text-primary)">
-            {data.title?.trim() || "Aether 分享"}
+    <main className='h-screen w-full bg-(--surface-primary) overflow-y-auto'>
+      <div className='pt-12 flex flex-col items-center'>
+        <div className='w-full max-w-[390px] px-4 mb-8'>
+          <h1 className='text-2xl font-semibold text-(--text-primary)'>
+            {data.title?.trim() || 'Aether 分享'}
           </h1>
         </div>
-        <div className="w-full max-w-[390px] pb-12">
+        <div className='w-full max-w-[390px] pb-12'>
           <ReadonlyMessageList messages={readonlyMessages} isPhone />
         </div>
       </div>

@@ -1,39 +1,34 @@
-import {
-  HeadContent,
-  Outlet,
-  Scripts,
-  createRootRoute,
-} from "@tanstack/react-router";
-import { Sentry } from "@/lib/sentry";
+import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
+import { Sentry } from '@/lib/sentry';
 
-import { useViewportHeight } from "@/hooks/useViewportHeight";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { ToastContainer } from "@/components/ui/toast-container";
-import { ResponsiveProvider } from "@/components/ResponsiveContext";
-import { NotFound } from "@/routes/-not-found";
-import { getTheme } from "@/server/functions/theme";
+import { useViewportHeight } from '@/hooks/useViewportHeight';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { ToastContainer } from '@/components/ui/toast-container';
+import { ResponsiveProvider } from '@/components/ResponsiveContext';
+import { NotFound } from '@/routes/-not-found';
+import { getTheme } from '@/server/functions/theme';
 
-import appCss from "@/routes/globals.css?url";
+import appCss from '@/routes/globals.css?url';
 
 export const Route = createRootRoute({
   loader: () => getTheme(),
   component: RootComponent,
   head: () => ({
     meta: [
-      { name: "description", content: "The invisible medium of knowledge." },
+      { name: 'description', content: 'The invisible medium of knowledge.' },
       {
-        name: "theme-color",
-        content: "#ffffff",
-        media: "(prefers-color-scheme: light)",
+        name: 'theme-color',
+        content: '#ffffff',
+        media: '(prefers-color-scheme: light)',
       },
       {
-        name: "theme-color",
-        content: "#000000",
-        media: "(prefers-color-scheme: dark)",
+        name: 'theme-color',
+        content: '#000000',
+        media: '(prefers-color-scheme: dark)',
       },
-      { title: "Aether" },
+      { title: 'Aether' },
     ],
-    links: [{ rel: "apple-touch-icon", href: "/apple-touch-icon.png" }],
+    links: [{ rel: 'apple-touch-icon', href: '/apple-touch-icon.png' }],
   }),
   notFoundComponent: NotFound,
   shellComponent: RootDocument,
@@ -45,15 +40,15 @@ function RootComponent() {
   return (
     <Sentry.ErrorBoundary
       fallback={({ error }) => (
-        <div className="flex h-screen items-center justify-center">
-          <div className="text-center space-y-4">
-            <h1 className="text-2xl font-semibold">出了点问题</h1>
-            <p className="text-muted-foreground text-sm">
-              {error instanceof Error ? error.message : "发生了未知错误"}
+        <div className='flex h-screen items-center justify-center'>
+          <div className='text-center space-y-4'>
+            <h1 className='text-2xl font-semibold'>出了点问题</h1>
+            <p className='text-muted-foreground text-sm'>
+              {error instanceof Error ? error.message : '发生了未知错误'}
             </p>
             <button
-              type="button"
-              className="px-4 py-2 rounded-md bg-(--interactive-primary) text-(--surface-primary) text-sm"
+              type='button'
+              className='px-4 py-2 rounded-md bg-(--interactive-primary) text-(--surface-primary) text-sm'
               onClick={() => window.location.reload()}
             >
               重试
@@ -74,22 +69,19 @@ const preHydrationInputScript = `(function(){window.__preHydrationInput='';windo
 function RootDocument({ children }: { children: React.ReactNode }) {
   const theme = Route.useLoaderData();
   return (
-    <html lang="en" className={theme === "dark" ? "dark" : ""}>
+    <html lang='en' className={theme === 'dark' ? 'dark' : ''}>
       <head>
         {import.meta.env.DEV && (
-          <script
-            crossOrigin="anonymous"
-            src="https://unpkg.com/react-scan/dist/auto.global.js"
-          />
+          <script crossOrigin='anonymous' src='https://unpkg.com/react-scan/dist/auto.global.js' />
         )}
-        <meta charSet="utf-8" />
+        <meta charSet='utf-8' />
         <meta
-          name="viewport"
-          content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+          name='viewport'
+          content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no'
         />
-        <link rel="stylesheet" href={appCss} />
-        <link rel="manifest" href="/manifest.webmanifest" />
-        <link rel="icon" href="/aether-logo.svg" />
+        <link rel='stylesheet' href={appCss} />
+        <link rel='manifest' href='/manifest.webmanifest' />
+        <link rel='icon' href='/aether-logo.svg' />
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
         <script dangerouslySetInnerHTML={{ __html: preHydrationInputScript }} />
         <HeadContent />

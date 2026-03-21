@@ -38,17 +38,17 @@
   --sdm-fg: #24292e;
 
   /* Status Colors - Semantic feedback */
-  --status-destructive: #BF616A;
+  --status-destructive: #bf616a;
   --status-destructive-hover: #a8545d;
   --status-destructive-foreground: #ffffff;
   --status-destructive-muted: #fdf2f3;
   --status-destructive-muted-hover: #fce8ea;
-  --status-info: #81A1C1;
+  --status-info: #81a1c1;
   --status-info-muted: #eef4f9;
   --status-info-foreground: #ffffff;
-  --status-success: #A3BE8C;
+  --status-success: #a3be8c;
   --status-success-foreground: #ffffff;
-  --status-warning: #D08770;
+  --status-warning: #d08770;
   --status-warning-foreground: #ffffff;
 
   /* Sidebar - Material differentiation */
@@ -118,16 +118,16 @@ html.dark {
   --shiki-dark: #e1e4e8;
 
   /* Status Colors - Semantic feedback */
-  --status-destructive: #BF616A;
+  --status-destructive: #bf616a;
   --status-destructive-hover: #d4737d;
   --status-destructive-foreground: #ffffff;
   --status-destructive-muted: #3d2a2d;
   --status-destructive-muted-hover: #4a3438;
-  --status-info: #88C0D0; /* nord8 */
+  --status-info: #88c0d0; /* nord8 */
   --status-info-muted: #1e2d33;
-  --status-success: #A3BE8C; /* nord14 */
+  --status-success: #a3be8c; /* nord14 */
   --status-success-foreground: #022c22;
-  --status-warning: #EBCB8B; /* nord13 - Brighter yellow for dark mode */
+  --status-warning: #ebcb8b; /* nord13 - Brighter yellow for dark mode */
   --status-warning-foreground: #451a03;
   --status-info-foreground: #1e3a8a;
 

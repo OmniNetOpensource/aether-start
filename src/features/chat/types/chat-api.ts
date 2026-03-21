@@ -1,5 +1,5 @@
-import type { Message } from "@/types/message";
-import type { ChatServerToClientEvent } from "./chat-event-types";
+import type { Message } from '@/types/message';
+import type { ChatServerToClientEvent } from './chat-event-types';
 
 export type {
   ArtifactLanguage,
@@ -7,7 +7,7 @@ export type {
   ChatErrorInfo,
   ChatErrorProvider,
   ChatServerToClientEvent,
-} from "./chat-event-types";
+} from './chat-event-types';
 
 // Tool call pending execution
 export type PendingToolInvocation = {
@@ -36,9 +36,4 @@ export type PersistedChatEvent = {
   createdAt: number;
 };
 
-export type ChatAgentStatus =
-  | "idle"
-  | "running"
-  | "completed"
-  | "aborted"
-  | "error";
+export type ChatAgentStatus = 'idle' | 'running' | 'completed' | 'aborted' | 'error';

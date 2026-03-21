@@ -1,38 +1,34 @@
-import OpenAI from "openai";
+import OpenAI from 'openai';
 import {
   buildSystemPrompt,
   type BackendConfig,
-} from "@/server/agents/services/model-provider-config";
-import {
-  log,
-  logProviderCommunication,
-  shouldLogProviderCommunication,
-} from "./logger";
-import { quotesToModelText } from "@/lib/conversation/tree/block-operations";
-import { buildProviderErrorEvent } from "./provider-error";
-import { resolveAttachmentToBase64 } from "./attachment-utils";
-import { parseToolResultImage } from "./tool-result-images";
-import { RenderArtifactStreamParser } from "./render-artifact-stream";
+} from '@/server/agents/services/model-provider-config';
+import { log, logProviderCommunication, shouldLogProviderCommunication } from './logger';
+import { quotesToModelText } from '@/lib/conversation/tree/block-operations';
+import { buildProviderErrorEvent } from './provider-error';
+import { resolveAttachmentToBase64 } from './attachment-utils';
+import { parseToolResultImage } from './tool-result-images';
+import { RenderArtifactStreamParser } from './render-artifact-stream';
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
-} from "@/types/chat-api";
-import type { ChatTool } from "@/server/agents/tools/types";
-import type { SerializedMessage } from "@/types/message";
-import type { ChatProvider, ChatProviderConfig } from "./provider-types";
+} from '@/types/chat-api';
+import type { ChatTool } from '@/server/agents/tools/types';
+import type { SerializedMessage } from '@/types/message';
+import type { ChatProvider, ChatProviderConfig } from './provider-types';
 
 type OpenAIContentPart =
-  | { type: "text"; text: string }
-  | { type: "image_url"; image_url: { url: string } };
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string } };
 
 export type OpenAIMessage = {
-  role: "system" | "user" | "assistant" | "tool";
+  role: 'system' | 'user' | 'assistant' | 'tool';
   content?: string | OpenAIContentPart[];
   tool_call_id?: string;
   tool_calls?: Array<{
     id: string;
-    type: "function";
+    type: 'function';
     function: {
       name: string;
       arguments: string;
@@ -41,7 +37,7 @@ export type OpenAIMessage = {
 };
 
 type OpenAITool = {
-  type: "function";
+  type: 'function';
   function: {
     name: string;
     description: string;
@@ -61,9 +57,7 @@ type OpenAIChatProviderConfig = {
   systemPrompt: string;
 };
 
-const serializeHeaders = (
-  headers: HeadersInit | undefined,
-): Record<string, string> | undefined => {
+const serializeHeaders = (headers: HeadersInit | undefined): Record<string, string> | undefined => {
   if (!headers) {
     return undefined;
   }
@@ -79,32 +73,25 @@ const serializeHeaders = (
   return { ...headers };
 };
 
-const createLoggingFetch = (
-  provider: "openai" | "openai-responses",
-): typeof fetch => {
+const createLoggingFetch = (provider: 'openai' | 'openai-responses'): typeof fetch => {
   return async (input, init) => {
     const url =
-      typeof input === "string"
-        ? input
-        : input instanceof URL
-          ? input.toString()
-          : input.url;
+      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
     let requestBody: unknown;
     try {
-      requestBody =
-        typeof init?.body === "string" ? JSON.parse(init.body) : init?.body;
+      requestBody = typeof init?.body === 'string' ? JSON.parse(init.body) : init?.body;
     } catch {
       requestBody = init?.body;
     }
 
     const isStreamingRequest =
       !!requestBody &&
-      typeof requestBody === "object" &&
+      typeof requestBody === 'object' &&
       (requestBody as { stream?: unknown }).stream === true;
 
     if (isStreamingRequest && shouldLogProviderCommunication(provider)) {
-      logProviderCommunication(provider, "HTTP Request", {
-        method: init?.method ?? "GET",
+      logProviderCommunication(provider, 'HTTP Request', {
+        method: init?.method ?? 'GET',
         url,
         headers: serializeHeaders(init?.headers),
         body: requestBody,
@@ -114,7 +101,7 @@ const createLoggingFetch = (
     const response = await fetch(input, init);
 
     if (isStreamingRequest && shouldLogProviderCommunication(provider)) {
-      logProviderCommunication(provider, "HTTP Response", {
+      logProviderCommunication(provider, 'HTTP Response', {
         status: response.status,
         statusText: response.statusText,
         headers: Object.fromEntries(response.headers.entries()),
@@ -127,7 +114,7 @@ const createLoggingFetch = (
 
 export const getOpenAIClient = (
   config: BackendConfig,
-  provider: "openai" | "openai-responses" = "openai",
+  provider: 'openai' | 'openai-responses' = 'openai',
 ) => {
   return new OpenAI({
     apiKey: config.apiKey,
@@ -139,9 +126,9 @@ export const getOpenAIClient = (
 
 const convertToolsToOpenAI = (tools: ChatTool[]): OpenAITool[] => {
   return tools
-    .filter((tool) => tool.type === "function")
+    .filter((tool) => tool.type === 'function')
     .map((tool) => ({
-      type: "function",
+      type: 'function',
       function: {
         name: tool.function.name,
         description: tool.function.description,
@@ -154,7 +141,7 @@ const extractThinkingTexts = (delta: Record<string, unknown>): string[] => {
   const thinkingTexts: string[] = [];
 
   const tryPush = (value: unknown) => {
-    if (typeof value === "string" && value.trim()) {
+    if (typeof value === 'string' && value.trim()) {
       thinkingTexts.push(value);
     }
   };
@@ -175,12 +162,12 @@ const extractThinkingTexts = (delta: Record<string, unknown>): string[] => {
     }
 
     for (const item of candidate) {
-      if (typeof item === "string") {
+      if (typeof item === 'string') {
         tryPush(item);
         continue;
       }
 
-      if (item && typeof item === "object") {
+      if (item && typeof item === 'object') {
         const detail = item as Record<string, unknown>;
         tryPush(detail.text);
         tryPush(detail.content);
@@ -199,20 +186,20 @@ export async function convertToOpenAIMessages(
       const contentParts: OpenAIContentPart[] = [];
 
       for (const block of message.blocks) {
-        if (block.type === "quotes" && block.quotes.length > 0) {
+        if (block.type === 'quotes' && block.quotes.length > 0) {
           const quoteText = quotesToModelText(block.quotes);
           if (quoteText) {
-            contentParts.push({ type: "text", text: quoteText });
+            contentParts.push({ type: 'text', text: quoteText });
           }
-        } else if (block.type === "content" && block.content) {
-          contentParts.push({ type: "text", text: block.content });
-        } else if (block.type === "attachments") {
+        } else if (block.type === 'content' && block.content) {
+          contentParts.push({ type: 'text', text: block.content });
+        } else if (block.type === 'attachments') {
           for (const attachment of block.attachments) {
-            if (attachment.kind !== "image") {
+            if (attachment.kind !== 'image') {
               continue;
             }
 
-            const resolved = await resolveAttachmentToBase64("OPENAI", {
+            const resolved = await resolveAttachmentToBase64('OPENAI', {
               name: attachment.name,
               mimeType: attachment.mimeType,
               url: attachment.url,
@@ -221,16 +208,13 @@ export async function convertToOpenAIMessages(
 
             if (resolved) {
               contentParts.push({
-                type: "image_url",
+                type: 'image_url',
                 image_url: {
                   url: `data:${resolved.media_type};base64,${resolved.data}`,
                 },
               });
             } else {
-              log(
-                "OPENAI",
-                `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`,
-              );
+              log('OPENAI', `消息 ${msgIdx + 1}: 附件 ${attachment.name} 解析失败`);
             }
           }
         }
@@ -238,7 +222,7 @@ export async function convertToOpenAIMessages(
 
       return {
         role: message.role,
-        content: contentParts.length > 0 ? contentParts : "",
+        content: contentParts.length > 0 ? contentParts : '',
       };
     }),
   );
@@ -251,7 +235,7 @@ export function formatOpenAIToolContinuation(
 ): OpenAIMessage[] {
   const assistantToolCalls = pendingToolCalls.map((toolCall, index) => ({
     id: toolCall.id || `tool_${index + 1}`,
-    type: "function" as const,
+    type: 'function' as const,
     function: {
       name: toolCall.name,
       arguments: JSON.stringify(toolCall.args ?? {}),
@@ -259,47 +243,42 @@ export function formatOpenAIToolContinuation(
   }));
 
   const assistantMessage: OpenAIMessage = {
-    role: "assistant",
-    content: assistantText || "",
+    role: 'assistant',
+    content: assistantText || '',
     tool_calls: assistantToolCalls,
   };
 
-  const toolMessages: OpenAIMessage[] = toolResults.map(
-    (toolResult, index) => ({
-      role: "tool",
-      tool_call_id:
-        toolResult.id || assistantToolCalls[index]?.id || `tool_${index + 1}`,
-      content: toolResult.result,
-    }),
-  );
+  const toolMessages: OpenAIMessage[] = toolResults.map((toolResult, index) => ({
+    role: 'tool',
+    tool_call_id: toolResult.id || assistantToolCalls[index]?.id || `tool_${index + 1}`,
+    content: toolResult.result,
+  }));
 
-  const toolResultImageParts: OpenAIContentPart[] = toolResults.flatMap(
-    (toolResult) => {
-      const image = parseToolResultImage(toolResult.result);
-      if (!image) {
-        return [];
-      }
+  const toolResultImageParts: OpenAIContentPart[] = toolResults.flatMap((toolResult) => {
+    const image = parseToolResultImage(toolResult.result);
+    if (!image) {
+      return [];
+    }
 
-      return [
-        {
-          type: "text",
-          text: `Image returned by tool ${toolResult.name}. Use it when answering.`,
+    return [
+      {
+        type: 'text',
+        text: `Image returned by tool ${toolResult.name}. Use it when answering.`,
+      },
+      {
+        type: 'image_url',
+        image_url: {
+          url: image.dataUrl,
         },
-        {
-          type: "image_url",
-          image_url: {
-            url: image.dataUrl,
-          },
-        },
-      ];
-    },
-  );
+      },
+    ];
+  });
 
   const imageMessage: OpenAIMessage[] =
     toolResultImageParts.length > 0
       ? [
           {
-            role: "user",
+            role: 'user',
             content: toolResultImageParts,
           },
         ]
@@ -318,8 +297,7 @@ export class OpenAIChatProvider {
     this.model = config.model;
     this.backendConfig = config.backendConfig;
     this.systemPrompt = config.systemPrompt;
-    this.openaiTools =
-      config.tools.length > 0 ? convertToolsToOpenAI(config.tools) : undefined;
+    this.openaiTools = config.tools.length > 0 ? convertToolsToOpenAI(config.tools) : undefined;
   }
 
   async *run(
@@ -332,7 +310,7 @@ export class OpenAIChatProvider {
     }
 
     const fullMessages: OpenAIMessage[] = [
-      { role: "system", content: systemParts.join("\n\n") },
+      { role: 'system', content: systemParts.join('\n\n') },
       ...messages,
     ];
 
@@ -340,14 +318,11 @@ export class OpenAIChatProvider {
       pendingToolCalls: [],
       thinkingBlocks: [],
     };
-    const toolCallsByIndex = new Map<
-      number,
-      { id: string; name: string; argsJson: string }
-    >();
+    const toolCallsByIndex = new Map<number, { id: string; name: string; argsJson: string }>();
     const renderParsers = new Map<number, RenderArtifactStreamParser>();
 
     try {
-      const client = getOpenAIClient(this.backendConfig, "openai");
+      const client = getOpenAIClient(this.backendConfig, 'openai');
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const streamParams: any = {
@@ -357,12 +332,9 @@ export class OpenAIChatProvider {
         stream: true,
       };
 
-      const streamResponse = await client.chat.completions.create(
-        streamParams,
-        {
-          signal,
-        },
-      );
+      const streamResponse = await client.chat.completions.create(streamParams, {
+        signal,
+      });
 
       const stream = streamResponse as unknown as AsyncIterable<{
         choices?: Array<{ delta?: Record<string, unknown> }>;
@@ -370,10 +342,10 @@ export class OpenAIChatProvider {
 
       for await (const chunk of stream) {
         if (signal?.aborted) {
-          throw new DOMException("Aborted", "AbortError");
+          throw new DOMException('Aborted', 'AbortError');
         }
 
-        logProviderCommunication("openai", "Stream chunk", {
+        logProviderCommunication('openai', 'Stream chunk', {
           model: this.model,
           chunk,
         });
@@ -385,49 +357,43 @@ export class OpenAIChatProvider {
 
         const delta = (choice.delta ?? {}) as Record<string, unknown>;
         const deltaContent = delta.content;
-        if (typeof deltaContent === "string" && deltaContent.length > 0) {
-          yield { type: "content", content: deltaContent };
+        if (typeof deltaContent === 'string' && deltaContent.length > 0) {
+          yield { type: 'content', content: deltaContent };
         }
 
         const thinkingTexts = extractThinkingTexts(delta);
         for (const text of thinkingTexts) {
-          yield { type: "thinking", content: text };
+          yield { type: 'thinking', content: text };
         }
 
-        const deltaToolCalls = Array.isArray(
-          (delta as { tool_calls?: unknown[] }).tool_calls,
-        )
-          ? ((delta as { tool_calls: unknown[] }).tool_calls as Array<
-              Record<string, unknown>
-            >)
+        const deltaToolCalls = Array.isArray((delta as { tool_calls?: unknown[] }).tool_calls)
+          ? ((delta as { tool_calls: unknown[] }).tool_calls as Array<Record<string, unknown>>)
           : [];
 
         for (const toolCall of deltaToolCalls) {
-          const index = typeof toolCall.index === "number" ? toolCall.index : 0;
+          const index = typeof toolCall.index === 'number' ? toolCall.index : 0;
           const existing = toolCallsByIndex.get(index) ?? {
-            id: "",
-            name: "",
-            argsJson: "",
+            id: '',
+            name: '',
+            argsJson: '',
           };
 
-          if (typeof toolCall.id === "string" && toolCall.id.length > 0) {
+          if (typeof toolCall.id === 'string' && toolCall.id.length > 0) {
             existing.id = toolCall.id;
           }
 
           const functionInfo = toolCall.function;
-          if (functionInfo && typeof functionInfo === "object") {
+          if (functionInfo && typeof functionInfo === 'object') {
             const fn = functionInfo as Record<string, unknown>;
-            if (typeof fn.name === "string" && fn.name.length > 0) {
+            if (typeof fn.name === 'string' && fn.name.length > 0) {
               existing.name = fn.name;
             }
-            if (typeof fn.arguments === "string" && fn.arguments.length > 0) {
+            if (typeof fn.arguments === 'string' && fn.arguments.length > 0) {
               existing.argsJson += fn.arguments;
-              if (existing.name === "render") {
+              if (existing.name === 'render') {
                 const parser =
                   renderParsers.get(index) ??
-                  new RenderArtifactStreamParser(
-                    existing.id || `tool_${index + 1}`,
-                  );
+                  new RenderArtifactStreamParser(existing.id || `tool_${index + 1}`);
                 renderParsers.set(index, parser);
                 for (const event of parser.append(fn.arguments)) {
                   yield event;
@@ -441,43 +407,41 @@ export class OpenAIChatProvider {
       }
     } catch (error) {
       if (
-        (error instanceof DOMException && error.name === "AbortError") ||
-        (error instanceof Error && error.name === "AbortError") ||
+        (error instanceof DOMException && error.name === 'AbortError') ||
+        (error instanceof Error && error.name === 'AbortError') ||
         signal?.aborted
       ) {
         return emptyResult;
       }
 
-      log("OPENAI", "OpenAI provider run failed", {
+      log('OPENAI', 'OpenAI provider run failed', {
         error,
         model: this.model,
       });
 
       yield buildProviderErrorEvent({
-        provider: "openai",
+        provider: 'openai',
         model: this.model,
         backendConfig: this.backendConfig,
         error,
-        fallbackMessage: "Failed to start OpenAI completion",
+        fallbackMessage: 'Failed to start OpenAI completion',
       });
       return emptyResult;
     }
 
-    log("OPENAI", "Stream completed", {
+    log('OPENAI', 'Stream completed', {
       model: this.model,
       toolCallCount: toolCallsByIndex.size,
     });
 
-    const pendingToolCalls: PendingToolInvocation[] = [
-      ...toolCallsByIndex.entries(),
-    ]
+    const pendingToolCalls: PendingToolInvocation[] = [...toolCallsByIndex.entries()]
       .sort(([a], [b]) => a - b)
       .map(([index, toolCall]) => {
         let args: Record<string, unknown> = {};
         try {
-          args = JSON.parse(toolCall.argsJson || "{}");
+          args = JSON.parse(toolCall.argsJson || '{}');
         } catch (error) {
-          log("OPENAI", "Failed to parse tool arguments", {
+          log('OPENAI', 'Failed to parse tool arguments', {
             error,
             index,
             toolCall,
@@ -486,15 +450,13 @@ export class OpenAIChatProvider {
 
         return {
           id: toolCall.id || `tool_${index + 1}`,
-          name: toolCall.name || "unknown_tool",
+          name: toolCall.name || 'unknown_tool',
           args,
         };
       });
 
-    for (const [index, toolCall] of [...toolCallsByIndex.entries()].sort(
-      ([a], [b]) => a - b,
-    )) {
-      if (toolCall.name !== "render") {
+    for (const [index, toolCall] of [...toolCallsByIndex.entries()].sort(([a], [b]) => a - b)) {
+      if (toolCall.name !== 'render') {
         continue;
       }
 
@@ -502,9 +464,8 @@ export class OpenAIChatProvider {
         renderParsers.get(index) ??
         new RenderArtifactStreamParser(toolCall.id || `tool_${index + 1}`);
       for (const event of parser.finalize(
-        pendingToolCalls.find(
-          (item) => item.id === (toolCall.id || `tool_${index + 1}`),
-        )?.args ?? {},
+        pendingToolCalls.find((item) => item.id === (toolCall.id || `tool_${index + 1}`))?.args ??
+          {},
       )) {
         yield event;
       }
@@ -514,23 +475,12 @@ export class OpenAIChatProvider {
   }
 }
 
-export function createOpenAIAdapter(
-  config: ChatProviderConfig,
-): ChatProvider<OpenAIMessage> {
+export function createOpenAIAdapter(config: ChatProviderConfig): ChatProvider<OpenAIMessage> {
   const provider = new OpenAIChatProvider(config);
   return {
     convertMessages: (history) => convertToOpenAIMessages(history),
     run: (messages, signal) => provider.run(messages, signal),
-    formatToolContinuation: (
-      assistantText,
-      _runResult,
-      pendingToolCalls,
-      toolResults,
-    ) =>
-      formatOpenAIToolContinuation(
-        assistantText,
-        pendingToolCalls,
-        toolResults,
-      ),
+    formatToolContinuation: (assistantText, _runResult, pendingToolCalls, toolResults) =>
+      formatOpenAIToolContinuation(assistantText, pendingToolCalls, toolResults),
   };
 }

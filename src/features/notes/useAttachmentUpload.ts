@@ -1,11 +1,9 @@
-import { useState } from "react";
-import { buildAttachmentsFromFiles } from "@/shared/attachments";
-import type { Attachment } from "@/features/chat/types/message";
+import { useState } from 'react';
+import { buildAttachmentsFromFiles } from '@/shared/attachments';
+import type { Attachment } from '@/features/chat/types/message';
 
 export function useAttachmentUpload(initialAttachments: Attachment[] = []) {
-  const [attachments, setAttachments] = useState<Attachment[]>(
-    initialAttachments,
-  );
+  const [attachments, setAttachments] = useState<Attachment[]>(initialAttachments);
   const [uploading, setUploading] = useState(false);
 
   const addFiles = async (files: File[]) => {

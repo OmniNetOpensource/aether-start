@@ -1,10 +1,10 @@
-import { Link, useMatch } from '@tanstack/react-router'
-import { Lightbulb } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
+import { Link, useMatch } from '@tanstack/react-router';
+import { Lightbulb } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export function NotesButton() {
-  const isActive = !!useMatch({ from: '/app/notes', shouldThrow: false })
+  const isActive = !!useMatch({ from: '/app/notes', shouldThrow: false });
 
   return (
     <Button
@@ -27,5 +27,5 @@ export function NotesButton() {
         </span>
       </Link>
     </Button>
-  )
+  );
 }

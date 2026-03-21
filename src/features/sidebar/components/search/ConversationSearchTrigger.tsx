@@ -1,15 +1,15 @@
-import { useState } from 'react'
-import { Search } from 'lucide-react'
-import { ConversationSearchDialog } from './ConversationSearchDialog'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react';
+import { Search } from 'lucide-react';
+import { ConversationSearchDialog } from './ConversationSearchDialog';
+import { Button } from '@/components/ui/button';
 
 type ConversationSearchTriggerProps = {
-  variant?: 'sidebar' | 'icon'
-}
+  variant?: 'sidebar' | 'icon';
+};
 
 export function ConversationSearchTrigger({ variant = 'icon' }: ConversationSearchTriggerProps) {
-  const [open, setOpen] = useState(false)
-  const isSidebar = variant === 'sidebar'
+  const [open, setOpen] = useState(false);
+  const isSidebar = variant === 'sidebar';
 
   return (
     <>
@@ -42,5 +42,5 @@ export function ConversationSearchTrigger({ variant = 'icon' }: ConversationSear
 
       <ConversationSearchDialog open={open} onOpenChange={setOpen} />
     </>
-  )
+  );
 }

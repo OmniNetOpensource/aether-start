@@ -49,9 +49,11 @@ Use `pnpm` for all tasks.
 - `pnpm install` - install dependencies
 - `pnpm dev` - start local dev server on port 3000
 - `pnpm build` - build production bundle
-- `pnpm lint` - run ESLint
+- `pnpm lint` - run Oxlint
+- `pnpm format` - format with Oxfmt
+- `pnpm format:check` - verify formatting (Oxfmt, no writes)
 - `pnpm type-check` - run TypeScript without emit
-- `pnpm check` - run type-check, lint, and build
+- `pnpm check` - run type-check, lint, format check, and build
 - `pnpm test` - run Vitest once
 - `pnpm test:watch` - run Vitest in watch mode
 - `pnpm test:coverage` - run coverage
@@ -243,7 +245,7 @@ Never commit real secrets.
 - Route files mirror their route paths.
 - Do not introduce `useMemo`, `useCallback`, or `React.memo`.
 - Prefer existing feature/store/server-function boundaries over creating a new abstraction layer.
-- Keep changes ESLint-clean.
+- Keep changes Oxlint-clean.
 
 ## Generated Files
 

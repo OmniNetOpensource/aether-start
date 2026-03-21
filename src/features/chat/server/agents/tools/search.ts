@@ -1,10 +1,10 @@
-import { ChatTool, ToolDefinition, ToolHandler } from "./types";
+import { ChatTool, ToolDefinition, ToolHandler } from './types';
 import {
   stringifySearchClientPayload,
   type SearchClientResult,
-} from "@/features/chat/research/search-result-payload";
-import { log } from "@/server/agents/services/logger";
-import { getServerEnv } from "@/server/env";
+} from '@/features/chat/research/search-result-payload';
+import { log } from '@/server/agents/services/logger';
+import { getServerEnv } from '@/server/env';
 
 type SearchArgs = {
   query: string;
@@ -30,27 +30,21 @@ type NormalizedSearchResult = {
   description: string;
 };
 
-const normalizeSearchResult = (
-  result: SearchResult,
-): NormalizedSearchResult | null => {
-  if (!result || typeof result !== "object") {
+const normalizeSearchResult = (result: SearchResult): NormalizedSearchResult | null => {
+  if (!result || typeof result !== 'object') {
     return null;
   }
 
   const url =
-    typeof result.link === "string" && result.link.trim().length > 0
-      ? result.link.trim()
-      : "";
+    typeof result.link === 'string' && result.link.trim().length > 0 ? result.link.trim() : '';
 
   if (!url) {
     return null;
   }
 
   const title =
-    typeof result.title === "string" && result.title.trim().length > 0
-      ? result.title.trim()
-      : url;
-  const description = typeof result.snippet === "string" ? result.snippet : "";
+    typeof result.title === 'string' && result.title.trim().length > 0 ? result.title.trim() : url;
+  const description = typeof result.snippet === 'string' ? result.snippet : '';
 
   return {
     title,
@@ -61,7 +55,7 @@ const normalizeSearchResult = (
 
 const buildAiMarkdown = (results: NormalizedSearchResult[]): string => {
   if (results.length === 0) {
-    return "No valid search results.";
+    return 'No valid search results.';
   }
 
   return results
@@ -71,12 +65,10 @@ const buildAiMarkdown = (results: NormalizedSearchResult[]): string => {
         `[${index + 1}]description: ${result.description}\n` +
         `[${index + 1}]url: ${result.url}`,
     )
-    .join("\n\n");
+    .join('\n\n');
 };
 
-export const formatSearchResponse = async (
-  data: { organic?: SearchResult[] },
-): Promise<string> => {
+export const formatSearchResponse = async (data: { organic?: SearchResult[] }): Promise<string> => {
   const rawResults = Array.isArray(data.organic) ? data.organic : [];
   const normalizedResults = rawResults
     .map((result) => normalizeSearchResult(result))
@@ -84,7 +76,7 @@ export const formatSearchResponse = async (
   const clientResults: SearchClientResult[] = normalizedResults.map((result) => ({
     title: result.title,
     url: result.url,
-  }))
+  }));
 
   const payload: SearchPayload = {
     client: {
@@ -100,14 +92,14 @@ export const formatSearchResponse = async (
 };
 
 const parseSearchArgs = (args: unknown): SearchArgs => {
-  if (!args || typeof args !== "object") {
-    throw new Error("search requires an object with a query");
+  if (!args || typeof args !== 'object') {
+    throw new Error('search requires an object with a query');
   }
 
   const { query } = args as { query?: unknown };
 
-  if (typeof query !== "string" || query.trim().length === 0) {
-    throw new Error("search requires a non-empty query string");
+  if (typeof query !== 'string' || query.trim().length === 0) {
+    throw new Error('search requires a non-empty query string');
   }
 
   return { query };
@@ -148,8 +140,8 @@ const performSearch = async (
   signal?: AbortSignal,
 ): Promise<string> => {
   const myHeaders = new Headers();
-  myHeaders.append("X-API-KEY", apiKey);
-  myHeaders.append("Content-Type", "application/json");
+  myHeaders.append('X-API-KEY', apiKey);
+  myHeaders.append('Content-Type', 'application/json');
 
   const raw = JSON.stringify({
     q: query,
@@ -157,28 +149,22 @@ const performSearch = async (
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 20_000);
-  const linkedAbort = () => controller.abort()
-  signal?.addEventListener('abort', linkedAbort)
+  const linkedAbort = () => controller.abort();
+  signal?.addEventListener('abort', linkedAbort);
 
   const requestOptions: RequestInit = {
-    method: "POST",
+    method: 'POST',
     headers: myHeaders,
     body: raw,
-    redirect: "follow",
+    redirect: 'follow',
     signal: controller.signal,
   };
 
   try {
-    const response = await fetch(
-      "https://google.serper.dev/search",
-      requestOptions,
-    );
+    const response = await fetch('https://google.serper.dev/search', requestOptions);
 
     if (!response.ok) {
-      log(
-        "SEARCH",
-        `API error: ${response.status} ${response.statusText}`,
-      );
+      log('SEARCH', `API error: ${response.status} ${response.statusText}`);
       return `Search API error: ${response.status} ${response.statusText}`;
     }
 
@@ -186,54 +172,54 @@ const performSearch = async (
     return await formatSearchResponse(data);
   } catch (error) {
     const isAbortError =
-      typeof error === "object" &&
+      typeof error === 'object' &&
       error !== null &&
-      "name" in error &&
-      (error as { name?: string }).name === "AbortError";
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError';
     const message = isAbortError
-      ? "Request timed out"
-      : typeof error === "object" && error !== null
+      ? 'Request timed out'
+      : typeof error === 'object' && error !== null
         ? (error as Error).message
         : String(error);
-    log("SEARCH", `Error: ${message}`);
+    log('SEARCH', `Error: ${message}`);
     return `Search error: ${message}`;
   } finally {
-    signal?.removeEventListener('abort', linkedAbort)
+    signal?.removeEventListener('abort', linkedAbort);
     clearTimeout(timeoutId);
   }
 };
 
 const search: ToolHandler = async (args, signal) => {
   const { query } = parseSearchArgs(args);
-  const { SERP_API_KEY: apiKey } = getServerEnv()
+  const { SERP_API_KEY: apiKey } = getServerEnv();
 
   if (!apiKey) {
-    log("SEARCH", "Missing SERP_API_KEY");
-    return "Error: SERP_API_KEY is not set";
+    log('SEARCH', 'Missing SERP_API_KEY');
+    return 'Error: SERP_API_KEY is not set';
   }
 
   if (signal?.aborted) {
-    throw new DOMException('Aborted', 'AbortError')
+    throw new DOMException('Aborted', 'AbortError');
   }
 
   return enqueueSearchCall(() => performSearch(query, apiKey, signal));
 };
 
 const searchSpec: ChatTool = {
-  type: "function",
+  type: 'function',
   function: {
-    name: "search",
-    description: "Search the web using Google Search",
+    name: 'search',
+    description: 'Search the web using Google Search',
     parameters: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
         query: {
-          type: "string",
-          description: "The search query",
+          type: 'string',
+          description: 'The search query',
         },
       },
-      required: ["query"],
+      required: ['query'],
     },
   },
 };

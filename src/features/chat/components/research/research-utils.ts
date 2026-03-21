@@ -1,7 +1,4 @@
-import type {
-  Tool,
-  ToolResult,
-} from "@/types/message";
+import type { Tool, ToolResult } from '@/types/message';
 
 export function getToolLifecycle(tool: Tool): {
   result?: ToolResult;
@@ -29,15 +26,15 @@ export function getSearchResultCount(rawResult: string): number | null {
     }
 
     return rawResults.filter((item) => {
-      if (!item || typeof item !== "object") {
+      if (!item || typeof item !== 'object') {
         return false;
       }
       const url =
-        "url" in item && typeof item.url === "string"
+        'url' in item && typeof item.url === 'string'
           ? item.url
-          : "link" in item && typeof item.link === "string"
+          : 'link' in item && typeof item.link === 'string'
             ? item.link
-            : "";
+            : '';
       return Boolean(url);
     }).length;
   } catch {

@@ -1,101 +1,97 @@
-import { betterAuth } from 'better-auth'
-import { drizzleAdapter } from 'better-auth/adapters/drizzle'
-import { emailOTP } from 'better-auth/plugins'
-import { tanstackStartCookies } from 'better-auth/tanstack-start'
-import { eq } from 'drizzle-orm'
-import { drizzle } from 'drizzle-orm/d1'
-import { Resend } from 'resend'
-import { getServerEnv } from '@/server/env'
-import * as authSchema from './auth.schema'
-import { hashPassword, verifyPassword } from './crypto'
+import { betterAuth } from 'better-auth';
+import { drizzleAdapter } from 'better-auth/adapters/drizzle';
+import { emailOTP } from 'better-auth/plugins';
+import { tanstackStartCookies } from 'better-auth/tanstack-start';
+import { eq } from 'drizzle-orm';
+import { drizzle } from 'drizzle-orm/d1';
+import { Resend } from 'resend';
+import { getServerEnv } from '@/server/env';
+import * as authSchema from './auth.schema';
+import { hashPassword, verifyPassword } from './crypto';
 
 const isBetterAuthCli =
   typeof process !== 'undefined' &&
   Array.isArray(process.argv) &&
-  process.argv.some((arg) => arg.includes('better-auth'))
+  process.argv.some((arg) => arg.includes('better-auth'));
 
-const requireEnvValue = (
-  value: string | undefined,
-  key: string,
-  fallbackForCli?: string,
-) => {
+const requireEnvValue = (value: string | undefined, key: string, fallbackForCli?: string) => {
   if (!value && isBetterAuthCli && fallbackForCli) {
-    return fallbackForCli
+    return fallbackForCli;
   }
 
   if (!value) {
-    throw new Error(`Missing server env: ${key}`)
+    throw new Error(`Missing server env: ${key}`);
   }
 
-  return value
-}
+  return value;
+};
 
 const toOrigin = (value: string) => {
   try {
-    return new URL(value).origin
+    return new URL(value).origin;
   } catch {
-    return value
+    return value;
   }
-}
+};
 
 const getRequestIp = (headers: Headers | undefined) => {
   if (!headers) {
-    return null
+    return null;
   }
 
   for (const key of ['cf-connecting-ip', 'x-forwarded-for']) {
-    const value = headers.get(key)?.split(',')[0]?.trim()
+    const value = headers.get(key)?.split(',')[0]?.trim();
     if (value) {
-      return value
+      return value;
     }
   }
 
-  return null
-}
+  return null;
+};
 
 const createPlaceholderD1Database = (): D1Database =>
   ({
     prepare() {
-      throw new Error('DB binding is unavailable in Better Auth CLI mode')
+      throw new Error('DB binding is unavailable in Better Auth CLI mode');
     },
     dump() {
-      return Promise.reject(new Error('DB binding is unavailable in Better Auth CLI mode'))
+      return Promise.reject(new Error('DB binding is unavailable in Better Auth CLI mode'));
     },
     batch() {
-      return Promise.reject(new Error('DB binding is unavailable in Better Auth CLI mode'))
+      return Promise.reject(new Error('DB binding is unavailable in Better Auth CLI mode'));
     },
     exec() {
-      return Promise.reject(new Error('DB binding is unavailable in Better Auth CLI mode'))
+      return Promise.reject(new Error('DB binding is unavailable in Better Auth CLI mode'));
     },
-  }) as unknown as D1Database
+  }) as unknown as D1Database;
 
 const resolveD1Database = () => {
-  const env = getServerEnv()
+  const env = getServerEnv();
   if (env.DB) {
-    return env.DB
+    return env.DB;
   }
 
   if (isBetterAuthCli) {
-    return createPlaceholderD1Database()
+    return createPlaceholderD1Database();
   }
 
-  throw new Error('Missing worker binding: DB')
-}
+  throw new Error('Missing worker binding: DB');
+};
 
 const createAuth = () => {
-  const serverEnv = getServerEnv()
+  const serverEnv = getServerEnv();
 
   const baseURL = requireEnvValue(
     serverEnv.BETTER_AUTH_URL,
     'BETTER_AUTH_URL',
     'http://localhost:3000',
-  )
+  );
   const secret = requireEnvValue(
     serverEnv.BETTER_AUTH_SECRET,
     'BETTER_AUTH_SECRET',
     '4f2f7f59ad6d435c9f5f2ce7f0f6f2d3',
-  )
-  const db = drizzle(resolveD1Database(), { schema: authSchema })
+  );
+  const db = drizzle(resolveD1Database(), { schema: authSchema });
 
   return betterAuth({
     baseURL,
@@ -142,17 +138,17 @@ const createAuth = () => {
       user: {
         create: {
           before: async (user, context) => {
-            const data = { ...user }
-            delete data.image
-            data.registrationIp = getRequestIp(context?.request?.headers)
-            return { data }
+            const data = { ...user };
+            delete data.image;
+            data.registrationIp = getRequestIp(context?.request?.headers);
+            return { data };
           },
         },
         update: {
           before: async (user) => {
-            const data = { ...user }
-            delete data.image
-            return { data }
+            const data = { ...user };
+            delete data.image;
+            return { data };
           },
         },
       },
@@ -162,7 +158,7 @@ const createAuth = () => {
             await db
               .update(authSchema.user)
               .set({ lastLoginAt: new Date() })
-              .where(eq(authSchema.user.id, session.userId))
+              .where(eq(authSchema.user.id, session.userId));
           },
         },
       },
@@ -171,19 +167,19 @@ const createAuth = () => {
       enabled: true,
       requireEmailVerification: true,
       sendResetPassword: async ({ user, url }) => {
-        const resendApiKey = serverEnv.RESEND_API_KEY
+        const resendApiKey = serverEnv.RESEND_API_KEY;
         if (!resendApiKey) {
-          console.warn('RESEND_API_KEY not configured, skipping reset password email')
-          return
+          console.warn('RESEND_API_KEY not configured, skipping reset password email');
+          return;
         }
 
-        const resend = new Resend(resendApiKey)
+        const resend = new Resend(resendApiKey);
         await resend.emails.send({
           from: 'noreply@mail.forkicks.fun',
           to: user.email,
           subject: 'Aether 重置密码',
           html: `<p>我们收到了重置密码请求。</p><p>请点击以下链接设置新密码：</p><p><a href="${url}">${url}</a></p><p>链接 1 小时内有效。</p>`,
-        })
+        });
       },
       resetPasswordTokenExpiresIn: 3600,
       revokeSessionsOnPasswordReset: true,
@@ -204,36 +200,36 @@ const createAuth = () => {
         sendVerificationOnSignUp: true,
         overrideDefaultEmailVerification: true,
         async sendVerificationOTP({ email, otp, type }) {
-          const resendApiKey = serverEnv.RESEND_API_KEY
+          const resendApiKey = serverEnv.RESEND_API_KEY;
           if (!resendApiKey) {
-            console.warn('RESEND_API_KEY not configured, skipping OTP email')
-            return
+            console.warn('RESEND_API_KEY not configured, skipping OTP email');
+            return;
           }
 
-          const resend = new Resend(resendApiKey)
+          const resend = new Resend(resendApiKey);
           const subjectMap = {
             'email-verification': 'Aether 邮箱验证',
             'sign-in': 'Aether 登录验证',
             'forget-password': 'Aether 重置密码',
             'change-email': 'Aether 更换邮箱',
-          } as const
+          } as const;
 
           await resend.emails.send({
             from: 'noreply@mail.forkicks.fun',
             to: email,
             subject: subjectMap[type],
             html: `<p>你的验证码是：</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:16px 0">${otp}</p><p>验证码 5 分钟内有效，请勿泄露给他人。</p>`,
-          })
+          });
         },
       }),
     ],
-  })
-}
+  });
+};
 
-export type AuthInstance = ReturnType<typeof createAuth>
+export type AuthInstance = ReturnType<typeof createAuth>;
 
-let _auth: AuthInstance
+let _auth: AuthInstance;
 export const getAuth = () => {
-  if (!_auth) _auth = createAuth()
-  return _auth
-}
+  if (!_auth) _auth = createAuth();
+  return _auth;
+};

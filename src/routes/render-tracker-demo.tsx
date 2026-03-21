@@ -1,21 +1,21 @@
-import { createFileRoute } from '@tanstack/react-router'
-import { memo, forwardRef, useState } from 'react'
+import { createFileRoute } from '@tanstack/react-router';
+import { memo, forwardRef, useState } from 'react';
 
 export const Route = createFileRoute('/render-tracker-demo')({
   component: RenderTrackerDemoPage,
-})
+});
 
 const MemoBadge = memo(function MemoBadge({ value }: { value: number }) {
   return (
     <div className='rounded-full border border-emerald-600 bg-emerald-100 dark:bg-emerald-950 px-3 py-1 text-xs font-medium text-emerald-700 dark:text-emerald-300'>
       memo value {value}
     </div>
-  )
-})
+  );
+});
 
 const ForwardCounter = forwardRef<HTMLDivElement, { count: number }>(function ForwardCounter(
   { count },
-  ref
+  ref,
 ) {
   return (
     <div
@@ -24,12 +24,12 @@ const ForwardCounter = forwardRef<HTMLDivElement, { count: number }>(function Fo
     >
       forwardRef count {count}
     </div>
-  )
-})
+  );
+});
 
 function RenderTrackerDemoPage() {
-  const [count, setCount] = useState(0)
-  const [showPanel, setShowPanel] = useState(true)
+  const [count, setCount] = useState(0);
+  const [showPanel, setShowPanel] = useState(true);
 
   return (
     <main className='min-h-screen bg-[radial-gradient(circle_at_top,_#bae6fd_0%,_#f8fafc_45%),linear-gradient(180deg,_#f8fafc_0%,_#e2e8f0_100%)] px-6 py-12 text-slate-900 dark:bg-[radial-gradient(circle_at_top,_#0c4a6e_0%,_#020617_42%),linear-gradient(180deg,_#020617_0%,_#0f172a_100%)] dark:text-slate-100'>
@@ -42,7 +42,9 @@ function RenderTrackerDemoPage() {
             A small page for watching mount, update, and unmount commits.
           </h1>
           <p className='max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300'>
-            Start the app with <code>VITE_ENABLE_RENDER_TRACKER=true</code> in development, then click the controls below. The page itself stays ordinary SSR TanStack Start UI; the tracker is only a dev-time add-on.
+            Start the app with <code>VITE_ENABLE_RENDER_TRACKER=true</code> in development, then
+            click the controls below. The page itself stays ordinary SSR TanStack Start UI; the
+            tracker is only a dev-time add-on.
           </p>
         </section>
 
@@ -85,7 +87,7 @@ function RenderTrackerDemoPage() {
         </section>
       </div>
     </main>
-  )
+  );
 }
 
 function ToggleBlock({ count }: { count: number }) {
@@ -100,5 +102,5 @@ function ToggleBlock({ count }: { count: number }) {
         <li>{count % 2 === 0 ? 'even branch' : 'odd branch'}</li>
       </ul>
     </section>
-  )
+  );
 }

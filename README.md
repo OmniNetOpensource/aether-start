@@ -16,15 +16,15 @@
 
 ## 🏗️ 技术栈
 
-| 层 | 用了啥 |
-|---|---|
-| 框架 | TanStack Start (React 19 + 文件路由) |
-| 样式 | Tailwind CSS v4 + Radix UI + NES.css |
-| 状态 | Zustand |
-| 部署 | Cloudflare Workers |
-| 数据库 | Cloudflare D1 (SQLite) |
-| 存储 | Cloudflare R2 |
-| AI | Anthropic Claude API + OpenAI-compatible API |
+| 层     | 用了啥                                       |
+| ------ | -------------------------------------------- |
+| 框架   | TanStack Start (React 19 + 文件路由)         |
+| 样式   | Tailwind CSS v4 + Radix UI + NES.css         |
+| 状态   | Zustand                                      |
+| 部署   | Cloudflare Workers                           |
+| 数据库 | Cloudflare D1 (SQLite)                       |
+| 存储   | Cloudflare R2                                |
+| AI     | Anthropic Claude API + OpenAI-compatible API |
 
 ## 🚀 跑起来
 
@@ -98,4 +98,4 @@ LLM_STREAM_LOGGING_MAX_CHARS=可选，单条日志最大字符数，超过则不
 
 ---
 
-*built with mass amounts of caffeine and mass amounts of claude*
+_built with mass amounts of caffeine and mass amounts of claude_

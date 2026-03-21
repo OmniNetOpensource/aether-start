@@ -1,0 +1,36 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "oxc", "react"],
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    ".output/**",
+    "**/*.d.ts",
+    ".vinxi/**",
+    ".tanstack/**"
+  ],
+  "rules": {
+    "no-empty": ["error", { "allowEmptyCatch": true }]
+  },
+  "overrides": [
+    {
+      "files": ["scripts/**/*.mjs"],
+      "env": { "node": true },
+      "rules": {
+        "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }]
+      }
+    },
+    {
+      "files": ["public/**/*.js"],
+      "env": { "browser": true },
+      "globals": {
+        "Element": "readonly",
+        "requestAnimationFrame": "readonly",
+        "performance": "readonly",
+        "innerWidth": "readonly",
+        "innerHeight": "readonly",
+        "devicePixelRatio": "readonly"
+      }
+    }
+  ]
+}

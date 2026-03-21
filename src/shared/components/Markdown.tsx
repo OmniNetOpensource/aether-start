@@ -1,22 +1,20 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense } from 'react';
 
 type Props = {
-  content: string
-  isAnimating?: boolean
-}
+  content: string;
+  isAnimating?: boolean;
+};
 
-const MarkdownLazy = import.meta.env.SSR
-  ? null
-  : lazy(() => import('./MarkdownImpl'))
+const MarkdownLazy = import.meta.env.SSR ? null : lazy(() => import('./MarkdownImpl'));
 
 function Markdown({ content, isAnimating = false }: Props) {
-  if (!MarkdownLazy) return null
+  if (!MarkdownLazy) return null;
 
   return (
-    <Suspense fallback={<div className="whitespace-pre-wrap">{content}</div>}>
+    <Suspense fallback={<div className='whitespace-pre-wrap'>{content}</div>}>
       <MarkdownLazy content={content} isAnimating={isAnimating} />
     </Suspense>
-  )
+  );
 }
 
-export default Markdown
+export default Markdown;

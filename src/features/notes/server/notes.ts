@@ -1,13 +1,8 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireSession } from "@/server/functions/auth/session";
-import { getServerBindings } from "@/server/env";
-import {
-  deleteNoteById,
-  listNotesPage,
-  type NoteCursor,
-  upsertNote,
-} from "@/server/db/notes-db";
+import { createServerFn } from '@tanstack/react-start';
+import { z } from 'zod';
+import { requireSession } from '@/server/functions/auth/session';
+import { getServerBindings } from '@/server/env';
+import { deleteNoteById, listNotesPage, type NoteCursor, upsertNote } from '@/server/db/notes-db';
 
 const cursorSchema = z
   .object({
@@ -18,7 +13,7 @@ const cursorSchema = z
 
 const attachmentSchema = z.object({
   id: z.string().min(1),
-  kind: z.literal("image"),
+  kind: z.literal('image'),
   name: z.string().min(1),
   size: z.number().nonnegative(),
   mimeType: z.string().min(1),
@@ -38,7 +33,7 @@ const notePayloadSchema = z.object({
 
 export type NotesCursor = NoteCursor;
 
-export const listNotesPageFn = createServerFn({ method: "POST" })
+export const listNotesPageFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       limit: z.number().int().positive().max(100),
@@ -56,7 +51,7 @@ export const listNotesPageFn = createServerFn({ method: "POST" })
     });
   });
 
-export const upsertNoteFn = createServerFn({ method: "POST" })
+export const upsertNoteFn = createServerFn({ method: 'POST' })
   .inputValidator(notePayloadSchema)
   .handler(async ({ data }) => {
     const { DB } = getServerBindings();
@@ -68,7 +63,7 @@ export const upsertNoteFn = createServerFn({ method: "POST" })
     });
   });
 
-export const deleteNoteFn = createServerFn({ method: "POST" })
+export const deleteNoteFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       id: z.string().min(1),

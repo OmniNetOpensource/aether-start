@@ -1,39 +1,33 @@
-import { ChatTool, ToolDefinition, ToolHandler } from "./types";
-import { log } from "@/server/agents/services/logger";
-import { Supadata } from "@supadata/js";
-import { getServerEnv } from "@/server/env";
-import { arrayBufferToBase64 } from "@/server/base64";
+import { ChatTool, ToolDefinition, ToolHandler } from './types';
+import { log } from '@/server/agents/services/logger';
+import { Supadata } from '@supadata/js';
+import { getServerEnv } from '@/server/env';
+import { arrayBufferToBase64 } from '@/server/base64';
 
 type FetchUrlArgs = {
   url: string;
-  response_type: "markdown" | "image" | "youtube";
+  response_type: 'markdown' | 'image' | 'youtube';
 };
 
 const parseFetchUrlArgs = (args: unknown): FetchUrlArgs => {
-  if (!args || typeof args !== "object") {
-    throw new Error("fetch_url requires an object with a URL");
+  if (!args || typeof args !== 'object') {
+    throw new Error('fetch_url requires an object with a URL');
   }
 
   const url = (args as { url?: unknown }).url;
-  if (typeof url !== "string" || url.trim().length === 0) {
-    throw new Error("fetch_url requires a non-empty URL string");
+  if (typeof url !== 'string' || url.trim().length === 0) {
+    throw new Error('fetch_url requires a non-empty URL string');
   }
 
   try {
     new URL(url);
   } catch {
-    throw new Error("Invalid URL format");
+    throw new Error('Invalid URL format');
   }
 
   const response_type = (args as { response_type?: unknown }).response_type;
-  if (
-    response_type !== "markdown" &&
-    response_type !== "image" &&
-    response_type !== "youtube"
-  ) {
-    throw new Error(
-      "fetch_url requires response_type to be 'markdown', 'image', or 'youtube'",
-    );
+  if (response_type !== 'markdown' && response_type !== 'image' && response_type !== 'youtube') {
+    throw new Error("fetch_url requires response_type to be 'markdown', 'image', or 'youtube'");
   }
 
   return { url, response_type };
@@ -69,16 +63,7 @@ const enqueueFetchUrlCall = async <T>(task: () => Promise<T>): Promise<T> => {
 };
 
 // Image URL detection
-const IMAGE_EXTENSIONS = [
-  ".jpg",
-  ".jpeg",
-  ".png",
-  ".gif",
-  ".webp",
-  ".bmp",
-  ".svg",
-  ".ico",
-];
+const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.ico'];
 
 const isDirectImageUrl = (url: string): boolean => {
   try {
@@ -107,26 +92,23 @@ const isDirectImageUrl = (url: string): boolean => {
 };
 
 type ImageResult = {
-  type: "image";
+  type: 'image';
   data_url: string;
   mime_type: string;
   size_bytes: number;
 };
 
-const fetchDirectImage = async (
-  url: string,
-  signal?: AbortSignal,
-): Promise<string> => {
+const fetchDirectImage = async (url: string, signal?: AbortSignal): Promise<string> => {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 30_000);
   const linkedAbort = () => controller.abort();
-  signal?.addEventListener("abort", linkedAbort);
+  signal?.addEventListener('abort', linkedAbort);
 
   try {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        "User-Agent": "Mozilla/5.0 (compatible; AetherBot/1.0)",
+        'User-Agent': 'Mozilla/5.0 (compatible; AetherBot/1.0)',
       },
     });
 
@@ -134,16 +116,16 @@ const fetchDirectImage = async (
       return `Error: HTTP ${response.status} ${response.statusText}`;
     }
 
-    const contentType = response.headers.get("content-type") || "image/png";
+    const contentType = response.headers.get('content-type') || 'image/png';
 
     const arrayBuffer = await response.arrayBuffer();
 
     const base64 = arrayBufferToBase64(arrayBuffer);
-    const mimeType = contentType.split(";")[0].trim();
+    const mimeType = contentType.split(';')[0].trim();
     const dataUrl = `data:${mimeType};base64,${base64}`;
 
     const result: ImageResult = {
-      type: "image",
+      type: 'image',
       data_url: dataUrl,
       mime_type: mimeType,
       size_bytes: arrayBuffer.byteLength,
@@ -152,41 +134,38 @@ const fetchDirectImage = async (
     return JSON.stringify(result);
   } catch (error) {
     const isAbortError =
-      typeof error === "object" &&
+      typeof error === 'object' &&
       error !== null &&
-      "name" in error &&
-      (error as { name?: string }).name === "AbortError";
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError';
     const message = isAbortError
-      ? "Request timed out"
-      : typeof error === "object" && error !== null
+      ? 'Request timed out'
+      : typeof error === 'object' && error !== null
         ? (error as Error).message
         : String(error);
-    log("FETCH", `Direct image error: ${message}`);
+    log('FETCH', `Direct image error: ${message}`);
     return `Error: ${message}`;
   } finally {
-    signal?.removeEventListener("abort", linkedAbort);
+    signal?.removeEventListener('abort', linkedAbort);
     clearTimeout(timeoutId);
   }
 };
 
-const performFetchUrl = async (
-  url: string,
-  signal?: AbortSignal,
-): Promise<string> => {
+const performFetchUrl = async (url: string, signal?: AbortSignal): Promise<string> => {
   const jinaUrl = `https://r.jina.ai/${url}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 80_000);
   const linkedAbort = () => controller.abort();
-  signal?.addEventListener("abort", linkedAbort);
+  signal?.addEventListener('abort', linkedAbort);
 
   const { JINA_API_KEY } = getServerEnv();
   const headers: Record<string, string> = {
-    "X-Token-Budget": "200000",
-    "X-Engine": "browser",
-    "X-Timeout": "30",
+    'X-Token-Budget': '200000',
+    'X-Engine': 'browser',
+    'X-Timeout': '30',
   };
   if (JINA_API_KEY) {
-    headers["Authorization"] = `Bearer ${JINA_API_KEY}`;
+    headers['Authorization'] = `Bearer ${JINA_API_KEY}`;
   }
 
   try {
@@ -196,29 +175,26 @@ const performFetchUrl = async (
     });
 
     if (!jinaResponse.ok) {
-      log(
-        "FETCH",
-        `Jina AI Reader HTTP error: ${jinaResponse.status} ${jinaResponse.statusText}`,
-      );
+      log('FETCH', `Jina AI Reader HTTP error: ${jinaResponse.status} ${jinaResponse.statusText}`);
       return `Error: HTTP ${jinaResponse.status} ${jinaResponse.statusText}`;
     }
 
     return await jinaResponse.text();
   } catch (error) {
     const isAbortError =
-      typeof error === "object" &&
+      typeof error === 'object' &&
       error !== null &&
-      "name" in error &&
-      (error as { name?: string }).name === "AbortError";
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError';
     const message = isAbortError
-      ? "Request timed out"
-      : typeof error === "object" && error !== null
+      ? 'Request timed out'
+      : typeof error === 'object' && error !== null
         ? (error as Error).message
         : String(error);
-    log("FETCH", `Error: ${message}`);
+    log('FETCH', `Error: ${message}`);
     return `Error: ${message}`;
   } finally {
-    signal?.removeEventListener("abort", linkedAbort);
+    signal?.removeEventListener('abort', linkedAbort);
     clearTimeout(timeoutId);
   }
 };
@@ -226,14 +202,11 @@ const performFetchUrl = async (
 const YOUTUBE_POLL_INTERVAL_MS = 3_000;
 const YOUTUBE_MAX_POLLS = 60;
 
-const fetchYoutubeTranscript = async (
-  url: string,
-  signal?: AbortSignal,
-): Promise<string> => {
+const fetchYoutubeTranscript = async (url: string, signal?: AbortSignal): Promise<string> => {
   const { SUPADATA_API_KEY: apiKey } = getServerEnv();
   if (!apiKey) {
-    log("FETCH", "Missing SUPADATA_API_KEY");
-    return "Error: SUPADATA_API_KEY is not set";
+    log('FETCH', 'Missing SUPADATA_API_KEY');
+    return 'Error: SUPADATA_API_KEY is not set';
   }
 
   const supadata = new Supadata({ apiKey });
@@ -242,49 +215,47 @@ const fetchYoutubeTranscript = async (
     const result = await supadata.transcript({
       url,
       text: true,
-      mode: "auto",
+      mode: 'auto',
     });
 
-    if ("jobId" in result && result.jobId) {
+    if ('jobId' in result && result.jobId) {
       const jobId = result.jobId;
 
       for (let i = 1; i <= YOUTUBE_MAX_POLLS; i++) {
         if (signal?.aborted) {
-          throw new DOMException("Aborted", "AbortError");
+          throw new DOMException('Aborted', 'AbortError');
         }
 
         await sleep(YOUTUBE_POLL_INTERVAL_MS);
 
         const job = await supadata.transcript.getJobStatus(jobId);
 
-        if (job.status === "completed" && job.result) {
+        if (job.status === 'completed' && job.result) {
           const transcript = job.result;
-          return typeof transcript.content === "string"
+          return typeof transcript.content === 'string'
             ? transcript.content
             : JSON.stringify(transcript.content);
         }
 
-        if (job.status === "failed") {
-          const errMsg = job.error?.message || "Job failed";
-          log("FETCH", `Transcript job failed: ${errMsg}`);
+        if (job.status === 'failed') {
+          const errMsg = job.error?.message || 'Job failed';
+          log('FETCH', `Transcript job failed: ${errMsg}`);
           return `Error: ${errMsg}`;
         }
       }
 
-      log("FETCH", "Transcript job timed out");
-      return "Error: Transcript job timed out after polling";
+      log('FETCH', 'Transcript job timed out');
+      return 'Error: Transcript job timed out after polling';
     }
 
     const transcript = result as { content: unknown };
-    return typeof transcript.content === "string"
+    return typeof transcript.content === 'string'
       ? transcript.content
       : JSON.stringify(transcript.content);
   } catch (error) {
     const message =
-      typeof error === "object" && error !== null
-        ? (error as Error).message
-        : String(error);
-    log("FETCH", `Transcript error: ${message}`);
+      typeof error === 'object' && error !== null ? (error as Error).message : String(error);
+    log('FETCH', `Transcript error: ${message}`);
     return `Error: ${message}`;
   }
 };
@@ -293,14 +264,14 @@ const fetchUrl: ToolHandler = async (args, signal) => {
   const { url, response_type } = parseFetchUrlArgs(args);
 
   if (signal?.aborted) {
-    throw new DOMException("Aborted", "AbortError");
+    throw new DOMException('Aborted', 'AbortError');
   }
 
-  if (response_type === "youtube") {
+  if (response_type === 'youtube') {
     return fetchYoutubeTranscript(url, signal);
   }
 
-  if (response_type === "image") {
+  if (response_type === 'image') {
     if (!isDirectImageUrl(url)) {
       return "Error: response_type 'image' only accepts direct image URLs (e.g. .jpg, .png, .gif, .webp)";
     }
@@ -311,27 +282,27 @@ const fetchUrl: ToolHandler = async (args, signal) => {
 };
 
 const fetchUrlSpec: ChatTool = {
-  type: "function",
+  type: 'function',
   function: {
-    name: "fetch_url",
+    name: 'fetch_url',
     description:
       "Fetch content from a URL with three response modes: 'markdown' converts webpage content to readable text (useful for reading articles, documentation, or API responses); 'image' fetches direct image URLs only ; 'youtube' extracts transcript/subtitles from a YouTube video URL.",
     parameters: {
-      type: "object",
+      type: 'object',
       additionalProperties: false,
       properties: {
         url: {
-          type: "string",
-          description: "The URL to fetch",
+          type: 'string',
+          description: 'The URL to fetch',
         },
         response_type: {
-          type: "string",
-          enum: ["markdown", "image", "youtube"],
+          type: 'string',
+          enum: ['markdown', 'image', 'youtube'],
           description:
             "Response format: 'markdown' for text content (converts HTML to readable text), 'image' for direct image URLs only (jpg, png, gif, webp, etc.), 'youtube' for extracting transcript/subtitles from YouTube videos",
         },
       },
-      required: ["url", "response_type"],
+      required: ['url', 'response_type'],
     },
   },
 };

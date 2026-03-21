@@ -1,6 +1,6 @@
-import type { AnyContext, AnyRoute } from "@tanstack/router-core";
+import type { AnyContext, AnyRoute } from '@tanstack/router-core';
 
-declare module "@tanstack/router-core" {
+declare module '@tanstack/router-core' {
   interface FilebaseRouteOptionsInterface<
     TRegister,
     TParentRoute extends AnyRoute = AnyRoute,
@@ -16,13 +16,10 @@ declare module "@tanstack/router-core" {
     TRemountDepsFn = AnyContext,
     TSSR = unknown,
     TServerMiddlewares = unknown,
-    THandlers = undefined
+    THandlers = undefined,
   > {
     server?: {
-      handlers?: Record<
-        string,
-        (ctx: { request: Request }) => Response | Promise<Response>
-      >;
+      handlers?: Record<string, (ctx: { request: Request }) => Response | Promise<Response>>;
     };
   }
 }

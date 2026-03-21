@@ -1,8 +1,8 @@
-import type { Message, ResearchItem } from "@/types/message";
+import type { Message, ResearchItem } from '@/types/message';
 
 export type SharedAttachmentSnapshot = {
   id: string;
-  kind: "image";
+  kind: 'image';
   name: string;
   size: number;
   mimeType: string;
@@ -15,20 +15,20 @@ export type SharedAttachmentSnapshot = {
 export type SharedQuoteItem = { id: string; text: string };
 
 export type SharedUserBlock =
-  | { type: "content"; content: string }
-  | { type: "quotes"; quotes: SharedQuoteItem[] }
-  | { type: "attachments"; attachments: SharedAttachmentSnapshot[] };
+  | { type: 'content'; content: string }
+  | { type: 'quotes'; quotes: SharedQuoteItem[] }
+  | { type: 'attachments'; attachments: SharedAttachmentSnapshot[] };
 
 export type SharedAssistantBlock =
-  | { type: "content"; content: string }
-  | { type: "research"; items: ResearchItem[] }
-  | { type: "error"; message: string };
+  | { type: 'content'; content: string }
+  | { type: 'research'; items: ResearchItem[] }
+  | { type: 'error'; message: string };
 
 export type SharedMessageBlock = SharedUserBlock | SharedAssistantBlock;
 
 export type SharedMessageSnapshot = {
   id: number;
-  role: Message["role"];
+  role: Message['role'];
   createdAt: string;
   blocks: SharedMessageBlock[];
 };
@@ -40,21 +40,21 @@ export type SharedConversationSnapshot = {
 
 export type PublicSharedAttachment = Omit<
   SharedAttachmentSnapshot,
-  "storageKey" | "thumbnailStorageKey"
+  'storageKey' | 'thumbnailStorageKey'
 >;
 
 export type PublicSharedQuoteItem = { id: string; text: string };
 
 export type PublicSharedMessageBlock =
-  | { type: "content"; content: string }
-  | { type: "quotes"; quotes: PublicSharedQuoteItem[] }
-  | { type: "attachments"; attachments: PublicSharedAttachment[] }
-  | { type: "research"; items: ResearchItem[] }
-  | { type: "error"; message: string };
+  | { type: 'content'; content: string }
+  | { type: 'quotes'; quotes: PublicSharedQuoteItem[] }
+  | { type: 'attachments'; attachments: PublicSharedAttachment[] }
+  | { type: 'research'; items: ResearchItem[] }
+  | { type: 'error'; message: string };
 
 export type PublicSharedMessage = {
   id: number;
-  role: Message["role"];
+  role: Message['role'];
   createdAt: string;
   blocks: PublicSharedMessageBlock[];
 };
@@ -64,22 +64,22 @@ export type PublicSharedConversationSnapshot = {
   messages: PublicSharedMessage[];
 };
 
-export type PublicShareStatus = "active" | "revoked" | "not_found";
+export type PublicShareStatus = 'active' | 'revoked' | 'not_found';
 
 export type PublicShareView =
   | {
-      status: "not_found";
+      status: 'not_found';
     }
   | {
-      status: "revoked";
+      status: 'revoked';
       token: string;
       title: string | null;
     }
   | {
-      status: "active";
+      status: 'active';
       token: string;
       title: string | null;
       snapshot: PublicSharedConversationSnapshot;
     };
 
-export type ConversationShareStatus = "not_shared" | "active" | "revoked";
+export type ConversationShareStatus = 'not_shared' | 'active' | 'revoked';

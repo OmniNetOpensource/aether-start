@@ -13,7 +13,7 @@ test('发送图片和文字并等待模型回复', async ({ page }) => {
   // 尝试点击角色选择器，如果当前显示的是"角色"说明还没选
   const roleSelectorBtn = page.locator('button:has(svg.lucide-chevron-down)');
   const roleText = await roleSelectorBtn.textContent();
-  
+
   if (roleText?.includes('角色') || roleText?.trim() === '') {
     await roleSelectorBtn.click();
     // 等待下拉列表出现并点击第一个角色
@@ -52,7 +52,7 @@ test('发送图片和文字并等待模型回复', async ({ page }) => {
   // 找到所有的消息内容区域
   // 假设用户的消息和模型的回复都会渲染在页面上
   // 我们等待最后一个包含内容的元素出现，并且等待生成完成（发送按钮恢复原状）
-  
+
   // 等待停止生成的按钮（方形图标）出现，表示正在生成
   const stopButton = page.locator('button:has(svg.lucide-square)');
   await expect(stopButton).toBeVisible();
@@ -65,7 +65,7 @@ test('发送图片和文字并等待模型回复', async ({ page }) => {
   const messages = page.locator('.prose, [data-message-role="assistant"]');
   const count = await messages.count();
   expect(count).toBeGreaterThan(0);
-  
+
   // 打印最后一条消息的文本，方便调试确认
   const lastMessageText = await messages.last().textContent();
   console.log('模型回复内容:', lastMessageText);

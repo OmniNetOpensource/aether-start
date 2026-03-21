@@ -1,5 +1,5 @@
-import type { ArtifactLanguage } from "@/types/chat-api";
-import type { ConversationArtifact } from "@/types/conversation";
+import type { ArtifactLanguage } from '@/types/chat-api';
+import type { ConversationArtifact } from '@/types/conversation';
 
 export type ConversationListCursor = {
   is_pinned: 0 | 1;
@@ -49,7 +49,7 @@ export type ConversationArtifactPayload = {
   updated_at: string;
 };
 
-export type ConversationSearchMode = "fts" | "contains";
+export type ConversationSearchMode = 'fts' | 'contains';
 
 export type ConversationSearchItem = {
   user_id: string;
@@ -60,12 +60,12 @@ export type ConversationSearchItem = {
   pinned_at: string | null;
   created_at: string;
   updated_at: string;
-  matchedIn: "title" | "content";
+  matchedIn: 'title' | 'content';
   excerpt: string;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+  typeof value === 'object' && value !== null;
 
 const safeParsePath = (value: string): number[] => {
   try {
@@ -74,7 +74,7 @@ const safeParsePath = (value: string): number[] => {
       return [];
     }
 
-    return parsed.filter((item): item is number => typeof item === "number");
+    return parsed.filter((item): item is number => typeof item === 'number');
   } catch {
     return [];
   }
@@ -87,41 +87,27 @@ const safeParseMessages = (value: string): object[] => {
       return [];
     }
 
-    return parsed.filter(
-      (item): item is object => typeof item === "object" && item !== null,
-    );
+    return parsed.filter((item): item is object => typeof item === 'object' && item !== null);
   } catch {
     return [];
   }
 };
 
 const toArtifactLanguage = (value: unknown): ArtifactLanguage | null =>
-  value === "html" || value === "react" ? value : null;
+  value === 'html' || value === 'react' ? value : null;
 
 const toConversationArtifact = (row: unknown): ConversationArtifact | null => {
-  if (
-    !isRecord(row) ||
-    typeof row.id !== "string" ||
-    typeof row.conversation_id !== "string"
-  ) {
+  if (!isRecord(row) || typeof row.id !== 'string' || typeof row.conversation_id !== 'string') {
     return null;
   }
 
   const language = toArtifactLanguage(row.language);
-  if (
-    !language ||
-    typeof row.title !== "string" ||
-    typeof row.code !== "string"
-  ) {
+  if (!language || typeof row.title !== 'string' || typeof row.code !== 'string') {
     return null;
   }
 
-  const createdAt =
-    typeof row.created_at === "string"
-      ? row.created_at
-      : new Date().toISOString();
-  const updatedAt =
-    typeof row.updated_at === "string" ? row.updated_at : createdAt;
+  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
+  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
 
   return {
     id: row.id,
@@ -134,32 +120,28 @@ const toConversationArtifact = (row: unknown): ConversationArtifact | null => {
   };
 };
 
-const toPinnedBoolean = (value: unknown) => value === 1 || value === "1";
+const toPinnedBoolean = (value: unknown) => value === 1 || value === '1';
 
-const toPinnedAt = (value: unknown) =>
-  typeof value === "string" ? value : null;
+const toPinnedAt = (value: unknown) => (typeof value === 'string' ? value : null);
 
-export const normalizeSearchQuery = (query: string) =>
-  query.trim().replace(/\s+/g, " ");
+export const normalizeSearchQuery = (query: string) => query.trim().replace(/\s+/g, ' ');
 
 export const containsCjk = (query: string) =>
-  /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]/.test(
-    query,
-  );
+  /[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff\uac00-\ud7af]/.test(query);
 
 const tokenizeSearchTerms = (query: string) =>
   normalizeSearchQuery(query)
-    .split(" ")
-    .map((part) => part.replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase())
+    .split(' ')
+    .map((part) => part.replace(/[^\p{L}\p{N}]+/gu, '').toLowerCase())
     .filter((part) => part.length > 0);
 
 export const buildFtsQuery = (query: string) => {
   const terms = tokenizeSearchTerms(query);
   if (terms.length === 0) {
-    return "";
+    return '';
   }
 
-  return terms.map((term) => `${term}*`).join(" AND ");
+  return terms.map((term) => `${term}*`).join(' AND ');
 };
 
 export const extractSearchText = (messages: object[]) => {
@@ -171,11 +153,11 @@ export const extractSearchText = (messages: object[]) => {
     }
 
     for (const block of message.blocks) {
-      if (!isRecord(block) || typeof block.type !== "string") {
+      if (!isRecord(block) || typeof block.type !== 'string') {
         continue;
       }
 
-      if (block.type === "content" && typeof block.content === "string") {
+      if (block.type === 'content' && typeof block.content === 'string') {
         const content = block.content.trim();
         if (content) {
           chunks.push(content);
@@ -183,9 +165,9 @@ export const extractSearchText = (messages: object[]) => {
         continue;
       }
 
-      if (block.type === "quotes" && Array.isArray(block.quotes)) {
+      if (block.type === 'quotes' && Array.isArray(block.quotes)) {
         for (const q of block.quotes) {
-          if (isRecord(q) && typeof q.text === "string") {
+          if (isRecord(q) && typeof q.text === 'string') {
             const text = (q.text as string).trim();
             if (text) {
               chunks.push(text);
@@ -195,7 +177,7 @@ export const extractSearchText = (messages: object[]) => {
         continue;
       }
 
-      if (block.type === "error" && typeof block.message === "string") {
+      if (block.type === 'error' && typeof block.message === 'string') {
         const messageText = block.message.trim();
         if (messageText) {
           chunks.push(messageText);
@@ -204,13 +186,13 @@ export const extractSearchText = (messages: object[]) => {
     }
   }
 
-  return chunks.join("\n");
+  return chunks.join('\n');
 };
 
 export const buildExcerpt = (text: string, query: string) => {
-  const normalizedText = text.replace(/\s+/g, " ").trim();
+  const normalizedText = text.replace(/\s+/g, ' ').trim();
   if (!normalizedText) {
-    return "";
+    return '';
   }
 
   const minLength = 120;
@@ -221,7 +203,7 @@ export const buildExcerpt = (text: string, query: string) => {
   let hitIndex = normalizedQuery ? lowerText.indexOf(normalizedQuery) : -1;
 
   if (hitIndex < 0) {
-    const terms = normalizedQuery.split(" ").filter(Boolean);
+    const terms = normalizedQuery.split(' ').filter(Boolean);
     for (const term of terms) {
       const termIndex = lowerText.indexOf(term);
       if (termIndex >= 0) {
@@ -248,8 +230,8 @@ export const buildExcerpt = (text: string, query: string) => {
     end = Math.min(normalizedText.length, start + minLength);
   }
 
-  const prefix = start > 0 ? "..." : "";
-  const suffix = end < normalizedText.length ? "..." : "";
+  const prefix = start > 0 ? '...' : '';
+  const suffix = end < normalizedText.length ? '...' : '';
 
   return `${prefix}${normalizedText.slice(start, end).trim()}${suffix}`;
 };
@@ -279,30 +261,19 @@ const isQueryMatchInTitle = (title: string | null, query: string) => {
 };
 
 const toConversationRecord = (row: unknown): ConversationRecord | null => {
-  if (
-    !isRecord(row) ||
-    typeof row.id !== "string" ||
-    typeof row.user_id !== "string"
-  ) {
+  if (!isRecord(row) || typeof row.id !== 'string' || typeof row.user_id !== 'string') {
     return null;
   }
 
-  const title =
-    typeof row.title === "string" || row.title === null ? row.title : null;
-  const role = typeof row.role === "string" ? row.role : null;
-  const createdAt =
-    typeof row.created_at === "string"
-      ? row.created_at
-      : new Date().toISOString();
-  const updatedAt =
-    typeof row.updated_at === "string" ? row.updated_at : createdAt;
+  const title = typeof row.title === 'string' || row.title === null ? row.title : null;
+  const role = typeof row.role === 'string' ? row.role : null;
+  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
+  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
   const isPinned = toPinnedBoolean(row.is_pinned);
   const pinnedAtRaw = toPinnedAt(row.pinned_at);
   const pinnedAt = isPinned ? (pinnedAtRaw ?? updatedAt) : null;
-  const currentPathJson =
-    typeof row.current_path_json === "string" ? row.current_path_json : "[]";
-  const messagesJson =
-    typeof row.messages_json === "string" ? row.messages_json : "[]";
+  const currentPathJson = typeof row.current_path_json === 'string' ? row.current_path_json : '[]';
+  const messagesJson = typeof row.messages_json === 'string' ? row.messages_json : '[]';
 
   return {
     user_id: row.user_id,
@@ -319,26 +290,15 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
   };
 };
 
-const toConversationSummaryRecord = (
-  row: unknown,
-): ConversationRecord | null => {
-  if (
-    !isRecord(row) ||
-    typeof row.id !== "string" ||
-    typeof row.user_id !== "string"
-  ) {
+const toConversationSummaryRecord = (row: unknown): ConversationRecord | null => {
+  if (!isRecord(row) || typeof row.id !== 'string' || typeof row.user_id !== 'string') {
     return null;
   }
 
-  const title =
-    typeof row.title === "string" || row.title === null ? row.title : null;
-  const role = typeof row.role === "string" ? row.role : null;
-  const createdAt =
-    typeof row.created_at === "string"
-      ? row.created_at
-      : new Date().toISOString();
-  const updatedAt =
-    typeof row.updated_at === "string" ? row.updated_at : createdAt;
+  const title = typeof row.title === 'string' || row.title === null ? row.title : null;
+  const role = typeof row.role === 'string' ? row.role : null;
+  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
+  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
   const isPinned = toPinnedBoolean(row.is_pinned);
   const pinnedAtRaw = toPinnedAt(row.pinned_at);
   const pinnedAt = isPinned ? (pinnedAtRaw ?? updatedAt) : null;
@@ -358,39 +318,24 @@ const toConversationSummaryRecord = (
   };
 };
 
-const toConversationSearchItem = (
-  row: unknown,
-  query: string,
-): ConversationSearchItem | null => {
-  if (
-    !isRecord(row) ||
-    typeof row.id !== "string" ||
-    typeof row.user_id !== "string"
-  ) {
+const toConversationSearchItem = (row: unknown, query: string): ConversationSearchItem | null => {
+  if (!isRecord(row) || typeof row.id !== 'string' || typeof row.user_id !== 'string') {
     return null;
   }
 
-  const title =
-    typeof row.title === "string" || row.title === null ? row.title : null;
-  const role = typeof row.role === "string" ? row.role : null;
-  const createdAt =
-    typeof row.created_at === "string"
-      ? row.created_at
-      : new Date().toISOString();
-  const updatedAt =
-    typeof row.updated_at === "string" ? row.updated_at : createdAt;
+  const title = typeof row.title === 'string' || row.title === null ? row.title : null;
+  const role = typeof row.role === 'string' ? row.role : null;
+  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
+  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
   const isPinned = toPinnedBoolean(row.is_pinned);
   const pinnedAtRaw = toPinnedAt(row.pinned_at);
   const pinnedAt = isPinned ? (pinnedAtRaw ?? updatedAt) : null;
-  const bodyText = typeof row.body_text === "string" ? row.body_text : "";
+  const bodyText = typeof row.body_text === 'string' ? row.body_text : '';
 
   const explicitMatch =
-    row.matched_in === "title" || row.matched_in === "content"
-      ? row.matched_in
-      : null;
-  const matchedIn =
-    explicitMatch ?? (isQueryMatchInTitle(title, query) ? "title" : "content");
-  const excerptBase = matchedIn === "title" ? (title ?? "") : bodyText;
+    row.matched_in === 'title' || row.matched_in === 'content' ? row.matched_in : null;
+  const matchedIn = explicitMatch ?? (isQueryMatchInTitle(title, query) ? 'title' : 'content');
+  const excerptBase = matchedIn === 'title' ? (title ?? '') : bodyText;
   const excerpt = buildExcerpt(excerptBase || title || bodyText, query);
 
   return {
@@ -491,9 +436,7 @@ export const listConversationsPage = async (
     mapped.length === input.limit && last
       ? {
           is_pinned: last.is_pinned ? 1 : 0,
-          sort_at: last.is_pinned
-            ? (last.pinned_at ?? last.updated_at)
-            : last.updated_at,
+          sort_at: last.is_pinned ? (last.pinned_at ?? last.updated_at) : last.updated_at,
           updated_at: last.updated_at,
           id: last.id,
         }
@@ -515,9 +458,7 @@ export const searchConversations = async (
   },
 ) => {
   const normalizedQuery = normalizeSearchQuery(input.query);
-  const mode: ConversationSearchMode = containsCjk(normalizedQuery)
-    ? "contains"
-    : "fts";
+  const mode: ConversationSearchMode = containsCjk(normalizedQuery) ? 'contains' : 'fts';
 
   if (!normalizedQuery) {
     return {
@@ -529,7 +470,7 @@ export const searchConversations = async (
 
   let rows: D1Result<Record<string, unknown>> | D1Result<unknown>;
 
-  if (mode === "fts") {
+  if (mode === 'fts') {
     const ftsQuery = buildFtsQuery(normalizedQuery);
     if (!ftsQuery) {
       return {
@@ -564,13 +505,7 @@ export const searchConversations = async (
             LIMIT ?5
             `,
           )
-          .bind(
-            input.userId,
-            ftsQuery,
-            input.cursor.updated_at,
-            input.cursor.id,
-            input.limit,
-          )
+          .bind(input.userId, ftsQuery, input.cursor.updated_at, input.cursor.id, input.limit)
           .all()
       : await db
           .prepare(
@@ -632,13 +567,7 @@ export const searchConversations = async (
             LIMIT ?5
             `,
           )
-          .bind(
-            input.userId,
-            containsQuery,
-            input.cursor.updated_at,
-            input.cursor.id,
-            input.limit,
-          )
+          .bind(input.userId, containsQuery, input.cursor.updated_at, input.cursor.id, input.limit)
           .all()
       : await db
           .prepare(
@@ -682,9 +611,7 @@ export const searchConversations = async (
 
   const last = mapped.at(-1);
   const nextCursor: ConversationSearchCursor =
-    mapped.length === input.limit && last
-      ? { updated_at: last.updated_at, id: last.id }
-      : null;
+    mapped.length === input.limit && last ? { updated_at: last.updated_at, id: last.id } : null;
 
   return {
     items: mapped,
@@ -693,11 +620,7 @@ export const searchConversations = async (
   };
 };
 
-export const getConversationById = async (
-  db: D1Database,
-  id: string,
-  userId: string,
-) => {
+export const getConversationById = async (db: D1Database, id: string, userId: string) => {
   const [row, artifactRows] = await Promise.all([
     db
       .prepare(
@@ -788,10 +711,7 @@ export const createConversationArtifact = async (
   return { ok: true };
 };
 
-export const upsertConversation = async (
-  db: D1Database,
-  payload: ConversationPayload,
-) => {
+export const upsertConversation = async (db: D1Database, payload: ConversationPayload) => {
   const messages = payload.messages ?? [];
   const searchBody = extractSearchText(messages);
 
@@ -832,42 +752,28 @@ export const upsertConversation = async (
         JSON.stringify(messages),
       ),
     db
-      .prepare(
-        "DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2",
-      )
+      .prepare('DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2')
       .bind(payload.user_id, payload.id),
     db
       .prepare(
-        "INSERT INTO conversation_search_fts(user_id, conversation_id, title, body) VALUES (?1, ?2, ?3, ?4)",
+        'INSERT INTO conversation_search_fts(user_id, conversation_id, title, body) VALUES (?1, ?2, ?3, ?4)',
       )
-      .bind(payload.user_id, payload.id, payload.title ?? "", searchBody),
+      .bind(payload.user_id, payload.id, payload.title ?? '', searchBody),
   ]);
 
   return { ok: true };
 };
 
-export const deleteConversationById = async (
-  db: D1Database,
-  id: string,
-  userId: string,
-) => {
+export const deleteConversationById = async (db: D1Database, id: string, userId: string) => {
   await db.batch([
     db
-      .prepare(
-        "DELETE FROM conversation_artifacts WHERE user_id = ?1 AND conversation_id = ?2",
-      )
+      .prepare('DELETE FROM conversation_artifacts WHERE user_id = ?1 AND conversation_id = ?2')
       .bind(userId, id),
     db
-      .prepare(
-        "DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2",
-      )
+      .prepare('DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2')
       .bind(userId, id),
-    db
-      .prepare("DELETE FROM conversation_bodies WHERE user_id = ?1 AND id = ?2")
-      .bind(userId, id),
-    db
-      .prepare("DELETE FROM conversation_metas WHERE user_id = ?1 AND id = ?2")
-      .bind(userId, id),
+    db.prepare('DELETE FROM conversation_bodies WHERE user_id = ?1 AND id = ?2').bind(userId, id),
+    db.prepare('DELETE FROM conversation_metas WHERE user_id = ?1 AND id = ?2').bind(userId, id),
   ]);
 
   return { ok: true };
@@ -875,18 +781,10 @@ export const deleteConversationById = async (
 
 export const clearConversations = async (db: D1Database, userId: string) => {
   await db.batch([
-    db
-      .prepare("DELETE FROM conversation_artifacts WHERE user_id = ?1")
-      .bind(userId),
-    db
-      .prepare("DELETE FROM conversation_search_fts WHERE user_id = ?1")
-      .bind(userId),
-    db
-      .prepare("DELETE FROM conversation_bodies WHERE user_id = ?1")
-      .bind(userId),
-    db
-      .prepare("DELETE FROM conversation_metas WHERE user_id = ?1")
-      .bind(userId),
+    db.prepare('DELETE FROM conversation_artifacts WHERE user_id = ?1').bind(userId),
+    db.prepare('DELETE FROM conversation_search_fts WHERE user_id = ?1').bind(userId),
+    db.prepare('DELETE FROM conversation_bodies WHERE user_id = ?1').bind(userId),
+    db.prepare('DELETE FROM conversation_metas WHERE user_id = ?1').bind(userId),
   ]);
 
   return { ok: true };
@@ -919,28 +817,22 @@ export const updateConversationTitle = async (
   const now = new Date().toISOString();
 
   const bodyRow = await db
-    .prepare(
-      "SELECT messages_json FROM conversation_bodies WHERE user_id = ?1 AND id = ?2 LIMIT 1",
-    )
+    .prepare('SELECT messages_json FROM conversation_bodies WHERE user_id = ?1 AND id = ?2 LIMIT 1')
     .bind(input.userId, input.id)
     .first();
 
   const messagesJson =
-    isRecord(bodyRow) && typeof bodyRow.messages_json === "string"
-      ? bodyRow.messages_json
-      : "[]";
+    isRecord(bodyRow) && typeof bodyRow.messages_json === 'string' ? bodyRow.messages_json : '[]';
   const searchBody = extractSearchText(safeParseMessages(messagesJson));
 
   await db.batch([
     db
       .prepare(
-        "UPDATE conversation_metas SET title = ?1, updated_at = ?2 WHERE user_id = ?3 AND id = ?4",
+        'UPDATE conversation_metas SET title = ?1, updated_at = ?2 WHERE user_id = ?3 AND id = ?4',
       )
       .bind(input.title, now, input.userId, input.id),
     db
-      .prepare(
-        "DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2",
-      )
+      .prepare('DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2')
       .bind(input.userId, input.id),
     db
       .prepare(

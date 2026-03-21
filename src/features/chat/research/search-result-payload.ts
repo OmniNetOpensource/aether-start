@@ -1,9 +1,9 @@
 export const SEARCH_TOOL_NAMES = new Set([
-  "search",
-  "serper_search",
-  "tavily_search",
-  "serp_search",
-  "brave_search",
+  'search',
+  'serper_search',
+  'tavily_search',
+  'serp_search',
+  'brave_search',
 ]);
 
 export type SearchClientResult = {
@@ -16,11 +16,9 @@ export type SearchClientPayload = {
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+  typeof value === 'object' && value !== null;
 
-export const parseSearchClientPayload = (
-  raw: string,
-): SearchClientPayload | null => {
+export const parseSearchClientPayload = (raw: string): SearchClientPayload | null => {
   try {
     const parsed = JSON.parse(raw);
     if (!isRecord(parsed) || !Array.isArray(parsed.results)) {
@@ -33,8 +31,8 @@ export const parseSearchClientPayload = (
           return null;
         }
 
-        const title = typeof item.title === "string" ? item.title.trim() : "";
-        const url = typeof item.url === "string" ? item.url : "";
+        const title = typeof item.title === 'string' ? item.title.trim() : '';
+        const url = typeof item.url === 'string' ? item.url : '';
 
         if (!title || !url) {
           return null;
@@ -50,9 +48,7 @@ export const parseSearchClientPayload = (
   }
 };
 
-export const stringifySearchClientPayload = (
-  payload: SearchClientPayload,
-): string =>
+export const stringifySearchClientPayload = (payload: SearchClientPayload): string =>
   JSON.stringify({
     results: payload.results.map((item) => ({
       title: item.title,
@@ -60,6 +56,5 @@ export const stringifySearchClientPayload = (
     })),
   });
 
-export const stringifyFetchClientPayload = (
-  payload: { type: "fetch_result" },
-): string => JSON.stringify(payload);
+export const stringifyFetchClientPayload = (payload: { type: 'fetch_result' }): string =>
+  JSON.stringify(payload);

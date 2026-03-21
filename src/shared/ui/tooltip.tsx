@@ -1,8 +1,7 @@
+import * as React from 'react';
+import * as TooltipPrimitive from '@radix-ui/react-tooltip';
 
-import * as React from "react";
-import * as TooltipPrimitive from "@radix-ui/react-tooltip";
-
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 
 function TooltipProvider({
   delayDuration = 400,
@@ -11,7 +10,7 @@ function TooltipProvider({
 }: React.ComponentProps<typeof TooltipPrimitive.Provider>) {
   return (
     <TooltipPrimitive.Provider
-      data-slot="tooltip-provider"
+      data-slot='tooltip-provider'
       delayDuration={delayDuration}
       skipDelayDuration={skipDelayDuration}
       {...props}
@@ -31,13 +30,13 @@ function TooltipContent({
   return (
     <TooltipPrimitive.Content
       sideOffset={sideOffset}
-      data-slot="tooltip-content"
+      data-slot='tooltip-content'
       className={cn(
-        "z-(--z-tooltip) max-w-sm rounded-md border bg-(--surface-secondary) px-3 py-2 text-xs text-(--text-primary) shadow-md",
-        "transition-[transform,opacity] duration-[125ms] ease-[var(--ease-out)] origin-[var(--radix-tooltip-content-transform-origin)]",
-        "data-[state=delayed-open]:opacity-100 data-[state=delayed-open]:scale-100",
-        "data-[state=closed]:opacity-0 data-[state=closed]:scale-[0.97]",
-        className
+        'z-(--z-tooltip) max-w-sm rounded-md border bg-(--surface-secondary) px-3 py-2 text-xs text-(--text-primary) shadow-md',
+        'transition-[transform,opacity] duration-[125ms] ease-[var(--ease-out)] origin-[var(--radix-tooltip-content-transform-origin)]',
+        'data-[state=delayed-open]:opacity-100 data-[state=delayed-open]:scale-100',
+        'data-[state=closed]:opacity-0 data-[state=closed]:scale-[0.97]',
+        className,
       )}
       {...props}
     />

@@ -1,18 +1,15 @@
-import {
-  createStartHandler,
-  defaultStreamHandler,
-} from "@tanstack/react-start/server";
-import { env } from "cloudflare:workers";
-import { createServerEntry } from "@tanstack/react-start/server-entry";
-import { withSentry } from "@sentry/cloudflare";
-import type { RequestHandler } from "@tanstack/react-start/server";
-import type { Register } from "@tanstack/react-router";
-import { getSessionFromRequest } from "@/features/auth/server/session";
+import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server';
+import { env } from 'cloudflare:workers';
+import { createServerEntry } from '@tanstack/react-start/server-entry';
+import { withSentry } from '@sentry/cloudflare';
+import type { RequestHandler } from '@tanstack/react-start/server';
+import type { Register } from '@tanstack/react-router';
+import { getSessionFromRequest } from '@/features/auth/server/session';
 
 // 所有发往聊天 Durable Object 的请求都约定挂在这个前缀下：
 // /agents/chat-agent/<conversation-or-instance-name>/...
 // 入口文件会先识别这个前缀，再决定是否把请求转发给 ChatAgent。
-const AGENT_PATH_PREFIX = "/agents/chat-agent/";
+const AGENT_PATH_PREFIX = '/agents/chat-agent/';
 
 // 整个 Cloudflare Worker 的统一 fetch 入口。
 //
@@ -26,7 +23,7 @@ const AGENT_PATH_PREFIX = "/agents/chat-agent/";
 const fetch: RequestHandler<Register> = async (request, opts) => {
   const url = new URL(request.url);
   const agentName = url.pathname.startsWith(AGENT_PATH_PREFIX)
-    ? url.pathname.slice(AGENT_PATH_PREFIX.length).split("/")[0] || null
+    ? url.pathname.slice(AGENT_PATH_PREFIX.length).split('/')[0] || null
     : null;
 
   if (agentName) {
@@ -34,11 +31,11 @@ const fetch: RequestHandler<Register> = async (request, opts) => {
     // 通过后把 user id 注入一个内部 header，后面的 Durable Object 就不需要重复解析 session。
     const session = await getSessionFromRequest(request);
     if (!session?.user?.id) {
-      return new Response("Unauthorized", { status: 401 });
+      return new Response('Unauthorized', { status: 401 });
     }
 
     const headers = new Headers(request.headers);
-    headers.set("x-aether-user-id", session.user.id);
+    headers.set('x-aether-user-id', session.user.id);
     const authedRequest = new Request(request, { headers });
 
     // env 来自 cloudflare:workers 运行时，类型收窄后取 ChatAgent 绑定。
@@ -54,7 +51,7 @@ const fetch: RequestHandler<Register> = async (request, opts) => {
 
 // 必须把 Durable Object 类从 worker 入口导出。
 // Cloudflare 会根据这个导出和 wrangler 配置来注册 ChatAgent 绑定。
-export { ChatAgent } from "@/features/chat/server/agents/chat-agent";
+export { ChatAgent } from '@/features/chat/server/agents/chat-agent';
 
 // createServerEntry 会把上面的 fetch 处理器包装成 TanStack Start 认识的 worker 入口对象。
 const serverEntry = createServerEntry({

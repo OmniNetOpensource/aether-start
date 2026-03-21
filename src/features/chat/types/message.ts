@@ -12,11 +12,9 @@ export type Tool = {
   result?: ToolResult;
 };
 
-export type ResearchItem =
-  | { kind: "thinking"; text: string }
-  | { kind: "tool"; data: Tool };
+export type ResearchItem = { kind: 'thinking'; text: string } | { kind: 'tool'; data: Tool };
 
-export type AttachmentKind = "image";
+export type AttachmentKind = 'image';
 
 type AttachmentBase = {
   id: string;
@@ -34,7 +32,7 @@ export type Attachment = AttachmentBase & {
 };
 
 type ResearchBlock = {
-  type: "research";
+  type: 'research';
   items: ResearchItem[];
 };
 
@@ -43,14 +41,14 @@ type ResearchBlock = {
 export type QuoteItem = { id: string; text: string };
 
 export type UserContentBlock =
-  | { type: "content"; content: string }
-  | { type: "quotes"; quotes: QuoteItem[] }
-  | { type: "attachments"; attachments: Attachment[] };
+  | { type: 'content'; content: string }
+  | { type: 'quotes'; quotes: QuoteItem[] }
+  | { type: 'attachments'; attachments: Attachment[] };
 
 export type AssistantContentBlock =
-  | { type: "content"; content: string }
+  | { type: 'content'; content: string }
   | ResearchBlock
-  | { type: "error"; message: string };
+  | { type: 'error'; message: string };
 
 export type ContentBlock = UserContentBlock | AssistantContentBlock;
 
@@ -66,12 +64,12 @@ type MessageFields = {
 };
 
 export type UserMessage = MessageFields & {
-  role: "user";
+  role: 'user';
   blocks: UserContentBlock[];
 };
 
 export type AssistantMessage = MessageFields & {
-  role: "assistant";
+  role: 'assistant';
   blocks: AssistantContentBlock[];
 };
 
@@ -80,23 +78,21 @@ export type Message = UserMessage | AssistantMessage;
 // --- Serialized message types ---
 
 export type SerializedUserMessage = {
-  role: "user";
+  role: 'user';
   blocks: UserContentBlock[];
 };
 
 export type SerializedAssistantMessage = {
-  role: "assistant";
+  role: 'assistant';
   blocks: AssistantContentBlock[];
 };
 
-export type SerializedMessage =
-  | SerializedUserMessage
-  | SerializedAssistantMessage;
+export type SerializedMessage = SerializedUserMessage | SerializedAssistantMessage;
 
 export type MessageLike =
   | Message
   | SerializedMessage
-  | { role: "user" | "assistant"; blocks: ContentBlock[] };
+  | { role: 'user' | 'assistant'; blocks: ContentBlock[] };
 
 export type BranchInfo = {
   currentIndex: number;

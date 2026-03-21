@@ -5,9 +5,9 @@
  * 上传后的资源存储在 Cloudflare R2，通过 /api/upload-attachment 接口完成。
  */
 
-import type { Attachment } from "@/types/message";
-import { MAX_IMAGE_SIZE } from "@/lib/utils/file";
-import { toast } from "@/hooks/useToast";
+import type { Attachment } from '@/types/message';
+import { MAX_IMAGE_SIZE } from '@/lib/utils/file';
+import { toast } from '@/hooks/useToast';
 
 /** 上传成功后服务端返回的资源信息 */
 type UploadedAsset = {
@@ -17,7 +17,7 @@ type UploadedAsset = {
 
 /** 生成唯一附件 ID，优先用 crypto.randomUUID，否则用时间戳+随机数兜底 */
 const createAttachmentId = () =>
-  typeof crypto !== "undefined" && crypto.randomUUID
+  typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -26,8 +26,8 @@ const createAttachmentId = () =>
  * @returns 校验失败时返回错误提示文案，通过时返回 null
  */
 const buildValidationMessage = (file: File) => {
-  const mimeType = file.type || "";
-  if (!mimeType.startsWith("image/")) {
+  const mimeType = file.type || '';
+  if (!mimeType.startsWith('image/')) {
     return `仅支持上传图片，已跳过「${file.name}」。`;
   }
 
@@ -42,17 +42,14 @@ const buildValidationMessage = (file: File) => {
  * 将 blob 上传到 /api/upload-attachment，存入 R2
  * @returns 服务端返回的 storageKey 和 url
  */
-const uploadBlobAsAsset = async (
-  blob: Blob,
-  filename: string,
-): Promise<UploadedAsset> => {
+const uploadBlobAsAsset = async (blob: Blob, filename: string): Promise<UploadedAsset> => {
   const formData = new FormData();
-  formData.append("file", blob, filename);
+  formData.append('file', blob, filename);
 
-  const res = await fetch("/api/upload-attachment", {
-    method: "POST",
+  const res = await fetch('/api/upload-attachment', {
+    method: 'POST',
     body: formData,
-    credentials: "same-origin",
+    credentials: 'same-origin',
   });
 
   if (!res.ok) {
@@ -65,18 +62,15 @@ const uploadBlobAsAsset = async (
 };
 
 /** 获取附件展示用的 URL，优先用缩略图，没有则用原图 */
-export const getAttachmentPreviewUrl = (
-  attachment: Pick<Attachment, "thumbnailUrl" | "url">,
-) => attachment.thumbnailUrl || attachment.url;
+export const getAttachmentPreviewUrl = (attachment: Pick<Attachment, 'thumbnailUrl' | 'url'>) =>
+  attachment.thumbnailUrl || attachment.url;
 
 /**
  * 上传单张图片附件
  * 校验类型和大小后直接上传原图，成功后用返回的 url 渲染
  * @returns 上传成功返回 Attachment，失败返回 null
  */
-export const uploadAttachmentFile = async (
-  file: File,
-): Promise<Attachment | null> => {
+export const uploadAttachmentFile = async (file: File): Promise<Attachment | null> => {
   const validationMessage = buildValidationMessage(file);
   if (validationMessage) {
     toast.warning(validationMessage);
@@ -87,16 +81,15 @@ export const uploadAttachmentFile = async (
     const uploaded = await uploadBlobAsAsset(file, file.name);
     return {
       id: createAttachmentId(),
-      kind: "image",
+      kind: 'image',
       name: file.name,
       size: file.size,
-      mimeType: file.type || "",
+      mimeType: file.type || '',
       url: uploaded.url,
       storageKey: uploaded.storageKey,
     };
   } catch (error) {
-    const detail =
-      error instanceof Error ? error.message : String(error || "Unknown error");
+    const detail = error instanceof Error ? error.message : String(error || 'Unknown error');
     console.error(`Failed to upload image "${file.name}"`, error);
     toast.error(`上传图片「${file.name}」失败：${detail}`);
     return null;
@@ -108,9 +101,7 @@ export const uploadAttachmentFile = async (
  * 每张图片单独上传，失败时各自 toast
  * @returns 仅包含上传成功的 Attachment 数组
  */
-export const buildAttachmentsFromFiles = async (
-  files: File[],
-): Promise<Attachment[]> => {
+export const buildAttachmentsFromFiles = async (files: File[]): Promise<Attachment[]> => {
   const results = await Promise.all(files.map((f) => uploadAttachmentFile(f)));
   return results.filter((a): a is Attachment => a !== null);
 };

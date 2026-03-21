@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+  "singleQuote": true,
+  "jsxSingleQuote": true,
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    "node_modules/**",
+    "dist/**",
+    ".output/**",
+    ".vinxi/**",
+    ".tanstack/**",
+    "pnpm-lock.yaml",
+    "src/routeTree.gen.ts",
+    "worker-configuration.d.ts",
+    "src/features/auth/server/auth.schema.ts"
+  ]
+}

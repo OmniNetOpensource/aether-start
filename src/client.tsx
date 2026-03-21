@@ -1,4 +1,4 @@
-import { StrictMode, startTransition } from 'react'
+import { StrictMode, startTransition } from 'react';
 
 // react-render-tracker 暂时禁用
 // if (
@@ -9,8 +9,8 @@ import { StrictMode, startTransition } from 'react'
 //   await import('@aether/react-render-tracker/auto')
 // }
 
-const { hydrateRoot } = await import('react-dom/client')
-const { StartClient } = await import('@tanstack/react-start/client')
+const { hydrateRoot } = await import('react-dom/client');
+const { StartClient } = await import('@tanstack/react-start/client');
 
 startTransition(() => {
   hydrateRoot(
@@ -18,5 +18,5 @@ startTransition(() => {
     <StrictMode>
       <StartClient />
     </StrictMode>,
-  )
-})
+  );
+});

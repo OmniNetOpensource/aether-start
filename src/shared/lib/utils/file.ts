@@ -19,7 +19,7 @@ export function formatFileSize(bytes: number): string {
     return `${bytes} B`;
   }
 
-  const units = ["KB", "MB", "GB"];
+  const units = ['KB', 'MB', 'GB'];
   let size = bytes / 1024;
   let unitIndex = 0;
 

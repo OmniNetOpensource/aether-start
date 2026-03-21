@@ -1,18 +1,18 @@
-import { getServerEnv } from "@/server/env";
+import { getServerEnv } from '@/server/env';
 
-export type ChatFormat = "anthropic" | "openai" | "gemini" | "openai-responses";
+export type ChatFormat = 'anthropic' | 'openai' | 'gemini' | 'openai-responses';
 export type ChatBackend =
-  | "rightcode-claude"
-  | "rightcode-claude-sale"
-  | "rightcode-gemini"
-  | "rightcode-openai"
-  | "dmx"
-  | "ikun"
-  | "ikun-gemini"
-  | "openrouter"
-  | "cubence-claude"
-  | "cubence-gemini"
-  | "cubence-openai";
+  | 'rightcode-claude'
+  | 'rightcode-claude-sale'
+  | 'rightcode-gemini'
+  | 'rightcode-openai'
+  | 'dmx'
+  | 'ikun'
+  | 'ikun-gemini'
+  | 'openrouter'
+  | 'cubence-claude'
+  | 'cubence-gemini'
+  | 'cubence-openai';
 
 export type BackendConfig = {
   apiKey: string;
@@ -153,227 +153,227 @@ On word choice:
 
 const PROMPT_CONFIGS: Record<string, PromptConfig> = {
   aether: {
-    id: "aether",
-    name: "aether",
+    id: 'aether',
+    name: 'aether',
     content: aetherSystemPrompt,
   },
   englishTeacher: {
-    id: "englishTeacher",
-    name: "英语教学助手",
+    id: 'englishTeacher',
+    name: '英语教学助手',
     content: englishTeacherSystemPrompt,
   },
 };
 
 const MODEL_CONFIGS: Record<string, ModelConfig> = {
   claudeOpus46Ikun: {
-    id: "claudeOpus46Ikun",
-    name: "opus-4-6+ikun",
-    model: "claude-opus-4-6",
-    format: "anthropic",
-    backend: "ikun",
+    id: 'claudeOpus46Ikun',
+    name: 'opus-4-6+ikun',
+    model: 'claude-opus-4-6',
+    format: 'anthropic',
+    backend: 'ikun',
   },
   claudeOpus45Ikun: {
-    id: "claudeOpus45Ikun",
-    name: "opus-4-5+ikun",
-    model: "claude-opus-4-5-20251101",
-    format: "anthropic",
-    backend: "ikun",
+    id: 'claudeOpus45Ikun',
+    name: 'opus-4-5+ikun',
+    model: 'claude-opus-4-5-20251101',
+    format: 'anthropic',
+    backend: 'ikun',
   },
   test3: {
-    id: "test3",
-    name: "qwen3.5-plus+dmx",
-    model: "qwen3.5-plus",
-    format: "openai",
-    backend: "dmx",
+    id: 'test3',
+    name: 'qwen3.5-plus+dmx',
+    model: 'qwen3.5-plus',
+    format: 'openai',
+    backend: 'dmx',
   },
   qwen35PlusFree: {
-    id: "qwen35PlusFree",
-    name: "qwen3.5-plus-free+dmx",
-    model: "qwen3.5-plus-free",
-    format: "openai",
-    backend: "dmx",
+    id: 'qwen35PlusFree',
+    name: 'qwen3.5-plus-free+dmx',
+    model: 'qwen3.5-plus-free',
+    format: 'openai',
+    backend: 'dmx',
   },
   minimaxM25: {
-    id: "minimaxM25",
-    name: "MiniMax-M2.5+dmx",
-    model: "MiniMax-M2.5",
-    format: "openai",
-    backend: "dmx",
+    id: 'minimaxM25',
+    name: 'MiniMax-M2.5+dmx',
+    model: 'MiniMax-M2.5',
+    format: 'openai',
+    backend: 'dmx',
   },
   minimaxM27Free: {
-    id: "minimaxM27Free",
-    name: "MiniMax-M2.7-free+dmx",
-    model: "MiniMax-M2.7-free",
-    format: "openai",
-    backend: "dmx",
+    id: 'minimaxM27Free',
+    name: 'MiniMax-M2.7-free+dmx',
+    model: 'MiniMax-M2.7-free',
+    format: 'openai',
+    backend: 'dmx',
   },
   glm5: {
-    id: "glm5",
-    name: "glm-5+dmx",
-    model: "glm-5",
-    format: "openai",
-    backend: "dmx",
+    id: 'glm5',
+    name: 'glm-5+dmx',
+    model: 'glm-5',
+    format: 'openai',
+    backend: 'dmx',
   },
   glm5Free: {
-    id: "glm5Free",
-    name: "glm-5-free+dmx",
-    model: "glm-5-free",
-    format: "openai",
-    backend: "dmx",
+    id: 'glm5Free',
+    name: 'glm-5-free+dmx',
+    model: 'glm-5-free',
+    format: 'openai',
+    backend: 'dmx',
   },
   doubao: {
-    id: "doubao",
-    name: "doubao-seed-2-0-pro-260215+dmx",
-    model: "doubao-seed-2-0-pro-260215",
-    format: "openai",
-    backend: "dmx",
+    id: 'doubao',
+    name: 'doubao-seed-2-0-pro-260215+dmx',
+    model: 'doubao-seed-2-0-pro-260215',
+    format: 'openai',
+    backend: 'dmx',
   },
   kimiK25: {
-    id: "kimiK25",
-    name: "kimi-k2.5+dmx",
-    model: "kimi-k2.5",
-    format: "openai",
-    backend: "dmx",
+    id: 'kimiK25',
+    name: 'kimi-k2.5+dmx',
+    model: 'kimi-k2.5',
+    format: 'openai',
+    backend: 'dmx',
   },
   kimiK25Free: {
-    id: "kimiK25Free",
-    name: "kimi-k2.5-free+dmx",
-    model: "kimi-k2.5-free",
-    format: "openai",
-    backend: "dmx",
+    id: 'kimiK25Free',
+    name: 'kimi-k2.5-free+dmx',
+    model: 'kimi-k2.5-free',
+    format: 'openai',
+    backend: 'dmx',
   },
   deepseekV32: {
-    id: "deepseekV32",
-    name: "DeepSeek-V3.2-Thinking+dmx",
-    model: "DeepSeek-V3.2-Thinking",
-    format: "openai",
-    backend: "dmx",
+    id: 'deepseekV32',
+    name: 'DeepSeek-V3.2-Thinking+dmx',
+    model: 'DeepSeek-V3.2-Thinking',
+    format: 'openai',
+    backend: 'dmx',
   },
   gemini31ProRightcode: {
-    id: "gemini31ProRightcode",
-    name: "gemini-3.1-pro+rightcode",
-    model: "gemini-3.1-pro-preview",
-    format: "gemini",
-    backend: "rightcode-gemini",
+    id: 'gemini31ProRightcode',
+    name: 'gemini-3.1-pro+rightcode',
+    model: 'gemini-3.1-pro-preview',
+    format: 'gemini',
+    backend: 'rightcode-gemini',
   },
   gemini31ProCubence: {
-    id: "gemini31ProCubence",
-    name: "gemini-3.1-pro+cubence",
-    model: "gemini-3.1-pro-preview",
-    format: "gemini",
-    backend: "cubence-gemini",
+    id: 'gemini31ProCubence',
+    name: 'gemini-3.1-pro+cubence',
+    model: 'gemini-3.1-pro-preview',
+    format: 'gemini',
+    backend: 'cubence-gemini',
   },
   gemini31ProIkun: {
-    id: "gemini31ProIkun",
-    name: "gemini-3.1-pro+ikun",
-    model: "gemini-3.1-pro-preview",
-    format: "gemini",
-    backend: "ikun-gemini",
+    id: 'gemini31ProIkun',
+    name: 'gemini-3.1-pro+ikun',
+    model: 'gemini-3.1-pro-preview',
+    format: 'gemini',
+    backend: 'ikun-gemini',
   },
   gemini3FlashIkun: {
-    id: "gemini3FlashIkun",
-    name: "gemini-3-flash-preview+ikun",
-    model: "gemini-3-flash-preview",
-    format: "gemini",
-    backend: "ikun-gemini",
+    id: 'gemini3FlashIkun',
+    name: 'gemini-3-flash-preview+ikun',
+    model: 'gemini-3-flash-preview',
+    format: 'gemini',
+    backend: 'ikun-gemini',
   },
   gpt54Rightcode: {
-    id: "gpt54Rightcode",
-    name: "gpt-5.4+rightcode",
-    model: "gpt-5.4-high",
-    format: "openai-responses",
-    backend: "rightcode-openai",
+    id: 'gpt54Rightcode',
+    name: 'gpt-5.4+rightcode',
+    model: 'gpt-5.4-high',
+    format: 'openai-responses',
+    backend: 'rightcode-openai',
   },
   gpt54Cubence: {
-    id: "gpt54Cubence",
-    name: "gpt-5.4+cubence",
-    model: "gpt-5.4-high",
-    format: "openai-responses",
-    backend: "cubence-openai",
+    id: 'gpt54Cubence',
+    name: 'gpt-5.4+cubence',
+    model: 'gpt-5.4-high',
+    format: 'openai-responses',
+    backend: 'cubence-openai',
   },
   claudeOpus46Rightcode: {
-    id: "claudeOpus46Rightcode",
-    name: "opus-4-6+rightcode",
-    model: "claude-opus-4-6",
-    format: "anthropic",
-    backend: "rightcode-claude",
+    id: 'claudeOpus46Rightcode',
+    name: 'opus-4-6+rightcode',
+    model: 'claude-opus-4-6',
+    format: 'anthropic',
+    backend: 'rightcode-claude',
   },
   claudeOpus46Cubence: {
-    id: "claudeOpus46Cubence",
-    name: "opus-4-6+cubence",
-    model: "claude-opus-4-6",
-    format: "anthropic",
-    backend: "cubence-claude",
+    id: 'claudeOpus46Cubence',
+    name: 'opus-4-6+cubence',
+    model: 'claude-opus-4-6',
+    format: 'anthropic',
+    backend: 'cubence-claude',
   },
   claudeSonnet46Ikun: {
-    id: "claudeSonnet46Ikun",
-    name: "sonnet-4-6+ikun",
-    model: "claude-sonnet-4-6",
-    format: "anthropic",
-    backend: "ikun",
+    id: 'claudeSonnet46Ikun',
+    name: 'sonnet-4-6+ikun',
+    model: 'claude-sonnet-4-6',
+    format: 'anthropic',
+    backend: 'ikun',
   },
   claudeHaiku45Ikun: {
-    id: "claudeHaiku45Ikun",
-    name: "haiku-4-5-20251001+ikun",
-    model: "claude-haiku-4-5-20251001",
-    format: "anthropic",
-    backend: "ikun",
+    id: 'claudeHaiku45Ikun',
+    name: 'haiku-4-5-20251001+ikun',
+    model: 'claude-haiku-4-5-20251001',
+    format: 'anthropic',
+    backend: 'ikun',
   },
   claudeHaiku45Rightcode: {
-    id: "claudeHaiku45Rightcode",
-    name: "haiku-4-5+rightcode",
-    model: "claude-haiku-4-5-20251001",
-    format: "anthropic",
-    backend: "rightcode-claude",
+    id: 'claudeHaiku45Rightcode',
+    name: 'haiku-4-5+rightcode',
+    model: 'claude-haiku-4-5-20251001',
+    format: 'anthropic',
+    backend: 'rightcode-claude',
   },
   claudeSonnet46Rightcode: {
-    id: "claudeSonnet46Rightcode",
-    name: "sonnet-4-6+rightcode",
-    model: "claude-sonnet-4-6",
-    format: "anthropic",
-    backend: "rightcode-claude",
+    id: 'claudeSonnet46Rightcode',
+    name: 'sonnet-4-6+rightcode',
+    model: 'claude-sonnet-4-6',
+    format: 'anthropic',
+    backend: 'rightcode-claude',
   },
   claudeOpus46RightcodeSale: {
-    id: "claudeOpus46RightcodeSale",
-    name: "opus-4-6+rightcode-sale",
-    model: "claude-opus-4-6",
-    format: "anthropic",
-    backend: "rightcode-claude-sale",
+    id: 'claudeOpus46RightcodeSale',
+    name: 'opus-4-6+rightcode-sale',
+    model: 'claude-opus-4-6',
+    format: 'anthropic',
+    backend: 'rightcode-claude-sale',
   },
   openrouterHunterAlpha: {
-    id: "openrouterHunterAlpha",
-    name: "hunter-alpha+openrouter",
-    model: "openrouter/hunter-alpha",
-    format: "openai",
-    backend: "openrouter",
+    id: 'openrouterHunterAlpha',
+    name: 'hunter-alpha+openrouter',
+    model: 'openrouter/hunter-alpha',
+    format: 'openai',
+    backend: 'openrouter',
   },
   openrouterHealerAlpha: {
-    id: "openrouterHealerAlpha",
-    name: "healer-alpha+openrouter",
-    model: "openrouter/healer-alpha",
-    format: "openai",
-    backend: "openrouter",
+    id: 'openrouterHealerAlpha',
+    name: 'healer-alpha+openrouter',
+    model: 'openrouter/healer-alpha',
+    format: 'openai',
+    backend: 'openrouter',
   },
   openrouterNemotron: {
-    id: "openrouterNemotron",
-    name: "nemotron-3-super+openrouter",
-    model: "nvidia/nemotron-3-super-120b-a12b:free",
-    format: "openai",
-    backend: "openrouter",
+    id: 'openrouterNemotron',
+    name: 'nemotron-3-super+openrouter',
+    model: 'nvidia/nemotron-3-super-120b-a12b:free',
+    format: 'openai',
+    backend: 'openrouter',
   },
   gpt5NanoOpenrouter: {
-    id: "gpt5NanoOpenrouter",
-    name: "gpt-5-nano+openrouter",
-    model: "openai/gpt-5-nano",
-    format: "openai",
-    backend: "openrouter",
+    id: 'gpt5NanoOpenrouter',
+    name: 'gpt-5-nano+openrouter',
+    model: 'openai/gpt-5-nano',
+    format: 'openai',
+    backend: 'openrouter',
   },
   gemini31FlashLiteOpenrouter: {
-    id: "gemini31FlashLiteOpenrouter",
-    name: "gemini-3.1-flash-lite+openrouter",
-    model: "google/gemini-3.1-flash-lite-preview",
-    format: "openai",
-    backend: "openrouter",
+    id: 'gemini31FlashLiteOpenrouter',
+    name: 'gemini-3.1-flash-lite+openrouter',
+    model: 'google/gemini-3.1-flash-lite-preview',
+    format: 'openai',
+    backend: 'openrouter',
   },
 };
 
@@ -384,15 +384,12 @@ export const getModelConfig = (modelId: string): ModelConfig | null => {
   const id = modelId.trim();
   return (
     MODEL_CONFIGS[id] ??
-    Object.values(MODEL_CONFIGS).find(
-      (role) => role.id === id || role.name === id,
-    ) ??
+    Object.values(MODEL_CONFIGS).find((role) => role.id === id || role.name === id) ??
     null
   );
 };
 
-export const getDefaultModelId = (): string | null =>
-  getAvailableModels()[0]?.id ?? null;
+export const getDefaultModelId = (): string | null => getAvailableModels()[0]?.id ?? null;
 
 export const getDefaultModelConfig = (): ModelConfig | null => {
   const id = getDefaultModelId();
@@ -411,17 +408,17 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
   );
 };
 
-export const getDefaultPromptId = (): string => "aether";
+export const getDefaultPromptId = (): string => 'aether';
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = "gemini31FlashLiteOpenrouter";
+export const TITLE_GENERATION_MODEL_ID = 'gemini31FlashLiteOpenrouter';
 
 export const buildSystemPrompt = () => {
   const now = new Date();
-  const localDate = now.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
+  const localDate = now.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
   });
 
   const prompt = `
@@ -441,145 +438,145 @@ No need to cite sources in your answers.
 export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
   const env = getServerEnv();
 
-  if (backend === "rightcode-claude") {
+  if (backend === 'rightcode-claude') {
     const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE;
     const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE;
-    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY_RIGHTCODE");
-    if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_RIGHTCODE");
+    if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_RIGHTCODE');
+    if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_RIGHTCODE');
     return {
       apiKey,
       baseURL,
       defaultHeaders: {
-        "User-Agent": "aether",
-        "anthropic-beta": "interleaved-thinking-2025-05-14",
+        'User-Agent': 'aether',
+        'anthropic-beta': 'interleaved-thinking-2025-05-14',
       },
     };
   }
 
-  if (backend === "rightcode-claude-sale") {
+  if (backend === 'rightcode-claude-sale') {
     const apiKey = env.ANTHROPIC_API_KEY_RIGHTCODE_SALE;
     const baseURL = env.ANTHROPIC_BASE_URL_RIGHTCODE_SALE;
-    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY_RIGHTCODE_SALE");
-    if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_RIGHTCODE_SALE");
+    if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_RIGHTCODE_SALE');
+    if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_RIGHTCODE_SALE');
     return {
       apiKey,
       baseURL,
       defaultHeaders: {
-        "User-Agent": "aether",
-        "anthropic-beta": "interleaved-thinking-2025-05-14",
+        'User-Agent': 'aether',
+        'anthropic-beta': 'interleaved-thinking-2025-05-14',
       },
     };
   }
 
-  if (backend === "rightcode-gemini") {
+  if (backend === 'rightcode-gemini') {
     const apiKey = env.GEMINI_API_KEY_RIGHTCODE;
     const baseURL = env.GEMINI_BASE_URL_RIGHTCODE;
-    if (!apiKey) throw new Error("Missing GEMINI_API_KEY_RIGHTCODE");
-    if (!baseURL) throw new Error("Missing GEMINI_BASE_URL_RIGHTCODE");
+    if (!apiKey) throw new Error('Missing GEMINI_API_KEY_RIGHTCODE');
+    if (!baseURL) throw new Error('Missing GEMINI_BASE_URL_RIGHTCODE');
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { "User-Agent": "aether" },
+      defaultHeaders: { 'User-Agent': 'aether' },
     };
   }
 
-  if (backend === "rightcode-openai") {
+  if (backend === 'rightcode-openai') {
     const apiKey = env.OPENAI_API_KEY_RIGHTCODE;
     const baseURL = env.OPENAI_BASE_URL_RIGHTCODE;
-    if (!apiKey) throw new Error("Missing OPENAI_API_KEY_RIGHTCODE");
-    if (!baseURL) throw new Error("Missing OPENAI_BASE_URL_RIGHTCODE");
+    if (!apiKey) throw new Error('Missing OPENAI_API_KEY_RIGHTCODE');
+    if (!baseURL) throw new Error('Missing OPENAI_BASE_URL_RIGHTCODE');
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { "User-Agent": "aether" },
+      defaultHeaders: { 'User-Agent': 'aether' },
     };
   }
 
-  if (backend === "ikun") {
+  if (backend === 'ikun') {
     const apiKey = env.ANTHROPIC_API_KEY_IKUNCODE;
     const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE;
-    if (!apiKey) throw new Error("Missing ANTHROPIC_API_KEY_IKUNCODE");
-    if (!baseURL) throw new Error("Missing ANTHROPIC_BASE_URL_IKUNCODE");
+    if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_IKUNCODE');
+    if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_IKUNCODE');
     return {
       apiKey,
       baseURL,
       defaultHeaders: {
-        "User-Agent": "aether",
-        "anthropic-beta": "interleaved-thinking-2025-05-14",
+        'User-Agent': 'aether',
+        'anthropic-beta': 'interleaved-thinking-2025-05-14',
       },
     };
   }
 
-  if (backend === "ikun-gemini") {
+  if (backend === 'ikun-gemini') {
     const apiKey = env.GEMINI_API_KEY_IKUNCODE;
     const baseURL = env.GEMINI_BASE_URL_IKUNCODE;
-    if (!apiKey) throw new Error("Missing GEMINI_API_KEY_IKUNCODE");
-    if (!baseURL) throw new Error("Missing GEMINI_BASE_URL_IKUNCODE");
+    if (!apiKey) throw new Error('Missing GEMINI_API_KEY_IKUNCODE');
+    if (!baseURL) throw new Error('Missing GEMINI_BASE_URL_IKUNCODE');
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { "User-Agent": "aether" },
+      defaultHeaders: { 'User-Agent': 'aether' },
     };
   }
 
-  if (backend === "dmx") {
+  if (backend === 'dmx') {
     const apiKey = env.DMX_APIKEY;
     const baseURL = env.DMX_BASEURL;
-    if (!apiKey) throw new Error("Missing DMX_APIKEY");
-    if (!baseURL) throw new Error("Missing DMX_BASEURL");
+    if (!apiKey) throw new Error('Missing DMX_APIKEY');
+    if (!baseURL) throw new Error('Missing DMX_BASEURL');
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { "User-Agent": "aether" },
+      defaultHeaders: { 'User-Agent': 'aether' },
     };
   }
 
-  if (backend === "openrouter") {
+  if (backend === 'openrouter') {
     const apiKey = env.OPENROUTER_API_KEY;
-    if (!apiKey) throw new Error("Missing OPENROUTER_API_KEY");
+    if (!apiKey) throw new Error('Missing OPENROUTER_API_KEY');
     return {
       apiKey,
-      baseURL: "https://openrouter.ai/api/v1",
-      defaultHeaders: { "User-Agent": "aether" },
+      baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: { 'User-Agent': 'aether' },
     };
   }
 
-  if (backend === "cubence-claude") {
+  if (backend === 'cubence-claude') {
     const apiKey = env.CUBENCE_API_KEY;
     const baseURL = env.CUBENCE_BASE_URL;
-    if (!apiKey) throw new Error("Missing CUBENCE_API_KEY");
-    if (!baseURL) throw new Error("Missing CUBENCE_BASE_URL");
+    if (!apiKey) throw new Error('Missing CUBENCE_API_KEY');
+    if (!baseURL) throw new Error('Missing CUBENCE_BASE_URL');
     return {
       apiKey,
       baseURL,
       defaultHeaders: {
-        "User-Agent": "aether",
-        "anthropic-beta": "interleaved-thinking-2025-05-14",
+        'User-Agent': 'aether',
+        'anthropic-beta': 'interleaved-thinking-2025-05-14',
       },
     };
   }
 
-  if (backend === "cubence-gemini") {
+  if (backend === 'cubence-gemini') {
     const apiKey = env.CUBENCE_API_KEY;
     const baseURL = env.CUBENCE_BASE_URL;
-    if (!apiKey) throw new Error("Missing CUBENCE_API_KEY");
-    if (!baseURL) throw new Error("Missing CUBENCE_BASE_URL");
+    if (!apiKey) throw new Error('Missing CUBENCE_API_KEY');
+    if (!baseURL) throw new Error('Missing CUBENCE_BASE_URL');
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { "User-Agent": "aether" },
+      defaultHeaders: { 'User-Agent': 'aether' },
     };
   }
 
-  if (backend === "cubence-openai") {
+  if (backend === 'cubence-openai') {
     const apiKey = env.CUBENCE_API_KEY;
     const baseURL = env.CUBENCE_BASE_URL;
-    if (!apiKey) throw new Error("Missing CUBENCE_API_KEY");
-    if (!baseURL) throw new Error("Missing CUBENCE_BASE_URL");
+    if (!apiKey) throw new Error('Missing CUBENCE_API_KEY');
+    if (!baseURL) throw new Error('Missing CUBENCE_BASE_URL');
     return {
       apiKey,
       baseURL,
-      defaultHeaders: { "User-Agent": "aether" },
+      defaultHeaders: { 'User-Agent': 'aether' },
     };
   }
 

@@ -1,7 +1,6 @@
-
-import { useState } from "react";
-import { useToastStore } from '@/stores/zustand/toast'
-import { Toast } from "@/components/ui/toast";
+import { useState } from 'react';
+import { useToastStore } from '@/stores/zustand/toast';
+import { Toast } from '@/components/ui/toast';
 
 export function ToastContainer() {
   const toasts = useToastStore((state) => state.toasts);
@@ -23,11 +22,11 @@ export function ToastContainer() {
 
   return (
     <div
-      className="fixed top-4 right-4 flex flex-col gap-2 pointer-events-none"
-      style={{ zIndex: "var(--z-toast)" }}
+      className='fixed top-4 right-4 flex flex-col gap-2 pointer-events-none'
+      style={{ zIndex: 'var(--z-toast)' }}
     >
       {toasts.map((toast) => (
-        <div key={toast.id} className="pointer-events-auto">
+        <div key={toast.id} className='pointer-events-auto'>
           <Toast
             toast={toast}
             isExiting={exitingIds.has(toast.id)}

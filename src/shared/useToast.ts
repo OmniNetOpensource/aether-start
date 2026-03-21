@@ -1,4 +1,4 @@
-import { useToastStore, type ToastVariant } from "./toastStore";
+import { useToastStore, type ToastVariant } from './toastStore';
 
 const defaultDuration = 4000;
 
@@ -14,11 +14,11 @@ function createToast(variant: ToastVariant) {
 }
 
 export const toast = {
-  info: createToast("info"),
-  success: createToast("success"),
-  warning: createToast("warning"),
-  error: createToast("error"),
+  info: createToast('info'),
+  success: createToast('success'),
+  warning: createToast('warning'),
+  error: createToast('error'),
 };
 
-export { useToastStore } from "./toastStore";
-export type { Toast, ToastVariant } from "./toastStore";
+export { useToastStore } from './toastStore';
+export type { Toast, ToastVariant } from './toastStore';

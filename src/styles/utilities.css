@@ -38,14 +38,14 @@ button,
 input,
 select,
 textarea,
-[role="button"] {
+[role='button'] {
   transition-property: background-color, color, border-color, box-shadow, opacity, transform;
   transition-duration: 0.2s;
   transition-timing-function: var(--ease-out);
 }
 
 button:active,
-[role="button"]:active {
+[role='button']:active {
   transform: scale(0.97);
 }
 

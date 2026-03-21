@@ -4,85 +4,83 @@ import type {
   SharedConversationSnapshot,
   SharedMessageBlock,
   SharedMessageSnapshot,
-} from '@/types/share'
-import type { ResearchItem } from '@/types/message'
+} from '@/types/share';
+import type { ResearchItem } from '@/types/message';
 
 type ConversationShareRecord = {
-  user_id: string
-  conversation_id: string
-  share_token: string
-  title: string | null
-  snapshot: SharedConversationSnapshot
-  is_active: boolean
-  created_at: string
-  updated_at: string
-  revoked_at: string | null
-}
+  user_id: string;
+  conversation_id: string;
+  share_token: string;
+  title: string | null;
+  snapshot: SharedConversationSnapshot;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  revoked_at: string | null;
+};
 
-const SHARE_TOKEN_PATTERN = /^[a-zA-Z0-9_-]{16,128}$/
-const STORAGE_KEY_PREFIX = 'chat-assets/'
-const ASSET_ROUTE_PREFIX = '/api/assets/'
+const SHARE_TOKEN_PATTERN = /^[a-zA-Z0-9_-]{16,128}$/;
+const STORAGE_KEY_PREFIX = 'chat-assets/';
+const ASSET_ROUTE_PREFIX = '/api/assets/';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null
+  typeof value === 'object' && value !== null;
 
 const safeParseSnapshot = (value: string): SharedConversationSnapshot | null => {
   try {
-    const parsed = JSON.parse(value)
-    return toSharedConversationSnapshot(parsed)
+    const parsed = JSON.parse(value);
+    return toSharedConversationSnapshot(parsed);
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 const toSharedMessageBlock = (value: unknown): SharedMessageBlock | null => {
   if (!isRecord(value) || typeof value.type !== 'string') {
-    return null
+    return null;
   }
 
   if (value.type === 'content' && typeof value.content === 'string') {
-    return { type: 'content', content: value.content }
+    return { type: 'content', content: value.content };
   }
 
   if (value.type === 'error' && typeof value.message === 'string') {
-    return { type: 'error', message: value.message }
+    return { type: 'error', message: value.message };
   }
 
   if (value.type === 'research' && Array.isArray(value.items)) {
     return {
       type: 'research',
       items: value.items as ResearchItem[],
-    }
+    };
   }
 
   if (value.type === 'quotes' && Array.isArray(value.quotes)) {
     const quotes = value.quotes
       .filter(
         (q): q is { id: string; text: string } =>
-          isRecord(q) &&
-          typeof q.id === 'string' &&
-          typeof q.text === 'string',
+          isRecord(q) && typeof q.id === 'string' && typeof q.text === 'string',
       )
-      .map((q) => ({ id: q.id, text: q.text }))
+      .map((q) => ({ id: q.id, text: q.text }));
     if (quotes.length > 0) {
-      return { type: 'quotes', quotes }
+      return { type: 'quotes', quotes };
     }
   }
 
   if (value.type !== 'attachments' || !Array.isArray(value.attachments)) {
-    return null
+    return null;
   }
 
   const attachments = value.attachments
     .map((attachment) => toSharedAttachment(attachment))
-    .filter((attachment): attachment is SharedAttachmentSnapshot => attachment !== null)
+    .filter((attachment): attachment is SharedAttachmentSnapshot => attachment !== null);
 
-  return { type: 'attachments', attachments }
-}
+  return { type: 'attachments', attachments };
+};
 
 const toSharedAttachment = (value: unknown): SharedAttachmentSnapshot | null => {
   if (!isRecord(value)) {
-    return null
+    return null;
   }
 
   if (
@@ -93,13 +91,13 @@ const toSharedAttachment = (value: unknown): SharedAttachmentSnapshot | null => 
     typeof value.mimeType !== 'string' ||
     typeof value.url !== 'string'
   ) {
-    return null
+    return null;
   }
 
-  const storageKey = typeof value.storageKey === 'string' ? value.storageKey : undefined
-  const thumbnailUrl = typeof value.thumbnailUrl === 'string' ? value.thumbnailUrl : undefined
+  const storageKey = typeof value.storageKey === 'string' ? value.storageKey : undefined;
+  const thumbnailUrl = typeof value.thumbnailUrl === 'string' ? value.thumbnailUrl : undefined;
   const thumbnailStorageKey =
-    typeof value.thumbnailStorageKey === 'string' ? value.thumbnailStorageKey : undefined
+    typeof value.thumbnailStorageKey === 'string' ? value.thumbnailStorageKey : undefined;
 
   return {
     id: value.id,
@@ -111,12 +109,12 @@ const toSharedAttachment = (value: unknown): SharedAttachmentSnapshot | null => 
     storageKey,
     thumbnailUrl,
     thumbnailStorageKey,
-  }
-}
+  };
+};
 
 const toSharedMessageSnapshot = (value: unknown): SharedMessageSnapshot | null => {
   if (!isRecord(value)) {
-    return null
+    return null;
   }
 
   if (
@@ -127,35 +125,35 @@ const toSharedMessageSnapshot = (value: unknown): SharedMessageSnapshot | null =
     typeof value.createdAt !== 'string' ||
     !Array.isArray(value.blocks)
   ) {
-    return null
+    return null;
   }
 
   const blocks = value.blocks
     .map((block) => toSharedMessageBlock(block))
-    .filter((block): block is SharedMessageBlock => block !== null)
+    .filter((block): block is SharedMessageBlock => block !== null);
 
   return {
     id: value.id,
     role: value.role,
     createdAt: value.createdAt,
     blocks,
-  }
-}
+  };
+};
 
 const toSharedConversationSnapshot = (value: unknown): SharedConversationSnapshot | null => {
   if (!isRecord(value) || value.version !== 1 || !Array.isArray(value.messages)) {
-    return null
+    return null;
   }
 
   const messages = value.messages
     .map((message) => toSharedMessageSnapshot(message))
-    .filter((message): message is SharedMessageSnapshot => message !== null)
+    .filter((message): message is SharedMessageSnapshot => message !== null);
 
   return {
     version: 1,
     messages,
-  }
-}
+  };
+};
 
 const toConversationShareRecord = (row: unknown): ConversationShareRecord | null => {
   if (
@@ -164,20 +162,20 @@ const toConversationShareRecord = (row: unknown): ConversationShareRecord | null
     typeof row.conversation_id !== 'string' ||
     typeof row.share_token !== 'string'
   ) {
-    return null
+    return null;
   }
 
-  const snapshotJson = typeof row.snapshot_json === 'string' ? row.snapshot_json : ''
-  const snapshot = safeParseSnapshot(snapshotJson)
+  const snapshotJson = typeof row.snapshot_json === 'string' ? row.snapshot_json : '';
+  const snapshot = safeParseSnapshot(snapshotJson);
   if (!snapshot) {
-    return null
+    return null;
   }
 
-  const title = typeof row.title === 'string' || row.title === null ? row.title : null
-  const isActive = row.is_active === 1 || row.is_active === true
-  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString()
-  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt
-  const revokedAt = typeof row.revoked_at === 'string' ? row.revoked_at : null
+  const title = typeof row.title === 'string' || row.title === null ? row.title : null;
+  const isActive = row.is_active === 1 || row.is_active === true;
+  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
+  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
+  const revokedAt = typeof row.revoked_at === 'string' ? row.revoked_at : null;
 
   return {
     user_id: row.user_id,
@@ -189,70 +187,67 @@ const toConversationShareRecord = (row: unknown): ConversationShareRecord | null
     created_at: createdAt,
     updated_at: updatedAt,
     revoked_at: revokedAt,
-  }
-}
+  };
+};
 
 const generateShareToken = () => {
   const raw =
     typeof crypto !== 'undefined' && crypto.randomUUID
       ? crypto.randomUUID().replace(/-/g, '')
-      : `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`
+      : `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
 
-  return `s_${raw.slice(0, 40)}`
-}
+  return `s_${raw.slice(0, 40)}`;
+};
 
-export const isSafeShareToken = (token: string) => SHARE_TOKEN_PATTERN.test(token)
+export const isSafeShareToken = (token: string) => SHARE_TOKEN_PATTERN.test(token);
 
 export const isSafeStorageKey = (storageKey: string) =>
-  storageKey.startsWith(STORAGE_KEY_PREFIX) && !storageKey.includes('..')
+  storageKey.startsWith(STORAGE_KEY_PREFIX) && !storageKey.includes('..');
 
 export const extractStorageKeyFromAssetUrl = (url: string): string | null => {
   try {
-    const parsed = new URL(url, 'https://aether.local')
+    const parsed = new URL(url, 'https://aether.local');
     if (!parsed.pathname.startsWith(ASSET_ROUTE_PREFIX)) {
-      return null
+      return null;
     }
 
-    const encodedKey = parsed.pathname.slice(ASSET_ROUTE_PREFIX.length)
-    const decodedKey = decodeURIComponent(encodedKey)
-    return isSafeStorageKey(decodedKey) ? decodedKey : null
+    const encodedKey = parsed.pathname.slice(ASSET_ROUTE_PREFIX.length);
+    const decodedKey = decodeURIComponent(encodedKey);
+    return isSafeStorageKey(decodedKey) ? decodedKey : null;
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 export const resolveStorageKeyForSharedAttachment = (attachment: SharedAttachmentSnapshot) => {
   if (attachment.storageKey && isSafeStorageKey(attachment.storageKey)) {
-    return attachment.storageKey
+    return attachment.storageKey;
   }
 
-  return extractStorageKeyFromAssetUrl(attachment.url)
-}
+  return extractStorageKeyFromAssetUrl(attachment.url);
+};
 
 export const resolveThumbnailStorageKeyForSharedAttachment = (
   attachment: SharedAttachmentSnapshot,
 ) => {
-  if (
-    attachment.thumbnailStorageKey &&
-    isSafeStorageKey(attachment.thumbnailStorageKey)
-  ) {
-    return attachment.thumbnailStorageKey
+  if (attachment.thumbnailStorageKey && isSafeStorageKey(attachment.thumbnailStorageKey)) {
+    return attachment.thumbnailStorageKey;
   }
 
   if (attachment.thumbnailUrl) {
-    return extractStorageKeyFromAssetUrl(attachment.thumbnailUrl)
+    return extractStorageKeyFromAssetUrl(attachment.thumbnailUrl);
   }
 
-  return null
-}
+  return null;
+};
 
 export const getShareByConversation = async (
   db: D1Database,
   input: { userId: string; conversationId: string },
 ): Promise<{
-  status: ConversationShareStatus
-  token?: string
-  title?: string | null
+  status: ConversationShareStatus;
+  token?: string;
+  title?: string | null;
 }> => {
   const row = await db
     .prepare(
@@ -264,31 +259,31 @@ export const getShareByConversation = async (
       `,
     )
     .bind(input.userId, input.conversationId)
-    .first()
+    .first();
 
-  const record = toConversationShareRecord(row)
+  const record = toConversationShareRecord(row);
   if (!record) {
-    return { status: 'not_shared' }
+    return { status: 'not_shared' };
   }
 
   return {
     status: record.is_active ? 'active' : 'revoked',
     token: record.share_token,
     title: record.title,
-  }
-}
+  };
+};
 
 export const upsertOrReactivateShare = async (
   db: D1Database,
   input: {
-    userId: string
-    conversationId: string
-    title: string | null
-    snapshot: SharedConversationSnapshot
+    userId: string;
+    conversationId: string;
+    title: string | null;
+    snapshot: SharedConversationSnapshot;
   },
 ) => {
-  const now = new Date().toISOString()
-  const snapshotJson = JSON.stringify(input.snapshot)
+  const now = new Date().toISOString();
+  const snapshotJson = JSON.stringify(input.snapshot);
 
   const existingRow = await db
     .prepare(
@@ -300,9 +295,9 @@ export const upsertOrReactivateShare = async (
       `,
     )
     .bind(input.userId, input.conversationId)
-    .first()
+    .first();
 
-  const existing = toConversationShareRecord(existingRow)
+  const existing = toConversationShareRecord(existingRow);
   if (existing) {
     await db
       .prepare(
@@ -317,20 +312,20 @@ export const upsertOrReactivateShare = async (
         `,
       )
       .bind(input.title, snapshotJson, now, input.userId, input.conversationId)
-      .run()
+      .run();
 
     return {
       status: 'active' as const,
       token: existing.share_token,
       title: input.title,
-    }
+    };
   }
 
-  let lastError: unknown = null
+  let lastError: unknown = null;
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const shareToken = generateShareToken()
+    const shareToken = generateShareToken();
     if (!isSafeShareToken(shareToken)) {
-      continue
+      continue;
     }
 
     try {
@@ -351,43 +346,35 @@ export const upsertOrReactivateShare = async (
           VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, NULL)
           `,
         )
-        .bind(
-          input.userId,
-          input.conversationId,
-          shareToken,
-          input.title,
-          snapshotJson,
-          now,
-          now,
-        )
-        .run()
+        .bind(input.userId, input.conversationId, shareToken, input.title, snapshotJson, now, now)
+        .run();
 
       return {
         status: 'active' as const,
         token: shareToken,
         title: input.title,
-      }
+      };
     } catch (error) {
-      lastError = error
+      lastError = error;
     }
   }
 
-  throw lastError instanceof Error ? lastError : new Error('Failed to create share token')
-}
+  throw lastError instanceof Error ? lastError : new Error('Failed to create share token');
+};
 
 export const revokeShare = async (
   db: D1Database,
   input: { userId: string; conversationId: string },
 ) => {
-  const existing = await getShareByConversation(db, input)
+  const existing = await getShareByConversation(db, input);
   if (existing.status === 'not_shared') {
     return {
       ok: true,
       status: 'not_shared' as const,
-    }
+    };
   }
 
-  const now = new Date().toISOString()
+  const now = new Date().toISOString();
   await db
     .prepare(
       `
@@ -399,32 +386,32 @@ export const revokeShare = async (
       `,
     )
     .bind(now, input.userId, input.conversationId)
-    .run()
+    .run();
 
   return {
     ok: true,
     status: 'revoked' as const,
     token: existing.token,
-  }
-}
+  };
+};
 
 export const getPublicShareByToken = async (
   db: D1Database,
   token: string,
 ): Promise<
   | {
-      status: 'not_found'
+      status: 'not_found';
     }
   | {
-      status: 'revoked'
-      token: string
-      title: string | null
+      status: 'revoked';
+      token: string;
+      title: string | null;
     }
   | {
-      status: 'active'
-      token: string
-      title: string | null
-      snapshotRaw: SharedConversationSnapshot
+      status: 'active';
+      token: string;
+      title: string | null;
+      snapshotRaw: SharedConversationSnapshot;
     }
 > => {
   const row = await db
@@ -437,11 +424,11 @@ export const getPublicShareByToken = async (
       `,
     )
     .bind(token)
-    .first()
+    .first();
 
-  const record = toConversationShareRecord(row)
+  const record = toConversationShareRecord(row);
   if (!record) {
-    return { status: 'not_found' }
+    return { status: 'not_found' };
   }
 
   if (!record.is_active) {
@@ -449,7 +436,7 @@ export const getPublicShareByToken = async (
       status: 'revoked',
       token: record.share_token,
       title: record.title,
-    }
+    };
   }
 
   return {
@@ -457,8 +444,8 @@ export const getPublicShareByToken = async (
     token: record.share_token,
     title: record.title,
     snapshotRaw: record.snapshot,
-  }
-}
+  };
+};
 
 export const findAttachmentInSnapshot = (
   snapshot: SharedConversationSnapshot,
@@ -467,15 +454,15 @@ export const findAttachmentInSnapshot = (
   for (const message of snapshot.messages) {
     for (const block of message.blocks) {
       if (block.type !== 'attachments') {
-        continue
+        continue;
       }
 
-      const target = block.attachments.find((attachment) => attachment.id === attachmentId)
+      const target = block.attachments.find((attachment) => attachment.id === attachmentId);
       if (target) {
-        return target
+        return target;
       }
     }
   }
 
-  return null
-}
+  return null;
+};

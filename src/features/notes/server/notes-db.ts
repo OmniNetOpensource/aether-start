@@ -1,4 +1,4 @@
-import type { Attachment } from "@/types/message";
+import type { Attachment } from '@/types/message';
 
 export type NoteCursor = {
   updated_at: string;
@@ -24,7 +24,7 @@ export type NotePayload = {
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null;
+  typeof value === 'object' && value !== null;
 
 const isAttachment = (value: unknown): value is Attachment => {
   if (!isRecord(value)) {
@@ -32,20 +32,18 @@ const isAttachment = (value: unknown): value is Attachment => {
   }
 
   return (
-    typeof value.id === "string" &&
-    value.kind === "image" &&
-    typeof value.name === "string" &&
-    typeof value.size === "number" &&
-    typeof value.mimeType === "string" &&
-    value.mimeType.startsWith("image/") &&
-    typeof value.url === "string" &&
+    typeof value.id === 'string' &&
+    value.kind === 'image' &&
+    typeof value.name === 'string' &&
+    typeof value.size === 'number' &&
+    typeof value.mimeType === 'string' &&
+    value.mimeType.startsWith('image/') &&
+    typeof value.url === 'string' &&
     value.url.length > 0 &&
-    (typeof value.storageKey === "string" ||
-      typeof value.storageKey === "undefined") &&
-    (typeof value.thumbnailUrl === "string" ||
-      typeof value.thumbnailUrl === "undefined") &&
-    (typeof value.thumbnailStorageKey === "string" ||
-      typeof value.thumbnailStorageKey === "undefined")
+    (typeof value.storageKey === 'string' || typeof value.storageKey === 'undefined') &&
+    (typeof value.thumbnailUrl === 'string' || typeof value.thumbnailUrl === 'undefined') &&
+    (typeof value.thumbnailStorageKey === 'string' ||
+      typeof value.thumbnailStorageKey === 'undefined')
   );
 };
 
@@ -63,23 +61,14 @@ const safeParseAttachments = (value: string): Attachment[] => {
 };
 
 const toNoteRecord = (row: unknown): NoteRecord | null => {
-  if (
-    !isRecord(row) ||
-    typeof row.id !== "string" ||
-    typeof row.user_id !== "string"
-  ) {
+  if (!isRecord(row) || typeof row.id !== 'string' || typeof row.user_id !== 'string') {
     return null;
   }
 
-  const createdAt =
-    typeof row.created_at === "string"
-      ? row.created_at
-      : new Date().toISOString();
-  const updatedAt =
-    typeof row.updated_at === "string" ? row.updated_at : createdAt;
-  const content = typeof row.content === "string" ? row.content : "";
-  const attachmentsJson =
-    typeof row.attachments_json === "string" ? row.attachments_json : "[]";
+  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
+  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
+  const content = typeof row.content === 'string' ? row.content : '';
+  const attachmentsJson = typeof row.attachments_json === 'string' ? row.attachments_json : '[]';
 
   return {
     user_id: row.user_id,
@@ -107,12 +96,7 @@ export const listNotesPage = async (
           LIMIT ?4
           `,
         )
-        .bind(
-          input.userId,
-          input.cursor.updated_at,
-          input.cursor.id,
-          input.limit,
-        )
+        .bind(input.userId, input.cursor.updated_at, input.cursor.id, input.limit)
         .all()
     : await db
         .prepare(
@@ -128,16 +112,12 @@ export const listNotesPage = async (
         .all();
 
   const mapped = Array.isArray(rows.results)
-    ? rows.results
-        .map((row) => toNoteRecord(row))
-        .filter((row): row is NoteRecord => !!row)
+    ? rows.results.map((row) => toNoteRecord(row)).filter((row): row is NoteRecord => !!row)
     : [];
 
   const last = mapped.at(-1);
   const nextCursor: NoteCursor =
-    mapped.length === input.limit && last
-      ? { updated_at: last.updated_at, id: last.id }
-      : null;
+    mapped.length === input.limit && last ? { updated_at: last.updated_at, id: last.id } : null;
 
   return {
     items: mapped,
@@ -145,11 +125,7 @@ export const listNotesPage = async (
   };
 };
 
-export const getNoteById = async (
-  db: D1Database,
-  id: string,
-  userId: string,
-) => {
+export const getNoteById = async (db: D1Database, id: string, userId: string) => {
   const row = await db
     .prepare(
       `
@@ -190,15 +166,8 @@ export const upsertNote = async (db: D1Database, payload: NotePayload) => {
   return { ok: true };
 };
 
-export const deleteNoteById = async (
-  db: D1Database,
-  id: string,
-  userId: string,
-) => {
-  await db
-    .prepare("DELETE FROM notes WHERE user_id = ?1 AND id = ?2")
-    .bind(userId, id)
-    .run();
+export const deleteNoteById = async (db: D1Database, id: string, userId: string) => {
+  await db.prepare('DELETE FROM notes WHERE user_id = ?1 AND id = ?2').bind(userId, id).run();
 
   return { ok: true };
 };

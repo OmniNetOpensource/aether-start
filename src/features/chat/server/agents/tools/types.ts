@@ -1,5 +1,5 @@
 export type ChatTool = {
-  type: "function";
+  type: 'function';
   function: {
     name: string;
     description: string;
@@ -7,10 +7,7 @@ export type ChatTool = {
   };
 };
 
-export type ToolHandler = (
-  args: unknown,
-  signal?: AbortSignal,
-) => Promise<string>;
+export type ToolHandler = (args: unknown, signal?: AbortSignal) => Promise<string>;
 
 export type ToolDefinition = {
   spec: ChatTool;

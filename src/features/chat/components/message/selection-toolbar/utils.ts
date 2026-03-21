@@ -11,10 +11,8 @@
  * - 若是文本节点，返回其父元素
  */
 export function getSelectionContainer(range: Range) {
-  const node = range.commonAncestorContainer
-  return node.nodeType === Node.ELEMENT_NODE
-    ? (node as Element)
-    : node.parentElement
+  const node = range.commonAncestorContainer;
+  return node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
 }
 
 /**
@@ -23,8 +21,8 @@ export function getSelectionContainer(range: Range) {
  * 返回 null 表示无法获取有效矩形（例如选区为空或跨多行异常）。
  */
 export function getSelectionRect(range: Range) {
-  const rect = range.getBoundingClientRect()
-  if (rect && (rect.width || rect.height)) return rect
-  const rects = range.getClientRects()
-  return rects.length > 0 ? rects[0] : null
+  const rect = range.getBoundingClientRect();
+  if (rect && (rect.width || rect.height)) return rect;
+  const rects = range.getClientRects();
+  return rects.length > 0 ? rects[0] : null;
 }

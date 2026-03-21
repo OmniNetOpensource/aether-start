@@ -50,20 +50,16 @@
       "@/hooks/useConversationLoader": ["./src/features/sidebar/useConversationLoader.ts"],
       "@/lib/auth/*": ["./src/features/auth/client/*"],
       "@/lib/chat/attachments": ["./src/shared/attachments.ts"],
-      "@/lib/chat/api/chat-orchestrator": [
-        "./src/features/chat/request/chat-orchestrator.ts"
-      ],
-      "@/lib/chat/api/event-handlers": [
-        "./src/features/chat/request/event-handlers.ts"
-      ],
-      "@/lib/chat/search-result-payload": [
-        "./src/features/chat/research/search-result-payload.ts"
-      ],
+      "@/lib/chat/api/chat-orchestrator": ["./src/features/chat/request/chat-orchestrator.ts"],
+      "@/lib/chat/api/event-handlers": ["./src/features/chat/request/event-handlers.ts"],
+      "@/lib/chat/search-result-payload": ["./src/features/chat/research/search-result-payload.ts"],
       "@/lib/conversation/*": ["./src/features/sidebar/*"],
       "@/lib/*": ["./src/shared/lib/*"],
       "@/server/agents/*": ["./src/features/chat/server/agents/*"],
       "@/server/base64": ["./src/shared/server/base64.ts"],
-      "@/server/db/conversation-shares-db": ["./src/features/share/server/conversation-shares-db.ts"],
+      "@/server/db/conversation-shares-db": [
+        "./src/features/share/server/conversation-shares-db.ts"
+      ],
       "@/server/db/conversations-db": ["./src/features/sidebar/server/conversations-db.ts"],
       "@/server/db/notes-db": ["./src/features/notes/server/notes-db.ts"],
       "@/server/db/prompt-quota-db": ["./src/features/quota/server/prompt-quota-db.ts"],
@@ -81,21 +77,13 @@
         "./src/features/chat/request/useChatRequestStore.ts"
       ],
       "@/stores/zustand/useComposerStore": ["./src/features/chat/composer/useComposerStore.ts"],
-      "@/stores/zustand/useChatSessionStore": [
-        "./src/features/sidebar/useChatSessionStore.ts"
-      ],
+      "@/stores/zustand/useChatSessionStore": ["./src/features/sidebar/useChatSessionStore.ts"],
       "@/features/sidebar/store/useChatSessionStore": [
         "./src/features/sidebar/useChatSessionStore.ts"
       ],
-      "@/stores/zustand/useEditingStore": [
-        "./src/features/chat/editing/useEditingStore.ts"
-      ],
-      "@/stores/zustand/useNotesStore": [
-        "./src/features/notes/useNotesStore.ts"
-      ],
-      "@/features/notes/store/useNotesStore": [
-        "./src/features/notes/useNotesStore.ts"
-      ],
+      "@/stores/zustand/useEditingStore": ["./src/features/chat/editing/useEditingStore.ts"],
+      "@/stores/zustand/useNotesStore": ["./src/features/notes/useNotesStore.ts"],
+      "@/features/notes/store/useNotesStore": ["./src/features/notes/useNotesStore.ts"],
       "@/stores/zustand/toast": ["./src/shared/toastStore.ts"],
       "@/types/chat-api": ["./src/features/chat/types/chat-api.ts"],
       "@/types/chat-event-types": ["./src/features/chat/types/chat-event-types.ts"],

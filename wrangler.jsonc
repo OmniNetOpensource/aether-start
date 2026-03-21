@@ -3,43 +3,39 @@
   "name": "aether-start",
   "main": "server-entry.ts",
   "compatibility_date": "2026-02-05",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
+  "compatibility_flags": ["nodejs_compat"],
   "observability": {
-    "enabled": true
+    "enabled": true,
   },
   "durable_objects": {
     "bindings": [
       {
         "name": "ChatAgent",
-        "class_name": "ChatAgent"
-      }
-    ]
+        "class_name": "ChatAgent",
+      },
+    ],
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": [
-        "ChatAgent"
-      ]
-    }
+      "new_sqlite_classes": ["ChatAgent"],
+    },
   ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "aether-db",
       "database_id": "bf11eda3-d112-4212-8388-a22828a2133e",
-      "migrations_dir": "./migrations"
-    }
+      "migrations_dir": "./migrations",
+    },
   ],
   "r2_buckets": [
     {
       "binding": "CHAT_ASSETS",
-      "bucket_name": "chat-assets"
-    }
+      "bucket_name": "chat-assets",
+    },
   ],
   "vars": {
-    "ADMIN_EMAIL_ALLOWLIST": "sauciness_gratitude464@simplelogin.com"
-  }
+    "ADMIN_EMAIL_ALLOWLIST": "sauciness_gratitude464@simplelogin.com",
+  },
 }

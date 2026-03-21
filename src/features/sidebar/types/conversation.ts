@@ -1,5 +1,5 @@
-import type { Message } from "@/types/message";
-import type { ArtifactLanguage } from "@/types/chat-api";
+import type { Message } from '@/types/message';
+import type { ArtifactLanguage } from '@/types/chat-api';
 
 export type ConversationArtifact = {
   id: string;
@@ -45,12 +45,12 @@ export type ConversationSearchItem = {
   pinned_at: string | null;
   created_at: string;
   updated_at: string;
-  matchedIn: "title" | "content";
+  matchedIn: 'title' | 'content';
   excerpt: string;
 };
 
 export type ConversationSearchPageResult = {
   items: ConversationSearchItem[];
   nextCursor: { updated_at: string; id: string } | null;
-  mode: "fts" | "contains";
+  mode: 'fts' | 'contains';
 };

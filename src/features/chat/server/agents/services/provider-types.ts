@@ -2,10 +2,10 @@ import type {
   ChatServerToClientEvent,
   PendingToolInvocation,
   ToolInvocationResult,
-} from "@/types/chat-api";
-import type { ChatTool } from "@/server/agents/tools/types";
-import type { BackendConfig } from "@/server/agents/services/model-provider-config";
-import type { SerializedMessage } from "@/types/message";
+} from '@/types/chat-api';
+import type { ChatTool } from '@/server/agents/tools/types';
+import type { BackendConfig } from '@/server/agents/services/model-provider-config';
+import type { SerializedMessage } from '@/types/message';
 
 export type ProviderRunResult = {
   pendingToolCalls: PendingToolInvocation[];

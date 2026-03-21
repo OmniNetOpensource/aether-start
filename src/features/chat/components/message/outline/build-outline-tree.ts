@@ -1,9 +1,9 @@
-import type { Message } from "@/types/message";
-import { truncateTextByWidth } from "./preview-text";
+import type { Message } from '@/types/message';
+import { truncateTextByWidth } from './preview-text';
 
 export type OutlineNode = {
   messageId: number;
-  role: Message["role"];
+  role: Message['role'];
   preview: string;
   fullPreview: string;
   children: OutlineNode[];
@@ -15,15 +15,11 @@ export type ParentById = Record<number, number | null>;
 
 const PREVIEW_LIMIT = 60;
 
-const normalizeText = (value: string) => value.replace(/\s+/g, " ").trim();
+const normalizeText = (value: string) => value.replace(/\s+/g, ' ').trim();
 
-const truncateText = (value: string, limit = PREVIEW_LIMIT) =>
-  truncateTextByWidth(value, limit);
+const truncateText = (value: string, limit = PREVIEW_LIMIT) => truncateTextByWidth(value, limit);
 
-export const collectSiblingIds = (
-  messages: Message[],
-  anchorId: number | null,
-): number[] => {
+export const collectSiblingIds = (messages: Message[], anchorId: number | null): number[] => {
   if (anchorId === null) {
     return [];
   }
@@ -76,7 +72,7 @@ export const buildParentMap = (messages: Message[]): Record<number, number> => {
   const parentById: Record<number, number> = {};
 
   for (const message of messages) {
-    if (typeof message.parentId === "number") {
+    if (typeof message.parentId === 'number') {
       parentById[message.id] = message.parentId;
     }
   }
@@ -95,7 +91,7 @@ export const buildParentMap = (messages: Message[]): Record<number, number> => {
 
 export const getPreview = (message: Message): string => {
   for (const block of message.blocks) {
-    if (block.type !== "content") {
+    if (block.type !== 'content') {
       continue;
     }
 
@@ -106,7 +102,7 @@ export const getPreview = (message: Message): string => {
   }
 
   for (const block of message.blocks) {
-    if (block.type === "quotes" && block.quotes.length > 0) {
+    if (block.type === 'quotes' && block.quotes.length > 0) {
       const firstQuote = normalizeText(block.quotes[0].text);
       if (firstQuote) {
         return truncateText(firstQuote);
@@ -119,18 +115,18 @@ export const getPreview = (message: Message): string => {
   let hasResearch = false;
 
   for (const block of message.blocks) {
-    if (block.type === "attachments") {
+    if (block.type === 'attachments') {
       attachmentCount += block.attachments.length;
       continue;
     }
 
-    if (block.type === "error" && errorMessage === null) {
+    if (block.type === 'error' && errorMessage === null) {
       const normalizedError = normalizeText(block.message);
-      errorMessage = normalizedError || "错误";
+      errorMessage = normalizedError || '错误';
       continue;
     }
 
-    if (block.type === "research") {
+    if (block.type === 'research') {
       hasResearch = true;
     }
   }
@@ -144,15 +140,15 @@ export const getPreview = (message: Message): string => {
   }
 
   if (hasResearch) {
-    return "思考/工具调用";
+    return '思考/工具调用';
   }
 
-  return "空消息";
+  return '空消息';
 };
 
 const getFullPreview = (message: Message): string => {
   for (const block of message.blocks) {
-    if (block.type !== "content") {
+    if (block.type !== 'content') {
       continue;
     }
 
@@ -209,23 +205,17 @@ export const buildOutlineTree = (
   latestRootId: number | null,
 ): { roots: OutlineNode[]; parentById: ParentById } => {
   const rawParentById = buildParentMap(messages);
-  const childIdSet = new Set<number>(
-    Object.keys(rawParentById).map((id) => Number(id)),
-  );
+  const childIdSet = new Set<number>(Object.keys(rawParentById).map((id) => Number(id)));
 
-  const allRootIds = messages
-    .map((message) => message.id)
-    .filter((id) => !childIdSet.has(id));
+  const allRootIds = messages.map((message) => message.id).filter((id) => !childIdSet.has(id));
 
   const rootIdSet = new Set<number>(allRootIds);
-  const preferredRootIds = collectSiblingIds(messages, latestRootId).filter(
-    (id) => rootIdSet.has(id),
+  const preferredRootIds = collectSiblingIds(messages, latestRootId).filter((id) =>
+    rootIdSet.has(id),
   );
 
   const preferredRootSet = new Set<number>(preferredRootIds);
-  const orphanRootIds = allRootIds
-    .filter((id) => !preferredRootSet.has(id))
-    .sort((a, b) => a - b);
+  const orphanRootIds = allRootIds.filter((id) => !preferredRootSet.has(id)).sort((a, b) => a - b);
 
   const orderedRootIds = [...preferredRootIds, ...orphanRootIds];
 
@@ -244,10 +234,7 @@ export const buildOutlineTree = (
   };
 };
 
-export const findPathToMessage = (
-  parentById: ParentById,
-  targetId: number,
-): number[] => {
+export const findPathToMessage = (parentById: ParentById, targetId: number): number[] => {
   if (!Number.isInteger(targetId) || !(targetId in parentById)) {
     return [];
   }
@@ -269,7 +256,7 @@ export const findPathToMessage = (
       break;
     }
 
-    if (typeof parentId !== "number") {
+    if (typeof parentId !== 'number') {
       return [];
     }
 

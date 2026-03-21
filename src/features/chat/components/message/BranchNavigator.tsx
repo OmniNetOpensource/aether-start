@@ -1,11 +1,10 @@
-
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import type { BranchInfo } from "@/types/message";
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import type { BranchInfo } from '@/types/message';
 
 type BranchNavigatorProps = {
   branchInfo: BranchInfo;
-  onNavigate: (direction: "prev" | "next") => void;
+  onNavigate: (direction: 'prev' | 'next') => void;
   disabled?: boolean;
 };
 
@@ -21,29 +20,31 @@ export function BranchNavigator({
   const { currentIndex, total } = branchInfo;
 
   return (
-    <div className="flex items-center gap-1 text-xs text-(--text-tertiary)">
+    <div className='flex items-center gap-1 text-xs text-(--text-tertiary)'>
       <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6"
-        aria-label="上一条分支"
+        type='button'
+        variant='ghost'
+        size='icon'
+        className='h-6 w-6'
+        aria-label='上一条分支'
         disabled={disabled || currentIndex === 0}
-        onClick={() => onNavigate("prev")}
+        onClick={() => onNavigate('prev')}
       >
-        <ChevronLeft className="h-3.5 w-3.5" />
+        <ChevronLeft className='h-3.5 w-3.5' />
       </Button>
-      <span className="min-w-[36px] text-center">{currentIndex + 1}/{total}</span>
+      <span className='min-w-[36px] text-center'>
+        {currentIndex + 1}/{total}
+      </span>
       <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6"
-        aria-label="下一条分支"
+        type='button'
+        variant='ghost'
+        size='icon'
+        className='h-6 w-6'
+        aria-label='下一条分支'
         disabled={disabled || currentIndex === total - 1}
-        onClick={() => onNavigate("next")}
+        onClick={() => onNavigate('next')}
       >
-        <ChevronRight className="h-3.5 w-3.5" />
+        <ChevronRight className='h-3.5 w-3.5' />
       </Button>
     </div>
   );

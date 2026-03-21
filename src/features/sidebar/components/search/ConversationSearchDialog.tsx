@@ -1,17 +1,12 @@
-import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
-import { Loader2, Search } from "lucide-react";
-import type { ConversationSearchItem } from "@/types/conversation";
+import { useEffect, useRef, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
+import { Loader2, Search } from 'lucide-react';
+import type { ConversationSearchItem } from '@/types/conversation';
 import {
   searchConversationsFn,
   type ConversationSearchCursor,
-} from "@/server/functions/conversations";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+} from '@/server/functions/conversations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const PAGE_SIZE = 20;
 
@@ -21,11 +16,11 @@ const formatUpdatedAt = (value: string) => {
     return value;
   }
 
-  return date.toLocaleString("zh-CN", {
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
+  return date.toLocaleString('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
     hour12: false,
   });
 };
@@ -35,14 +30,10 @@ export type ConversationSearchDialogProps = {
   onOpenChange: (next: boolean) => void;
 };
 
-function ConversationSearchContent({
-  onClose,
-}: {
-  onClose: () => void;
-}) {
+function ConversationSearchContent({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [items, setItems] = useState<ConversationSearchItem[]>([]);
   const [cursor, setCursor] = useState<ConversationSearchCursor>(null);
   const [loading, setLoading] = useState(false);
@@ -103,7 +94,7 @@ function ConversationSearchContent({
           return;
         }
 
-        console.error("Failed to search conversations:", error);
+        console.error('Failed to search conversations:', error);
         setItems([]);
         setCursor(null);
         setHasSearched(true);
@@ -152,7 +143,7 @@ function ConversationSearchContent({
           return;
         }
 
-        console.error("Failed to load more search results:", error);
+        console.error('Failed to load more search results:', error);
       } finally {
         if (requestIdRef.current === currentRequestId) {
           setLoadingMore(false);
@@ -175,7 +166,7 @@ function ConversationSearchContent({
       },
       {
         root: listRootRef.current,
-        rootMargin: "120px",
+        rootMargin: '120px',
       },
     );
 
@@ -187,68 +178,64 @@ function ConversationSearchContent({
   const handleSelect = (item: ConversationSearchItem) => {
     onClose();
     navigate({
-      to: "/app/c/$conversationId",
+      to: '/app/c/$conversationId',
       params: { conversationId: item.id },
     });
   };
 
   return (
     <>
-      <DialogHeader className="sr-only">
+      <DialogHeader className='sr-only'>
         <DialogTitle>搜索聊天记录</DialogTitle>
       </DialogHeader>
 
-      <div className="flex items-center px-4 py-4">
-        <Search className="size-6 text-(--text-secondary)" />
+      <div className='flex items-center px-4 py-4'>
+        <Search className='size-6 text-(--text-secondary)' />
         <input
           autoFocus
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="你想找什么？"
-          className="ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-(--text-tertiary)"
+          placeholder='你想找什么？'
+          className='ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-(--text-tertiary)'
         />
-        {loading && (
-          <Loader2 className="size-5 animate-spin text-(--text-secondary)" />
-        )}
+        {loading && <Loader2 className='size-5 animate-spin text-(--text-secondary)' />}
       </div>
 
-      <div className="h-[1px] w-full bg-(--surface-muted) dark:bg-(--surface-muted)" />
+      <div className='h-[1px] w-full bg-(--surface-muted) dark:bg-(--surface-muted)' />
 
-      <div ref={listRootRef} className="max-h-[60vh] overflow-y-auto p-2">
+      <div ref={listRootRef} className='max-h-[60vh] overflow-y-auto p-2'>
         {!debouncedQuery ? (
-          <p className="px-3 py-10 text-center text-sm text-(--text-tertiary)">
+          <p className='px-3 py-10 text-center text-sm text-(--text-tertiary)'>
             输入关键词搜索聊天记录
           </p>
         ) : null}
 
         {debouncedQuery && !loading && hasSearched && items.length === 0 ? (
-          <p className="px-3 py-10 text-center text-sm text-(--text-tertiary)">
-            没有找到相关会话
-          </p>
+          <p className='px-3 py-10 text-center text-sm text-(--text-tertiary)'>没有找到相关会话</p>
         ) : null}
 
         {items.length > 0 ? (
-          <div className="flex flex-col gap-0.5">
+          <div className='flex flex-col gap-0.5'>
             {items.map((item) => {
-              const title = item.title || "未命名会话";
+              const title = item.title || '未命名会话';
 
               return (
                 <button
                   key={item.id}
-                  type="button"
-                  className="group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-(--surface-muted) active:scale-[0.98]"
+                  type='button'
+                  className='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-(--surface-muted) active:scale-[0.98]'
                   onClick={() => handleSelect(item)}
                 >
-                  <div className="flex w-full items-baseline justify-between">
-                    <span className="truncate text-base font-medium text-(--text-primary)">
+                  <div className='flex w-full items-baseline justify-between'>
+                    <span className='truncate text-base font-medium text-(--text-primary)'>
                       {title}
                     </span>
-                    <span className="ml-4 shrink-0 text-xs text-(--text-tertiary) opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100">
+                    <span className='ml-4 shrink-0 text-xs text-(--text-tertiary) opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100'>
                       {formatUpdatedAt(item.updated_at)}
                     </span>
                   </div>
-                  <span className="mt-0.5 truncate text-sm text-(--text-tertiary)">
-                    {item.excerpt || "暂无可展示内容"}
+                  <span className='mt-0.5 truncate text-sm text-(--text-tertiary)'>
+                    {item.excerpt || '暂无可展示内容'}
                   </span>
                 </button>
               );
@@ -259,10 +246,10 @@ function ConversationSearchContent({
         {items.length > 0 && (hasMore || loadingMore) ? (
           <div
             ref={sentinelRef}
-            className="flex items-center justify-center py-2 text-(--text-tertiary)"
+            className='flex items-center justify-center py-2 text-(--text-tertiary)'
           >
             {loadingMore ? (
-              <Loader2 className="size-4 animate-spin text-(--text-secondary)" />
+              <Loader2 className='size-4 animate-spin text-(--text-secondary)' />
             ) : null}
           </div>
         ) : null}
@@ -271,15 +258,12 @@ function ConversationSearchContent({
   );
 }
 
-export function ConversationSearchDialog({
-  open,
-  onOpenChange,
-}: ConversationSearchDialogProps) {
+export function ConversationSearchDialog({ open, onOpenChange }: ConversationSearchDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
         <DialogContent
-          className="max-h-[80vh] overflow-hidden border-0 bg-white p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl dark:bg-(--surface-primary)"
+          className='max-h-[80vh] overflow-hidden border-0 bg-white p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl dark:bg-(--surface-primary)'
           showCloseButton={false}
         >
           <ConversationSearchContent onClose={() => onOpenChange(false)} />

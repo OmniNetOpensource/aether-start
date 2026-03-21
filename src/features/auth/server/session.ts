@@ -1,10 +1,10 @@
-import { getRequestHeaders } from "@tanstack/react-start/server";
-import { getAuth, type AuthInstance } from "@/server/functions/auth/auth";
+import { getRequestHeaders } from '@tanstack/react-start/server';
+import { getAuth, type AuthInstance } from '@/server/functions/auth/auth';
 
-type AuthSession = AuthInstance["$Infer"]["Session"];
+type AuthSession = AuthInstance['$Infer']['Session'];
 
 const unauthorizedResponse = () =>
-  new Response("Unauthorized", {
+  new Response('Unauthorized', {
     status: 401,
   });
 
@@ -14,9 +14,7 @@ export const getSessionFromRequest = async (request: Request) => {
   });
 };
 
-export const requireSessionFromRequest = async (
-  request: Request,
-): Promise<AuthSession> => {
+export const requireSessionFromRequest = async (request: Request): Promise<AuthSession> => {
   const session = await getSessionFromRequest(request);
   if (!session) {
     throw unauthorizedResponse();

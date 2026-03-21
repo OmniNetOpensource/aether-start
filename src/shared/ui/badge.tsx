@@ -1,22 +1,17 @@
-import { Slot } from '@radix-ui/react-slot'
-import { cn } from '@/lib/utils'
+import { Slot } from '@radix-ui/react-slot';
+import { cn } from '@/lib/utils';
 
 type BadgeProps = React.HTMLAttributes<HTMLDivElement> & {
-  variant?: 'default' | 'secondary' | 'outline' | 'destructive'
-  asChild?: boolean
-}
+  variant?: 'default' | 'secondary' | 'outline' | 'destructive';
+  asChild?: boolean;
+};
 
-function Badge({
-  variant = 'default',
-  className,
-  asChild = false,
-  ...props
-}: BadgeProps) {
-  const Comp = asChild ? Slot : 'div'
+function Badge({ variant = 'default', className, asChild = false, ...props }: BadgeProps) {
+  const Comp = asChild ? Slot : 'div';
 
   return (
     <Comp
-      data-slot="badge"
+      data-slot='badge'
       className={cn(
         'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
         {
@@ -29,11 +24,11 @@ function Badge({
           'bg-(--status-destructive-muted) text-destructive hover:bg-(--status-destructive-muted-hover)':
             variant === 'destructive',
         },
-        className
+        className,
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Badge }
+export { Badge };

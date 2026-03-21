@@ -6,35 +6,36 @@ import type {
   QuoteItem,
   ResearchItem,
   UserContentBlock,
-} from "@/types/message";
-import { cloneBlocks, cloneResearchItem } from "./message-tree";
+} from '@/types/message';
+import { cloneBlocks, cloneResearchItem } from './message-tree';
 
-type ToolLifecycleUpdate = { kind: "tool_result"; tool: string; result: string };
+type ToolLifecycleUpdate = { kind: 'tool_result'; tool: string; result: string };
 
 export type AssistantAddition = AssistantContentBlock | ResearchItem | ToolLifecycleUpdate;
 
 export const cloneMessages = (messages: Message[]): Message[] =>
-  messages.map((msg) => ({
-    id: msg.id,
-    parentId: msg.parentId,
-    role: msg.role,
-    blocks: cloneBlocks(msg.blocks ?? []),
-    prevSibling: msg.prevSibling,
-    nextSibling: msg.nextSibling,
-    latestChild: msg.latestChild,
-    createdAt: msg.createdAt,
-  } as Message));
+  messages.map(
+    (msg) =>
+      ({
+        id: msg.id,
+        parentId: msg.parentId,
+        role: msg.role,
+        blocks: cloneBlocks(msg.blocks ?? []),
+        prevSibling: msg.prevSibling,
+        nextSibling: msg.nextSibling,
+        latestChild: msg.latestChild,
+        createdAt: msg.createdAt,
+      }) as Message,
+  );
 
 export const extractContentFromBlocks = (blocks: ContentBlock[]) =>
   blocks
-    .filter((block) => block.type === "content")
+    .filter((block) => block.type === 'content')
     .map((block) => block.content)
-    .join("\n\n");
+    .join('\n\n');
 
 export const extractQuotesFromBlocks = (blocks: ContentBlock[]) =>
-  blocks.flatMap((block) =>
-    block.type === "quotes" ? block.quotes : []
-  );
+  blocks.flatMap((block) => (block.type === 'quotes' ? block.quotes : []));
 
 /** 将 quotes 转为发给模型时的引用文本格式：多行逐行加 >，多条之间空一段 */
 export const quotesToModelText = (quotes: QuoteItem[]): string =>
@@ -43,66 +44,62 @@ export const quotesToModelText = (quotes: QuoteItem[]): string =>
       q.text
         .split(/\r?\n/)
         .map((line) => `> ${line}`)
-        .join("\n"),
+        .join('\n'),
     )
-    .join("\n\n");
+    .join('\n\n');
 
 export const extractAttachmentsFromBlocks = (blocks: ContentBlock[]) =>
-  blocks.flatMap((block) =>
-    block.type === "attachments" ? block.attachments : []
-  );
+  blocks.flatMap((block) => (block.type === 'attachments' ? block.attachments : []));
 
 export const collectAttachmentIds = (blocks: ContentBlock[]) =>
   new Set(
     blocks.flatMap((block) =>
-      block.type === "attachments"
-        ? block.attachments.map((attachment) => attachment.id)
-        : []
-    )
+      block.type === 'attachments' ? block.attachments.map((attachment) => attachment.id) : [],
+    ),
   );
 
 export const buildUserBlocks = (
   content: string,
   quotes: QuoteItem[],
-  attachments: Attachment[]
+  attachments: Attachment[],
 ): UserContentBlock[] => {
   const blocks: UserContentBlock[] = [];
   if (quotes.length > 0) {
-    blocks.push({ type: "quotes", quotes });
+    blocks.push({ type: 'quotes', quotes });
   }
   if (attachments.length > 0) {
-    blocks.push({ type: "attachments", attachments });
+    blocks.push({ type: 'attachments', attachments });
   }
   const trimmed = content.trim();
   if (trimmed) {
-    blocks.push({ type: "content", content: trimmed });
+    blocks.push({ type: 'content', content: trimmed });
   }
   return blocks;
 };
 
 export const applyAssistantAddition = (
   blocks: AssistantContentBlock[],
-  addition: AssistantAddition
+  addition: AssistantAddition,
 ): AssistantContentBlock[] => {
   // Fast path: content append (hot path during text streaming)
-  if ("type" in addition && addition.type === "content") {
+  if ('type' in addition && addition.type === 'content') {
     const text = addition.content;
     if (!text) return blocks;
     const last = blocks[blocks.length - 1];
-    if (last?.type === "content") {
+    if (last?.type === 'content') {
       const next = blocks.slice();
       next[next.length - 1] = { ...last, content: last.content + text };
       return next;
     }
-    return [...blocks, { type: "content" as const, content: text }];
+    return [...blocks, { type: 'content' as const, content: text }];
   }
 
   const nextBlocks = cloneBlocks(blocks ?? []) as AssistantContentBlock[];
 
   const ensureResearchBlock = (targetBlocks: AssistantContentBlock[]) => {
     const lastBlock = targetBlocks[targetBlocks.length - 1];
-    if (!lastBlock || lastBlock.type !== "research") {
-      targetBlocks.push({ type: "research", items: [] });
+    if (!lastBlock || lastBlock.type !== 'research') {
+      targetBlocks.push({ type: 'research', items: [] });
       return targetBlocks.length - 1;
     }
     return targetBlocks.length - 1;
@@ -112,7 +109,7 @@ export const applyAssistantAddition = (
     let fallback = -1;
     for (let i = items.length - 1; i >= 0; i--) {
       const item = items[i];
-      if (item.kind === "tool" && item.data.call.tool === toolName) {
+      if (item.kind === 'tool' && item.data.call.tool === toolName) {
         if (!item.data.result) {
           return i;
         }
@@ -124,17 +121,17 @@ export const applyAssistantAddition = (
     return fallback;
   };
 
-  if ("kind" in addition) {
-    if (addition.kind === "thinking") {
+  if ('kind' in addition) {
+    if (addition.kind === 'thinking') {
       const researchIndex = ensureResearchBlock(nextBlocks);
       const researchBlock = nextBlocks[researchIndex] as Extract<
         AssistantContentBlock,
-        { type: "research" }
+        { type: 'research' }
       >;
       const items = [...researchBlock.items];
       const lastItem = items[items.length - 1];
 
-      if (lastItem?.kind === "thinking") {
+      if (lastItem?.kind === 'thinking') {
         items[items.length - 1] = {
           ...lastItem,
           text: lastItem.text + addition.text,
@@ -147,11 +144,11 @@ export const applyAssistantAddition = (
       return nextBlocks;
     }
 
-    if (addition.kind === "tool") {
+    if (addition.kind === 'tool') {
       const researchIndex = ensureResearchBlock(nextBlocks);
       const researchBlock = nextBlocks[researchIndex] as Extract<
         AssistantContentBlock,
-        { type: "research" }
+        { type: 'research' }
       >;
 
       nextBlocks[researchIndex] = {
@@ -161,18 +158,18 @@ export const applyAssistantAddition = (
       return nextBlocks;
     }
 
-    if (addition.kind === "tool_result") {
+    if (addition.kind === 'tool_result') {
       const researchIndex = ensureResearchBlock(nextBlocks);
       const researchBlock = nextBlocks[researchIndex] as Extract<
         AssistantContentBlock,
-        { type: "research" }
+        { type: 'research' }
       >;
       const items = [...researchBlock.items];
       const targetIndex = findToolIndex(items, addition.tool);
 
       if (targetIndex === -1) {
         items.push({
-          kind: "tool",
+          kind: 'tool',
           data: {
             call: { tool: addition.tool, args: {} },
             result: { result: addition.result },
@@ -180,7 +177,7 @@ export const applyAssistantAddition = (
         });
       } else {
         const targetItem = items[targetIndex];
-        if (targetItem.kind === "tool") {
+        if (targetItem.kind === 'tool') {
           items[targetIndex] = {
             ...targetItem,
             data: {
@@ -196,20 +193,20 @@ export const applyAssistantAddition = (
     }
   }
 
-  if ("type" in addition) {
-    if (addition.type === "research") {
+  if ('type' in addition) {
+    if (addition.type === 'research') {
       const normalizedItems = addition.items.map((item) =>
-        item.kind === "thinking" ? { ...item } : cloneResearchItem(item)
+        item.kind === 'thinking' ? { ...item } : cloneResearchItem(item),
       );
       nextBlocks.push({
-        type: "research",
+        type: 'research',
         items: normalizedItems,
       });
       return nextBlocks;
     }
 
-    if (addition.type === "error") {
-      nextBlocks.push({ type: "error", message: addition.message });
+    if (addition.type === 'error') {
+      nextBlocks.push({ type: 'error', message: addition.message });
       return nextBlocks;
     }
   }

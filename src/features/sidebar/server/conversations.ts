@@ -1,7 +1,7 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { requireSession } from "@/server/functions/auth/session";
-import { getServerBindings } from "@/server/env";
+import { createServerFn } from '@tanstack/react-start';
+import { z } from 'zod';
+import { requireSession } from '@/server/functions/auth/session';
+import { getServerBindings } from '@/server/env';
 import {
   clearConversations,
   deleteConversationById,
@@ -11,7 +11,7 @@ import {
   searchConversations,
   updateConversationTitle,
   upsertConversation,
-} from "@/server/db/conversations-db";
+} from '@/server/db/conversations-db';
 
 const listCursorSchema = z
   .object({
@@ -51,7 +51,7 @@ const conversationPayloadSchema = z.object({
   updated_at: z.string(),
 });
 
-export const listConversationsPageFn = createServerFn({ method: "POST" })
+export const listConversationsPageFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       limit: z.number().int().positive().max(100),
@@ -69,7 +69,7 @@ export const listConversationsPageFn = createServerFn({ method: "POST" })
     });
   });
 
-export const searchConversationsFn = createServerFn({ method: "POST" })
+export const searchConversationsFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       query: z.string().trim().min(1).max(200),
@@ -89,7 +89,7 @@ export const searchConversationsFn = createServerFn({ method: "POST" })
     });
   });
 
-export const getConversationFn = createServerFn({ method: "POST" })
+export const getConversationFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       id: z.string().min(1),
@@ -102,7 +102,7 @@ export const getConversationFn = createServerFn({ method: "POST" })
     return getConversationById(DB, data.id, session.user.id);
   });
 
-export const upsertConversationFn = createServerFn({ method: "POST" })
+export const upsertConversationFn = createServerFn({ method: 'POST' })
   .inputValidator(conversationPayloadSchema)
   .handler(async ({ data }) => {
     const { DB } = getServerBindings();
@@ -114,7 +114,7 @@ export const upsertConversationFn = createServerFn({ method: "POST" })
     });
   });
 
-export const deleteConversationFn = createServerFn({ method: "POST" })
+export const deleteConversationFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       id: z.string().min(1),
@@ -127,16 +127,14 @@ export const deleteConversationFn = createServerFn({ method: "POST" })
     return deleteConversationById(DB, data.id, session.user.id);
   });
 
-export const clearConversationsFn = createServerFn({ method: "POST" }).handler(
-  async () => {
-    const { DB } = getServerBindings();
-    const session = await requireSession();
+export const clearConversationsFn = createServerFn({ method: 'POST' }).handler(async () => {
+  const { DB } = getServerBindings();
+  const session = await requireSession();
 
-    return clearConversations(DB, session.user.id);
-  },
-);
+  return clearConversations(DB, session.user.id);
+});
 
-export const updateConversationTitleFn = createServerFn({ method: "POST" })
+export const updateConversationTitleFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       id: z.string().min(1),
@@ -154,7 +152,7 @@ export const updateConversationTitleFn = createServerFn({ method: "POST" })
     });
   });
 
-export const setConversationPinnedFn = createServerFn({ method: "POST" })
+export const setConversationPinnedFn = createServerFn({ method: 'POST' })
   .inputValidator(
     z.object({
       id: z.string().min(1),

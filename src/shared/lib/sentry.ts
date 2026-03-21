@@ -1,6 +1,6 @@
-import * as Sentry from '@sentry/react'
+import * as Sentry from '@sentry/react';
 
-const dsn = import.meta.env.VITE_SENTRY_DSN
+const dsn = import.meta.env.VITE_SENTRY_DSN;
 
 if (dsn) {
   Sentry.init({
@@ -12,11 +12,8 @@ if (dsn) {
     replaysSessionSampleRate: 0,
     replaysOnErrorSampleRate: 1.0,
     sendDefaultPii: true,
-    integrations: [
-      Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration(),
-    ],
-  })
+    integrations: [Sentry.browserTracingIntegration(), Sentry.replayIntegration()],
+  });
 }
 
-export { Sentry }
+export { Sentry };

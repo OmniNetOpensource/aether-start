@@ -1,13 +1,8 @@
-import type {
-  BranchInfo,
-  ContentBlock,
-  Message,
-  ResearchItem,
-} from "@/types/message";
+import type { BranchInfo, ContentBlock, Message, ResearchItem } from '@/types/message';
 
 export type LegacyMessageNode = {
   id: string;
-  role: "user" | "assistant";
+  role: 'user' | 'assistant';
   blocks: ContentBlock[];
   parentId: string | null;
   children: string[];
@@ -28,18 +23,18 @@ type MessageState = {
 };
 
 type LinearMessageInput = {
-  role: Message["role"];
+  role: Message['role'];
   blocks: ContentBlock[];
   createdAt?: string;
 };
 
 export const cloneResearchItem = (item: ResearchItem): ResearchItem => {
-  if (item.kind === "thinking") {
+  if (item.kind === 'thinking') {
     return { ...item };
   }
 
   return {
-    kind: "tool",
+    kind: 'tool',
     data: {
       call: {
         tool: item.data.call.tool,
@@ -52,19 +47,19 @@ export const cloneResearchItem = (item: ResearchItem): ResearchItem => {
 
 export const cloneBlocks = (blocks: ContentBlock[]): ContentBlock[] =>
   blocks.map((block) => {
-    if (block.type === "research") {
+    if (block.type === 'research') {
       return {
         ...block,
         items: block.items.map((item) => cloneResearchItem(item)),
       };
     }
-    if (block.type === "attachments") {
+    if (block.type === 'attachments') {
       return {
         ...block,
         attachments: block.attachments.map((attachment) => ({ ...attachment })),
       };
     }
-    if (block.type === "quotes") {
+    if (block.type === 'quotes') {
       return {
         ...block,
         quotes: block.quotes.map((q) => ({ ...q })),
@@ -93,10 +88,7 @@ const updateMessage = (
   messages[index] = updater(current) as Message;
 };
 
-const collectSiblingIds = (
-  messages: Message[],
-  anchorId: number | null,
-): number[] => {
+const collectSiblingIds = (messages: Message[], anchorId: number | null): number[] => {
   if (anchorId === null) {
     return [];
   }
@@ -171,10 +163,7 @@ export const normalizeMessageParentIds = (messages: Message[]): Message[] => {
   return normalized;
 };
 
-export const buildCurrentPath = (
-  messages: Message[],
-  latestRootId: number | null,
-): number[] => {
+export const buildCurrentPath = (messages: Message[], latestRootId: number | null): number[] => {
   const path: number[] = [];
   let currentId = latestRootId;
 
@@ -190,17 +179,12 @@ export const buildCurrentPath = (
   return path;
 };
 
-export const computeMessagesFromPath = (
-  messages: Message[],
-  currentPath: number[],
-): Message[] =>
-  currentPath
-    .map((id) => messages[id - 1])
-    .filter((message): message is Message => !!message);
+export const computeMessagesFromPath = (messages: Message[], currentPath: number[]): Message[] =>
+  currentPath.map((id) => messages[id - 1]).filter((message): message is Message => !!message);
 
 export const addMessage = (
   state: MessageState,
-  role: Message["role"],
+  role: Message['role'],
   blocks: ContentBlock[],
   createdAt = new Date().toISOString(),
 ): MessageState & { addedMessage: Message } => {
@@ -309,10 +293,7 @@ export const switchBranch = (
   };
 };
 
-export const getBranchInfo = (
-  messages: Message[],
-  messageId: number,
-): BranchInfo | null => {
+export const getBranchInfo = (messages: Message[], messageId: number): BranchInfo | null => {
   const msg = messages[messageId - 1];
   if (!msg) {
     return null;
@@ -403,9 +384,7 @@ export const editMessage = (
   };
 };
 
-export const createLinearMessages = (
-  items: LinearMessageInput[],
-): MessageState => {
+export const createLinearMessages = (items: LinearMessageInput[]): MessageState => {
   if (items.length === 0) {
     return createEmptyMessageState();
   }
@@ -483,14 +462,9 @@ export const migrateFromOldTree = (tree: LegacyMessageTree): MessageState => {
       parentId: node.parentId ? (idMap.get(node.parentId) ?? null) : null,
       role: node.role,
       blocks: cloneBlocks(node.blocks ?? []),
-      prevSibling:
-        siblingIndex > 0
-          ? (idMap.get(siblings[siblingIndex - 1]) ?? null)
-          : null,
+      prevSibling: siblingIndex > 0 ? (idMap.get(siblings[siblingIndex - 1]) ?? null) : null,
       nextSibling:
-        siblingIndex < siblings.length - 1
-          ? (idMap.get(siblings[siblingIndex + 1]) ?? null)
-          : null,
+        siblingIndex < siblings.length - 1 ? (idMap.get(siblings[siblingIndex + 1]) ?? null) : null,
       latestChild:
         node.children?.length > 0
           ? (idMap.get(node.children[node.children.length - 1]) ?? null)
@@ -540,8 +514,7 @@ export const migrateFromOldTree = (tree: LegacyMessageTree): MessageState => {
   if (hasMappedPath) {
     for (let index = 0; index < mappedPath.length; index += 1) {
       const messageId = mappedPath[index];
-      const nextId =
-        index < mappedPath.length - 1 ? mappedPath[index + 1] : null;
+      const nextId = index < mappedPath.length - 1 ? mappedPath[index + 1] : null;
       updateMessage(messages, messageId, (message) => ({
         ...message,
         latestChild: nextId,
@@ -551,9 +524,7 @@ export const migrateFromOldTree = (tree: LegacyMessageTree): MessageState => {
 
   return {
     messages,
-    currentPath: hasMappedPath
-      ? mappedPath
-      : buildCurrentPath(messages, latestRootId),
+    currentPath: hasMappedPath ? mappedPath : buildCurrentPath(messages, latestRootId),
     latestRootId,
     nextId: messages.length + 1,
   };

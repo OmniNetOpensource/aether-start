@@ -1,10 +1,10 @@
-import { createServerFn } from '@tanstack/react-start'
-import { getRequest } from '@tanstack/react-start/server'
-import { getSessionFromRequest } from '@/server/functions/auth/session'
-import { isAdminEmail } from '@/server/functions/auth/admin'
+import { createServerFn } from '@tanstack/react-start';
+import { getRequest } from '@tanstack/react-start/server';
+import { getSessionFromRequest } from '@/server/functions/auth/session';
+import { isAdminEmail } from '@/server/functions/auth/admin';
 
 export const getSessionStateFn = createServerFn({ method: 'GET' }).handler(async () => {
-  const session = await getSessionFromRequest(getRequest())
+  const session = await getSessionFromRequest(getRequest());
 
   return {
     isAuthenticated: !!session,
@@ -16,5 +16,5 @@ export const getSessionStateFn = createServerFn({ method: 'GET' }).handler(async
           name: session.user.name,
         }
       : null,
-  }
-})
+  };
+});
