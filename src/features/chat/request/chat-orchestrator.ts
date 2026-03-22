@@ -452,6 +452,7 @@ export const resumeRunningConversation = async (conversationId: string) => {
   activeController = controller;
 
   useChatRequestStore.getState().setStatus('sending', 'resumeRunningConversation');
+  toast.info('重新连接中...');
 
   try {
     const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/events`, {
@@ -463,6 +464,12 @@ export const resumeRunningConversation = async (conversationId: string) => {
     });
 
     await consumeStreamResponse(response);
+
+    if (useChatRequestStore.getState().status === 'idle') {
+      clearReconnectState();
+      toast.success('重新连接成功');
+      return;
+    }
 
     finalizeStream();
   } catch (error) {
