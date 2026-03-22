@@ -11,7 +11,6 @@ interface NewChatButtonProps extends Omit<LinkComponentProps, 'to'> {
   variant?: 'sidebar' | 'topbar';
   className?: string;
   children?: ReactNode;
-  to?: LinkComponentProps['to'];
 }
 
 export function NewChatButton({
@@ -20,7 +19,6 @@ export function NewChatButton({
   className,
   children,
   onClick,
-  to = '/app',
   ...props
 }: NewChatButtonProps) {
   const isTopbar = variant === 'topbar';
@@ -61,7 +59,7 @@ export function NewChatButton({
       style={isTopbar ? undefined : { width: isCollapsed ? 40 : '100%' }}
       aria-label='新对话'
     >
-      <Link to={to} onClick={onClick} {...props}>
+      <Link to='/app' onClick={onClick} {...props}>
         {children ?? defaultContent}
       </Link>
     </Button>

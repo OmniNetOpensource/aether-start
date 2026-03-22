@@ -1,3 +1,4 @@
+import { memo, useEffect, useRef } from 'react';
 import { Streamdown, defaultRehypePlugins } from 'streamdown';
 import { createCodePlugin } from '@streamdown/code';
 import { math } from '@streamdown/math';
@@ -42,20 +43,61 @@ const codePlugin = createCodePlugin({
 
 const plugins = { code: codePlugin, math, cjk };
 
+type StreamdownBlockProps = {
+  markdown: string;
+  blockIsAnimating: boolean;
+};
+
+const StreamdownBlock = memo(function StreamdownBlock({
+  markdown,
+  blockIsAnimating,
+}: StreamdownBlockProps) {
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+
+    if (blockIsAnimating) {
+      el.style.contentVisibility = '';
+      el.style.containIntrinsicBlockSize = '';
+      return;
+    }
+
+    const h = Math.round(el.getBoundingClientRect().height);
+    if (h > 0) {
+      el.style.contentVisibility = 'auto';
+      el.style.containIntrinsicBlockSize = `${h}px`;
+    } else {
+      el.style.contentVisibility = '';
+      el.style.containIntrinsicBlockSize = '';
+    }
+  }, [blockIsAnimating]);
+
+  return (
+    <div ref={wrapRef}>
+      <Streamdown
+        plugins={plugins}
+        rehypePlugins={[defaultRehypePlugins.sanitize, defaultRehypePlugins.harden]}
+        isAnimating={blockIsAnimating}
+      >
+        {markdown}
+      </Streamdown>
+    </div>
+  );
+});
+
 function MarkdownImpl({ content, isAnimating = false }: Props) {
   const paragraphs = splitMarkdownParagraphs(content);
 
   return (
     <div className='space-y-3'>
       {paragraphs.map((paragraph, i) => (
-        <Streamdown
+        <StreamdownBlock
           key={i}
-          plugins={plugins}
-          rehypePlugins={[defaultRehypePlugins.sanitize, defaultRehypePlugins.harden]}
-          isAnimating={isAnimating && i === paragraphs.length - 1}
-        >
-          {paragraph}
-        </Streamdown>
+          markdown={paragraph}
+          blockIsAnimating={isAnimating && i === paragraphs.length - 1}
+        />
       ))}
     </div>
   );
