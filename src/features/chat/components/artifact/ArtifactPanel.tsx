@@ -6,60 +6,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { cn } from '@/lib/utils';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
-import { ARTIFACT_PREVIEW_MESSAGE_TYPE, type ArtifactPreviewPayload } from './preview-protocol';
-import { ARTIFACT_PREVIEW_DOCUMENT } from './preview-document';
+import { buildPreviewDocument } from './preview-document';
 import { ArtifactCodeBlock } from './ArtifactCodeBlock';
-
-function ArtifactPreviewFrame({
-  artifactId,
-  language,
-  code,
-}: {
-  artifactId: string;
-  language: 'html' | 'react';
-  code: string;
-}) {
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-
-  useEffect(() => {
-    const frame = iframeRef.current?.contentWindow;
-    if (!frame) {
-      return;
-    }
-
-    const payload: ArtifactPreviewPayload = {
-      type: ARTIFACT_PREVIEW_MESSAGE_TYPE,
-      artifactId,
-      language,
-      code,
-    };
-    frame.postMessage(payload, '*');
-  }, [artifactId, language, code]);
-
-  return (
-    <iframe
-      ref={iframeRef}
-      title='Artifact preview'
-      srcDoc={ARTIFACT_PREVIEW_DOCUMENT}
-      sandbox='allow-scripts'
-      className='h-full w-full rounded-md border border-border/50 bg-background'
-      onLoad={() => {
-        const frame = iframeRef.current?.contentWindow;
-        if (!frame) {
-          return;
-        }
-
-        const payload: ArtifactPreviewPayload = {
-          type: ARTIFACT_PREVIEW_MESSAGE_TYPE,
-          artifactId,
-          language,
-          code,
-        };
-        frame.postMessage(payload, '*');
-      }}
-    />
-  );
-}
 
 function ArtifactPanelBody() {
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -157,10 +105,12 @@ function ArtifactPanelBody() {
       <div className='min-h-0 flex-1 overflow-hidden pt-4'>
         {artifactView === 'preview' && canPreview ? (
           <div className='h-full min-h-96'>
-            <ArtifactPreviewFrame
-              artifactId={selectedArtifact.id}
-              language={selectedArtifact.language}
-              code={selectedArtifact.code}
+            <iframe
+              key={selectedArtifact.id}
+              title='Artifact preview'
+              srcDoc={buildPreviewDocument(selectedArtifact.language, selectedArtifact.code)}
+              sandbox='allow-scripts'
+              className='h-full w-full rounded-md border border-border/50 bg-background'
             />
           </div>
         ) : (

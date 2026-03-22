@@ -129,7 +129,6 @@ Client-side:
 
 - `src/features/chat/components/artifact/ArtifactPanel.tsx`
 - `src/features/chat/components/artifact/preview-document.ts`
-- `src/features/chat/components/artifact/preview-protocol.ts`
 - `src/routes/app/c/$conversationId.tsx`
 
 Server-side:
