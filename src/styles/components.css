@@ -48,7 +48,9 @@
 }
 
 [data-streamdown='code-block-body'] pre {
-  overflow-x: auto;
+  overflow: visible;
+  width: max-content;
+  min-width: 100%;
 }
 
 /* Hide code block download button */
@@ -72,6 +74,7 @@
 /* Remove border from inner code block body */
 [data-streamdown='code-block-body'] {
   border: none;
+  min-width: 100%;
 }
 
 /* Remove background from code block action buttons (top-right) */

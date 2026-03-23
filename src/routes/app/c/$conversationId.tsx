@@ -1,9 +1,10 @@
-import { useRef } from 'react';
+import { lazy, Suspense, useRef } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { Composer } from '@/features/chat/composer/Composer';
-import { ArtifactPanel } from '@/features/chat/components/artifact/ArtifactPanel';
 import { MessageList } from '@/features/chat/components/message/MessageList';
 import { useConversationLoader } from '@/features/sidebar/useConversationLoader';
+
+const ArtifactPanel = lazy(() => import('@/features/chat/components/artifact/ArtifactPanel'));
 
 export const Route = createFileRoute('/app/c/$conversationId')({
   component: ConversationPage,
@@ -25,7 +26,9 @@ export function ConversationPage() {
           <MessageList />
           <Composer />
         </div>
-        <ArtifactPanel />
+        <Suspense>
+          <ArtifactPanel />
+        </Suspense>
       </main>
     </div>
   );

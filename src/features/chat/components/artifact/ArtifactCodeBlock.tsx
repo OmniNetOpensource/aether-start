@@ -35,7 +35,13 @@ function getHighlightCacheKey(code: string, language: ArtifactLanguage) {
   return `${language}:${code}`;
 }
 
-export function ArtifactCodeBlock({ code, language }: { code: string; language: ArtifactLanguage }) {
+export function ArtifactCodeBlock({
+  code,
+  language,
+}: {
+  code: string;
+  language: ArtifactLanguage;
+}) {
   const lang = shikiLang[language];
   const cacheKey = getHighlightCacheKey(code, language);
   const [highlightState, setHighlightState] = useState(() => ({
@@ -45,7 +51,7 @@ export function ArtifactCodeBlock({ code, language }: { code: string; language: 
   const highlight =
     highlightState.cacheKey === cacheKey
       ? highlightState.result
-      : highlightCache.get(cacheKey) ?? null;
+      : (highlightCache.get(cacheKey) ?? null);
 
   useEffect(() => {
     if (!codePlugin.supportsLanguage(lang) || highlightCache.has(cacheKey)) {
@@ -102,7 +108,7 @@ export function ArtifactCodeBlock({ code, language }: { code: string; language: 
       data-language={lang}
       style={containerStyle}
     >
-      <pre className='bg-(--sdm-bg,inherit) dark:bg-(--shiki-dark-bg,var(--sdm-bg,inherit))'>
+      <pre className='m-0 bg-(--sdm-bg,inherit) dark:bg-(--shiki-dark-bg,var(--sdm-bg,inherit))'>
         <code className='[counter-increment:line_0] [counter-reset:line]'>
           {highlight.tokens.map((line, lineIdx) => (
             <span key={lineIdx} className={lineClass}>

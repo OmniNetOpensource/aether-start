@@ -8,7 +8,7 @@ import {
 import Sidebar from '@/components/sidebar/Sidebar';
 import { getSessionStateFn } from '@/server/functions/auth/session-state';
 import { NewChatButton } from '@/features/chat/components/NewChatButton';
-import { ArtifactToggleButton } from '@/features/chat/components/artifact/ArtifactPanel';
+import { ArtifactToggleButton } from '@/features/chat/components/artifact/ArtifactToggleButton';
 import { ShareButton } from '@/features/share/components/ShareButton';
 
 export function getNormalizedAppTarget(

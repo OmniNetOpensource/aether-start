@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Braces, ChevronDown, Eye, Folder, FolderOpen } from 'lucide-react';
+import { Braces, ChevronDown, Eye } from 'lucide-react';
 import { useResponsive } from '@/components/ResponsiveContext';
-import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { cn } from '@/lib/utils';
@@ -124,31 +123,7 @@ function ArtifactPanelBody() {
   );
 }
 
-export function ArtifactToggleButton() {
-  const artifacts = useChatSessionStore((state) => state.artifacts);
-  const artifactPanelOpen = useChatSessionStore((state) => state.artifactPanelOpen);
-  const setArtifactPanelOpen = useChatSessionStore((state) => state.setArtifactPanelOpen);
-
-  if (artifacts.length === 0) {
-    return null;
-  }
-
-  return (
-    <Button
-      type='button'
-      variant='ghost'
-      size='icon-lg'
-      className={cn('rounded-lg', artifactPanelOpen && 'bg-(--surface-hover) text-foreground')}
-      aria-label={artifactPanelOpen ? 'Close artifacts' : 'Open artifacts'}
-      title={artifactPanelOpen ? 'Close artifacts' : 'Open artifacts'}
-      onClick={() => setArtifactPanelOpen(!artifactPanelOpen)}
-    >
-      {artifactPanelOpen ? <FolderOpen className='h-5 w-5' /> : <Folder className='h-5 w-5' />}
-    </Button>
-  );
-}
-
-export function ArtifactPanel() {
+export default function ArtifactPanel() {
   const deviceType = useResponsive();
   const isMobile = deviceType === 'mobile';
   const artifacts = useChatSessionStore((state) => state.artifacts);
