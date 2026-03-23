@@ -22,7 +22,7 @@ import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as AppNotesRouteImport } from './routes/app/notes'
 import { Route as ApiUploadAttachmentRouteImport } from './routes/api/upload-attachment'
-import { Route as ApiSentryRouteImport } from './routes/api/sentry'
+import { Route as ApiClientErrorsRouteImport } from './routes/api/client-errors'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
@@ -93,9 +93,9 @@ const ApiUploadAttachmentRoute = ApiUploadAttachmentRouteImport.update({
   path: '/api/upload-attachment',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSentryRoute = ApiSentryRouteImport.update({
-  id: '/api/sentry',
-  path: '/api/sentry',
+const ApiClientErrorsRoute = ApiClientErrorsRouteImport.update({
+  id: '/api/client-errors',
+  path: '/api/client-errors',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
@@ -125,7 +125,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
-  '/api/sentry': typeof ApiSentryRoute
+  '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -144,7 +144,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
-  '/api/sentry': typeof ApiSentryRoute
+  '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -165,7 +165,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
-  '/api/sentry': typeof ApiSentryRoute
+  '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -187,7 +187,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/404'
     | '/render-tracker-demo'
-    | '/api/sentry'
+    | '/api/client-errors'
     | '/api/upload-attachment'
     | '/app/notes'
     | '/auth/forgot-password'
@@ -206,7 +206,7 @@ export interface FileRouteTypes {
     | '/'
     | '/404'
     | '/render-tracker-demo'
-    | '/api/sentry'
+    | '/api/client-errors'
     | '/api/upload-attachment'
     | '/app/notes'
     | '/auth/forgot-password'
@@ -226,7 +226,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/404'
     | '/render-tracker-demo'
-    | '/api/sentry'
+    | '/api/client-errors'
     | '/api/upload-attachment'
     | '/app/notes'
     | '/auth/forgot-password'
@@ -247,7 +247,7 @@ export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
   R404Route: typeof R404Route
   RenderTrackerDemoRoute: typeof RenderTrackerDemoRoute
-  ApiSentryRoute: typeof ApiSentryRoute
+  ApiClientErrorsRoute: typeof ApiClientErrorsRoute
   ApiUploadAttachmentRoute: typeof ApiUploadAttachmentRoute
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
@@ -353,11 +353,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiUploadAttachmentRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/sentry': {
-      id: '/api/sentry'
-      path: '/api/sentry'
-      fullPath: '/api/sentry'
-      preLoaderRoute: typeof ApiSentryRouteImport
+    '/api/client-errors': {
+      id: '/api/client-errors'
+      path: '/api/client-errors'
+      fullPath: '/api/client-errors'
+      preLoaderRoute: typeof ApiClientErrorsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app/c/$conversationId': {
@@ -412,7 +412,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
   R404Route: R404Route,
   RenderTrackerDemoRoute: RenderTrackerDemoRoute,
-  ApiSentryRoute: ApiSentryRoute,
+  ApiClientErrorsRoute: ApiClientErrorsRoute,
   ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,

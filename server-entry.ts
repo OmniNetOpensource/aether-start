@@ -1,7 +1,6 @@
 import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server';
 import { env } from 'cloudflare:workers';
 import { createServerEntry } from '@tanstack/react-start/server-entry';
-import { withSentry } from '@sentry/cloudflare';
 import type { RequestHandler } from '@tanstack/react-start/server';
 import type { Register } from '@tanstack/react-router';
 import { getSessionFromRequest } from '@/features/auth/server/session';
@@ -59,14 +58,4 @@ const serverEntry = createServerEntry({
 });
 
 // 最终导出给 Cloudflare 的默认入口。
-// withSentry 会在外层包一层监控逻辑，这样无论是普通 SSR 请求还是 agent 分流链路里的异常，
-// 只要冒泡到入口层，Sentry 都有机会捕获并上报。
-export default withSentry(
-  // Sentry 只需要拿到运行时环境里的 DSN 就能接管异常上报。
-  // tracesSampleRate 目前设为 1.0，表示把所有 transaction 都采样进 tracing。
-  (env: Record<string, string>) => ({
-    dsn: env.SENTRY_DSN,
-    tracesSampleRate: 1.0,
-  }),
-  serverEntry as ExportedHandler,
-) as typeof serverEntry;
+export default serverEntry;

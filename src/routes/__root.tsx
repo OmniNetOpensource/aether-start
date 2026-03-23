@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
-import { Sentry } from '@/lib/sentry';
+import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
+import { reportClientError } from '@/lib/report-client-error';
 
 import { useViewportHeight } from '@/hooks/useViewportHeight';
 import { TooltipProvider } from '@/components/ui/tooltip';
@@ -37,28 +39,76 @@ export const Route = createRootRoute({
 function RootComponent() {
   useViewportHeight();
 
+  useEffect(() => {
+    const pageUrl = () => window.location.href;
+
+    const onWindowError = (event: ErrorEvent) => {
+      const href = pageUrl();
+      const thrown = event.error;
+      if (thrown instanceof Error) {
+        reportClientError({
+          kind: 'window-error',
+          message: thrown.message,
+          pageUrl: href,
+          errorName: thrown.name,
+          stack: thrown.stack,
+          source: event.filename || undefined,
+          line: Number.isFinite(event.lineno) ? event.lineno : undefined,
+          column: Number.isFinite(event.colno) ? event.colno : undefined,
+        });
+        return;
+      }
+      const fallbackMessage =
+        typeof event.message === 'string' && event.message.trim().length > 0
+          ? event.message
+          : 'Unknown error';
+      reportClientError({
+        kind: 'window-error',
+        message: fallbackMessage,
+        pageUrl: href,
+        source: event.filename || undefined,
+        line: Number.isFinite(event.lineno) ? event.lineno : undefined,
+        column: Number.isFinite(event.colno) ? event.colno : undefined,
+      });
+    };
+
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const href = pageUrl();
+      const reason = event.reason;
+      if (reason instanceof Error) {
+        reportClientError({
+          kind: 'unhandledrejection',
+          message: reason.message,
+          pageUrl: href,
+          errorName: reason.name,
+          stack: reason.stack,
+        });
+        return;
+      }
+      const message =
+        typeof reason === 'string' && reason.trim().length > 0
+          ? reason
+          : 'Unhandled rejection';
+      reportClientError({
+        kind: 'unhandledrejection',
+        message,
+        pageUrl: href,
+        detail: reason,
+      });
+    };
+
+    window.addEventListener('error', onWindowError);
+    window.addEventListener('unhandledrejection', onUnhandledRejection);
+    return () => {
+      window.removeEventListener('error', onWindowError);
+      window.removeEventListener('unhandledrejection', onUnhandledRejection);
+    };
+  }, []);
+
   return (
-    <Sentry.ErrorBoundary
-      fallback={({ error }) => (
-        <div className='flex h-screen items-center justify-center'>
-          <div className='text-center space-y-4'>
-            <h1 className='text-2xl font-semibold'>出了点问题</h1>
-            <p className='text-muted-foreground text-sm'>
-              {error instanceof Error ? error.message : '发生了未知错误'}
-            </p>
-            <button
-              type='button'
-              className='px-4 py-2 rounded-md bg-(--interactive-primary) text-(--surface-primary) text-sm'
-              onClick={() => window.location.reload()}
-            >
-              重试
-            </button>
-          </div>
-        </div>
-      )}
-    >
+    <AppErrorBoundary>
       <Outlet />
-    </Sentry.ErrorBoundary>
+    </AppErrorBoundary>
   );
 }
 
