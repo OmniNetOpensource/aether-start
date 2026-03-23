@@ -24,7 +24,9 @@
       "Bash(cd \"D:/develop/projects/aether-start\" && pnpm test -- --run src/routes/app/-route.test.ts 2>&1)",
       "Bash(cd /d/develop/projects/aether-start && git restore src/features/chat/components/outline/preview-text.test.ts 2>&1)",
       "Bash(ls:*)",
-      "Bash(pnpm build:*)"
+      "Bash(pnpm build:*)",
+      "Bash(node:*)",
+      "Bash(xargs cat:*)"
     ]
   }
 }

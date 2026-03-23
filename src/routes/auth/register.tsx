@@ -2,7 +2,6 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
-import { z } from 'zod';
 import { authClient } from '@/lib/auth/auth-client';
 import { getSessionStateFn } from '@/server/functions/auth/session-state';
 import { Button } from '@/components/ui/button';
@@ -10,18 +9,19 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { cn } from '@/lib/utils';
 import {
-  authSearchSchema,
+  validateAuthSearch,
   getDefaultName,
   getErrorMessage,
   getSafeRedirectTarget,
 } from './-_utils';
 
-const searchSchema = authSearchSchema.extend({
-  verify: z.enum(['true']).optional(),
-});
-
 export const Route = createFileRoute('/auth/register')({
-  validateSearch: (search) => searchSchema.parse(search),
+  validateSearch: (search: Record<string, unknown>) => {
+    const result: { redirect?: string; reset?: 'success'; email?: string; verify?: 'true' } =
+      validateAuthSearch(search);
+    if (search.verify === 'true') result.verify = 'true';
+    return result;
+  },
   beforeLoad: async () => {
     const sessionState = await getSessionStateFn();
     if (sessionState.isAuthenticated) {

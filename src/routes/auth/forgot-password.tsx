@@ -1,6 +1,5 @@
 import { FormEvent, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
-import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { authClient } from '@/lib/auth/auth-client';
@@ -25,12 +24,12 @@ const getForgotPasswordErrorMessage = (error: unknown) => {
   return '发送失败，请稍后重试';
 };
 
-const forgotPasswordSearchSchema = z.object({
-  email: z.string().optional(),
-});
-
 export const Route = createFileRoute('/auth/forgot-password')({
-  validateSearch: (search) => forgotPasswordSearchSchema.parse(search),
+  validateSearch: (search: Record<string, unknown>) => {
+    const result: { email?: string } = {};
+    if (typeof search.email === 'string') result.email = search.email;
+    return result;
+  },
   component: ForgotPasswordPage,
 });
 

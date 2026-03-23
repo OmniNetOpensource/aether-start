@@ -9,14 +9,14 @@ import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
 import { cn } from '@/lib/utils';
 import {
-  authSearchSchema,
+  validateAuthSearch,
   getSafeRedirectTarget,
   getErrorMessage,
   isEmailNotVerifiedError,
 } from './-_utils';
 
 export const Route = createFileRoute('/auth/login')({
-  validateSearch: (search) => authSearchSchema.parse(search),
+  validateSearch: validateAuthSearch,
   beforeLoad: async () => {
     const sessionState = await getSessionStateFn();
     if (sessionState.isAuthenticated) {

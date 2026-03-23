@@ -1,10 +1,10 @@
-import { z } from 'zod';
-
-export const authSearchSchema = z.object({
-  redirect: z.string().optional(),
-  reset: z.enum(['success']).optional(),
-  email: z.string().optional(),
-});
+export function validateAuthSearch(search: Record<string, unknown>) {
+  const result: { redirect?: string; reset?: 'success'; email?: string } = {};
+  if (typeof search.redirect === 'string') result.redirect = search.redirect;
+  if (search.reset === 'success') result.reset = 'success';
+  if (typeof search.email === 'string') result.email = search.email;
+  return result;
+}
 
 export const getSafeRedirectTarget = (value: string | undefined) => {
   if (!value || !value.startsWith('/') || value.startsWith('/auth')) {

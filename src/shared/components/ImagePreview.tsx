@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { formatFileSize } from '@/lib/utils/file';
 
@@ -120,46 +119,36 @@ export function ImagePreview({ url, previewUrl, name, size, className }: ImagePr
 
       {isOpen &&
         createPortal(
-          <AnimatePresence>
-            {isOpen && (
-              <motion.div
-                className='fixed inset-0 z-(--z-modal-backdrop) flex items-center justify-center bg-[#404040]'
-                onClick={handleClose}
-                onWheel={(event) => event.preventDefault()}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2, ease: 'easeOut' }}
+          <div
+            className='fixed inset-0 z-(--z-modal-backdrop) flex items-center justify-center bg-[#404040]'
+            onClick={handleClose}
+            onWheel={(event) => event.preventDefault()}
+            style={{ animation: 'fadeIn 0.2s ease-out' }}
+          >
+            <div
+              className='relative z-(--z-modal-content) flex items-center justify-center'
+              onClick={(event) => event.stopPropagation()}
+              style={{ animation: 'scaleIn 0.2s ease-out' }}
+            >
+              <div
+                className={cn('select-none', isDragging ? 'cursor-grabbing' : 'cursor-grab')}
+                onClick={(event) => event.stopPropagation()}
+                onMouseDown={handleMouseDown}
+                onWheel={handleWheel}
+                style={{
+                  transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
+                  transformOrigin: 'center',
+                }}
               >
-                <motion.div
-                  className='relative z-(--z-modal-content) flex items-center justify-center'
-                  onClick={(event) => event.stopPropagation()}
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  transition={{ duration: 0.2, ease: 'easeOut' }}
-                >
-                  <div
-                    className={cn('select-none', isDragging ? 'cursor-grabbing' : 'cursor-grab')}
-                    onClick={(event) => event.stopPropagation()}
-                    onMouseDown={handleMouseDown}
-                    onWheel={handleWheel}
-                    style={{
-                      transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
-                      transformOrigin: 'center',
-                    }}
-                  >
-                    <img
-                      src={url}
-                      alt={name}
-                      className='pointer-events-none max-h-[80vh] max-w-[80vw] select-none object-contain'
-                      draggable={false}
-                    />
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>,
+                <img
+                  src={url}
+                  alt={name}
+                  className='pointer-events-none max-h-[80vh] max-w-[80vw] select-none object-contain'
+                  draggable={false}
+                />
+              </div>
+            </div>
+          </div>,
           document.body,
         )}
     </>

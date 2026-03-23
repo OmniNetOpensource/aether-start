@@ -1,6 +1,5 @@
 import { FormEvent, useState } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
-import { z } from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { authClient } from '@/lib/auth/auth-client';
@@ -8,10 +7,6 @@ import { Button } from '@/components/ui/button';
 import { PasswordInput } from '@/components/ui/password-input';
 import { cn } from '@/lib/utils';
 
-const resetPasswordSearchSchema = z.object({
-  token: z.string().optional(),
-  error: z.string().optional(),
-});
 
 const isInvalidTokenError = (error: unknown) => {
   const message =
@@ -48,7 +43,12 @@ const getResetPasswordErrorMessage = (error: unknown) => {
 };
 
 export const Route = createFileRoute('/auth/reset-password')({
-  validateSearch: (search) => resetPasswordSearchSchema.parse(search),
+  validateSearch: (search: Record<string, unknown>) => {
+    const result: { token?: string; error?: string } = {};
+    if (typeof search.token === 'string') result.token = search.token;
+    if (typeof search.error === 'string') result.error = search.error;
+    return result;
+  },
   component: ResetPasswordPage,
 });
 
