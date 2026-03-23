@@ -14,6 +14,7 @@ const SHARED_STYLES = `
   * { box-sizing: border-box; }
   html, body { margin: 0; min-height: 100%; width: 100%; background: #ffffff; }
   body { position: relative; overflow: auto; }
+  #root { height: 100vh; width: 100%; overflow: auto; }
 `;
 
 const ERROR_OVERLAY = `
@@ -38,31 +39,34 @@ const ERROR_OVERLAY = `
       padding: 16px 18px;
       background: rgba(254, 242, 242, 0.96);
       color: #b91c1c;
+      white-space: pre-wrap;
     }
   </style>
   <div id="error-overlay"><div id="error-card"></div></div>
   <script>
-    window.addEventListener('error', (e) => {
+    window.addEventListener('error', (event) => {
       const overlay = document.getElementById('error-overlay');
       const card = document.getElementById('error-card');
-      card.textContent = e.message || 'Preview failed';
+      if (!overlay || !card) return;
+      card.textContent = event.message || 'Preview failed';
       overlay.classList.add('visible');
     });
   </script>
 `;
 
 function buildReactDocument(code: string): string {
-  // Escape the code for safe embedding in a JS template literal
-  const escaped = code.replace(/\\/g, '\\\\').replace(/`/g, '\\`').replace(/\$/g, '\\$');
+  const escaped = code
+    .replace(/\\/g, '\\\\')
+    .replace(/`/g, '\\`')
+    .replace(/\$/g, '\\$')
+    .replace(/<\/script/gi, '<\\/script');
 
   return `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <style>${SHARED_STYLES}
-      #root { height: 100vh; width: 100%; overflow: auto; }
-    </style>
+    <style>${SHARED_STYLES}</style>
   </head>
   <body>
     <div id="root"></div>
@@ -81,29 +85,64 @@ function buildReactDocument(code: string): string {
 
         if (!compiled) throw new Error('Failed to compile artifact code');
 
-        const _module = { exports: {} };
-        const _exports = _module.exports;
+        const root = document.getElementById('root');
+        if (!root) throw new Error('Preview root not found');
+
+        const module = { exports: {} };
+        const exports = module.exports;
+        const reactGlobals = {
+          createContext: React.createContext,
+          createElement: React.createElement,
+          forwardRef: React.forwardRef,
+          Fragment: React.Fragment,
+          lazy: React.lazy,
+          memo: React.memo,
+          startTransition: React.startTransition,
+          Suspense: React.Suspense,
+          use: React.use,
+          useActionState: React.useActionState,
+          useCallback: React.useCallback,
+          useContext: React.useContext,
+          useDebugValue: React.useDebugValue,
+          useDeferredValue: React.useDeferredValue,
+          useEffect: React.useEffect,
+          useId: React.useId,
+          useImperativeHandle: React.useImperativeHandle,
+          useInsertionEffect: React.useInsertionEffect,
+          useLayoutEffect: React.useLayoutEffect,
+          useMemo: React.useMemo,
+          useOptimistic: React.useOptimistic,
+          useReducer: React.useReducer,
+          useRef: React.useRef,
+          useState: React.useState,
+          useSyncExternalStore: React.useSyncExternalStore,
+          useTransition: React.useTransition,
+        };
+
         const factory = new Function(
-          'React', 'exports', 'module',
-          'useState', 'useEffect', 'useLayoutEffect', 'useMemo',
-          'useRef', 'useReducer', 'useId', 'useDeferredValue',
-          'startTransition', 'Fragment',
+          'React',
+          'exports',
+          'module',
+          ...Object.keys(reactGlobals),
           compiled + '; return module.exports.default ?? exports.default;',
         );
 
         const Component = factory(
-          React, _exports, _module,
-          React.useState, React.useEffect, React.useLayoutEffect, React.useMemo,
-          React.useRef, React.useReducer, React.useId, React.useDeferredValue,
-          React.startTransition, React.Fragment,
+          React,
+          exports,
+          module,
+          ...Object.values(reactGlobals),
         );
 
-        if (!Component) throw new Error('Artifact must export a default React component');
+        if (!Component) {
+          throw new Error('Artifact must export a default React component');
+        }
 
-        createRoot(document.getElementById('root')).render(React.createElement(Component));
+        createRoot(root).render(React.createElement(Component));
       } catch (error) {
         const overlay = document.getElementById('error-overlay');
         const card = document.getElementById('error-card');
+        if (!overlay || !card) throw error;
         card.textContent = error instanceof Error ? error.message : String(error);
         overlay.classList.add('visible');
       }

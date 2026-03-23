@@ -85,7 +85,7 @@ export function ArtifactCodeBlock({ code, language }: { code: string; language: 
 
   if (!highlight) {
     return (
-      <pre className='min-h-0 flex-1 overflow-auto rounded-md bg-(--surface-muted) p-4 text-xs leading-relaxed text-foreground'>
+      <pre className='m-0 whitespace-pre-wrap wrap-break-word rounded-md bg-(--surface-muted) p-0 text-foreground'>
         <code>{code}</code>
       </pre>
     );
@@ -97,7 +97,7 @@ export function ArtifactCodeBlock({ code, language }: { code: string; language: 
 
   return (
     <div
-      className='min-h-0 flex-1 overflow-auto rounded-md border border-border bg-background p-4 text-xs leading-relaxed'
+      className='m-0'
       data-streamdown='code-block-body'
       data-language={lang}
       style={containerStyle}

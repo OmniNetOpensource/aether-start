@@ -104,27 +104,19 @@ function ArtifactPanelBody() {
       {/* Main: content only */}
       <div className='min-h-0 flex-1 overflow-hidden pt-4'>
         {artifactView === 'preview' && canPreview ? (
-          <div className='h-full min-h-96'>
-            <iframe
-              key={selectedArtifact.id}
-              title='Artifact preview'
-              srcDoc={buildPreviewDocument(selectedArtifact.language, selectedArtifact.code)}
-              sandbox='allow-scripts'
-              className='h-full w-full rounded-md border border-border/50 bg-background'
-            />
-          </div>
+          <iframe
+            key={selectedArtifact.id}
+            title='Artifact preview'
+            srcDoc={buildPreviewDocument(selectedArtifact.language, selectedArtifact.code)}
+            sandbox='allow-scripts'
+            className='h-full w-full rounded-md border border-border/50 bg-background'
+          />
         ) : (
-          <div className='flex h-full min-h-96 flex-col gap-3'>
-            {selectedArtifact.errorMessage ? (
-              <div className='rounded-md border border-border/60 bg-(--status-destructive-muted) px-3 py-2 text-xs text-destructive'>
-                {selectedArtifact.errorMessage}
-              </div>
-            ) : null}
-            <ArtifactCodeBlock
-              key={selectedArtifact.id}
-              code={selectedArtifact.code}
-              language={selectedArtifact.language}
-            />
+          <div
+            key={selectedArtifact.id}
+            className='min-h-0 h-full overflow-auto p-4 text-xs leading-relaxed'
+          >
+            <ArtifactCodeBlock code={selectedArtifact.code} language={selectedArtifact.language} />
           </div>
         )}
       </div>

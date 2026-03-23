@@ -17,8 +17,10 @@ const parseReactCode = (code: string) => {
     throw new Error('React artifacts must be self-contained and cannot use import statements');
   }
 
-  if (!/\bexport\s+default\b/.test(code)) {
-    throw new Error('React artifacts must export a default component');
+  if (!/\bexport\s+default\s+function\s+App\b/.test(code)) {
+    throw new Error(
+      "React artifacts must use exactly `export default function App` (component name must be App, not another name)",
+    );
   }
 };
 
@@ -63,8 +65,12 @@ export const parseRenderArgs = (args: unknown): RenderArgs => {
 };
 
 const renderArtifact: ToolHandler = async (args) => {
-  const { title, language } = parseRenderArgs(args);
-  return `Artifact rendered successfully: "${title}" (${language})`;
+  try {
+    const { title, language } = parseRenderArgs(args);
+    return `Artifact rendered successfully: "${title}" (${language})`;
+  } catch (error) {
+    return `Error: ${error instanceof Error ? error.message : String(error)}`;
+  }
 };
 
 const renderSpec: ChatTool = {
@@ -72,7 +78,7 @@ const renderSpec: ChatTool = {
   function: {
     name: 'render',
     description:
-      'Create a conversation artifact preview for HTML or React code. Use this when the user asks for a component, page, demo, or visual code output. Tailwind is not available; use inline styles or plain CSS.',
+      'Create a conversation artifact preview for HTML or React code. Use this when the user asks for a component, page, demo, or visual code output. Tailwind is not available; use inline styles or plain CSS. For React: the entry component must be `export default function App`; do NOT write any import statements — React hooks (useState, useEffect, useRef, etc.) and APIs (createContext, memo, forwardRef, etc.) are pre-injected as globals.',
     parameters: {
       type: 'object',
       additionalProperties: false,
@@ -85,12 +91,12 @@ const renderSpec: ChatTool = {
           type: 'string',
           enum: ['html', 'react'],
           description:
-            "Artifact language. Use 'react' only for a self-contained TSX component with a default export and no imports.",
+            "Artifact language. Use 'react' for TSX: no imports needed (React hooks and APIs are globals), root component must be `export default function App`.",
         },
         code: {
           type: 'string',
           description:
-            'Artifact source code. For React this must be a self-contained TSX component. Use inline styles or plain CSS; Tailwind classes are not supported.',
+            'Artifact source code. For React: TSX with `export default function App`, no imports (hooks like useState/useEffect and APIs like createContext/memo are pre-injected globals); inline styles or plain CSS only (no Tailwind).',
         },
       },
       required: ['title', 'language', 'code'],
