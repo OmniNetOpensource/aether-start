@@ -91,7 +91,7 @@ function MarkdownImpl({ content, isAnimating = false }: Props) {
   const paragraphs = splitMarkdownParagraphs(content);
 
   return (
-    <div className='space-y-3'>
+    <div className='space-y-3 [&_b]:font-extrabold [&_strong]:font-extrabold'>
       {paragraphs.map((paragraph, i) => (
         <StreamdownBlock
           key={i}

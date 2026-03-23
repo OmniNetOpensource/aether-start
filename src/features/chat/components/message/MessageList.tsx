@@ -43,7 +43,6 @@ export function MessageList({ className, listClassName }: MessageListProps = {})
   const deviceType = useResponsive();
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const rafIdRef = useRef<number | null>(null);
-  const railRef = useRef<HTMLDivElement | null>(null);
 
   const [expanded, setExpanded] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(-1);
@@ -149,7 +148,7 @@ export function MessageList({ className, listClassName }: MessageListProps = {})
     const handlePointerDownOutside = (e: PointerEvent) => {
       const target = e.target instanceof Element ? e.target : null;
       if (!target) return;
-      if (railRef.current?.contains(target)) return;
+      if (target.closest('[data-chat-actions-rail]')) return;
       if (target.closest('[data-outline-dialog]')) return;
       closeRail();
     };
@@ -196,55 +195,50 @@ export function MessageList({ className, listClassName }: MessageListProps = {})
       <SelectionToolbar containerRef={scrollRef} />
 
       <div
-        ref={railRef}
-        className='fixed right-0 top-0 bottom-0 z-(--z-sidebar) flex w-0 shrink-0 group/rail-trigger'
-        data-chat-actions-rail
-      >
+        className='absolute right-0 top-1/2 z-(--z-sidebar) h-24 w-2 -translate-y-1/2 rounded-l-md bg-border transition-all duration-300 group-hover/rail-trigger:w-2.5'
+        onClick={isMobile ? handleTriggerClick : undefined}
+        onMouseEnter={isMobile ? undefined : openRail}
+        aria-label='展开聊天操作'
+      />
+      {expanded && (
         <div
-          className='absolute right-0 top-1/2 z-(--z-sidebar) h-24 w-2 -translate-y-1/2 rounded-l-md bg-border transition-all duration-300 group-hover/rail-trigger:w-2.5'
-          onClick={isMobile ? handleTriggerClick : undefined}
-          onMouseEnter={isMobile ? undefined : openRail}
-          aria-label='展开聊天操作'
-        />
-        {expanded && (
-          <div
-            className='absolute right-4 top-0 z-(--z-sidebar) flex h-full flex-col justify-center gap-1 bg-transparent p-1 transition-transform duration-300 ease-(--transition-smooth) pointer-events-auto'
-            onMouseLeave={isMobile ? undefined : handleMouseLeave}
+          className='absolute right-4 top-0 z-(--z-sidebar) flex h-full flex-col justify-center gap-1 bg-transparent p-1 transition-transform duration-300 ease-(--transition-smooth) pointer-events-auto'
+          onMouseLeave={isMobile ? undefined : handleMouseLeave}
+          data-chat-actions-rail
+        >
+          <OutlineButton />
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon-sm'
+            onClick={handlePrev}
+            aria-label='Previous message'
+            title='Previous message'
           >
-            <OutlineButton />
-            <Button
-              type='button'
-              variant='ghost'
-              size='icon-sm'
-              onClick={handlePrev}
-              aria-label='Previous message'
-              title='Previous message'
-            >
-              <ChevronUp className='h-4 w-4' />
-            </Button>
-            <Button
-              type='button'
-              variant='ghost'
-              size='icon-sm'
-              onClick={handleNext}
-              aria-label='Next message'
-              title='Next message'
-            >
-              <ChevronDown className='h-4 w-4' />
-            </Button>
-            <Button
-              type='button'
-              variant='ghost'
-              size='icon-sm'
-              onClick={followBottom}
-              aria-label='Scroll to bottom'
-              title='Scroll to bottom'
-            >
-              <ArrowDown className='h-4 w-4' />
-            </Button>
-          </div>
-        )}
-      </div>
+            <ChevronUp className='h-4 w-4' />
+          </Button>
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon-sm'
+            onClick={handleNext}
+            aria-label='Next message'
+            title='Next message'
+          >
+            <ChevronDown className='h-4 w-4' />
+          </Button>
+          <Button
+            type='button'
+            variant='ghost'
+            size='icon-sm'
+            onClick={followBottom}
+            aria-label='Scroll to bottom'
+            title='Scroll to bottom'
+          >
+            <ArrowDown className='h-4 w-4' />
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
