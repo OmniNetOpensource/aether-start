@@ -6,7 +6,6 @@ import {
   Command,
   CommandDialog,
   CommandEmpty,
-  CommandGroup,
   CommandInput,
   CommandItem,
   CommandList,
@@ -14,49 +13,20 @@ import {
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useResponsive } from '@/components/ResponsiveContext';
+import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 
-/** 根据 role id/name 推断 provider，用于分组 */
-function getProviderFromRole(roleId: string, roleName: string): string {
-  const lower = (roleId + roleName).toLowerCase();
-  if (lower.includes('claude')) return 'Anthropic';
-  if (lower.includes('gemini')) return 'Gemini';
-  if (lower.includes('qwen')) return '千问';
-  if (lower.includes('glm')) return '智谱';
-  if (lower.includes('minimax')) return 'MiniMax';
-  if (lower.includes('doubao')) return '豆包';
-  if (lower.includes('kimi')) return 'Kimi';
-  if (lower.includes('deepseek')) return 'DeepSeek';
-  return '其他';
-}
-
 export function ModelSelector() {
+  const appShellData = useAppShellRouteData();
   const [open, setOpen] = React.useState(false);
   const isMobile = useResponsive() === 'mobile';
   const currentRole = useChatSessionStore((state) => state.currentRole);
-  const roles = useChatSessionStore((state) => state.availableRoles);
-  const loadAvailableRoles = useChatSessionStore((state) => state.loadAvailableRoles);
   const setCurrentRole = useChatSessionStore((state) => state.setCurrentRole);
+  const initialRoles = appShellData?.availableRoles ?? [];
+  const initialRoleId = appShellData?.initialRoleId ?? '';
 
-  React.useEffect(() => {
-    void loadAvailableRoles();
-  }, [loadAvailableRoles]);
-
-  const currentRoleName = roles.find((role) => role.id === currentRole)?.name ?? '';
-
-  // 按 provider 分组
-  const grouped = (() => {
-    const map = new Map<string, { id: string; name: string }[]>();
-    for (const role of roles) {
-      const provider = getProviderFromRole(role.id, role.name);
-      const list = map.get(provider) ?? [];
-      list.push(role);
-      map.set(provider, list);
-    }
-    return Array.from(map.entries()).sort(([a], [b]) =>
-      a === '其他' ? 1 : b === '其他' ? -1 : a.localeCompare(b),
-    );
-  })();
+  const selectedRoleId = currentRole || initialRoleId || (initialRoles[0]?.id ?? '');
+  const currentRoleName = initialRoles.find((role) => role.id === selectedRoleId)?.name ?? '';
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground';
@@ -89,22 +59,18 @@ export function ModelSelector() {
           <CommandInput placeholder='搜索模型...' autoFocus={!isMobile} />
           <CommandList>
             <CommandEmpty>未找到匹配的模型</CommandEmpty>
-            {grouped.map(([provider, items]) => (
-              <CommandGroup key={provider} heading={provider}>
-                {items.map((role) => (
-                  <CommandItem
-                    key={role.id}
-                    value={`${role.id} ${role.name} ${provider}`}
-                    onSelect={() => {
-                      setCurrentRole(role.id);
-                      setOpen(false);
-                    }}
-                  >
-                    <span className='flex-1 truncate'>{role.name}</span>
-                    {currentRole === role.id && <Check className='h-4 w-4 shrink-0' />}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
+            {initialRoles.map((role) => (
+              <CommandItem
+                key={role.id}
+                value={`${role.id} ${role.name}`}
+                onSelect={() => {
+                  setCurrentRole(role.id);
+                  setOpen(false);
+                }}
+              >
+                <span className='flex-1 truncate'>{role.name}</span>
+                {selectedRoleId === role.id && <Check className='h-4 w-4 shrink-0' />}
+              </CommandItem>
             ))}
           </CommandList>
         </Command>

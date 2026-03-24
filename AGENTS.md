@@ -102,7 +102,6 @@ Artifacts are a first-class part of conversation loading now. If you change conv
 
 - Model and prompt definitions live in `src/features/chat/server/agents/services/model-provider-config.ts`.
 - Availability APIs live in `src/features/chat/server/functions/models.ts`.
-- `src/features/chat/server/functions/roles.ts` is only a deprecated alias.
 - Provider adapters live in `src/features/chat/server/agents/services/`.
 - `provider-factory.ts` currently supports `anthropic`, `openai`, `openai-responses`, and `gemini`.
 

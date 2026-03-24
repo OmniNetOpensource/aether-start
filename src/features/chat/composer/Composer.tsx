@@ -4,7 +4,7 @@ import { useResponsive } from '@/components/ResponsiveContext';
 import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/useToast';
-import { useChatSessionStore, useIsNewChat } from '@/features/sidebar/useChatSessionStore';
+import { useIsNewChat } from '@/features/sidebar/useChatSessionStore';
 import { submitMessage } from './submit-chat';
 import { useComposerStore } from './useComposerStore';
 import { ComposerToolbar } from './ComposerToolbar';
@@ -69,12 +69,6 @@ export function Composer() {
   }, []);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Tab' && event.shiftKey && !event.ctrlKey && !event.metaKey) {
-      event.preventDefault();
-      useChatSessionStore.getState().cyclePrompt();
-      return;
-    }
-
     if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       void submitMessage((conversationId) =>

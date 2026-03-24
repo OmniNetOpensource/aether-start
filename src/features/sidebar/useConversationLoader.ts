@@ -71,7 +71,7 @@ export function useConversationLoader(loadingConversationId: string) {
         initializeTree(messages, currentPath);
         setArtifacts(conversation.artifacts ?? []);
         const store = useChatSessionStore.getState();
-        const roleId = conversation.role ?? store.currentRole ?? store.availableRoles[0]?.id ?? '';
+        const roleId = conversation.role ?? '';
         store.setCurrentRole(roleId);
         setIsLoading(false);
         void resumeRunningConversation(loadingConversationId);

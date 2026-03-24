@@ -176,7 +176,6 @@ Provider adapters live in `src/features/chat/server/agents/services/`:
 
 Model and prompt definitions live in `src/features/chat/server/agents/services/model-provider-config.ts`.
 Availability server functions live in `src/features/chat/server/functions/models.ts`.
-`src/features/chat/server/functions/roles.ts` is only a deprecated alias.
 
 Supported provider formats currently include:
 

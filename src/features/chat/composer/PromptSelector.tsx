@@ -1,6 +1,4 @@
 'use client';
-
-import * as React from 'react';
 import { Check, ChevronDown, MessageSquareText } from 'lucide-react';
 import {
   DropdownMenu,
@@ -10,19 +8,21 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 
 export function PromptSelector() {
+  const appShellData = useAppShellRouteData();
   const currentPrompt = useChatSessionStore((state) => state.currentPrompt);
-  const prompts = useChatSessionStore((state) => state.availablePrompts);
-  const loadAvailablePrompts = useChatSessionStore((state) => state.loadAvailablePrompts);
+
   const setCurrentPrompt = useChatSessionStore((state) => state.setCurrentPrompt);
+  const prompts = appShellData?.availablePrompts ?? [];
+  const promptId = appShellData?.initialPromptId ?? 'aether';
 
-  React.useEffect(() => {
-    void loadAvailablePrompts();
-  }, [loadAvailablePrompts]);
-
-  const currentPromptName = prompts.find((p) => p.id === currentPrompt)?.name ?? 'aether';
+  const visiblePrompts = prompts.length > 0 ? prompts : [];
+  const selectedPromptId = currentPrompt || promptId;
+  const currentPromptName =
+    visiblePrompts.find((prompt) => prompt.id === selectedPromptId)?.name ?? 'aether';
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)';
@@ -49,10 +49,10 @@ export function PromptSelector() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' sideOffset={4}>
-        {prompts.map((prompt) => (
+        {visiblePrompts.map((prompt) => (
           <DropdownMenuItem key={prompt.id} onSelect={() => setCurrentPrompt(prompt.id)}>
             <span className='flex-1 truncate'>{prompt.name}</span>
-            {currentPrompt === prompt.id && <Check className='h-4 w-4 shrink-0' />}
+            {selectedPromptId === prompt.id && <Check className='h-4 w-4 shrink-0' />}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

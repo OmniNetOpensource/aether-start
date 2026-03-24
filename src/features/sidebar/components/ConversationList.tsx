@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { ConversationItem } from './ConversationItem';
 
@@ -8,9 +9,9 @@ type ConversationListProps = {
 };
 
 export function ConversationList({ onDropdownOpenChange }: ConversationListProps) {
+  const appShellData = useAppShellRouteData();
   const conversations = useChatSessionStore((state) => state.conversations);
   const conversationsLoading = useChatSessionStore((state) => state.conversationsLoading);
-  const loadInitialConversations = useChatSessionStore((state) => state.loadInitialConversations);
   const loadMoreConversations = useChatSessionStore((state) => state.loadMoreConversations);
   const hasLoaded = useChatSessionStore((state) => state.hasLoaded);
   const loadingMore = useChatSessionStore((state) => state.loadingMore);
@@ -18,13 +19,12 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
   const activeConversationId = useChatSessionStore((state) => state.conversationId);
   const historyScrollRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
+  const initialConversations = appShellData?.initialConversations ?? [];
+  const initialHasMore = (appShellData?.nextConversationCursor ?? null) !== null;
 
   useEffect(() => {
-    void loadInitialConversations();
-  }, [loadInitialConversations]);
-
-  useEffect(() => {
-    if (!hasMore) {
+    const visibleHasMore = hasLoaded ? hasMore : initialHasMore;
+    if (!visibleHasMore) {
       return;
     }
 
@@ -39,7 +39,7 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
         if (!entries.some((entry) => entry.isIntersecting)) {
           return;
         }
-        if (loadingMore || !hasMore) {
+        if (loadingMore || !visibleHasMore) {
           return;
         }
         void loadMoreConversations();
@@ -52,9 +52,12 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
 
     observer.observe(target);
     return () => observer.disconnect();
-  }, [hasMore, loadingMore, loadMoreConversations]);
+  }, [hasLoaded, hasMore, initialHasMore, loadMoreConversations, loadingMore]);
 
-  if (conversationsLoading && !hasLoaded) {
+  const visibleConversations = hasLoaded ? conversations : initialConversations;
+  const visibleHasMore = hasLoaded ? hasMore : initialHasMore;
+
+  if (conversationsLoading && !hasLoaded && visibleConversations.length === 0) {
     return (
       <div className='flex items-center justify-center py-6 text-(--text-tertiary)'>
         <Loader2 className='h-4 w-4 animate-spin' />
@@ -63,67 +66,41 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
     );
   }
 
-  const pinnedConversations = conversations.filter((item) => item.is_pinned);
-  const historyConversations = conversations.filter((item) => !item.is_pinned);
-  const showHistorySection =
-    historyConversations.length > 0 || pinnedConversations.length === 0 || hasMore || loadingMore;
+  const orderedConversations = visibleConversations.slice().sort((a, b) => {
+    if (a.is_pinned === b.is_pinned) return 0;
+    return a.is_pinned ? -1 : 1;
+  });
 
   return (
-    <div className='flex h-full min-h-0 flex-col gap-2'>
-      {pinnedConversations.length > 0 ? (
-        <>
-          <div className='px-1 py-1 text-[10px] font-semibold uppercase tracking-widest text-(--text-tertiary) font-mono opacity-80'>
-            Pinned
-          </div>
-          <div className='flex flex-col gap-1'>
-            {pinnedConversations.map((conversation) => (
-              <ConversationItem
-                key={conversation.id}
-                conversation={conversation}
-                isActive={conversation.id === activeConversationId}
-                onDropdownOpenChange={onDropdownOpenChange}
-              />
-            ))}
-          </div>
-        </>
-      ) : null}
-      {showHistorySection ? (
-        <div className='flex min-h-0 flex-1 flex-col gap-2'>
-          <div className='px-1 py-1 text-[10px] font-semibold uppercase tracking-widest text-(--text-tertiary) font-mono opacity-80'>
-            History
-          </div>
+    <div
+      ref={historyScrollRef}
+      className='flex h-full min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pr-1'
+    >
+      <div className='flex flex-col gap-1'>
+        {orderedConversations.map((conversation) => (
+          <ConversationItem
+            key={conversation.id}
+            conversation={conversation}
+            isActive={conversation.id === activeConversationId}
+            onDropdownOpenChange={onDropdownOpenChange}
+          />
+        ))}
+        {visibleHasMore || loadingMore ? (
           <div
-            ref={historyScrollRef}
-            className='min-h-0 flex-1 overflow-x-hidden overflow-y-auto pr-1'
+            ref={sentinelRef}
+            className='flex items-center justify-center py-3 text-(--text-tertiary)'
           >
-            <div className='flex flex-col gap-1'>
-              {historyConversations.map((conversation) => (
-                <ConversationItem
-                  key={conversation.id}
-                  conversation={conversation}
-                  isActive={conversation.id === activeConversationId}
-                  onDropdownOpenChange={onDropdownOpenChange}
-                />
-              ))}
-              {hasMore || loadingMore ? (
-                <div
-                  ref={sentinelRef}
-                  className='flex items-center justify-center py-3 text-(--text-tertiary)'
-                >
-                  {loadingMore ? (
-                    <>
-                      <Loader2 className='h-4 w-4 animate-spin' />
-                      <span className='ml-2 text-xs'>加载更多...</span>
-                    </>
-                  ) : (
-                    <span className='text-xs'>滚动加载更多...</span>
-                  )}
-                </div>
-              ) : null}
-            </div>
+            {loadingMore ? (
+              <>
+                <Loader2 className='h-4 w-4 animate-spin' />
+                <span className='ml-2 text-xs'>加载更多...</span>
+              </>
+            ) : (
+              <span className='text-xs'>滚动加载更多...</span>
+            )}
           </div>
-        </div>
-      ) : null}
+        ) : null}
+      </div>
     </div>
   );
 }

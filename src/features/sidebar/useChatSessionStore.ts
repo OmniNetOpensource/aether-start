@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { getAvailableModelsFn, getAvailablePromptsFn } from '@/server/functions/chat/models';
 import {
   listConversationsPageFn,
   type ConversationListCursor,
@@ -80,18 +79,6 @@ const MODEL_STORAGE_KEY = 'aether_current_role';
 const PROMPT_STORAGE_KEY = 'aether_current_prompt';
 const PAGE_SIZE = 10;
 
-const getStoredValue = (key: string) => {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-
-  try {
-    return localStorage.getItem(key);
-  } catch {
-    return null;
-  }
-};
-
 const setStoredValue = (key: string, value: string) => {
   if (typeof window === 'undefined') {
     return;
@@ -106,20 +93,12 @@ const setStoredValue = (key: string, value: string) => {
 
 export type ChatSessionSelectionState = {
   currentRole: string;
-  availableRoles: RoleInfo[];
-  rolesLoading: boolean;
   currentPrompt: string;
-  availablePrompts: PromptInfo[];
-  promptsLoading: boolean;
 };
 
 export const initialChatSessionSelectionState: ChatSessionSelectionState = {
   currentRole: '',
-  availableRoles: [],
-  rolesLoading: false,
   currentPrompt: '',
-  availablePrompts: [],
-  promptsLoading: false,
 };
 
 type ChatSessionState = TreeSnapshot &
@@ -130,8 +109,6 @@ type ChatSessionState = TreeSnapshot &
 
 type ChatSessionActions = {
   addConversation: (conversation: ConversationMeta) => void;
-  setConversations: (conversations: ConversationMeta[]) => void;
-  loadInitialConversations: () => Promise<void>;
   loadMoreConversations: () => Promise<void>;
   clearConversations: () => Promise<void>;
   resetConversations: () => void;
@@ -147,14 +124,7 @@ type ChatSessionActions = {
   getBranchInfo: (messageId: number) => BranchInfo | null;
   navigateBranch: (messageId: number, depth: number, direction: 'prev' | 'next') => void;
   setCurrentRole: (role: string) => void;
-  setAvailableRoles: (roles: RoleInfo[]) => void;
-  setRolesLoading: (loading: boolean) => void;
-  loadAvailableRoles: () => Promise<void>;
   setCurrentPrompt: (promptId: string) => void;
-  setAvailablePrompts: (prompts: PromptInfo[]) => void;
-  setPromptsLoading: (loading: boolean) => void;
-  loadAvailablePrompts: () => Promise<void>;
-  cyclePrompt: () => void;
   setArtifacts: (artifacts: ConversationArtifact[]) => void;
   selectArtifact: (artifactId: string | null) => void;
   setArtifactPanelOpen: (open: boolean) => void;
@@ -241,41 +211,7 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
     set((state) => ({
       conversations: upsertConversations(state.conversations, [conversation]),
     })),
-  setConversations: (conversations) =>
-    set((state) => ({
-      conversations: upsertConversations(state.conversations, conversations),
-    })),
-  loadInitialConversations: async () => {
-    const { hasLoaded, conversationsLoading } = get();
-    if (hasLoaded || conversationsLoading) {
-      return;
-    }
 
-    set({ conversationsLoading: true });
-
-    try {
-      const page = await listConversationsPageFn({
-        data: { limit: PAGE_SIZE, cursor: null },
-      });
-      const conversations = (page.items as ConversationDetail[]).map(mapDetailToMeta);
-
-      set((state) => ({
-        conversations: upsertConversations(state.conversations, conversations),
-        hasLoaded: true,
-        conversationsLoading: false,
-        hasMore: page.nextCursor !== null,
-        conversationsCursor: page.nextCursor,
-      }));
-    } catch (error) {
-      console.error('Failed to load conversations:', error);
-      set({
-        hasLoaded: true,
-        conversationsLoading: false,
-        hasMore: false,
-        conversationsCursor: null,
-      });
-    }
-  },
   loadMoreConversations: async () => {
     const { hasLoaded, conversationsLoading, loadingMore, hasMore, conversationsCursor } = get();
     if (!hasLoaded || conversationsLoading || loadingMore || !hasMore) {
@@ -666,80 +602,12 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
       setStoredValue(MODEL_STORAGE_KEY, currentRole);
     }
   },
-  setAvailableRoles: (availableRoles) => set({ availableRoles }),
-  setRolesLoading: (rolesLoading) => set({ rolesLoading }),
-  loadAvailableRoles: async () => {
-    const state = get();
-    if (state.availableRoles.length > 0 || state.rolesLoading) {
-      return;
-    }
-
-    set({ rolesLoading: true });
-
-    try {
-      const roles = await getAvailableModelsFn();
-      const firstId = roles[0]?.id ?? '';
-      const stored = getStoredValue(MODEL_STORAGE_KEY);
-      const roleToUse = stored && roles.some((role) => role.id === stored) ? stored : firstId;
-
-      if (roleToUse) {
-        get().setCurrentRole(roleToUse);
-      }
-
-      set({ availableRoles: roles });
-    } catch {
-      // ignore
-    } finally {
-      set({ rolesLoading: false });
-    }
-  },
   setCurrentPrompt: (currentPrompt) => {
     set({ currentPrompt });
 
     if (currentPrompt) {
       setStoredValue(PROMPT_STORAGE_KEY, currentPrompt);
     }
-  },
-  setAvailablePrompts: (availablePrompts) => set({ availablePrompts }),
-  setPromptsLoading: (promptsLoading) => set({ promptsLoading }),
-  loadAvailablePrompts: async () => {
-    const state = get();
-    if (state.availablePrompts.length > 0 || state.promptsLoading) {
-      return;
-    }
-
-    set({ promptsLoading: true });
-
-    try {
-      const prompts = await getAvailablePromptsFn();
-      const firstId = prompts[0]?.id ?? 'aether';
-      const stored = getStoredValue(PROMPT_STORAGE_KEY);
-      const promptToUse =
-        stored && prompts.some((prompt) => prompt.id === stored) ? stored : firstId;
-
-      if (promptToUse) {
-        get().setCurrentPrompt(promptToUse);
-      }
-
-      set({ availablePrompts: prompts });
-    } catch {
-      // ignore
-    } finally {
-      set({ promptsLoading: false });
-    }
-  },
-  cyclePrompt: () => {
-    const state = get();
-    if (state.availablePrompts.length === 0) {
-      return;
-    }
-
-    const currentIndex = state.availablePrompts.findIndex(
-      (prompt) => prompt.id === state.currentPrompt,
-    );
-    const nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % state.availablePrompts.length;
-
-    get().setCurrentPrompt(state.availablePrompts[nextIndex].id);
   },
   clearSession: () => {
     const state = get();
@@ -748,11 +616,7 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
       conversationId: null,
       ...initialArtifactState,
       currentRole: state.currentRole,
-      availableRoles: state.availableRoles,
-      rolesLoading: state.rolesLoading,
       currentPrompt: state.currentPrompt,
-      availablePrompts: state.availablePrompts,
-      promptsLoading: state.promptsLoading,
     });
   },
   getTreeState: () => {
