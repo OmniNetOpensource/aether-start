@@ -1,14 +1,32 @@
-import { useEffect, useState } from 'react';
-import { Moon, Settings, Sun } from 'lucide-react';
+import { Suspense, lazy, useEffect, useState } from 'react';
+import { Loader2, Moon, Settings, Sun } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { authClient } from '@/features/auth/client/auth-client';
 import { useTheme } from '@/hooks/useTheme';
-import { SettingsModal } from './SettingsModal';
+
+let settingsModalModulePromise: Promise<typeof import('./SettingsModal')> | null = null;
+
+const loadSettingsModal = () => {
+  if (!settingsModalModulePromise) {
+    settingsModalModulePromise = import('./SettingsModal');
+  }
+
+  return settingsModalModulePromise;
+};
+
+const SettingsModal = lazy(async () => {
+  const module = await loadSettingsModal();
+
+  return {
+    default: module.SettingsModal,
+  };
+});
 
 type ProfileMenuProps = {
   isCollapsed?: boolean;
@@ -22,7 +40,7 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const displayName = session?.user.name || session?.user.email?.split('@')[0] || 'User';
-  const subtitle = session?.user.email || '';
+  const subtitle = session?.user.email || '已登录';
 
   const handleMenuOpenChange = (open: boolean) => {
     setMenuOpen(open);
@@ -86,9 +104,7 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
                       {displayName}
                     </span>
                   </div>
-                  <div className='text-xs leading-tight text-muted-foreground'>
-                    {subtitle || '已登录'}
-                  </div>
+                  <div className='text-xs leading-tight text-muted-foreground'>{subtitle}</div>
                 </div>
               </div>
 
@@ -99,14 +115,43 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
                 {theme === 'dark' ? '浅色模式' : '深色模式'}
               </DropdownMenuItem>
 
-              <DropdownMenuItem onSelect={() => setSettingsOpen(true)}>
+              <DropdownMenuItem
+                onPointerMove={() => {
+                  void loadSettingsModal();
+                }}
+                onFocus={() => {
+                  void loadSettingsModal();
+                }}
+                onSelect={() => {
+                  void loadSettingsModal();
+                  setSettingsOpen(true);
+                }}
+              >
                 <Settings className='h-4 w-4' />
                 设置
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+          {settingsOpen ? (
+            <Suspense
+              fallback={
+                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+                  <DialogContent className='max-h-[85vh] w-[50vw] min-w-[320px] max-w-4xl overflow-y-auto'>
+                    <DialogHeader>
+                      <DialogTitle>Settings</DialogTitle>
+                    </DialogHeader>
+                    <div className='flex items-center gap-2 py-6 text-sm text-muted-foreground'>
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                      <span>Loading settings...</span>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              }
+            >
+              <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+            </Suspense>
+          ) : null}
         </div>
       </div>
     </div>
