@@ -104,7 +104,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
       return;
     }
 
-    const selectedModel = useChatSessionStore.getState().currentModel;
+    const selectedModel = useChatSessionStore.getState().currentModelId;
     if (!selectedModel) {
       toast.warning('请先选择模型');
       return;
@@ -153,7 +153,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
       return;
     }
 
-    const selectedModel = useChatSessionStore.getState().currentModel;
+    const selectedModel = useChatSessionStore.getState().currentModelId;
     if (!selectedModel) {
       toast.warning('请先选择模型');
       return;

@@ -4,6 +4,36 @@ import type { Attachment } from '@/features/chat/types/message';
 
 const UPLOAD_CONCURRENCY = 4;
 
+const COMPOSER_DRAFT_STORAGE_KEY = 'aether_composer_draft';
+
+function writeComposerDraftStorage(value: string) {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, value);
+  } catch {
+    // ignore
+  }
+}
+
+export function readComposerDraftFromStorage(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  try {
+    const raw = localStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
+    if (raw === null) {
+      return '';
+    }
+    return raw;
+  } catch {
+    return '';
+  }
+}
+
 type PendingQuote = { id: string; text: string };
 
 type ComposerState = {
@@ -11,7 +41,6 @@ type ComposerState = {
   pendingAttachments: Attachment[];
   pendingQuotes: PendingQuote[];
   uploading: boolean;
-  _uploadGeneration: number;
 };
 
 type ComposerActions = {
@@ -21,8 +50,6 @@ type ComposerActions = {
   removeAttachment: (id: string) => void;
   addQuote: (text: string) => void;
   removeQuote: (id: string) => void;
-  clearInput: () => void;
-  clearAttachments: () => void;
   clear: () => void;
 };
 
@@ -31,23 +58,29 @@ export const useComposerStore = create<ComposerState & ComposerActions>()((set, 
   pendingAttachments: [],
   pendingQuotes: [],
   uploading: false,
-  _uploadGeneration: 0,
-  setInput: (value) => set({ input: value }),
+  setInput: (value) => {
+    writeComposerDraftStorage(value);
+    set({ input: value });
+  },
   setPendingAttachments: (attachments) => set({ pendingAttachments: attachments }),
   addAttachments: async (files) => {
     if (files.length === 0 || get().uploading) {
       return;
     }
 
-    const uploadGeneration = get()._uploadGeneration + 1;
-    set({ uploading: true, _uploadGeneration: uploadGeneration });
+    set({ uploading: true });
 
     let running = 0;
     const queue: Array<() => void> = [];
-    const acquire = (): Promise<void> =>
-      running < UPLOAD_CONCURRENCY
-        ? ((running += 1), Promise.resolve())
-        : new Promise((res) => queue.push(res));
+    const acquire = () =>
+      new Promise<void>((resolve) => {
+        if (running < UPLOAD_CONCURRENCY) {
+          running += 1;
+          resolve();
+        } else {
+          queue.push(resolve);
+        }
+      });
     const release = () => {
       running -= 1;
       const next = queue.shift();
@@ -62,7 +95,6 @@ export const useComposerStore = create<ComposerState & ComposerActions>()((set, 
         await acquire();
         try {
           const attachment = await uploadAttachmentFile(file);
-          if (get()._uploadGeneration !== uploadGeneration) return;
           if (attachment) {
             set((state) => ({
               pendingAttachments: [...state.pendingAttachments, attachment],
@@ -74,7 +106,6 @@ export const useComposerStore = create<ComposerState & ComposerActions>()((set, 
       }),
     );
 
-    if (get()._uploadGeneration !== uploadGeneration) return;
     set({ uploading: false });
   },
   removeAttachment: (id) =>
@@ -96,19 +127,13 @@ export const useComposerStore = create<ComposerState & ComposerActions>()((set, 
     set((state) => ({
       pendingQuotes: state.pendingQuotes.filter((q) => q.id !== id),
     })),
-  clearInput: () => set({ input: '' }),
-  clearAttachments: () =>
-    set((state) => ({
-      pendingAttachments: [],
-      uploading: false,
-      _uploadGeneration: state._uploadGeneration + 1,
-    })),
-  clear: () =>
-    set((state) => ({
-      input: '',
-      pendingAttachments: [],
-      pendingQuotes: [],
-      uploading: false,
-      _uploadGeneration: state._uploadGeneration + 1,
-    })),
+  clear: () => {
+    writeComposerDraftStorage('');
+    set({ input: '', pendingAttachments: [], pendingQuotes: [] });
+  },
 }));
+
+/** Updates composer input and mirrors it to localStorage. */
+export function setComposerInputWithLocalStorage(value: string) {
+  useComposerStore.getState().setInput(value);
+}

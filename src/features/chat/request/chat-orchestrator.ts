@@ -307,7 +307,7 @@ export const startChatRequest = async () => {
 
   resetLastEventId();
 
-  if (!sessionStore.currentModel) {
+  if (!sessionStore.currentModelId) {
     toast.warning(SELECT_MODEL_WARNING);
     return;
   }
@@ -321,8 +321,8 @@ export const startChatRequest = async () => {
 
   const body = {
     idempotencyKey,
-    model: sessionStore.currentModel,
-    promptId: sessionStore.currentPrompt || undefined,
+    model: sessionStore.currentModelId,
+    promptId: sessionStore.currentPromptId || undefined,
     conversationId,
     conversationHistory: messages.map(
       (message) =>

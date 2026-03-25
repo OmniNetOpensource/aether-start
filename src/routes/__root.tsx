@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useMountEffect } from '@/hooks/useMountEffect';
 import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
 import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
 import { reportClientError } from '@/lib/report-client-error';
@@ -39,7 +39,7 @@ export const Route = createRootRoute({
 function RootComponent() {
   useViewportHeight();
 
-  useEffect(() => {
+  useMountEffect(() => {
     const pageUrl = () => window.location.href;
 
     const onWindowError = (event: ErrorEvent) => {
@@ -101,7 +101,7 @@ function RootComponent() {
       window.removeEventListener('error', onWindowError);
       window.removeEventListener('unhandledrejection', onUnhandledRejection);
     };
-  }, []);
+  });
 
   return (
     <AppErrorBoundary>

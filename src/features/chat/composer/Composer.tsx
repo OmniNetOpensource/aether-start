@@ -1,4 +1,5 @@
-import { ClipboardEvent, DragEvent, KeyboardEvent, useEffect, useRef } from 'react';
+import { ClipboardEvent, DragEvent, KeyboardEvent, useRef } from 'react';
+import { useMountEffect } from '@/hooks/useMountEffect';
 import { useNavigate } from '@tanstack/react-router';
 import { useResponsive } from '@/components/ResponsiveContext';
 import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
@@ -6,7 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/useToast';
 import { useIsNewChat } from '@/features/sidebar/useChatSessionStore';
 import { submitMessage } from './submit-chat';
-import { useComposerStore } from './useComposerStore';
+import {
+  readComposerDraftFromStorage,
+  setComposerInputWithLocalStorage,
+  useComposerStore,
+} from './useComposerStore';
 import { ComposerToolbar } from './ComposerToolbar';
 
 declare global {
@@ -24,25 +29,29 @@ export function Composer() {
   const uploading = useComposerStore((state) => state.uploading);
   const deviceType = useResponsive();
   const isDesktop = deviceType === 'desktop';
-  const setInput = useComposerStore((state) => state.setInput);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
   const removeQuote = useComposerStore((state) => state.removeQuote);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  useEffect(() => {
-    const saved = window.__preHydrationInput;
-    if (saved) {
-      setInput(saved);
+  useMountEffect(() => {
+    const pre = window.__preHydrationInput;
+    if (pre) {
+      setComposerInputWithLocalStorage(pre);
+    } else {
+      const fromStorage = readComposerDraftFromStorage();
+      if (fromStorage !== '') {
+        setComposerInputWithLocalStorage(fromStorage);
+      }
     }
     delete window.__preHydrationInput;
     if (window.__preHydrationInputHandler) {
       document.removeEventListener('input', window.__preHydrationInputHandler);
       delete window.__preHydrationInputHandler;
     }
-  }, []);
+  });
 
-  useEffect(() => {
+  useMountEffect(() => {
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey) {
         return;
@@ -66,7 +75,7 @@ export function Composer() {
 
     document.addEventListener('keydown', handleGlobalKeyDown);
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  });
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
@@ -145,7 +154,7 @@ export function Composer() {
       name='message'
       value={input}
       onChange={(event) => {
-        setInput(event.target.value);
+        setComposerInputWithLocalStorage(event.target.value);
       }}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}

@@ -6,7 +6,7 @@
  * 职责：
  * 1. 根据 loadingConversationId 拉取对话（消息树、artifacts、currentPath 等）
  * 2. 若当前 store 已是该对话，则尝试恢复断点续传（resume streaming）
- * 3. 切换/离开对话时执行清理（abort 请求、清空 composer/editing 等）
+ * 3. 切换/离开对话时执行清理（abort 请求、清空 editing 等）
  * 4. 根据对话标题更新 document.title
  *
  * 使用场景：/app/c/$conversationId 路由下的 ConversationPage

@@ -3,7 +3,8 @@
  * golden-box flash on the component's root DOM element.
  */
 
-import { useEffect, useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef } from 'react';
+import { useMountEffect } from '@/hooks/useMountEffect';
 
 const FLASH_DURATION_MS = 700;
 const FLASH_CLASS = 'render-monitor-flash';
@@ -93,7 +94,7 @@ export function RenderMonitorBoundary({ name, children }: RenderMonitorBoundaryP
 }
 
 export function RenderMonitorController() {
-  useEffect(() => {
+  useMountEffect(() => {
     if (!import.meta.env.DEV || typeof window === 'undefined') return;
 
     let enabled = true;
@@ -129,6 +130,6 @@ export function RenderMonitorController() {
     return () => {
       delete window.__RENDER_MONITOR__;
     };
-  }, []);
+  });
   return null;
 }

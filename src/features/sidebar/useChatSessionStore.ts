@@ -61,13 +61,13 @@ const setStoredValue = (key: string, value: string) => {
 };
 
 export type ChatSessionSelectionState = {
-  currentModel: string;
-  currentPrompt: string;
+  currentModelId: string;
+  currentPromptId: string;
 };
 
 export const initialChatSessionSelectionState: ChatSessionSelectionState = {
-  currentModel: '',
-  currentPrompt: '',
+  currentModelId: '',
+  currentPromptId: '',
 };
 
 type ChatSessionState = TreeSnapshot &
@@ -386,17 +386,17 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
       artifactView: 'code',
     })),
   setCurrentModel: (modelId) => {
-    set({ currentModel: modelId });
+    set({ currentModelId: modelId });
 
     if (modelId) {
       setStoredValue(MODEL_STORAGE_KEY, modelId);
     }
   },
-  setCurrentPrompt: (currentPrompt) => {
-    set({ currentPrompt });
+  setCurrentPrompt: (promptId) => {
+    set({ currentPromptId: promptId });
 
-    if (currentPrompt) {
-      setStoredValue(PROMPT_STORAGE_KEY, currentPrompt);
+    if (promptId) {
+      setStoredValue(PROMPT_STORAGE_KEY, promptId);
     }
   },
   clearSession: () => {
@@ -405,8 +405,8 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
       ...createEmptyMessageState(),
       conversationId: null,
       ...initialArtifactState,
-      currentModel: state.currentModel,
-      currentPrompt: state.currentPrompt,
+      currentModelId: state.currentModelId,
+      currentPromptId: state.currentPromptId,
     });
   },
   getTreeState: () => {

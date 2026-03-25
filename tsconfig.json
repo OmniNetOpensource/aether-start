@@ -47,6 +47,7 @@
       "@/hooks/useTheme": ["./src/shared/useTheme.ts"],
       "@/hooks/useToast": ["./src/shared/useToast.ts"],
       "@/hooks/useViewportHeight": ["./src/shared/useViewportHeight.ts"],
+      "@/hooks/useMountEffect": ["./src/shared/useMountEffect.ts"],
       "@/hooks/useConversationLoader": ["./src/features/sidebar/useConversationLoader.ts"],
       "@/lib/auth/*": ["./src/features/auth/client/*"],
       "@/lib/chat/attachments": ["./src/shared/attachments.ts"],

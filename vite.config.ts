@@ -76,6 +76,7 @@ const config = defineConfig({
       { find: '@/hooks/useTheme', replacement: srcPath('shared/useTheme.ts') },
       { find: '@/hooks/useToast', replacement: srcPath('shared/useToast.ts') },
       { find: '@/hooks/useViewportHeight', replacement: srcPath('shared/useViewportHeight.ts') },
+      { find: '@/hooks/useMountEffect', replacement: srcPath('shared/useMountEffect.ts') },
       {
         find: '@/hooks/useConversationLoader',
         replacement: srcPath('features/sidebar/useConversationLoader.ts'),

@@ -2,7 +2,6 @@ import { useRef } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { Composer } from '@/features/chat/composer/Composer';
 import { MessageList } from '@/components/chat/message/MessageList';
-import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useEditingStore } from '@/features/chat/editing/useEditingStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
@@ -12,15 +11,6 @@ function initNewChatPage() {
 
   useChatRequestStore.getState().setStatus('idle', 'new_chat/enter');
   useEditingStore.getState().clear();
-  const composer = useComposerStore.getState();
-  const hasPrefill =
-    composer.input.trim().length > 0 ||
-    composer.pendingAttachments.length > 0 ||
-    (typeof window.__preHydrationInput === 'string' &&
-      window.__preHydrationInput.trim().length > 0);
-  if (!hasPrefill) {
-    composer.clear();
-  }
   useChatSessionStore.getState().clearSession();
 }
 

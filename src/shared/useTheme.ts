@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useMountEffect } from '@/hooks/useMountEffect';
 
 type Theme = 'light' | 'dark';
 
@@ -40,7 +41,7 @@ export function useTheme() {
     applyHtmlClass(theme);
   }, [theme]);
 
-  useEffect(() => {
+  useMountEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== THEME_STORAGE_KEY) return;
       const next = event.newValue;
@@ -50,7 +51,7 @@ export function useTheme() {
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
-  }, []);
+  });
 
   const setTheme = (next: Theme) => {
     setThemeState(next);

@@ -6,7 +6,7 @@ import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { upsertConversationInCache } from '@/features/sidebar/queries/use-conversations';
 import { useComposerStore } from './useComposerStore';
 
-// 校验输入、清空草稿，并在必要时创建新会话后发起聊天请求
+// 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
 export async function submitMessage(navigateToNewChat: (conversationId: string) => void) {
   const composerStore = useComposerStore.getState();
   const requestStore = useChatRequestStore.getState();
@@ -15,14 +15,14 @@ export async function submitMessage(navigateToNewChat: (conversationId: string) 
   const input = composerStore.input;
   const pendingAttachments = composerStore.pendingAttachments;
   const pendingQuotes = composerStore.pendingQuotes;
-  const currentModel = sessionStore.currentModel;
+  const currentModelId = sessionStore.currentModelId;
   const isBusy = requestStore.status !== 'idle';
 
   const trimmed = input.trim();
   const hasContent = trimmed.length > 0;
   const hasAttachment = pendingAttachments.length > 0;
   const hasQuotes = pendingQuotes.length > 0;
-  const hasModel = !!currentModel;
+  const hasModel = !!currentModelId;
 
   if (isBusy || (!hasContent && !hasAttachment && !hasQuotes) || !hasModel) {
     if (!hasModel) {
@@ -32,7 +32,6 @@ export async function submitMessage(navigateToNewChat: (conversationId: string) 
   }
 
   sessionStore.addMessage('user', buildUserBlocks(input, pendingQuotes, pendingAttachments));
-
   composerStore.clear();
 
   if (!sessionStore.conversationId) {
@@ -47,7 +46,7 @@ export async function submitMessage(navigateToNewChat: (conversationId: string) 
     upsertConversationInCache({
       id: conversationId,
       title: 'New Chat',
-      model: sessionStore.currentModel,
+      model: sessionStore.currentModelId,
       is_pinned: false,
       pinned_at: null,
       created_at: now,

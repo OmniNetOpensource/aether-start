@@ -17,14 +17,16 @@ export function ComposerToolbar() {
   const input = useComposerStore((state) => state.input);
   const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
   const uploading = useComposerStore((state) => state.uploading);
-  const currentModel = useChatSessionStore((state) => state.currentModel);
+  const currentModelId = useChatSessionStore((state) => state.currentModelId);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const fileInputId = useId();
 
   const isBusy = status !== 'idle';
   const hasText = input.trim().length > 0;
   const hasAttachments = pendingAttachments.length > 0;
-  const sendDisabled = isBusy ? false : (!hasText && !hasAttachments) || !currentModel || uploading;
+  const sendDisabled = isBusy
+    ? false
+    : (!hasText && !hasAttachments) || !currentModelId || uploading;
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)';

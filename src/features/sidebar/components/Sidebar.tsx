@@ -1,4 +1,5 @@
-import { useEffect, useRef, type MouseEvent as ReactMouseEvent } from 'react';
+import { useRef, type MouseEvent as ReactMouseEvent } from 'react';
+import { useMountEffect } from '@/hooks/useMountEffect';
 import { AetherLogo } from '@/components/AetherLogo';
 import { NewChatButton } from '@/features/chat/components/NewChatButton';
 import { useResponsive } from '@/components/ResponsiveContext';
@@ -56,7 +57,7 @@ export default function Sidebar() {
     }
   };
 
-  useEffect(() => {
+  useMountEffect(() => {
     const closeSidebarFromOutside = () => {
       openDropdownRef.current = false;
       sidebarRef.current?.classList.add('-translate-x-full');
@@ -79,9 +80,9 @@ export default function Sidebar() {
 
     document.addEventListener('pointerdown', handlePointerDownOutside);
     return () => document.removeEventListener('pointerdown', handlePointerDownOutside);
-  }, []);
+  });
 
-  useEffect(() => {
+  useMountEffect(() => {
     const closeSidebarOnEscape = () => {
       openDropdownRef.current = false;
       sidebarRef.current?.classList.add('-translate-x-full');
@@ -96,13 +97,13 @@ export default function Sidebar() {
 
     window.addEventListener('keydown', handleEsc);
     return () => window.removeEventListener('keydown', handleEsc);
-  }, []);
+  });
 
-  useEffect(() => {
+  useMountEffect(() => {
     return () => {
       document.body.style.overflow = '';
     };
-  }, []);
+  });
 
   return (
     <div className='relative z-(--z-sidebar) h-full w-0 shrink-0 group/sidebar-trigger'>

@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState } from 'react';
+import { useMountEffect } from '@/hooks/useMountEffect';
 import { BREAKPOINTS, type DeviceType } from '@/lib/responsive-types';
 
 const MOBILE_QUERY = `(max-width: ${BREAKPOINTS.mobileMax}px)`;
@@ -21,7 +22,7 @@ const ResponsiveContext = createContext<DeviceType>('desktop');
 export function ResponsiveProvider({ children }: { children: React.ReactNode }) {
   const [deviceType, setDeviceType] = useState<DeviceType>('desktop');
 
-  useEffect(() => {
+  useMountEffect(() => {
     const mobileQuery = window.matchMedia(MOBILE_QUERY);
     const tabletQuery = window.matchMedia(TABLET_QUERY);
     const desktopQuery = window.matchMedia(DESKTOP_QUERY);
@@ -37,7 +38,7 @@ export function ResponsiveProvider({ children }: { children: React.ReactNode }) 
       tabletQuery.removeEventListener('change', handler);
       desktopQuery.removeEventListener('change', handler);
     };
-  }, []);
+  });
 
   return <ResponsiveContext.Provider value={deviceType}>{children}</ResponsiveContext.Provider>;
 }

@@ -5,7 +5,6 @@ import { authClient } from '@/features/auth/client/auth-client';
 import { getSessionStateFn } from '@/features/auth/server/session-state';
 import { resetLastEventId } from '@/features/chat/request/chat-orchestrator';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
-import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { useEditingStore } from '@/features/chat/editing/useEditingStore';
 import { useNotesStore } from '@/features/notes/useNotesStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
@@ -109,7 +108,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       await authClient.signOut();
     } finally {
       useChatRequestStore.getState().setStatus('idle', 'signOut');
-      useComposerStore.getState().clear();
       useEditingStore.getState().clear();
       useChatSessionStore.getState().clearSession();
       queryClient.removeQueries({ queryKey: conversationListQueryKey });

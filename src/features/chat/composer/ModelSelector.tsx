@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useMountEffect } from '@/hooks/useMountEffect';
 import { Bot, Check, ChevronDown } from 'lucide-react';
 import {
   Command,
@@ -19,17 +20,18 @@ import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 export function ModelSelector() {
   const appShellData = useAppShellRouteData();
   const [open, setOpen] = useState(false);
+  const currentModelId = useChatSessionStore((state) => state.currentModelId);
   const isMobile = useResponsive() === 'mobile';
-  const currentModel = useChatSessionStore((state) => state.currentModel);
   const setCurrentModel = useChatSessionStore((state) => state.setCurrentModel);
   const availableModels = appShellData?.availableModels ?? [];
-  const selectedModelId = appShellData?.initialModelId ?? availableModels[0]?.id ?? '';
+  const selectedModelId =
+    currentModelId || appShellData?.initialModelId || availableModels[0]?.id || '';
 
-  const currentModelName = availableModels.find((m) => m.id === currentModel)?.name ?? '';
+  const currentModelName = availableModels.find((m) => m.id === selectedModelId)?.name ?? '';
 
-  useEffect(() => {
+  useMountEffect(() => {
     setCurrentModel(selectedModelId);
-  }, []);
+  });
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground';

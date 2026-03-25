@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useMountEffect } from '@/hooks/useMountEffect';
 import { ChevronUp, ChevronDown, ArrowDown } from 'lucide-react';
 import { MessageItem } from './MessageItem';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
@@ -98,7 +99,7 @@ export function MessageList({ className, listClassName }: MessageListProps = {})
     el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
-  useEffect(() => {
+  useMountEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
 
@@ -122,9 +123,9 @@ export function MessageList({ className, listClassName }: MessageListProps = {})
       container.removeEventListener('scroll', handleScroll);
       container.removeEventListener('click', cancelPendingScroll);
     };
-  }, []);
+  });
 
-  useEffect(() => {
+  useMountEffect(() => {
     const container = scrollRef.current;
     if (!container) return;
 
@@ -141,7 +142,7 @@ export function MessageList({ className, listClassName }: MessageListProps = {})
       container.removeEventListener('scroll', updateState);
       ro.disconnect();
     };
-  }, []);
+  });
 
   useEffect(() => {
     if (!expanded) return;
