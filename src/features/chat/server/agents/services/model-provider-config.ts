@@ -8,6 +8,7 @@ export type ChatBackend =
   | 'rightcode-openai'
   | 'dmx'
   | 'ikun'
+  | 'ikun-openai'
   | 'ikun-gemini'
   | 'openrouter'
   | 'cubence-claude'
@@ -291,6 +292,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai-responses',
     backend: 'cubence-openai',
   },
+  gpt54Ikun: {
+    id: 'gpt54Ikun',
+    name: 'gpt-5.4+ikun',
+    model: 'gpt-5.4-high',
+    format: 'openai-responses',
+    backend: 'ikun-openai',
+  },
   claudeOpus46Rightcode: {
     id: 'claudeOpus46Rightcode',
     name: 'opus-4-6+rightcode',
@@ -504,6 +512,18 @@ export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
         'User-Agent': 'aether',
         'anthropic-beta': 'interleaved-thinking-2025-05-14',
       },
+    };
+  }
+
+  if (backend === 'ikun-openai') {
+    const apiKey = env.OPENAI_API_KEY_IKUNCODE;
+    const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE;
+    if (!apiKey) throw new Error('Missing OPENAI_API_KEY_IKUNCODE');
+    if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_IKUNCODE');
+    return {
+      apiKey,
+      baseURL,
+      defaultHeaders: { 'User-Agent': 'aether' },
     };
   }
 

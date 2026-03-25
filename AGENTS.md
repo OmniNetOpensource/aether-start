@@ -113,6 +113,7 @@ Current backends include:
 - `rightcode-openai`
 - `dmx`
 - `ikun`
+- `ikun-openai`
 - `ikun-gemini`
 - `openrouter`
 - `cubence-claude`, `cubence-gemini`, `cubence-openai` (shared `CUBENCE_API_KEY` / `CUBENCE_BASE_URL`)
@@ -233,6 +234,7 @@ Common env keys include:
 - `OPENAI_BASE_URL_RIGHTCODE`
 - `ANTHROPIC_API_KEY_IKUNCODE`
 - `ANTHROPIC_BASE_URL_IKUNCODE`
+- `OPENAI_API_KEY_IKUNCODE` (ikun OpenAI Responses; base URL reuses `ANTHROPIC_BASE_URL_IKUNCODE`)
 - `GEMINI_API_KEY_IKUNCODE`
 - `GEMINI_BASE_URL_IKUNCODE`
 
