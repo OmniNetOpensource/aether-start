@@ -22,8 +22,13 @@ export function ConversationPage() {
   return (
     <div className='flex h-full w-full flex-col'>
       <main className='relative flex min-h-0 flex-1'>
-        <div ref={chatAreaRef} className='@container relative flex min-w-0 flex-1 flex-col'>
-          <MessageList />
+        <div
+          ref={chatAreaRef}
+          className='@container relative flex min-h-0 min-w-0 flex-1 flex-col'
+        >
+          <div className='flex min-h-0 min-w-0 flex-1 flex-col'>
+            <MessageList className='flex-1 min-h-0' />
+          </div>
           <Composer />
         </div>
         <Suspense>

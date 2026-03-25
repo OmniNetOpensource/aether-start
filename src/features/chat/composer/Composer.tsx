@@ -5,7 +5,6 @@ import { useResponsive } from '@/components/ResponsiveContext';
 import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/useToast';
-import { useIsNewChat } from '@/features/sidebar/useChatSessionStore';
 import { submitMessage } from './submit-chat';
 import {
   readComposerDraftFromStorage,
@@ -142,8 +141,6 @@ export function Composer() {
     void addAttachments(files);
   };
 
-  const isNewChat = useIsNewChat();
-
   const composerBoxClass =
     'relative z-10 flex w-full flex-col gap-2 rounded-xl bg-(--sidebar-surface) p-2 shadow-sm transition-shadow duration-200 focus-within:shadow-md';
 
@@ -167,36 +164,14 @@ export function Composer() {
 
   const widthClass = 'w-[90%] max-w-full @[921px]:w-[50%] @[921px]:max-w-2xl';
 
-  if (isNewChat) {
-    return (
-      <div
-        key='composer-initial'
-        className={`mx-auto flex flex-1 flex-col items-center justify-center py-8 ${widthClass}`}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-      >
-        <AttachmentStack
-          items={pendingAttachments}
-          quotes={pendingQuotes}
-          onRemove={removeAttachment}
-          onRemoveQuote={removeQuote}
-        />
-        <div className={composerBoxClass}>
-          <div className='flex w-full items-end gap-2'>{textarea}</div>
-          <ComposerToolbar />
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div
       key='composer-wrapper'
-      className='pointer-events-none absolute inset-x-0 bottom-0 z-(--z-composer) pb-3 md:pb-4'
+      className='z-(--z-composer) w-full shrink-0 pb-3 md:pb-4'
     >
       <div
         key='composer-bottom'
-        className={`pointer-events-auto relative mx-auto flex flex-col gap-2 ${widthClass}`}
+        className={`relative mx-auto flex flex-col gap-2 ${widthClass}`}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >

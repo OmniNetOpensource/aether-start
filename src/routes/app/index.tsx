@@ -26,15 +26,14 @@ function HomePage() {
 
   return (
     <div className='flex h-full w-full flex-col'>
-      <main className='relative flex-1 min-h-0 flex'>
-        <div ref={chatAreaRef} className='@container flex-1 min-w-0 flex flex-col relative'>
-          {hasMessages && (
-            <div className='flex-1 min-h-0 flex flex-col'>
-              <div className='flex-1 min-h-0 overflow-y-auto'>
-                <MessageList />
-              </div>
-            </div>
-          )}
+      <main className='relative flex min-h-0 flex-1'>
+        <div
+          ref={chatAreaRef}
+          className='@container relative flex min-h-0 min-w-0 flex-1 flex-col'
+        >
+          <div className='flex min-h-0 min-w-0 flex-1 flex-col'>
+            {hasMessages ? <MessageList className='flex-1 min-h-0' /> : null}
+          </div>
           <Composer />
         </div>
       </main>

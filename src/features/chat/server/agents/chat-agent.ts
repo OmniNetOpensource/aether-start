@@ -60,10 +60,6 @@ type ChatAgentEnv = Cloudflare.Env & {
   SUPADATA_API_KEY?: string;
 };
 
-// 一次回复可能会经历多轮“模型输出 -> 调工具 -> 带工具结果继续推理”。
-// 这里限制最大轮数，避免模型陷入无穷工具循环。
-const MAX_ITERATIONS = 50;
-
 // 请求体来自网络边界，先把 unknown 缩小成可用结构。
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -569,8 +565,6 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         blocks: Array.isArray(m.blocks) ? m.blocks : [],
       })) as SerializedMessage[];
 
-      let iteration = 0;
-
       const backendConfig = getBackendConfig(modelConfig.backend);
 
       // provider 层屏蔽了不同模型供应商的格式差异，ChatAgent 只关心统一接口。
@@ -583,9 +577,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
       let workingMessages = await provider.convertMessages(normalizedHistory);
 
-      while (iteration < MAX_ITERATIONS) {
+      while (true) {
         throwIfAborted();
-        iteration += 1;
         // 一轮 run 代表“带着当前上下文让模型跑到一个暂停点”：
         // 要么自然结束，要么产出待执行的工具调用。
         const generator = provider.run(workingMessages, signal);
@@ -655,16 +648,6 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
           toolResults,
         );
         workingMessages = [...workingMessages, ...continuationMessages];
-      }
-
-      // 达到上限却仍未收敛，通常意味着工具循环失控，强制转成错误态。
-      if (iteration >= MAX_ITERATIONS && finalStatus === 'completed') {
-        await emitEvent(
-          toEventError(
-            `[已达到最大工具调用次数限制] iteration=${iteration} maxIterations=${MAX_ITERATIONS} model=${modelConfig.model}`,
-          ),
-        );
-        finalStatus = 'error';
       }
 
       // 有些失败会以 error 事件优雅地下发，而不是直接 throw。
