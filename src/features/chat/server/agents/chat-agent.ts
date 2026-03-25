@@ -574,7 +574,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       const backendConfig = getBackendConfig(modelConfig.backend);
 
       // provider 层屏蔽了不同模型供应商的格式差异，ChatAgent 只关心统一接口。
-      const provider = createChatProvider(modelConfig.format, {
+      const provider = await createChatProvider(modelConfig.format, {
         model: modelConfig.model,
         backendConfig,
         tools: getAvailableTools(),

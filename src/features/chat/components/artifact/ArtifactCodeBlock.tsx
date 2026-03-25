@@ -1,10 +1,6 @@
 import { useEffect, useState } from 'react';
-import { createCodePlugin } from '@streamdown/code';
+import type { CodeHighlighterPlugin } from 'streamdown';
 import type { ArtifactLanguage } from '@/types/chat-api';
-
-const codePlugin = createCodePlugin({
-  themes: ['github-light', 'github-dark'],
-});
 
 const shikiLang: Record<ArtifactLanguage, 'html' | 'tsx'> = {
   html: 'html',
@@ -30,6 +26,19 @@ type HighlightResult = {
 };
 
 const highlightCache = new Map<string, HighlightResult>();
+let codePluginPromise: Promise<CodeHighlighterPlugin> | null = null;
+
+const loadCodePlugin = () => {
+  if (!codePluginPromise) {
+    codePluginPromise = import('@streamdown/code').then(({ createCodePlugin }) =>
+      createCodePlugin({
+        themes: ['github-light', 'github-dark'],
+      }),
+    );
+  }
+
+  return codePluginPromise;
+};
 
 function getHighlightCacheKey(code: string, language: ArtifactLanguage) {
   return `${language}:${code}`;
@@ -44,6 +53,7 @@ export function ArtifactCodeBlock({
 }) {
   const lang = shikiLang[language];
   const cacheKey = getHighlightCacheKey(code, language);
+  const [codePlugin, setCodePlugin] = useState<CodeHighlighterPlugin | null>(null);
   const [highlightState, setHighlightState] = useState(() => ({
     cacheKey,
     result: highlightCache.get(cacheKey) ?? null,
@@ -54,7 +64,25 @@ export function ArtifactCodeBlock({
       : (highlightCache.get(cacheKey) ?? null);
 
   useEffect(() => {
-    if (!codePlugin.supportsLanguage(lang) || highlightCache.has(cacheKey)) {
+    if (codePlugin) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void loadCodePlugin().then((plugin) => {
+      if (!cancelled) {
+        setCodePlugin(plugin);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [codePlugin]);
+
+  useEffect(() => {
+    if (!codePlugin || !codePlugin.supportsLanguage(lang) || highlightCache.has(cacheKey)) {
       return;
     }
 
@@ -87,7 +115,7 @@ export function ArtifactCodeBlock({
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, code, lang]);
+  }, [cacheKey, code, codePlugin, lang]);
 
   if (!highlight) {
     return (

@@ -1,7 +1,6 @@
 /* External dependencies */
 @import 'tailwindcss';
 @import 'tw-animate-css';
-@import 'streamdown/styles.css';
 
 /* Ensure Tailwind picks up Streamdown utility classes */
 @source "../../node_modules/streamdown/dist/*.js";

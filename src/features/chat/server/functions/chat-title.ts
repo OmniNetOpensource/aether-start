@@ -1,10 +1,8 @@
-import Anthropic from '@anthropic-ai/sdk';
 import {
   getModelConfig,
   getBackendConfig,
   TITLE_GENERATION_MODEL_ID,
 } from '@/server/agents/services/model-provider-config';
-import { getOpenAIClient } from '@/server/agents/services/openai';
 import { log } from '@/server/agents/services/logger';
 
 const FALLBACK_TITLE = 'New Chat';
@@ -75,6 +73,7 @@ export const generateTitleFromConversation = async (
     if (modelConfig.format === 'anthropic') {
       log('TITLE', 'Sending title generation request', requestLog);
 
+      const { default: Anthropic } = await import('@anthropic-ai/sdk');
       const client = new Anthropic({
         apiKey: backendConfig.apiKey,
         baseURL: backendConfig.baseURL,
@@ -119,6 +118,7 @@ export const generateTitleFromConversation = async (
 
     log('TITLE', 'Sending title generation request', requestLog);
 
+    const { getOpenAIClient } = await import('@/server/agents/services/openai');
     const client = getOpenAIClient(backendConfig);
     const response = await client.chat.completions.create(
       {

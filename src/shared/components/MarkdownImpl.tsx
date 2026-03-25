@@ -1,8 +1,7 @@
-import { memo, useEffect, useRef } from 'react';
-import { Streamdown, defaultRehypePlugins } from 'streamdown';
-import { createCodePlugin } from '@streamdown/code';
-import { math } from '@streamdown/math';
+import { memo, useEffect, useRef, useState } from 'react';
+import { Streamdown, defaultRehypePlugins, type PluginConfig } from 'streamdown';
 import { cjk } from '@streamdown/cjk';
+import 'streamdown/styles.css';
 import 'katex/dist/katex.min.css';
 
 function splitMarkdownParagraphs(text: string): string[] {
@@ -37,20 +36,44 @@ type Props = {
   isAnimating?: boolean;
 };
 
-const codePlugin = createCodePlugin({
-  themes: ['github-light', 'github-dark'],
-});
+const codeFencePattern = /```|~~~/;
+const mathPattern = /(^|[^\\])\$\$|(^|[^\\])\$[^$\n]+?\$|\\\(|\\\[/m;
 
-const plugins = { code: codePlugin, math, cjk };
+let codePluginPromise: Promise<PluginConfig['code']> | null = null;
+let mathPluginPromise: Promise<PluginConfig['math']> | null = null;
+
+const loadCodePlugin = () => {
+  if (!codePluginPromise) {
+    codePluginPromise = import('@streamdown/code').then(({ createCodePlugin }) =>
+      createCodePlugin({
+        themes: ['github-light', 'github-dark'],
+      }),
+    );
+  }
+
+  return codePluginPromise;
+};
+
+const loadMathPlugin = () => {
+  if (!mathPluginPromise) {
+    mathPluginPromise = import('@streamdown/math').then(({ createMathPlugin }) =>
+      createMathPlugin({ singleDollarTextMath: true }),
+    );
+  }
+
+  return mathPluginPromise;
+};
 
 type StreamdownBlockProps = {
   markdown: string;
   blockIsAnimating: boolean;
+  plugins: PluginConfig;
 };
 
 const StreamdownBlock = memo(function StreamdownBlock({
   markdown,
   blockIsAnimating,
+  plugins,
 }: StreamdownBlockProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -88,7 +111,40 @@ const StreamdownBlock = memo(function StreamdownBlock({
 });
 
 function MarkdownImpl({ content, isAnimating = false }: Props) {
+  const [codePlugin, setCodePlugin] = useState<PluginConfig['code']>();
+  const [mathPlugin, setMathPlugin] = useState<PluginConfig['math']>();
+  const needsCodePlugin = codeFencePattern.test(content);
+  const needsMathPlugin = mathPattern.test(content);
   const paragraphs = splitMarkdownParagraphs(content);
+  const plugins: PluginConfig = {
+    cjk,
+    ...(needsCodePlugin && codePlugin ? { code: codePlugin } : {}),
+    ...(needsMathPlugin && mathPlugin ? { math: mathPlugin } : {}),
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (needsCodePlugin && !codePlugin) {
+      void loadCodePlugin().then((plugin) => {
+        if (!cancelled) {
+          setCodePlugin(plugin);
+        }
+      });
+    }
+
+    if (needsMathPlugin && !mathPlugin) {
+      void loadMathPlugin().then((plugin) => {
+        if (!cancelled) {
+          setMathPlugin(plugin);
+        }
+      });
+    }
+
+    return () => {
+      cancelled = true;
+    };
+  }, [codePlugin, mathPlugin, needsCodePlugin, needsMathPlugin]);
 
   return (
     <div className='space-y-3 [&_b]:font-extrabold [&_strong]:font-extrabold'>
@@ -97,6 +153,7 @@ function MarkdownImpl({ content, isAnimating = false }: Props) {
           key={i}
           markdown={paragraph}
           blockIsAnimating={isAnimating && i === paragraphs.length - 1}
+          plugins={plugins}
         />
       ))}
     </div>

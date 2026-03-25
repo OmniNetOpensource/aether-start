@@ -1,19 +1,26 @@
 import type { ChatFormat } from '@/server/agents/services/model-provider-config';
 import type { ChatProvider, ChatProviderConfig } from './provider-types';
-import { createAnthropicAdapter } from './anthropic';
-import { createOpenAIAdapter } from './openai';
-import { createOpenAIResponsesAdapter } from './openai-responses';
-import { createGeminiAdapter } from './gemini';
 
-export function createChatProvider(format: ChatFormat, config: ChatProviderConfig): ChatProvider {
+export async function createChatProvider(
+  format: ChatFormat,
+  config: ChatProviderConfig,
+): Promise<ChatProvider> {
   switch (format) {
-    case 'anthropic':
-      return createAnthropicAdapter(config) as ChatProvider;
-    case 'openai':
-      return createOpenAIAdapter(config) as ChatProvider;
-    case 'openai-responses':
-      return createOpenAIResponsesAdapter(config) as ChatProvider;
-    case 'gemini':
-      return createGeminiAdapter(config) as ChatProvider;
+    case 'anthropic': {
+      const { createAnthropicAdapter } = await import('./anthropic');
+      return createAnthropicAdapter(config);
+    }
+    case 'openai': {
+      const { createOpenAIAdapter } = await import('./openai');
+      return createOpenAIAdapter(config);
+    }
+    case 'openai-responses': {
+      const { createOpenAIResponsesAdapter } = await import('./openai-responses');
+      return createOpenAIResponsesAdapter(config);
+    }
+    case 'gemini': {
+      const { createGeminiAdapter } = await import('./gemini');
+      return createGeminiAdapter(config);
+    }
   }
 }
