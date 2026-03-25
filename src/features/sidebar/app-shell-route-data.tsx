@@ -1,15 +1,11 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import type { ConversationListCursor } from '@/server/functions/conversations';
-import type { ConversationMeta } from '@/types/conversation';
-import { type PromptInfo, type RoleInfo } from './useChatSessionStore';
+import { type ModelInfo, type PromptInfo } from './useChatSessionStore';
 
 export type AppShellRouteData = {
-  availableRoles: RoleInfo[];
+  availableModels: ModelInfo[];
   availablePrompts: PromptInfo[];
-  initialRoleId: string;
+  initialModelId: string;
   initialPromptId: string;
-  initialConversations: ConversationMeta[];
-  nextConversationCursor: ConversationListCursor;
 };
 
 const AppShellRouteDataContext = createContext<AppShellRouteData | null>(null);

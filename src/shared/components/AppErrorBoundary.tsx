@@ -4,10 +4,7 @@ import { reportClientError } from '@/lib/report-client-error';
 
 type Props = { children: ReactNode };
 
-type State =
-  | { status: 'ok' }
-  | { status: 'error'; value: Error }
-  | { status: 'unknown' };
+type State = { status: 'ok' } | { status: 'error'; value: Error } | { status: 'unknown' };
 
 const errorToastDurationMs = 8000;
 

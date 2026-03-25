@@ -20,6 +20,10 @@ import {
 } from '@/features/chat/request/chat-orchestrator';
 import { useEditingStore } from '@/features/chat/editing/useEditingStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import {
+  useConversationsQuery,
+  selectAllConversations,
+} from '@/features/sidebar/queries/use-conversations';
 import { getConversationFn } from '@/server/functions/conversations';
 import { buildCurrentPath } from './tree/message-tree';
 import type { Message } from '@/types/message';
@@ -51,7 +55,7 @@ export function useConversationLoader(loadingConversationId: string) {
 
     let cancelled = false;
 
-    /* 拉取新对话：getConversationFn 返回 messages、currentPath、artifacts、role 等 */
+    /* 拉取新对话：getConversationFn 返回 messages、currentPath、artifacts、model 等 */
     void getConversationFn({ data: { id: loadingConversationId } })
       .then((conversation) => {
         if (cancelled) return;
@@ -71,8 +75,8 @@ export function useConversationLoader(loadingConversationId: string) {
         initializeTree(messages, currentPath);
         setArtifacts(conversation.artifacts ?? []);
         const store = useChatSessionStore.getState();
-        const roleId = conversation.role ?? '';
-        store.setCurrentRole(roleId);
+        const modelId = conversation.model ?? '';
+        store.setCurrentModel(modelId);
         setIsLoading(false);
         void resumeRunningConversation(loadingConversationId);
       })
@@ -94,9 +98,8 @@ export function useConversationLoader(loadingConversationId: string) {
     setArtifacts,
   ]);
 
-  const title = useChatSessionStore(
-    (state) => state.conversations.find((c) => c.id === loadingConversationId)?.title,
-  );
+  const { data } = useConversationsQuery();
+  const title = selectAllConversations(data).find((c) => c.id === loadingConversationId)?.title;
 
   const defaultTitle = 'Aether';
   // 同步更新 document.title，离开时由下方 effect cleanup 恢复

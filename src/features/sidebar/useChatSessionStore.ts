@@ -1,13 +1,5 @@
 import { create } from 'zustand';
 import {
-  listConversationsPageFn,
-  type ConversationListCursor,
-  clearConversationsFn,
-  deleteConversationFn,
-  setConversationPinnedFn,
-  updateConversationTitleFn,
-} from '@/server/functions/conversations';
-import {
   addMessage,
   buildCurrentPath,
   computeMessagesFromPath,
@@ -19,28 +11,15 @@ import {
   switchBranch,
 } from './tree/message-tree';
 import { applyAssistantAddition, type AssistantAddition } from './tree/block-operations';
-import type {
-  ConversationArtifact,
-  ConversationDetail,
-  ConversationMeta,
-} from '@/types/conversation';
+import type { ConversationArtifact } from '@/types/conversation';
 import type { ArtifactLanguage } from '@/types/chat-api';
 import type { AssistantMessage, BranchInfo, ContentBlock, Message } from '@/types/message';
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 
-export type RoleInfo = { id: string; name: string };
+export type ModelInfo = { id: string; name: string };
 
 export type PromptInfo = { id: string; name: string };
-
-type ConversationListState = {
-  conversations: ConversationMeta[];
-  conversationsLoading: boolean;
-  hasLoaded: boolean;
-  loadingMore: boolean;
-  hasMore: boolean;
-  conversationsCursor: ConversationListCursor;
-};
 
 export type ArtifactStatus = 'streaming' | 'completed' | 'failed';
 export type ArtifactView = 'code' | 'preview';
@@ -66,18 +45,8 @@ const initialArtifactState: ArtifactState = {
   artifactView: 'code',
 };
 
-export const initialConversationListState: ConversationListState = {
-  conversations: [],
-  conversationsLoading: false,
-  hasLoaded: false,
-  loadingMore: false,
-  hasMore: false,
-  conversationsCursor: null,
-};
-
-const MODEL_STORAGE_KEY = 'aether_current_role';
+const MODEL_STORAGE_KEY = 'aether_current_model';
 const PROMPT_STORAGE_KEY = 'aether_current_prompt';
-const PAGE_SIZE = 10;
 
 const setStoredValue = (key: string, value: string) => {
   if (typeof window === 'undefined') {
@@ -92,29 +61,21 @@ const setStoredValue = (key: string, value: string) => {
 };
 
 export type ChatSessionSelectionState = {
-  currentRole: string;
+  currentModel: string;
   currentPrompt: string;
 };
 
 export const initialChatSessionSelectionState: ChatSessionSelectionState = {
-  currentRole: '',
+  currentModel: '',
   currentPrompt: '',
 };
 
 type ChatSessionState = TreeSnapshot &
-  ConversationListState &
   ChatSessionSelectionState & {
     conversationId: string | null;
   } & ArtifactState;
 
 type ChatSessionActions = {
-  addConversation: (conversation: ConversationMeta) => void;
-  loadMoreConversations: () => Promise<void>;
-  clearConversations: () => Promise<void>;
-  resetConversations: () => void;
-  deleteConversation: (id: string) => Promise<void>;
-  updateConversationTitle: (id: string, title: string) => Promise<void>;
-  setConversationPinned: (id: string, pinned: boolean) => Promise<void>;
   setMessages: (messages: Message[]) => void;
   initializeTree: (messages?: Message[], currentPath?: number[]) => void;
   getMessagesFromPath: () => Message[];
@@ -123,7 +84,7 @@ type ChatSessionActions = {
   appendToAssistant: (addition: AssistantAddition) => void;
   getBranchInfo: (messageId: number) => BranchInfo | null;
   navigateBranch: (messageId: number, depth: number, direction: 'prev' | 'next') => void;
-  setCurrentRole: (role: string) => void;
+  setCurrentModel: (modelId: string) => void;
   setCurrentPrompt: (promptId: string) => void;
   setArtifacts: (artifacts: ConversationArtifact[]) => void;
   selectArtifact: (artifactId: string | null) => void;
@@ -150,182 +111,11 @@ type ChatSessionActions = {
   ) => ReturnType<typeof editMessage> | null;
 };
 
-const sortConversations = (conversations: ConversationMeta[]): ConversationMeta[] => {
-  const sorted = [...conversations];
-  sorted.sort((a, b) => {
-    if (a.is_pinned !== b.is_pinned) {
-      return a.is_pinned ? -1 : 1;
-    }
-
-    const aSortAt = a.is_pinned ? (a.pinned_at ?? a.updated_at) : a.updated_at;
-    const bSortAt = b.is_pinned ? (b.pinned_at ?? b.updated_at) : b.updated_at;
-    const bySortAt = bSortAt.localeCompare(aSortAt);
-
-    if (bySortAt !== 0) {
-      return bySortAt;
-    }
-
-    const byUpdated = b.updated_at.localeCompare(a.updated_at);
-    if (byUpdated !== 0) {
-      return byUpdated;
-    }
-
-    return b.id.localeCompare(a.id);
-  });
-
-  return sorted;
-};
-
-const upsertConversations = (conversations: ConversationMeta[], incoming: ConversationMeta[]) => {
-  const map = new Map<string, ConversationMeta>();
-
-  for (const conversation of conversations) {
-    map.set(conversation.id, conversation);
-  }
-
-  for (const conversation of incoming) {
-    map.set(conversation.id, conversation);
-  }
-
-  return sortConversations(Array.from(map.values()));
-};
-
-const mapDetailToMeta = (detail: ConversationDetail): ConversationMeta => ({
-  id: detail.id,
-  title: detail.title,
-  role: detail.role,
-  is_pinned: detail.is_pinned,
-  pinned_at: detail.pinned_at,
-  created_at: detail.created_at,
-  updated_at: detail.updated_at,
-  user_id: detail.user_id,
-});
-
 export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>()((set, get) => ({
   ...createEmptyMessageState(),
-  ...initialConversationListState,
   conversationId: null,
   ...initialChatSessionSelectionState,
   ...initialArtifactState,
-  addConversation: (conversation) =>
-    set((state) => ({
-      conversations: upsertConversations(state.conversations, [conversation]),
-    })),
-
-  loadMoreConversations: async () => {
-    const { hasLoaded, conversationsLoading, loadingMore, hasMore, conversationsCursor } = get();
-    if (!hasLoaded || conversationsLoading || loadingMore || !hasMore) {
-      return;
-    }
-
-    set({ loadingMore: true });
-
-    try {
-      const page = await listConversationsPageFn({
-        data: { limit: PAGE_SIZE, cursor: conversationsCursor },
-      });
-      const conversations = (page.items as ConversationDetail[]).map(mapDetailToMeta);
-
-      set((state) => ({
-        conversations: upsertConversations(state.conversations, conversations),
-        loadingMore: false,
-        hasMore: page.nextCursor !== null,
-        conversationsCursor: page.nextCursor,
-      }));
-    } catch (error) {
-      console.error('Failed to load more conversations:', error);
-      set({
-        loadingMore: false,
-        hasMore: false,
-        conversationsCursor: null,
-      });
-    }
-  },
-  clearConversations: async () => {
-    try {
-      await clearConversationsFn();
-    } catch (error) {
-      console.error('Failed to clear conversations:', error);
-    }
-
-    set({
-      conversations: [],
-      hasLoaded: true,
-      conversationsLoading: false,
-      loadingMore: false,
-      hasMore: false,
-      conversationsCursor: null,
-    });
-  },
-  resetConversations: () =>
-    set({
-      ...initialConversationListState,
-    }),
-  deleteConversation: async (id) => {
-    set((state) => ({
-      conversations: state.conversations.filter((item) => item.id !== id),
-    }));
-
-    try {
-      await deleteConversationFn({ data: { id } });
-    } catch (error) {
-      console.error('Failed to delete conversation:', error);
-    }
-  },
-  updateConversationTitle: async (id, title) => {
-    const { conversations } = get();
-    const target = conversations.find((item) => item.id === id);
-    if (!target) {
-      return;
-    }
-
-    const updated: ConversationMeta = { ...target, title };
-    set((state) => ({
-      conversations: upsertConversations(state.conversations, [updated]),
-    }));
-
-    try {
-      await updateConversationTitleFn({ data: { id, title } });
-    } catch (error) {
-      console.error('Failed to update conversation title:', error);
-    }
-  },
-  setConversationPinned: async (id, pinned) => {
-    const { conversations } = get();
-    const target = conversations.find((item) => item.id === id);
-    if (!target) {
-      return;
-    }
-
-    const optimistic: ConversationMeta = {
-      ...target,
-      is_pinned: pinned,
-      pinned_at: pinned ? new Date().toISOString() : null,
-    };
-
-    set((state) => ({
-      conversations: upsertConversations(state.conversations, [optimistic]),
-    }));
-
-    try {
-      const result = await setConversationPinnedFn({
-        data: { id, pinned },
-      });
-      set((state) => ({
-        conversations: upsertConversations(state.conversations, [
-          {
-            ...optimistic,
-            pinned_at: pinned ? result.pinned_at : null,
-          },
-        ]),
-      }));
-    } catch (error) {
-      console.error('Failed to update conversation pin state:', error);
-      set((state) => ({
-        conversations: upsertConversations(state.conversations, [target]),
-      }));
-    }
-  },
   setMessages: (messages) => {
     const linearState = createLinearMessages(
       messages.map((message) => ({
@@ -595,11 +385,11 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
         state.activeStreamingArtifactId === artifactId ? null : state.activeStreamingArtifactId,
       artifactView: 'code',
     })),
-  setCurrentRole: (currentRole) => {
-    set({ currentRole });
+  setCurrentModel: (modelId) => {
+    set({ currentModel: modelId });
 
-    if (currentRole) {
-      setStoredValue(MODEL_STORAGE_KEY, currentRole);
+    if (modelId) {
+      setStoredValue(MODEL_STORAGE_KEY, modelId);
     }
   },
   setCurrentPrompt: (currentPrompt) => {
@@ -615,7 +405,7 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
       ...createEmptyMessageState(),
       conversationId: null,
       ...initialArtifactState,
-      currentRole: state.currentRole,
+      currentModel: state.currentModel,
       currentPrompt: state.currentPrompt,
     });
   },

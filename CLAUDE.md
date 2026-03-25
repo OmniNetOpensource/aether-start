@@ -406,5 +406,4 @@ When working on public share routes, preserve read-only behavior and noindex sem
 
 - write extremely easy to consume code, optimize for how easy the code is to read. make the code skimmable. avoid cleverness. use early returns.reduce the number of possible states a function can be in with distriminated unions, remove any optionality that is not actual optional, never pass params for overriding code except strictly necessary
 
-
 - For React code, prefer modern patterns including useEffectEvent, startTransition, and useDeferredValue when appropriate if used by the team. Do not add useMemo /useCallback by default unless already used; follow the repo's React Compiler guidance.

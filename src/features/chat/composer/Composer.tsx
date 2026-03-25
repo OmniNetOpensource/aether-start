@@ -40,7 +40,7 @@ export function Composer() {
       document.removeEventListener('input', window.__preHydrationInputHandler);
       delete window.__preHydrationInputHandler;
     }
-  }, [setInput]);
+  }, []);
 
   useEffect(() => {
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {

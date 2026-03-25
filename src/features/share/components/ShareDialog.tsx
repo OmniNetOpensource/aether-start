@@ -10,6 +10,10 @@ import {
 } from '@/server/functions/shares';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import {
+  useConversationsQuery,
+  selectAllConversations,
+} from '@/features/sidebar/queries/use-conversations';
 import type { ConversationShareStatus } from '@/types/share';
 
 export type ShareDialogProps = {
@@ -26,7 +30,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
   const messages = useChatSessionStore((state) => state.messages);
   const currentPath = useChatSessionStore((state) => state.currentPath);
   const conversationId = useChatSessionStore((state) => state.conversationId);
-  const conversations = useChatSessionStore((state) => state.conversations);
+  const { data: conversationsData } = useConversationsQuery();
   const status = useChatRequestStore((state) => state.status);
   const isBusy = status !== 'idle';
 
@@ -40,7 +44,9 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
 
   const conversationTitle = (() => {
     if (!conversationId) return 'Aether';
-    const conversation = conversations.find((item) => item.id === conversationId);
+    const conversation = selectAllConversations(conversationsData).find(
+      (item) => item.id === conversationId,
+    );
     return conversation?.title?.trim() || 'Aether';
   })();
 

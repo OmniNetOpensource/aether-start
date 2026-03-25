@@ -15,7 +15,7 @@ export type ConversationMeta = {
   id: string;
   user_id?: string;
   title: string | null;
-  role?: string | null;
+  model?: string | null;
   is_pinned: boolean;
   pinned_at: string | null;
   created_at: string;
@@ -26,7 +26,7 @@ export type ConversationDetail = {
   id: string;
   user_id?: string;
   title: string | null;
-  role?: string | null;
+  model?: string | null;
   is_pinned: boolean;
   pinned_at: string | null;
   currentPath: number[];
@@ -40,7 +40,7 @@ export type ConversationSearchItem = {
   id: string;
   user_id?: string;
   title: string | null;
-  role?: string | null;
+  model?: string | null;
   is_pinned: boolean;
   pinned_at: string | null;
   created_at: string;

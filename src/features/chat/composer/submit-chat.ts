@@ -3,6 +3,7 @@ import { buildUserBlocks } from '@/features/sidebar/tree/block-operations';
 import { toast } from '@/hooks/useToast';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import { upsertConversationInCache } from '@/features/sidebar/queries/use-conversations';
 import { useComposerStore } from './useComposerStore';
 
 // 校验输入、清空草稿，并在必要时创建新会话后发起聊天请求
@@ -14,18 +15,18 @@ export async function submitMessage(navigateToNewChat: (conversationId: string) 
   const input = composerStore.input;
   const pendingAttachments = composerStore.pendingAttachments;
   const pendingQuotes = composerStore.pendingQuotes;
-  const currentRole = sessionStore.currentRole;
+  const currentModel = sessionStore.currentModel;
   const isBusy = requestStore.status !== 'idle';
 
   const trimmed = input.trim();
   const hasContent = trimmed.length > 0;
   const hasAttachment = pendingAttachments.length > 0;
   const hasQuotes = pendingQuotes.length > 0;
-  const hasRole = !!currentRole;
+  const hasModel = !!currentModel;
 
-  if (isBusy || (!hasContent && !hasAttachment && !hasQuotes) || !hasRole) {
-    if (!hasRole) {
-      toast.warning('Select a role before sending a message.');
+  if (isBusy || (!hasContent && !hasAttachment && !hasQuotes) || !hasModel) {
+    if (!hasModel) {
+      toast.warning('Select a model before sending a message.');
     }
     return;
   }
@@ -43,10 +44,10 @@ export async function submitMessage(navigateToNewChat: (conversationId: string) 
 
     sessionStore.setConversationId(conversationId);
     navigateToNewChat(conversationId);
-    sessionStore.addConversation({
+    upsertConversationInCache({
       id: conversationId,
       title: 'New Chat',
-      role: sessionStore.currentRole,
+      model: sessionStore.currentModel,
       is_pinned: false,
       pinned_at: null,
       created_at: now,

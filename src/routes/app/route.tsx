@@ -8,7 +8,6 @@ import {
 import Sidebar from '@/components/sidebar/Sidebar';
 import { getSessionStateFn } from '@/server/functions/auth/session-state';
 import { getAvailableModelsFn, getAvailablePromptsFn } from '@/server/functions/chat/models';
-import { listConversationsPageFn } from '@/server/functions/conversations';
 import { NewChatButton } from '@/features/chat/components/NewChatButton';
 import { ArtifactToggleButton } from '@/features/chat/components/artifact/ArtifactToggleButton';
 import { ShareButton } from '@/features/share/components/ShareButton';
@@ -16,29 +15,8 @@ import {
   AppShellRouteDataProvider,
   type AppShellRouteData,
 } from '@/features/sidebar/app-shell-route-data';
-import type { ConversationMeta } from '@/types/conversation';
-
-const APP_SHELL_CONVERSATION_PAGE_SIZE = 10;
-
-const toConversationMeta = (detail: {
-  id: string;
-  user_id?: string;
-  title: string | null;
-  role?: string | null;
-  is_pinned: boolean;
-  pinned_at: string | null;
-  created_at: string;
-  updated_at: string;
-}): ConversationMeta => ({
-  id: detail.id,
-  title: detail.title,
-  role: detail.role,
-  is_pinned: detail.is_pinned,
-  pinned_at: detail.pinned_at,
-  created_at: detail.created_at,
-  updated_at: detail.updated_at,
-  user_id: detail.user_id,
-});
+import { queryClient } from '@/features/sidebar/queries/query-client';
+import { conversationInfiniteQueryOptions } from '@/features/sidebar/queries/use-conversations';
 
 export function getNormalizedAppTarget(
   location: Pick<ParsedLocation, 'pathname' | 'searchStr' | 'hash'>,
@@ -61,24 +39,17 @@ export const Route = createFileRoute('/app')({
     });
   },
   loader: async (): Promise<AppShellRouteData> => {
-    const [availableRoles, availablePrompts, conversationPage] = await Promise.all([
+    const [availableModels, availablePrompts] = await Promise.all([
       getAvailableModelsFn(),
       getAvailablePromptsFn(),
-      listConversationsPageFn({
-        data: {
-          limit: APP_SHELL_CONVERSATION_PAGE_SIZE,
-          cursor: null,
-        },
-      }),
+      queryClient.prefetchInfiniteQuery(conversationInfiniteQueryOptions),
     ]);
 
     return {
-      availableRoles,
+      availableModels,
       availablePrompts,
-      initialRoleId: availableRoles[0]?.id ?? '',
+      initialModelId: availableModels[0]?.id ?? '',
       initialPromptId: availablePrompts[0]?.id ?? 'aether',
-      initialConversations: conversationPage.items.map(toConversationMeta),
-      nextConversationCursor: conversationPage.nextCursor,
     };
   },
   component: AppLayout,

@@ -7,9 +7,7 @@ export default async function globalSetup(config: FullConfig) {
   const password = process.env.E2E_PASSWORD ?? process.env.E2E_USER_PASSWORD;
 
   if (!email || !password) {
-    throw new Error(
-      'Set E2E_EMAIL and E2E_PASSWORD (or E2E_USER_EMAIL and E2E_USER_PASSWORD)',
-    );
+    throw new Error('Set E2E_EMAIL and E2E_PASSWORD (or E2E_USER_EMAIL and E2E_USER_PASSWORD)');
   }
 
   const api = await request.newContext({

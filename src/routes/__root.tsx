@@ -86,9 +86,7 @@ function RootComponent() {
         return;
       }
       const message =
-        typeof reason === 'string' && reason.trim().length > 0
-          ? reason
-          : 'Unhandled rejection';
+        typeof reason === 'string' && reason.trim().length > 0 ? reason : 'Unhandled rejection';
       reportClientError({
         kind: 'unhandledrejection',
         message,

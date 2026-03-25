@@ -9,6 +9,8 @@ import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { useEditingStore } from '@/features/chat/editing/useEditingStore';
 import { useNotesStore } from '@/features/notes/useNotesStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import { queryClient } from '@/features/sidebar/queries/query-client';
+import { conversationListQueryKey } from '@/features/sidebar/queries/use-conversations';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
@@ -110,7 +112,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       useComposerStore.getState().clear();
       useEditingStore.getState().clear();
       useChatSessionStore.getState().clearSession();
-      useChatSessionStore.getState().resetConversations();
+      queryClient.removeQueries({ queryKey: conversationListQueryKey });
       useNotesStore.getState().reset();
       resetLastEventId();
       await navigate({ href: '/auth/login', replace: true });

@@ -1,6 +1,6 @@
 'use client';
 
-import * as React from 'react';
+import { useEffect, useState } from 'react';
 import { Bot, Check, ChevronDown } from 'lucide-react';
 import {
   Command,
@@ -18,15 +18,18 @@ import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 
 export function ModelSelector() {
   const appShellData = useAppShellRouteData();
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = useState(false);
   const isMobile = useResponsive() === 'mobile';
-  const currentRole = useChatSessionStore((state) => state.currentRole);
-  const setCurrentRole = useChatSessionStore((state) => state.setCurrentRole);
-  const initialRoles = appShellData?.availableRoles ?? [];
-  const initialRoleId = appShellData?.initialRoleId ?? '';
+  const currentModel = useChatSessionStore((state) => state.currentModel);
+  const setCurrentModel = useChatSessionStore((state) => state.setCurrentModel);
+  const availableModels = appShellData?.availableModels ?? [];
+  const selectedModelId = appShellData?.initialModelId ?? availableModels[0]?.id ?? '';
 
-  const selectedRoleId = currentRole || initialRoleId || (initialRoles[0]?.id ?? '');
-  const currentRoleName = initialRoles.find((role) => role.id === selectedRoleId)?.name ?? '';
+  const currentModelName = availableModels.find((m) => m.id === currentModel)?.name ?? '';
+
+  useEffect(() => {
+    setCurrentModel(selectedModelId);
+  }, []);
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground';
@@ -38,8 +41,8 @@ export function ModelSelector() {
         variant='ghost'
         size='sm'
         onClick={() => setOpen(true)}
-        aria-label={currentRoleName ? `选择模型，当前为 ${currentRoleName}` : '选择模型'}
-        title={currentRoleName || '选择模型'}
+        aria-label={currentModelName ? `选择模型，当前为 ${currentModelName}` : '选择模型'}
+        title={currentModelName || '选择模型'}
         data-testid='model-selector'
         className={cn(
           toolButtonBaseClass,
@@ -50,7 +53,7 @@ export function ModelSelector() {
           <Bot className='h-3.5 w-3.5' />
         </span>
         <span className='hidden @[921px]:flex items-center gap-1.5'>
-          <span className='max-w-40 truncate'>{currentRoleName}</span>
+          <span className='max-w-40 truncate'>{currentModelName}</span>
           <ChevronDown className='h-3 w-3 transition-transform duration-300' />
         </span>
       </Button>
@@ -59,17 +62,17 @@ export function ModelSelector() {
           <CommandInput placeholder='搜索模型...' autoFocus={!isMobile} />
           <CommandList>
             <CommandEmpty>未找到匹配的模型</CommandEmpty>
-            {initialRoles.map((role) => (
+            {availableModels.map((m) => (
               <CommandItem
-                key={role.id}
-                value={`${role.id} ${role.name}`}
+                key={m.id}
+                value={`${m.id} ${m.name}`}
                 onSelect={() => {
-                  setCurrentRole(role.id);
+                  setCurrentModel(m.id);
                   setOpen(false);
                 }}
               >
-                <span className='flex-1 truncate'>{role.name}</span>
-                {selectedRoleId === role.id && <Check className='h-4 w-4 shrink-0' />}
+                <span className='flex-1 truncate'>{m.name}</span>
+                {selectedModelId === m.id && <Check className='h-4 w-4 shrink-0' />}
               </CommandItem>
             ))}
           </CommandList>

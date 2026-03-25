@@ -104,9 +104,9 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
       return;
     }
 
-    const selectedRole = useChatSessionStore.getState().currentRole;
-    if (!selectedRole) {
-      toast.warning('请先选择角色');
+    const selectedModel = useChatSessionStore.getState().currentModel;
+    if (!selectedModel) {
+      toast.warning('请先选择模型');
       return;
     }
 
@@ -153,9 +153,9 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
       return;
     }
 
-    const selectedRole = useChatSessionStore.getState().currentRole;
-    if (!selectedRole) {
-      toast.warning('请先选择角色');
+    const selectedModel = useChatSessionStore.getState().currentModel;
+    if (!selectedModel) {
+      toast.warning('请先选择模型');
       return;
     }
 

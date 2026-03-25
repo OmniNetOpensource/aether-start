@@ -28,7 +28,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const isDesktop = deviceType === 'desktop';
   const uploading = useComposerStore((state) => state.uploading);
   const status = useChatRequestStore((state) => state.status);
-  const currentRole = useChatSessionStore((state) => state.currentRole);
+  const currentModel = useChatSessionStore((state) => state.currentModel);
   const isBusy = status !== 'idle';
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -73,7 +73,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const hasQuotes = editedQuotes.length > 0;
   const hasAttachments = editedAttachments.length > 0;
   const sendDisabled =
-    isBusy || uploading || (!hasText && !hasQuotes && !hasAttachments) || !currentRole;
+    isBusy || uploading || (!hasText && !hasQuotes && !hasAttachments) || !currentModel;
 
   const handleAddAttachments = async (files: File[]) => {
     if (!files.length) {

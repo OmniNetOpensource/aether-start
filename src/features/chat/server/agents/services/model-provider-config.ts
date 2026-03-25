@@ -392,7 +392,7 @@ export const getModelConfig = (modelId: string): ModelConfig | null => {
   const id = modelId.trim();
   return (
     MODEL_CONFIGS[id] ??
-    Object.values(MODEL_CONFIGS).find((role) => role.id === id || role.name === id) ??
+    Object.values(MODEL_CONFIGS).find((entry) => entry.id === id || entry.name === id) ??
     null
   );
 };

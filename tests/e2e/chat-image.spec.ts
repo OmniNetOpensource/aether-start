@@ -39,10 +39,7 @@ test('发送图片并询问这是什么，等待模型回复', async ({ page }) 
   await targetModel.click();
 
   await expect(modelSelector).toHaveAttribute('title', targetModelName);
-  await expect(modelSelector).toHaveAttribute(
-    'aria-label',
-    `选择模型，当前为 ${targetModelName}`,
-  );
+  await expect(modelSelector).toHaveAttribute('aria-label', `选择模型，当前为 ${targetModelName}`);
 
   const imagePath = path.join(process.cwd(), 'public', 'logo512.png');
   const uploadResponse = page.waitForResponse(

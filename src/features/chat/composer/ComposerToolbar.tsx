@@ -17,15 +17,14 @@ export function ComposerToolbar() {
   const input = useComposerStore((state) => state.input);
   const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
   const uploading = useComposerStore((state) => state.uploading);
-  const currentRole = useChatSessionStore((state) => state.currentRole);
+  const currentModel = useChatSessionStore((state) => state.currentModel);
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const fileInputId = useId();
 
   const isBusy = status !== 'idle';
   const hasText = input.trim().length > 0;
   const hasAttachments = pendingAttachments.length > 0;
-  const hasRole = !!currentRole;
-  const sendDisabled = isBusy ? false : (!hasText && !hasAttachments) || !hasRole || uploading;
+  const sendDisabled = isBusy ? false : (!hasText && !hasAttachments) || !currentModel || uploading;
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)';
@@ -90,7 +89,9 @@ export function ComposerToolbar() {
   return (
     <div className='flex items-center justify-between px-0.5'>
       <div className='flex items-center gap-1'>
-        <span title={uploading ? '正在上传附件...' : '添加附件（支持 JPG、PNG、WebP、GIF，最大 20MB）'}>
+        <span
+          title={uploading ? '正在上传附件...' : '添加附件（支持 JPG、PNG、WebP、GIF，最大 20MB）'}
+        >
           <input
             id={fileInputId}
             type='file'
@@ -115,7 +116,10 @@ export function ComposerToolbar() {
               aria-disabled={uploading}
               title={uploading ? '正在上传附件...' : '添加附件'}
               data-testid='composer-attachment-trigger'
-              className={cn('cursor-pointer', uploading && 'pointer-events-none cursor-not-allowed')}
+              className={cn(
+                'cursor-pointer',
+                uploading && 'pointer-events-none cursor-not-allowed',
+              )}
             >
               {uploading ? (
                 <Loader2 className='h-3.5 w-3.5 animate-spin' />

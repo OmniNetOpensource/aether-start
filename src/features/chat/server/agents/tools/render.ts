@@ -19,7 +19,7 @@ const parseReactCode = (code: string) => {
 
   if (!/\bexport\s+default\s+function\s+App\b/.test(code)) {
     throw new Error(
-      "React artifacts must use exactly `export default function App` (component name must be App, not another name)",
+      'React artifacts must use exactly `export default function App` (component name must be App, not another name)',
     );
   }
 };

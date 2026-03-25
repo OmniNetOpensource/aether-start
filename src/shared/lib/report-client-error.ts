@@ -1,7 +1,4 @@
-export type ClientErrorReportKind =
-  | 'react-boundary'
-  | 'window-error'
-  | 'unhandledrejection';
+export type ClientErrorReportKind = 'react-boundary' | 'window-error' | 'unhandledrejection';
 
 export type ClientErrorReportBody = {
   kind: ClientErrorReportKind;

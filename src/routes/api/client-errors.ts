@@ -95,8 +95,7 @@ export const Route = createFileRoute('/api/client-errors')({
           const stack = readOptionalString(record.stack);
           const componentStack = readOptionalString(record.componentStack);
           const sourceField = readOptionalString(record.source);
-          const source =
-            sourceField === null ? null : truncate(sourceField, SOURCE_MAX);
+          const source = sourceField === null ? null : truncate(sourceField, SOURCE_MAX);
           const line = readOptionalInt(record.line);
           const column = readOptionalInt(record.column);
 
@@ -105,8 +104,7 @@ export const Route = createFileRoute('/api/client-errors')({
             detailJson = serializeDetailJson(record.detail);
           }
 
-          const errorNameStored =
-            errorName === null ? null : truncate(errorName, NAME_MAX);
+          const errorNameStored = errorName === null ? null : truncate(errorName, NAME_MAX);
 
           const session = await getSessionFromRequest(request);
           const sessionUserId = session?.user?.id;
@@ -117,9 +115,7 @@ export const Route = createFileRoute('/api/client-errors')({
 
           const userAgent = request.headers.get('user-agent');
           const userAgentStored =
-            userAgent && userAgent.trim().length > 0
-              ? truncate(userAgent.trim(), LONG_MAX)
-              : null;
+            userAgent && userAgent.trim().length > 0 ? truncate(userAgent.trim(), LONG_MAX) : null;
 
           const id = crypto.randomUUID();
           const createdAt = new Date().toISOString();

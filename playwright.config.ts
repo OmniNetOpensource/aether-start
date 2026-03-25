@@ -6,8 +6,7 @@ const baseURL =
   process.env.E2E_BASE_URL ??
   (useWebServer ? `http://127.0.0.1:${e2ePort}` : 'http://localhost:3000');
 const webServerURL = new URL(baseURL);
-const webServerPort =
-  webServerURL.port || (webServerURL.protocol === 'https:' ? '443' : '80');
+const webServerPort = webServerURL.port || (webServerURL.protocol === 'https:' ? '443' : '80');
 const e2eOrigins = [webServerURL.origin];
 
 if (webServerURL.hostname === '127.0.0.1') {

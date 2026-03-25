@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { PasswordInput } from '@/components/ui/password-input';
 import { cn } from '@/lib/utils';
 
-
 const isInvalidTokenError = (error: unknown) => {
   const message =
     typeof error === 'object' && error !== null && 'message' in error

@@ -10,18 +10,21 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import { useEffect } from 'react';
 
 export function PromptSelector() {
   const appShellData = useAppShellRouteData();
-  const currentPrompt = useChatSessionStore((state) => state.currentPrompt);
 
   const setCurrentPrompt = useChatSessionStore((state) => state.setCurrentPrompt);
   const prompts = appShellData?.availablePrompts ?? [];
-  const promptId = appShellData?.initialPromptId ?? 'aether';
+  const selectedPromptId = appShellData?.initialPromptId ?? prompts[0]?.id ?? 'aether';
 
-  const selectedPromptId = currentPrompt || promptId;
   const currentPromptName =
     prompts.find((prompt) => prompt.id === selectedPromptId)?.name ?? 'aether';
+
+  useEffect(() => {
+    setCurrentPrompt(selectedPromptId);
+  }, []);
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)';

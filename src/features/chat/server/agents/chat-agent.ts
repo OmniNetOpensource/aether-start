@@ -117,7 +117,7 @@ const toEventError = (message: string): ChatServerToClientEvent => ({
 type ChatRequestBody = {
   idempotencyKey: string;
   conversationId: string;
-  role: string;
+  model: string;
   promptId?: string;
   conversationHistory: SerializedMessage[];
   treeSnapshot: MessageTreeSnapshot;
@@ -136,7 +136,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
 
   const idempotencyKey = asString(body.idempotencyKey);
   const conversationId = asString(body.conversationId);
-  const role = asString(body.role);
+  const model = asString(body.model);
   const promptId = asString(body.promptId) ?? undefined;
   const conversationHistory = Array.isArray(body.conversationHistory)
     ? (body.conversationHistory as SerializedMessage[])
@@ -162,7 +162,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   if (
     !idempotencyKey ||
     !conversationId ||
-    !role ||
+    !model ||
     !conversationHistory ||
     !snapshotMessages ||
     !snapshotPath ||
@@ -174,7 +174,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   return {
     idempotencyKey,
     conversationId,
-    role,
+    model,
     promptId,
     conversationHistory,
     treeSnapshot: {
@@ -354,7 +354,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         user_id: userId,
         id: message.conversationId,
         title,
-        role: message.role ?? existing?.role ?? null,
+        model: message.model ?? existing?.model ?? null,
         currentPath: message.treeSnapshot.currentPath,
         messages: message.treeSnapshot.messages,
         created_at: existing?.created_at ?? now,
@@ -527,7 +527,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     };
 
     try {
-      const { conversationHistory, role, promptId } = message;
+      const { conversationHistory, model, promptId } = message;
 
       // 这层校验主要是保护 provider，不让它接收到结构明显不合法的输入。
       if (!Array.isArray(conversationHistory) || conversationHistory.length === 0) {
@@ -552,10 +552,10 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         return;
       }
 
-      // role 决定模型、后端和 provider 格式；拿不到配置就无法继续。
-      const modelConfig = role ? getModelConfig(role) : getDefaultModelConfig();
+      // model id 决定模型、后端和 provider 格式；拿不到配置就无法继续。
+      const modelConfig = model ? getModelConfig(model) : getDefaultModelConfig();
       if (!modelConfig) {
-        await emitEvent(toEventError(`Invalid or missing role: "${String(role ?? '')}".`));
+        await emitEvent(toEventError(`Invalid or missing model: "${String(model ?? '')}".`));
         finalStatus = 'error';
         return;
       }
@@ -703,7 +703,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
           message.conversationId,
           userId,
           cloneTreeSnapshot(workingTree),
-          message.role,
+          message.model,
           finalStatus === 'completed',
         );
       } catch (error) {
@@ -750,7 +750,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       latestRootId: number | null;
       nextId: number;
     },
-    role?: string,
+    model?: string,
     regenerateTitle = false,
   ) {
     const existing = await getConversationById(this.env.DB, conversationId, userId);
@@ -774,7 +774,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       user_id: userId,
       id: conversationId,
       title: resolvedTitle,
-      role: role ?? existing?.role ?? null,
+      model: model ?? existing?.model ?? null,
       currentPath: snapshot.currentPath,
       messages: snapshot.messages,
       created_at: existing?.created_at ?? now,

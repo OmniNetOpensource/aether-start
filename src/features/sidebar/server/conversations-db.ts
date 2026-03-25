@@ -17,7 +17,7 @@ export type ConversationRecord = {
   user_id: string;
   id: string;
   title: string | null;
-  role: string | null;
+  model: string | null;
   is_pinned: boolean;
   pinned_at: string | null;
   currentPath: number[];
@@ -31,7 +31,7 @@ export type ConversationPayload = {
   user_id: string;
   id: string;
   title: string | null;
-  role?: string | null;
+  model?: string | null;
   currentPath: number[];
   messages: object[];
   created_at: string;
@@ -55,7 +55,7 @@ export type ConversationSearchItem = {
   user_id: string;
   id: string;
   title: string | null;
-  role: string | null;
+  model: string | null;
   is_pinned: boolean;
   pinned_at: string | null;
   created_at: string;
@@ -266,7 +266,7 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
   }
 
   const title = typeof row.title === 'string' || row.title === null ? row.title : null;
-  const role = typeof row.role === 'string' ? row.role : null;
+  const model = typeof row.model === 'string' ? row.model : null;
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
   const isPinned = toPinnedBoolean(row.is_pinned);
@@ -279,7 +279,7 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
     user_id: row.user_id,
     id: row.id,
     title,
-    role,
+    model,
     is_pinned: isPinned,
     pinned_at: pinnedAt,
     currentPath: safeParsePath(currentPathJson),
@@ -296,7 +296,7 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
   }
 
   const title = typeof row.title === 'string' || row.title === null ? row.title : null;
-  const role = typeof row.role === 'string' ? row.role : null;
+  const model = typeof row.model === 'string' ? row.model : null;
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
   const isPinned = toPinnedBoolean(row.is_pinned);
@@ -307,7 +307,7 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
     user_id: row.user_id,
     id: row.id,
     title,
-    role,
+    model,
     is_pinned: isPinned,
     pinned_at: pinnedAt,
     currentPath: [],
@@ -324,7 +324,7 @@ const toConversationSearchItem = (row: unknown, query: string): ConversationSear
   }
 
   const title = typeof row.title === 'string' || row.title === null ? row.title : null;
-  const role = typeof row.role === 'string' ? row.role : null;
+  const model = typeof row.model === 'string' ? row.model : null;
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
   const isPinned = toPinnedBoolean(row.is_pinned);
@@ -342,7 +342,7 @@ const toConversationSearchItem = (row: unknown, query: string): ConversationSear
     user_id: row.user_id,
     id: row.id,
     title,
-    role,
+    model,
     is_pinned: isPinned,
     pinned_at: pinnedAt,
     created_at: createdAt,
@@ -360,7 +360,7 @@ export const listConversationsPage = async (
     ? await db
         .prepare(
           `
-          SELECT m.user_id, m.id, m.title, m.role, m.is_pinned, m.pinned_at, m.created_at, m.updated_at
+          SELECT m.user_id, m.id, m.title, m.model, m.is_pinned, m.pinned_at, m.created_at, m.updated_at
           FROM conversation_metas m
           WHERE m.user_id = ?1
             AND (
@@ -408,7 +408,7 @@ export const listConversationsPage = async (
     : await db
         .prepare(
           `
-          SELECT m.user_id, m.id, m.title, m.role, m.is_pinned, m.pinned_at, m.created_at, m.updated_at
+          SELECT m.user_id, m.id, m.title, m.model, m.is_pinned, m.pinned_at, m.created_at, m.updated_at
           FROM conversation_metas m
           WHERE m.user_id = ?1
           ORDER BY
@@ -488,7 +488,7 @@ export const searchConversations = async (
               m.user_id,
               m.id,
               m.title,
-              m.role,
+              m.model,
               m.is_pinned,
               m.pinned_at,
               m.created_at,
@@ -514,7 +514,7 @@ export const searchConversations = async (
               m.user_id,
               m.id,
               m.title,
-              m.role,
+              m.model,
               m.is_pinned,
               m.pinned_at,
               m.created_at,
@@ -543,7 +543,7 @@ export const searchConversations = async (
               m.user_id,
               m.id,
               m.title,
-              m.role,
+              m.model,
               m.is_pinned,
               m.pinned_at,
               m.created_at,
@@ -576,7 +576,7 @@ export const searchConversations = async (
               m.user_id,
               m.id,
               m.title,
-              m.role,
+              m.model,
               m.is_pinned,
               m.pinned_at,
               m.created_at,
@@ -625,7 +625,7 @@ export const getConversationById = async (db: D1Database, id: string, userId: st
     db
       .prepare(
         `
-      SELECT m.user_id, m.id, m.title, m.role, m.is_pinned, m.pinned_at, m.created_at, m.updated_at, b.current_path_json, b.messages_json
+      SELECT m.user_id, m.id, m.title, m.model, m.is_pinned, m.pinned_at, m.created_at, m.updated_at, b.current_path_json, b.messages_json
       FROM conversation_metas m
       JOIN conversation_bodies b ON b.user_id = m.user_id AND b.id = m.id
       WHERE m.id = ?1 AND m.user_id = ?2
@@ -719,11 +719,11 @@ export const upsertConversation = async (db: D1Database, payload: ConversationPa
     db
       .prepare(
         `
-      INSERT INTO conversation_metas(user_id, id, title, role, created_at, updated_at)
+      INSERT INTO conversation_metas(user_id, id, title, model, created_at, updated_at)
       VALUES (?1, ?2, ?3, ?4, ?5, ?6)
       ON CONFLICT(user_id, id) DO UPDATE SET
         title = excluded.title,
-        role = excluded.role,
+        model = excluded.model,
         updated_at = excluded.updated_at
       `,
       )
@@ -731,7 +731,7 @@ export const upsertConversation = async (db: D1Database, payload: ConversationPa
         payload.user_id,
         payload.id,
         payload.title,
-        payload.role ?? null,
+        payload.model ?? null,
         payload.created_at,
         payload.updated_at,
       ),

@@ -4,6 +4,7 @@ import type {
   ChatServerToClientEvent,
 } from '@/types/chat-event-types';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import { upsertConversationInCache } from '@/features/sidebar/queries/use-conversations';
 
 const ERROR_COPY: Record<ChatErrorCode, { title: string; cause: string; suggestion: string }> = {
   invalid_request: {
@@ -193,7 +194,7 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
   if (event.type === 'conversation_updated') {
     if (event.title) {
       const now = event.updated_at ?? new Date().toISOString();
-      useChatSessionStore.getState().addConversation({
+      upsertConversationInCache({
         id: event.conversationId,
         title: event.title,
         is_pinned: false,

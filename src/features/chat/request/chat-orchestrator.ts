@@ -25,7 +25,7 @@ const AGENT_NAME = 'chat-agent';
 /** 对话已在生成回复时的提示文案 */
 const BUSY_WARNING = 'This conversation is already generating a response.';
 /** 未选择角色时的提示文案 */
-const SELECT_ROLE_WARNING = 'Select a role before sending a message.';
+const SELECT_MODEL_WARNING = 'Select a model before sending a message.';
 /** 配额超限时的默认提示文案 */
 const QUOTA_EXCEEDED_MESSAGE = 'Quota exceeded.';
 
@@ -290,9 +290,9 @@ export const checkAgentStatus = async (
  * 发起一次聊天请求。
  *
  * 流程：
- * 1. 校验 status 为 idle、已选角色
+ * 1. 校验 status 为 idle、已选模型
  * 2. 若无 conversationId，创建新对话并导航到 /app/c/:id
- * 3. 构建 body（idempotencyKey、role、promptId、conversationHistory、treeSnapshot）
+ * 3. 构建 body（idempotencyKey、model、promptId、conversationHistory、treeSnapshot）
  * 4. 取消之前的请求，发起 POST /agents/chat-agent/:conversationId/chat
  * 5. 处理 409（busy）、402（配额超限）
  * 6. 消费 SSE 流，结束时 finalizeStream
@@ -307,8 +307,8 @@ export const startChatRequest = async () => {
 
   resetLastEventId();
 
-  if (!sessionStore.currentRole) {
-    toast.warning(SELECT_ROLE_WARNING);
+  if (!sessionStore.currentModel) {
+    toast.warning(SELECT_MODEL_WARNING);
     return;
   }
 
@@ -321,7 +321,7 @@ export const startChatRequest = async () => {
 
   const body = {
     idempotencyKey,
-    role: sessionStore.currentRole,
+    model: sessionStore.currentModel,
     promptId: sessionStore.currentPrompt || undefined,
     conversationId,
     conversationHistory: messages.map(

@@ -8,7 +8,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import {
+  useDeleteConversation,
+  useSetConversationPinned,
+} from '@/features/sidebar/queries/use-conversations';
 import type { ConversationMeta } from '@/types/conversation';
 
 const PLACEHOLDER_TITLES = ['New Chat', 'Untitled Chat'];
@@ -36,8 +39,8 @@ export function ConversationItem({
   const useShimmer = isPlaceholderTitle(conversation.title);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
-  const deleteConversation = useChatSessionStore((state) => state.deleteConversation);
-  const setConversationPinned = useChatSessionStore((state) => state.setConversationPinned);
+  const deleteMutation = useDeleteConversation();
+  const pinMutation = useSetConversationPinned();
 
   const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) {
@@ -50,21 +53,19 @@ export function ConversationItem({
     event.stopPropagation();
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
     const confirmed = window.confirm('Delete this conversation? This action cannot be undone.');
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
 
-    await deleteConversation(conversation.id);
+    deleteMutation.mutate(conversation.id);
 
     if (isActive) {
       navigate({ to: '/app' });
     }
   };
 
-  const handleSetPinned = async (pinned: boolean) => {
-    await setConversationPinned(conversation.id, pinned);
+  const handleSetPinned = (pinned: boolean) => {
+    pinMutation.mutate({ id: conversation.id, pinned });
   };
 
   const handleMenuOpenChange = (open: boolean) => {
@@ -131,7 +132,7 @@ export function ConversationItem({
             >
               <DropdownMenuItem
                 onSelect={() => {
-                  void handleSetPinned(!conversation.is_pinned);
+                  handleSetPinned(!conversation.is_pinned);
                 }}
               >
                 {conversation.is_pinned ? (
@@ -143,7 +144,7 @@ export function ConversationItem({
               </DropdownMenuItem>
               <DropdownMenuItem
                 onSelect={() => {
-                  void handleDelete();
+                  handleDelete();
                 }}
                 variant='destructive'
               >
