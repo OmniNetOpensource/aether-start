@@ -61,9 +61,7 @@ function ArtifactPanelBody() {
                   }}
                 >
                   <div className='truncate font-medium'>{artifact.title}</div>
-                  <div className='mt-0.5 text-xs text-muted-foreground'>
-                    {artifact.language} · {artifact.status}
-                  </div>
+                  <div className='mt-0.5 text-xs text-muted-foreground'>{artifact.status}</div>
                 </button>
               ))}
             </div>
@@ -106,7 +104,7 @@ function ArtifactPanelBody() {
           <iframe
             key={selectedArtifact.id}
             title='Artifact preview'
-            srcDoc={buildPreviewDocument(selectedArtifact.language, selectedArtifact.code)}
+            srcDoc={buildPreviewDocument(selectedArtifact.code)}
             sandbox='allow-scripts'
             className='h-full w-full rounded-md border border-border/50 bg-background'
           />
@@ -115,7 +113,7 @@ function ArtifactPanelBody() {
             key={selectedArtifact.id}
             className='min-h-0 h-full overflow-auto p-4 text-xs leading-relaxed'
           >
-            <ArtifactCodeBlock code={selectedArtifact.code} language={selectedArtifact.language} />
+            <ArtifactCodeBlock code={selectedArtifact.code} />
           </div>
         )}
       </div>

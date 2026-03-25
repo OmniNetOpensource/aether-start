@@ -1,6 +1,6 @@
 import type { ChatServerToClientEvent } from '@/types/chat-api';
 
-type KnownField = 'title' | 'language' | 'code';
+type KnownField = 'title' | 'code';
 type ParserPhase =
   | 'before_object'
   | 'before_key'
@@ -22,8 +22,7 @@ const ESCAPE_MAP: Record<string, string> = {
   t: '\t',
 };
 
-const isKnownField = (value: string): value is KnownField =>
-  value === 'title' || value === 'language' || value === 'code';
+const isKnownField = (value: string): value is KnownField => value === 'title' || value === 'code';
 
 export class RenderArtifactStreamParser {
   private readonly artifactId: string;
@@ -35,7 +34,6 @@ export class RenderArtifactStreamParser {
   private unicodeDigits = '';
   private emittedStarted = false;
   private emittedTitle = false;
-  private emittedLanguage = false;
   private emittedCodeLength = 0;
 
   constructor(artifactId: string) {
@@ -53,6 +51,11 @@ export class RenderArtifactStreamParser {
         type: 'artifact_started',
         artifactId: this.artifactId,
         callId: this.artifactId,
+      },
+      {
+        type: 'artifact_language',
+        artifactId: this.artifactId,
+        language: 'html',
       },
     ];
   }
@@ -158,17 +161,6 @@ export class RenderArtifactStreamParser {
             this.emittedTitle = true;
           }
 
-          if (this.currentField === 'language' && !this.emittedLanguage) {
-            if (this.currentValue === 'html' || this.currentValue === 'react') {
-              events.push({
-                type: 'artifact_language',
-                artifactId: this.artifactId,
-                language: this.currentValue,
-              });
-              this.emittedLanguage = true;
-            }
-          }
-
           this.phase = 'after_value';
         }
         continue;
@@ -200,7 +192,6 @@ export class RenderArtifactStreamParser {
   finalize(args: Record<string, unknown>): ChatServerToClientEvent[] {
     const events: ChatServerToClientEvent[] = this.start();
     const title = typeof args.title === 'string' ? args.title.trim() : '';
-    const language = args.language;
     const code = typeof args.code === 'string' ? args.code : '';
 
     if (title && !this.emittedTitle) {
@@ -210,15 +201,6 @@ export class RenderArtifactStreamParser {
         title,
       });
       this.emittedTitle = true;
-    }
-
-    if ((language === 'html' || language === 'react') && !this.emittedLanguage) {
-      events.push({
-        type: 'artifact_language',
-        artifactId: this.artifactId,
-        language,
-      });
-      this.emittedLanguage = true;
     }
 
     if (code) {
@@ -290,20 +272,16 @@ export const buildRenderArtifactEvents = (
 ): ChatServerToClientEvent[] => {
   const events: ChatServerToClientEvent[] = [
     { type: 'artifact_started', artifactId, callId: artifactId },
+    {
+      type: 'artifact_language',
+      artifactId,
+      language: 'html',
+    },
   ];
 
   const title = typeof args.title === 'string' ? args.title.trim() : '';
   if (title) {
     events.push({ type: 'artifact_title', artifactId, title });
-  }
-
-  const language = args.language;
-  if (language === 'html' || language === 'react') {
-    events.push({
-      type: 'artifact_language',
-      artifactId,
-      language,
-    });
   }
 
   const code = typeof args.code === 'string' ? args.code : '';

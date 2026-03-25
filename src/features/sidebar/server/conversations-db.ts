@@ -94,7 +94,7 @@ const safeParseMessages = (value: string): object[] => {
 };
 
 const toArtifactLanguage = (value: unknown): ArtifactLanguage | null =>
-  value === 'html' || value === 'react' ? value : null;
+  value === 'html' ? value : null;
 
 const toConversationArtifact = (row: unknown): ConversationArtifact | null => {
   if (!isRecord(row) || typeof row.id !== 'string' || typeof row.conversation_id !== 'string') {

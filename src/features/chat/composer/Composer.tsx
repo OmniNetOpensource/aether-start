@@ -165,10 +165,7 @@ export function Composer() {
   const widthClass = 'w-[90%] max-w-full @[921px]:w-[50%] @[921px]:max-w-2xl';
 
   return (
-    <div
-      key='composer-wrapper'
-      className='z-(--z-composer) w-full shrink-0 pb-3 md:pb-4'
-    >
+    <div key='composer-wrapper' className='z-(--z-composer) w-full shrink-0 pb-3 md:pb-4'>
       <div
         key='composer-bottom'
         className={`relative mx-auto flex flex-col gap-2 ${widthClass}`}

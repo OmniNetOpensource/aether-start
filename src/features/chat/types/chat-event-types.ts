@@ -15,7 +15,7 @@ export type ChatErrorCode =
 
 export type ChatErrorProvider = 'anthropic' | 'openai' | 'openai-responses' | 'gemini' | 'system';
 
-export type ArtifactLanguage = 'html' | 'react';
+export type ArtifactLanguage = 'html';
 
 export type ChatErrorInfo = {
   code: ChatErrorCode;

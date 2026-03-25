@@ -1,11 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { CodeHighlighterPlugin } from 'streamdown';
-import type { ArtifactLanguage } from '@/types/chat-api';
 
-const shikiLang: Record<ArtifactLanguage, 'html' | 'tsx'> = {
-  html: 'html',
-  react: 'tsx',
-};
+const lang = 'html';
 
 const lineClass =
   'block before:content-[counter(line)] before:inline-block before:[counter-increment:line] before:w-6 before:mr-4 before:text-[13px] before:text-right before:text-muted-foreground/50 before:font-mono before:select-none';
@@ -40,19 +36,12 @@ const loadCodePlugin = () => {
   return codePluginPromise;
 };
 
-function getHighlightCacheKey(code: string, language: ArtifactLanguage) {
-  return `${language}:${code}`;
+function getHighlightCacheKey(code: string) {
+  return code;
 }
 
-export function ArtifactCodeBlock({
-  code,
-  language,
-}: {
-  code: string;
-  language: ArtifactLanguage;
-}) {
-  const lang = shikiLang[language];
-  const cacheKey = getHighlightCacheKey(code, language);
+export function ArtifactCodeBlock({ code }: { code: string }) {
+  const cacheKey = getHighlightCacheKey(code);
   const [codePlugin, setCodePlugin] = useState<CodeHighlighterPlugin | null>(null);
   const [highlightState, setHighlightState] = useState(() => ({
     cacheKey,
@@ -115,7 +104,7 @@ export function ArtifactCodeBlock({
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, code, codePlugin, lang]);
+  }, [cacheKey, code, codePlugin]);
 
   if (!highlight) {
     return (

@@ -1,4 +1,3 @@
-import type { ArtifactLanguage } from '@/types/chat-api';
 import type { ChatTool, ToolDefinition, ToolHandler } from './types';
 
 const TITLE_MAX_LENGTH = 120;
@@ -6,23 +5,10 @@ const CODE_MAX_LENGTH = 200_000;
 
 export type RenderArgs = {
   title: string;
-  language: ArtifactLanguage;
   code: string;
 };
 
 const normalizeString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
-
-const parseReactCode = (code: string) => {
-  if (/\bimport\s+/.test(code)) {
-    throw new Error('React artifacts must be self-contained and cannot use import statements');
-  }
-
-  if (!/\bexport\s+default\s+function\s+App\b/.test(code)) {
-    throw new Error(
-      'React artifacts must use exactly `export default function App` (component name must be App, not another name)',
-    );
-  }
-};
 
 export const parseRenderArgs = (args: unknown): RenderArgs => {
   if (!args || typeof args !== 'object') {
@@ -37,11 +23,6 @@ export const parseRenderArgs = (args: unknown): RenderArgs => {
     throw new Error(`render title must be ${TITLE_MAX_LENGTH} characters or fewer`);
   }
 
-  const language = (args as { language?: unknown }).language;
-  if (language !== 'html' && language !== 'react') {
-    throw new Error("render language must be 'html' or 'react'");
-  }
-
   const code =
     typeof (args as { code?: unknown }).code === 'string'
       ? (args as { code: string }).code.trim()
@@ -53,21 +34,16 @@ export const parseRenderArgs = (args: unknown): RenderArgs => {
     throw new Error(`render code must be ${CODE_MAX_LENGTH} characters or fewer`);
   }
 
-  if (language === 'react') {
-    parseReactCode(code);
-  }
-
   return {
     title,
-    language,
     code,
   };
 };
 
 const renderArtifact: ToolHandler = async (args) => {
   try {
-    const { title, language } = parseRenderArgs(args);
-    return `Artifact rendered successfully: "${title}" (${language})`;
+    const { title } = parseRenderArgs(args);
+    return `Artifact rendered successfully: "${title}" (html)`;
   } catch (error) {
     return `Error: ${error instanceof Error ? error.message : String(error)}`;
   }
@@ -78,7 +54,7 @@ const renderSpec: ChatTool = {
   function: {
     name: 'render',
     description:
-      'Create a conversation artifact preview for HTML or React code. Use this when the user asks for a component, page, demo, or visual code output. Tailwind is not available; use inline styles or plain CSS. For React: the entry component must be `export default function App`; do NOT write any import statements — React hooks (useState, useEffect, useRef, etc.) and APIs (createContext, memo, forwardRef, etc.) are pre-injected as globals.',
+      'Create a visual artifact. Output must be a complete, self-contained HTML file that works directly in an iframe — no build step, no local imports. To use React, Vue, Three.js, or any library: load it from a CDN (e.g. https://esm.sh/react@19). Use <script type="module"> for ES modules. Tailwind CSS is available via CDN: <script src="https://cdn.tailwindcss.com"></script>',
     parameters: {
       type: 'object',
       additionalProperties: false,
@@ -87,19 +63,13 @@ const renderSpec: ChatTool = {
           type: 'string',
           description: 'Short artifact title, 120 characters or fewer',
         },
-        language: {
-          type: 'string',
-          enum: ['html', 'react'],
-          description:
-            "Artifact language. Use 'react' for TSX: no imports needed (React hooks and APIs are globals), root component must be `export default function App`.",
-        },
         code: {
           type: 'string',
           description:
-            'Artifact source code. For React: TSX with `export default function App`, no imports (hooks like useState/useEffect and APIs like createContext/memo are pre-injected globals); inline styles or plain CSS only (no Tailwind).',
+            'Complete, self-contained HTML. Must include <!doctype html> and run as-is in an iframe.',
         },
       },
-      required: ['title', 'language', 'code'],
+      required: ['title', 'code'],
     },
   },
 };
