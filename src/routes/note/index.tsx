@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/useToast';
 
-export const Route = createFileRoute('/note')({
+export const Route = createFileRoute('/note/')({
   component: NotesPage,
 });
 

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export function NotesButton() {
-  const isActive = !!useMatch({ from: '/note', shouldThrow: false });
+  const isActive = !!useMatch({ from: '/note/', shouldThrow: false });
 
   return (
     <Button
