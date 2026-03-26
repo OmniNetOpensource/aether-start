@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Braces, ChevronDown, Eye } from 'lucide-react';
+import { Braces, ChevronDown, Eye, X } from 'lucide-react';
 import { useResponsive } from '@/components/ResponsiveContext';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { cn } from '@/lib/utils';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
@@ -144,14 +143,21 @@ export default function ArtifactPanel() {
   }
 
   if (isMobile) {
+    if (!artifactPanelOpen) return null;
     return (
-      <Dialog open={artifactPanelOpen} onOpenChange={setArtifactPanelOpen}>
-        <DialogContent className='w-[min(96vw,72rem)] p-5 sm:max-w-5xl' showCloseButton>
-          <div className='h-[75vh] min-h-0'>
-            <ArtifactPanelBody />
-          </div>
-        </DialogContent>
-      </Dialog>
+      <div className='fixed inset-0 z-(--z-modal-content) flex h-dvh flex-col bg-background px-5 pb-5 pt-14'>
+        <button
+          type='button'
+          onClick={() => setArtifactPanelOpen(false)}
+          className='absolute right-4 top-4 rounded-sm p-2 text-(--text-secondary) transition-colors hover:text-foreground'
+          aria-label='Close'
+        >
+          <X className='size-4' />
+        </button>
+        <div className='flex min-h-0 flex-1 flex-col'>
+          <ArtifactPanelBody />
+        </div>
+      </div>
     );
   }
 

@@ -1,5 +1,4 @@
-import { createContext, useContext, useState } from 'react';
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { createContext, useContext, useSyncExternalStore } from 'react';
 import { BREAKPOINTS, type DeviceType } from '@/lib/responsive-types';
 
 const MOBILE_QUERY = `(max-width: ${BREAKPOINTS.mobileMax}px)`;
@@ -19,26 +18,28 @@ function getSnapshot(): DeviceType {
 
 const ResponsiveContext = createContext<DeviceType>('desktop');
 
+function subscribe(onStoreChange: () => void) {
+  const mobileQuery = window.matchMedia(MOBILE_QUERY);
+  const tabletQuery = window.matchMedia(TABLET_QUERY);
+  const desktopQuery = window.matchMedia(DESKTOP_QUERY);
+
+  mobileQuery.addEventListener('change', onStoreChange);
+  tabletQuery.addEventListener('change', onStoreChange);
+  desktopQuery.addEventListener('change', onStoreChange);
+
+  return () => {
+    mobileQuery.removeEventListener('change', onStoreChange);
+    tabletQuery.removeEventListener('change', onStoreChange);
+    desktopQuery.removeEventListener('change', onStoreChange);
+  };
+}
+
+function getServerSnapshot(): DeviceType {
+  return 'desktop';
+}
+
 export function ResponsiveProvider({ children }: { children: React.ReactNode }) {
-  const [deviceType, setDeviceType] = useState<DeviceType>('desktop');
-
-  useMountEffect(() => {
-    const mobileQuery = window.matchMedia(MOBILE_QUERY);
-    const tabletQuery = window.matchMedia(TABLET_QUERY);
-    const desktopQuery = window.matchMedia(DESKTOP_QUERY);
-
-    const handler = () => setDeviceType(getSnapshot());
-
-    mobileQuery.addEventListener('change', handler);
-    tabletQuery.addEventListener('change', handler);
-    desktopQuery.addEventListener('change', handler);
-
-    return () => {
-      mobileQuery.removeEventListener('change', handler);
-      tabletQuery.removeEventListener('change', handler);
-      desktopQuery.removeEventListener('change', handler);
-    };
-  });
+  const deviceType = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   return <ResponsiveContext.Provider value={deviceType}>{children}</ResponsiveContext.Provider>;
 }
