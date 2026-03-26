@@ -124,7 +124,7 @@ export function Composer() {
   const hasText = input.trim().length > 0;
   const hasAttachments = pendingAttachments.length > 0;
   const sendDisabled =
-    isBusy || window.__preHydrationInput
+    isBusy || !!window.__preHydrationInput
       ? false
       : (!hasText && !hasAttachments) || !currentModelId || uploading;
 
