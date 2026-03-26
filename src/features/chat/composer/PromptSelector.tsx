@@ -30,9 +30,7 @@ export function PromptSelector() {
   const prompts = appShellData?.availablePrompts ?? [];
   const rawStoredPromptId = readStoredPromptId();
   const storedPromptId =
-    rawStoredPromptId && prompts.some((p) => p.id === rawStoredPromptId)
-      ? rawStoredPromptId
-      : '';
+    rawStoredPromptId && prompts.some((p) => p.id === rawStoredPromptId) ? rawStoredPromptId : '';
   const selectedPromptId =
     currentPromptId ||
     appShellData?.initialPromptId ||
@@ -82,10 +80,7 @@ export function PromptSelector() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' sideOffset={4}>
         {prompts.map((prompt) => (
-          <DropdownMenuItem
-            key={prompt.id}
-            onSelect={() => persistPromptSelection(prompt.id)}
-          >
+          <DropdownMenuItem key={prompt.id} onSelect={() => persistPromptSelection(prompt.id)}>
             <span className='flex-1 truncate'>{prompt.name}</span>
             {selectedPromptId === prompt.id && <Check className='h-4 w-4 shrink-0' />}
           </DropdownMenuItem>
