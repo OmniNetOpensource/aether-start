@@ -4,28 +4,6 @@ import type { Attachment } from '@/features/chat/types/message';
 
 const UPLOAD_CONCURRENCY = 4;
 
-const COMPOSER_DRAFT_STORAGE_KEY = 'aether_composer_draft';
-
-function writeComposerDraftStorage(value: string) {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, value);
-}
-
-export function readComposerDraftFromStorage(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  const raw = localStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
-  if (raw === null) {
-    return '';
-  }
-  return raw;
-}
-
 type PendingQuote = { id: string; text: string };
 
 type ComposerState = {
@@ -50,10 +28,7 @@ export const useComposerStore = create<ComposerState & ComposerActions>()((set, 
   pendingAttachments: [],
   pendingQuotes: [],
   uploading: false,
-  setInput: (value) => {
-    writeComposerDraftStorage(value);
-    set({ input: value });
-  },
+  setInput: (value) => set({ input: value }),
   setPendingAttachments: (attachments) => set({ pendingAttachments: attachments }),
   addAttachments: async (files) => {
     if (files.length === 0 || get().uploading) {
@@ -119,13 +94,5 @@ export const useComposerStore = create<ComposerState & ComposerActions>()((set, 
     set((state) => ({
       pendingQuotes: state.pendingQuotes.filter((q) => q.id !== id),
     })),
-  clear: () => {
-    writeComposerDraftStorage('');
-    set({ input: '', pendingAttachments: [], pendingQuotes: [] });
-  },
+  clear: () => set({ input: '', pendingAttachments: [], pendingQuotes: [] }),
 }));
-
-/** Updates composer input and mirrors it to localStorage. */
-export function setComposerInputWithLocalStorage(value: string) {
-  useComposerStore.getState().setInput(value);
-}

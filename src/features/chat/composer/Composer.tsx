@@ -1,4 +1,4 @@
-import { ClipboardEvent, DragEvent, KeyboardEvent, useRef } from 'react';
+import { ClipboardEvent, DragEvent, KeyboardEvent, useEffect, useRef } from 'react';
 import { useMountEffect } from '@/hooks/useMountEffect';
 import { useNavigate } from '@tanstack/react-router';
 import { useResponsive } from '@/components/ResponsiveContext';
@@ -6,11 +6,7 @@ import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/useToast';
 import { submitMessage } from './submit-chat';
-import {
-  readComposerDraftFromStorage,
-  setComposerInputWithLocalStorage,
-  useComposerStore,
-} from './useComposerStore';
+import { useComposerStore } from './useComposerStore';
 import { ComposerToolbar } from './ComposerToolbar';
 
 declare global {
@@ -19,6 +15,8 @@ declare global {
     __preHydrationInputHandler?: (e: Event) => void;
   }
 }
+
+const COMPOSER_DRAFT_STORAGE_KEY = 'aether_composer_draft';
 
 export function Composer() {
   const navigate = useNavigate();
@@ -31,17 +29,14 @@ export function Composer() {
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
   const removeQuote = useComposerStore((state) => state.removeQuote);
+  const setInput = useComposerStore((state) => state.setInput);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   useMountEffect(() => {
     const pre = window.__preHydrationInput;
     if (pre) {
-      setComposerInputWithLocalStorage(pre);
-    } else {
-      const fromStorage = readComposerDraftFromStorage();
-      if (fromStorage !== '') {
-        setComposerInputWithLocalStorage(fromStorage);
-      }
+      setInput(pre);
+      localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, pre);
     }
     delete window.__preHydrationInput;
     if (window.__preHydrationInputHandler) {
@@ -49,6 +44,10 @@ export function Composer() {
       delete window.__preHydrationInputHandler;
     }
   });
+
+  useEffect(() => {
+    localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, input);
+  }, [input]);
 
   useMountEffect(() => {
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -150,9 +149,8 @@ export function Composer() {
       id='message-input'
       name='message'
       value={input}
-      onChange={(event) => {
-        setComposerInputWithLocalStorage(event.target.value);
-      }}
+      defaultValue={window.__preHydrationInput ?? ''}
+      onChange={(event) => setInput(event.target.value)}
       onKeyDown={handleKeyDown}
       onPaste={handlePaste}
       rows={1}
