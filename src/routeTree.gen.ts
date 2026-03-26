@@ -9,11 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as RenderTrackerDemoRouteImport } from './routes/render-tracker-demo'
-import { Route as NoteRouteImport } from './routes/note'
 import { Route as R404RouteImport } from './routes/404'
+import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as NoteIndexRouteImport } from './routes/note/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ShareTokenRouteImport } from './routes/share/$token'
@@ -28,19 +28,14 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
 import { Route as ApiShareAssetsTokenAttachmentIdRouteImport } from './routes/api/share-assets/$token/$attachmentId'
 
-const RenderTrackerDemoRoute = RenderTrackerDemoRouteImport.update({
-  id: '/render-tracker-demo',
-  path: '/render-tracker-demo',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const NoteRoute = NoteRouteImport.update({
-  id: '/note',
-  path: '/note',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const R404Route = R404RouteImport.update({
   id: '/404',
   path: '/404',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRouteRoute = AuthRouteRouteImport.update({
+  id: '/auth',
+  path: '/auth',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AppRouteRoute = AppRouteRouteImport.update({
@@ -53,10 +48,15 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthIndexRoute = AuthIndexRouteImport.update({
-  id: '/auth/',
-  path: '/auth/',
+const NoteIndexRoute = NoteIndexRouteImport.update({
+  id: '/note/',
+  path: '/note/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthIndexRoute = AuthIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AppIndexRoute = AppIndexRouteImport.update({
   id: '/',
@@ -69,24 +69,24 @@ const ShareTokenRoute = ShareTokenRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
-  id: '/auth/reset-password',
-  path: '/auth/reset-password',
-  getParentRoute: () => rootRouteImport,
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
-  id: '/auth/register',
-  path: '/auth/register',
-  getParentRoute: () => rootRouteImport,
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthLoginRoute = AuthLoginRouteImport.update({
-  id: '/auth/login',
-  path: '/auth/login',
-  getParentRoute: () => rootRouteImport,
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/auth/forgot-password',
-  path: '/auth/forgot-password',
-  getParentRoute: () => rootRouteImport,
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const ApiUploadAttachmentRoute = ApiUploadAttachmentRouteImport.update({
   id: '/api/upload-attachment',
@@ -123,9 +123,8 @@ const ApiShareAssetsTokenAttachmentIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/auth': typeof AuthRouteRouteWithChildren
   '/404': typeof R404Route
-  '/note': typeof NoteRoute
-  '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -135,6 +134,7 @@ export interface FileRoutesByFullPath {
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
+  '/note/': typeof NoteIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
@@ -143,8 +143,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
-  '/note': typeof NoteRoute
-  '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -154,6 +152,7 @@ export interface FileRoutesByTo {
   '/share/$token': typeof ShareTokenRoute
   '/app': typeof AppIndexRoute
   '/auth': typeof AuthIndexRoute
+  '/note': typeof NoteIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
@@ -163,9 +162,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
+  '/auth': typeof AuthRouteRouteWithChildren
   '/404': typeof R404Route
-  '/note': typeof NoteRoute
-  '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
@@ -175,6 +173,7 @@ export interface FileRoutesById {
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
+  '/note/': typeof NoteIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/app/c/$conversationId': typeof AppCConversationIdRoute
@@ -185,9 +184,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/app'
+    | '/auth'
     | '/404'
-    | '/note'
-    | '/render-tracker-demo'
     | '/api/client-errors'
     | '/api/upload-attachment'
     | '/auth/forgot-password'
@@ -197,6 +195,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/app/'
     | '/auth/'
+    | '/note/'
     | '/api/assets/$key'
     | '/api/auth/$'
     | '/app/c/$conversationId'
@@ -205,8 +204,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/404'
-    | '/note'
-    | '/render-tracker-demo'
     | '/api/client-errors'
     | '/api/upload-attachment'
     | '/auth/forgot-password'
@@ -216,6 +213,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/app'
     | '/auth'
+    | '/note'
     | '/api/assets/$key'
     | '/api/auth/$'
     | '/app/c/$conversationId'
@@ -224,9 +222,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/app'
+    | '/auth'
     | '/404'
-    | '/note'
-    | '/render-tracker-demo'
     | '/api/client-errors'
     | '/api/upload-attachment'
     | '/auth/forgot-password'
@@ -236,6 +233,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/app/'
     | '/auth/'
+    | '/note/'
     | '/api/assets/$key'
     | '/api/auth/$'
     | '/app/c/$conversationId'
@@ -245,17 +243,12 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
+  AuthRouteRoute: typeof AuthRouteRouteWithChildren
   R404Route: typeof R404Route
-  NoteRoute: typeof NoteRoute
-  RenderTrackerDemoRoute: typeof RenderTrackerDemoRoute
   ApiClientErrorsRoute: typeof ApiClientErrorsRoute
   ApiUploadAttachmentRoute: typeof ApiUploadAttachmentRoute
-  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
-  AuthLoginRoute: typeof AuthLoginRoute
-  AuthRegisterRoute: typeof AuthRegisterRoute
-  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   ShareTokenRoute: typeof ShareTokenRoute
-  AuthIndexRoute: typeof AuthIndexRoute
+  NoteIndexRoute: typeof NoteIndexRoute
   ApiAssetsKeyRoute: typeof ApiAssetsKeyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiShareAssetsTokenAttachmentIdRoute: typeof ApiShareAssetsTokenAttachmentIdRoute
@@ -263,25 +256,18 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/render-tracker-demo': {
-      id: '/render-tracker-demo'
-      path: '/render-tracker-demo'
-      fullPath: '/render-tracker-demo'
-      preLoaderRoute: typeof RenderTrackerDemoRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/note': {
-      id: '/note'
-      path: '/note'
-      fullPath: '/note'
-      preLoaderRoute: typeof NoteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/404': {
       id: '/404'
       path: '/404'
       fullPath: '/404'
       preLoaderRoute: typeof R404RouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/app': {
@@ -298,12 +284,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/note/': {
+      id: '/note/'
+      path: '/note'
+      fullPath: '/note/'
+      preLoaderRoute: typeof NoteIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/': {
       id: '/auth/'
-      path: '/auth'
+      path: '/'
       fullPath: '/auth/'
       preLoaderRoute: typeof AuthIndexRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/app/': {
       id: '/app/'
@@ -321,31 +314,31 @@ declare module '@tanstack/react-router' {
     }
     '/auth/reset-password': {
       id: '/auth/reset-password'
-      path: '/auth/reset-password'
+      path: '/reset-password'
       fullPath: '/auth/reset-password'
       preLoaderRoute: typeof AuthResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/register': {
       id: '/auth/register'
-      path: '/auth/register'
+      path: '/register'
       fullPath: '/auth/register'
       preLoaderRoute: typeof AuthRegisterRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/login': {
       id: '/auth/login'
-      path: '/auth/login'
+      path: '/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/auth/forgot-password': {
       id: '/auth/forgot-password'
-      path: '/auth/forgot-password'
+      path: '/forgot-password'
       fullPath: '/auth/forgot-password'
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/api/upload-attachment': {
       id: '/api/upload-attachment'
@@ -406,20 +399,35 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
   AppRouteRouteChildren,
 )
 
-const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  AppRouteRoute: AppRouteRouteWithChildren,
-  R404Route: R404Route,
-  NoteRoute: NoteRoute,
-  RenderTrackerDemoRoute: RenderTrackerDemoRoute,
-  ApiClientErrorsRoute: ApiClientErrorsRoute,
-  ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,
+interface AuthRouteRouteChildren {
+  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthRegisterRoute: typeof AuthRegisterRoute
+  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthIndexRoute: typeof AuthIndexRoute
+}
+
+const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
-  ShareTokenRoute: ShareTokenRoute,
   AuthIndexRoute: AuthIndexRoute,
+}
+
+const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
+  AuthRouteRouteChildren,
+)
+
+const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
+  AppRouteRoute: AppRouteRouteWithChildren,
+  AuthRouteRoute: AuthRouteRouteWithChildren,
+  R404Route: R404Route,
+  ApiClientErrorsRoute: ApiClientErrorsRoute,
+  ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,
+  ShareTokenRoute: ShareTokenRoute,
+  NoteIndexRoute: NoteIndexRoute,
   ApiAssetsKeyRoute: ApiAssetsKeyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiShareAssetsTokenAttachmentIdRoute: ApiShareAssetsTokenAttachmentIdRoute,

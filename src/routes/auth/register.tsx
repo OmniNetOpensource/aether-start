@@ -1,6 +1,5 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import { SubmitEvent, useEffect, useRef, useState } from 'react';
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
-import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { authClient } from '@/lib/auth/auth-client';
 import { getSessionStateFn } from '@/server/functions/auth/session-state';
@@ -15,6 +14,14 @@ import {
   getSafeRedirectTarget,
 } from './-_utils';
 
+/**
+ * 注册与邮箱验证（OTP）。
+ *
+ * - 默认：`RegisterForm` 收集邮箱与密码，调用 `signUp.email`；成功后 `replace` 到同一路由并带上
+ *   `verify=true` 与 `email`，切换为 `VerifyEmailPanel`。
+ * - 验证模式：6 位 OTP，支持粘贴、退格回退焦点；验证成功后按 `getSafeRedirectTarget(redirect)` 跳转。
+ * - `search.verify` 仅在 `validateSearch` 中从原始 query 透传，用于区分「填表」与「收邮件验证码」两阶段。
+ */
 export const Route = createFileRoute('/auth/register')({
   validateSearch: (search: Record<string, unknown>) => {
     const result: { redirect?: string; reset?: 'success'; email?: string; verify?: 'true' } =
@@ -31,6 +38,7 @@ export const Route = createFileRoute('/auth/register')({
   component: RegisterPage,
 });
 
+/** 根据是否处于「验证邮箱」阶段，在表单与 OTP 面板之间切换。 */
 function RegisterPage() {
   const { email: routeEmail, redirect: redirectTarget, verify } = Route.useSearch();
   const normalizedRouteEmail = routeEmail?.trim().toLowerCase() ?? '';
@@ -38,35 +46,26 @@ function RegisterPage() {
   const target = getSafeRedirectTarget(redirectTarget);
 
   return (
-    <main className='relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background p-6'>
-      <div className='absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[#e8e4dc] via-background to-background' />
-      <div className='absolute top-0 left-0 right-0 h-px bg-(--interactive-primary)' />
-
-      <motion.div
-        initial={{ opacity: 0, y: 10, scale: 0.98 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className='relative z-10 w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border'
-      >
-        {isVerifyMode ? (
-          <VerifyEmailPanel
-            key={normalizedRouteEmail}
-            email={normalizedRouteEmail}
-            redirectTarget={redirectTarget}
-            target={target}
-          />
-        ) : (
-          <RegisterForm
-            key={normalizedRouteEmail || 'register'}
-            initialEmail={normalizedRouteEmail}
-            redirectTarget={redirectTarget}
-          />
-        )}
-      </motion.div>
-    </main>
+    <div className='w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
+      {isVerifyMode ? (
+        <VerifyEmailPanel
+          key={normalizedRouteEmail}
+          email={normalizedRouteEmail}
+          redirectTarget={redirectTarget}
+          target={target}
+        />
+      ) : (
+        <RegisterForm
+          key={normalizedRouteEmail || 'register'}
+          initialEmail={normalizedRouteEmail}
+          redirectTarget={redirectTarget}
+        />
+      )}
+    </div>
   );
 }
 
+/** 注册第一步：提交邮箱与密码后进入同路由的 verify 阶段。 */
 function RegisterForm({
   initialEmail,
   redirectTarget,
@@ -82,7 +81,7 @@ function RegisterForm({
   const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  const submit = async (event: SubmitEvent<HTMLFormElement>) => {
     event.preventDefault();
     const normalizedEmail = email.trim().toLowerCase();
     if (!normalizedEmail || !password || !confirmPassword) {
@@ -126,12 +125,7 @@ function RegisterForm({
   return (
     <>
       <div className='mb-8 space-y-2 text-center'>
-        <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.4 }}
-          className='mx-auto mb-6 flex h-12 w-12 rotate-3 cursor-default items-center justify-center rounded-xl bg-foreground text-background shadow-sm transition-transform hover:rotate-0'
-        >
+        <div className='mx-auto mb-6 flex h-12 w-12 rotate-3 cursor-default items-center justify-center rounded-xl bg-foreground text-background shadow-sm transition-transform hover:rotate-0 animate-in fade-in zoom-in-90 duration-300'>
           <svg
             xmlns='http://www.w3.org/2000/svg'
             width='24'
@@ -145,7 +139,7 @@ function RegisterForm({
           >
             <path d='m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z' />
           </svg>
-        </motion.div>
+        </div>
         <h1 className='text-2xl font-bold tracking-tight'>创建账号</h1>
         <p className='text-sm text-muted-foreground'>注册后即可开始使用</p>
       </div>
@@ -235,59 +229,37 @@ function RegisterForm({
         </div>
 
         <div className='min-h-[20px]'>
-          <AnimatePresence mode='popLayout'>
-            {formErrorMessage && (
-              <motion.p
-                initial={{ opacity: 0, y: -5 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -5 }}
-                className='flex items-center gap-1.5 text-sm text-(--status-destructive)'
+          {formErrorMessage ? (
+            <p className='flex items-center gap-1.5 text-sm text-(--status-destructive) animate-in fade-in slide-in-from-top-1 duration-200'>
+              <svg
+                xmlns='http://www.w3.org/2000/svg'
+                width='14'
+                height='14'
+                viewBox='0 0 24 24'
+                fill='none'
+                stroke='currentColor'
+                strokeWidth='2'
+                strokeLinecap='round'
+                strokeLinejoin='round'
               >
-                <svg
-                  xmlns='http://www.w3.org/2000/svg'
-                  width='14'
-                  height='14'
-                  viewBox='0 0 24 24'
-                  fill='none'
-                  stroke='currentColor'
-                  strokeWidth='2'
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
-                >
-                  <circle cx='12' cy='12' r='10' />
-                  <line x1='12' x2='12' y1='8' y2='12' />
-                  <line x1='12' x2='12.01' y1='16' y2='16' />
-                </svg>
-                {formErrorMessage}
-              </motion.p>
-            )}
-          </AnimatePresence>
+                <circle cx='12' cy='12' r='10' />
+                <line x1='12' x2='12' y1='8' y2='12' />
+                <line x1='12' x2='12.01' y1='16' y2='16' />
+              </svg>
+              {formErrorMessage}
+            </p>
+          ) : null}
         </div>
 
         <Button className='relative w-full overflow-hidden' type='submit' disabled={isSubmitting}>
-          <AnimatePresence mode='wait'>
-            {isSubmitting ? (
-              <motion.div
-                key='submitting'
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className='flex items-center gap-2'
-              >
-                <Loader2 className='h-4 w-4 animate-spin' />
-                <span>处理中...</span>
-              </motion.div>
-            ) : (
-              <motion.span
-                key='idle'
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-              >
-                注册
-              </motion.span>
-            )}
-          </AnimatePresence>
+          {isSubmitting ? (
+            <span className='flex items-center gap-2'>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              <span>处理中...</span>
+            </span>
+          ) : (
+            '注册'
+          )}
         </Button>
       </form>
 
@@ -305,6 +277,10 @@ function RegisterForm({
   );
 }
 
+/**
+ * 注册第二步：邮箱 OTP。输入满 6 位或点击「验证」调用 `emailOtp.verifyEmail`；
+ * 「重新发送」带 30s 冷却，避免频繁请求。
+ */
 function VerifyEmailPanel({
   email,
   redirectTarget,
@@ -322,6 +298,7 @@ function VerifyEmailPanel({
   const [resendCooldownSeconds, setResendCooldownSeconds] = useState(0);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  // 重发冷却：每秒递减，到 0 时清除 interval。
   useEffect(() => {
     if (resendCooldownSeconds <= 0) return;
     const id = setInterval(() => {
@@ -460,18 +437,13 @@ function VerifyEmailPanel({
         ))}
       </div>
 
-      <AnimatePresence>
-        {verifyErrorMessage && (
-          <motion.p
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className='mb-4 text-center text-sm text-(--status-destructive)'
-          >
+      <div className='mb-4 min-h-[20px]'>
+        {verifyErrorMessage ? (
+          <p className='text-center text-sm text-(--status-destructive) animate-in fade-in slide-in-from-top-1 duration-200'>
             {verifyErrorMessage}
-          </motion.p>
-        )}
-      </AnimatePresence>
+          </p>
+        ) : null}
+      </div>
 
       <div className='space-y-3'>
         <Button
