@@ -27,84 +27,38 @@ let codePluginPromise: Promise<CodeHighlighterPlugin> | null = null;
 const loadCodePlugin = () => {
   if (!codePluginPromise) {
     codePluginPromise = import('@streamdown/code').then(({ createCodePlugin }) =>
-      createCodePlugin({
-        themes: ['github-light', 'github-dark'],
-      }),
+      createCodePlugin({ themes: ['github-light', 'github-dark'] }),
     );
   }
-
   return codePluginPromise;
 };
 
-function getHighlightCacheKey(code: string) {
-  return code;
-}
-
-export function ArtifactCodeBlock({ code }: { code: string }) {
-  const cacheKey = getHighlightCacheKey(code);
-  const [codePlugin, setCodePlugin] = useState<CodeHighlighterPlugin | null>(null);
-  const [highlightState, setHighlightState] = useState(() => ({
-    cacheKey,
-    result: highlightCache.get(cacheKey) ?? null,
-  }));
-  const highlight =
-    highlightState.cacheKey === cacheKey
-      ? highlightState.result
-      : (highlightCache.get(cacheKey) ?? null);
+export function ArtifactCodeBlock({ code, isCompleted }: { code: string; isCompleted: boolean }) {
+  const [highlight, setHighlight] = useState<HighlightResult | null>(
+    () => highlightCache.get(code) ?? null,
+  );
 
   useEffect(() => {
-    if (codePlugin) {
-      return;
-    }
+    if (!isCompleted || highlightCache.has(code)) return;
 
     let cancelled = false;
 
     void loadCodePlugin().then((plugin) => {
-      if (!cancelled) {
-        setCodePlugin(plugin);
-      }
+      if (cancelled) return;
+
+      const apply = (result: HighlightResult) => {
+        highlightCache.set(code, result);
+        if (!cancelled) setHighlight(result);
+      };
+
+      const result = plugin.highlight({ code, language: lang, themes: plugin.getThemes() }, apply);
+      if (result) apply(result);
     });
 
     return () => {
       cancelled = true;
     };
-  }, [codePlugin]);
-
-  useEffect(() => {
-    if (!codePlugin || !codePlugin.supportsLanguage(lang) || highlightCache.has(cacheKey)) {
-      return;
-    }
-
-    let cancelled = false;
-
-    const applyHighlight = (nextHighlight: HighlightResult) => {
-      highlightCache.set(cacheKey, nextHighlight);
-
-      queueMicrotask(() => {
-        if (cancelled) {
-          return;
-        }
-
-        setHighlightState({
-          cacheKey,
-          result: nextHighlight,
-        });
-      });
-    };
-
-    const nextHighlight = codePlugin.highlight(
-      { code, language: lang, themes: codePlugin.getThemes() },
-      applyHighlight,
-    );
-
-    if (nextHighlight) {
-      applyHighlight(nextHighlight);
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [cacheKey, code, codePlugin]);
+  }, [code, isCompleted]);
 
   if (!highlight) {
     return (

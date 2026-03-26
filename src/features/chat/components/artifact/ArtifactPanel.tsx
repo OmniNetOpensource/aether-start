@@ -113,7 +113,10 @@ function ArtifactPanelBody() {
             key={selectedArtifact.id}
             className='min-h-0 h-full overflow-auto p-4 text-xs leading-relaxed'
           >
-            <ArtifactCodeBlock code={selectedArtifact.code} />
+            <ArtifactCodeBlock
+              code={selectedArtifact.code}
+              isCompleted={selectedArtifact.status === 'completed'}
+            />
           </div>
         )}
       </div>

@@ -11,11 +11,7 @@ function writeComposerDraftStorage(value: string) {
     return;
   }
 
-  try {
-    localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, value);
-  } catch {
-    // ignore
-  }
+  localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, value);
 }
 
 export function readComposerDraftFromStorage(): string {
@@ -23,15 +19,11 @@ export function readComposerDraftFromStorage(): string {
     return '';
   }
 
-  try {
-    const raw = localStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
-    if (raw === null) {
-      return '';
-    }
-    return raw;
-  } catch {
+  const raw = localStorage.getItem(COMPOSER_DRAFT_STORAGE_KEY);
+  if (raw === null) {
     return '';
   }
+  return raw;
 }
 
 type PendingQuote = { id: string; text: string };

@@ -12,20 +12,48 @@ import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { useMountEffect } from '@/hooks/useMountEffect';
 
+const PROMPT_STORAGE_KEY = 'aether_current_prompt';
+
+function readStoredPromptId(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return localStorage.getItem(PROMPT_STORAGE_KEY) ?? '';
+}
+
 export function PromptSelector() {
   const appShellData = useAppShellRouteData();
 
   const setCurrentPrompt = useChatSessionStore((state) => state.setCurrentPrompt);
   const currentPromptId = useChatSessionStore((state) => state.currentPromptId);
   const prompts = appShellData?.availablePrompts ?? [];
+  const rawStoredPromptId = readStoredPromptId();
+  const storedPromptId =
+    rawStoredPromptId && prompts.some((p) => p.id === rawStoredPromptId)
+      ? rawStoredPromptId
+      : '';
   const selectedPromptId =
-    currentPromptId || appShellData?.initialPromptId || prompts[0]?.id || 'aether';
+    currentPromptId ||
+    appShellData?.initialPromptId ||
+    storedPromptId ||
+    prompts[0]?.id ||
+    'aether';
+
+  const persistPromptSelection = (promptId: string) => {
+    setCurrentPrompt(promptId);
+    if (typeof window === 'undefined' || !promptId) {
+      return;
+    }
+
+    localStorage.setItem(PROMPT_STORAGE_KEY, promptId);
+  };
 
   const currentPromptName =
     prompts.find((prompt) => prompt.id === selectedPromptId)?.name ?? 'aether';
 
   useMountEffect(() => {
-    setCurrentPrompt(selectedPromptId);
+    persistPromptSelection(selectedPromptId);
   });
 
   const toolButtonBaseClass =
@@ -54,7 +82,10 @@ export function PromptSelector() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' sideOffset={4}>
         {prompts.map((prompt) => (
-          <DropdownMenuItem key={prompt.id} onSelect={() => setCurrentPrompt(prompt.id)}>
+          <DropdownMenuItem
+            key={prompt.id}
+            onSelect={() => persistPromptSelection(prompt.id)}
+          >
             <span className='flex-1 truncate'>{prompt.name}</span>
             {selectedPromptId === prompt.id && <Check className='h-4 w-4 shrink-0' />}
           </DropdownMenuItem>

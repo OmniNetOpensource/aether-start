@@ -45,21 +45,6 @@ const initialArtifactState: ArtifactState = {
   artifactView: 'code',
 };
 
-const MODEL_STORAGE_KEY = 'aether_current_model';
-const PROMPT_STORAGE_KEY = 'aether_current_prompt';
-
-const setStoredValue = (key: string, value: string) => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  try {
-    localStorage.setItem(key, value);
-  } catch {
-    // ignore
-  }
-};
-
 export type ChatSessionSelectionState = {
   currentModelId: string;
   currentPromptId: string;
@@ -387,17 +372,9 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
     })),
   setCurrentModel: (modelId) => {
     set({ currentModelId: modelId });
-
-    if (modelId) {
-      setStoredValue(MODEL_STORAGE_KEY, modelId);
-    }
   },
   setCurrentPrompt: (promptId) => {
     set({ currentPromptId: promptId });
-
-    if (promptId) {
-      setStoredValue(PROMPT_STORAGE_KEY, promptId);
-    }
   },
   clearSession: () => {
     const state = get();

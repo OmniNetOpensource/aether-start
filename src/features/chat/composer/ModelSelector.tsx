@@ -17,6 +17,16 @@ import { useResponsive } from '@/components/ResponsiveContext';
 import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 
+const MODEL_STORAGE_KEY = 'aether_current_model';
+
+function readStoredModelId(): string {
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  return localStorage.getItem(MODEL_STORAGE_KEY) ?? '';
+}
+
 export function ModelSelector() {
   const appShellData = useAppShellRouteData();
   const [open, setOpen] = useState(false);
@@ -24,13 +34,27 @@ export function ModelSelector() {
   const isMobile = useResponsive() === 'mobile';
   const setCurrentModel = useChatSessionStore((state) => state.setCurrentModel);
   const availableModels = appShellData?.availableModels ?? [];
+  const rawStoredModelId = readStoredModelId();
+  const storedModelId =
+    rawStoredModelId && availableModels.some((m) => m.id === rawStoredModelId)
+      ? rawStoredModelId
+      : '';
   const selectedModelId =
-    currentModelId || appShellData?.initialModelId || availableModels[0]?.id || '';
+    currentModelId || appShellData?.initialModelId || storedModelId || availableModels[0]?.id || '';
+
+  const persistModelSelection = (modelId: string) => {
+    setCurrentModel(modelId);
+    if (typeof window === 'undefined' || !modelId) {
+      return;
+    }
+
+    localStorage.setItem(MODEL_STORAGE_KEY, modelId);
+  };
 
   const currentModelName = availableModels.find((m) => m.id === selectedModelId)?.name ?? '';
 
   useMountEffect(() => {
-    setCurrentModel(selectedModelId);
+    persistModelSelection(selectedModelId);
   });
 
   const toolButtonBaseClass =
@@ -69,7 +93,7 @@ export function ModelSelector() {
                 key={m.id}
                 value={`${m.id} ${m.name}`}
                 onSelect={() => {
-                  setCurrentModel(m.id);
+                  persistModelSelection(m.id);
                   setOpen(false);
                 }}
               >
