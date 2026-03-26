@@ -16,8 +16,8 @@ The codebase has already been split by feature, but the import aliases still pre
 ## Project Structure & Module Organization
 
 - `src/routes/` contains TanStack Start file-based routes. Dynamic segments use `$`.
-- `src/routes/__root.tsx` wires the root shell, theme loader, responsive provider, tooltip provider, toast container, and Sentry boundary.
-- `src/routes/app/route.tsx` is the authenticated app shell. Keep its login redirect behavior intact.
+- `src/routes/__root.tsx` wires the root shell, theme loader, responsive provider, tooltip provider, toast container, Sentry boundary, and auth redirects for `/app` and `/note`.
+- `src/routes/app/route.tsx` is the authenticated app shell (chat layout with sidebar).
 - `src/routes/app/c/$conversationId.tsx` renders the conversation page with `MessageList`, `Composer`, and the artifact side panel.
 - `src/routes/share/$token.tsx` and `src/routes/api/share-assets/$token/$attachmentId.ts` implement public read-only sharing.
 - `src/routes/api/assets/$key.ts` serves private R2 assets. `src/routes/api/auth/$.ts` is the Better Auth entry.

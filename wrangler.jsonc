@@ -3,7 +3,7 @@
   "name": "aether-start",
   "main": "server-entry.ts",
   "compatibility_date": "2026-02-05",
-  "compatibility_flags": ["nodejs_compat"],
+  "compatibility_flags": ["nodejs_compat", "no_handle_cross_request_promise_resolution"],
   "observability": {
     "enabled": true,
   },

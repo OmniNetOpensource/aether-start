@@ -1,5 +1,5 @@
 import { useMountEffect } from '@/hooks/useMountEffect';
-import { HeadContent, Outlet, Scripts, createRootRoute } from '@tanstack/react-router';
+import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/react-router';
 import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
 import { reportClientError } from '@/lib/report-client-error';
 
@@ -9,10 +9,30 @@ import { ToastContainer } from '@/components/ui/toast-container';
 import { ResponsiveProvider } from '@/components/ResponsiveContext';
 import { NotFound } from '@/routes/-not-found';
 import { getTheme } from '@/server/functions/theme';
+import { getSessionStateFn } from '@/server/functions/auth/session-state';
 
 import appCss from '@/routes/globals.css?url';
 
+const PROTECTED_PREFIXES = ['/app', '/note'];
+
 export const Route = createRootRoute({
+  beforeLoad: async ({ location }) => {
+    const needsAuth = PROTECTED_PREFIXES.some((p) => location.pathname.startsWith(p));
+    if (!needsAuth) {
+      return;
+    }
+
+    const sessionState = await getSessionStateFn();
+    if (sessionState.isAuthenticated) {
+      return;
+    }
+
+    const hashSuffix = location.hash ? `#${location.hash}` : '';
+    const target = `${location.pathname}${location.searchStr}${hashSuffix}`;
+    throw redirect({
+      href: `/auth/login?redirect=${encodeURIComponent(target)}`,
+    });
+  },
   loader: () => getTheme(),
   component: RootComponent,
   head: () => ({

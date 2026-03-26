@@ -1,6 +1,4 @@
-import { useRef } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { Composer } from '@/features/chat/composer/Composer';
 import { MessageList } from '@/components/chat/message/MessageList';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useEditingStore } from '@/features/chat/editing/useEditingStore';
@@ -22,18 +20,10 @@ export const Route = createFileRoute('/app/')({
 function HomePage() {
   const messages = useChatSessionStore((state) => state.messages);
   const hasMessages = messages.length > 0;
-  const chatAreaRef = useRef<HTMLDivElement>(null);
 
-  return (
-    <div className='flex h-full w-full flex-col'>
-      <main className='relative flex min-h-0 flex-1'>
-        <div ref={chatAreaRef} className='@container relative flex min-h-0 min-w-0 flex-1 flex-col'>
-          <div className='flex min-h-0 min-w-0 flex-1 flex-col'>
-            {hasMessages ? <MessageList className='flex-1 min-h-0' /> : null}
-          </div>
-          <Composer />
-        </div>
-      </main>
-    </div>
-  );
+  if (!hasMessages) {
+    return null;
+  }
+
+  return <MessageList className='flex-1 min-h-0' />;
 }

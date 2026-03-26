@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 export function NotesButton() {
-  const isActive = !!useMatch({ from: '/app/notes', shouldThrow: false });
+  const isActive = !!useMatch({ from: '/note', shouldThrow: false });
 
   return (
     <Button
@@ -18,7 +18,7 @@ export function NotesButton() {
       )}
       aria-label='灵感笔记'
     >
-      <Link to='/app/notes'>
+      <Link to='/note'>
         <span className='flex h-10 w-10 shrink-0 items-center justify-center'>
           <Lightbulb className='h-5 w-5 transition-transform duration-300 group-hover:rotate-6' />
         </span>

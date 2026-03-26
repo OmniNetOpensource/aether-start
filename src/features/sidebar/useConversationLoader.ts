@@ -104,9 +104,11 @@ export function useConversationLoader(loadingConversationId: string) {
   const defaultTitle = 'Aether';
   // 同步更新 document.title，离开时由下方 effect cleanup 恢复
   // eslint-disable-next-line -- intentionally sync
-  document.title = title
-    ? `${title.length > 50 ? `${title.slice(0, 50)}...` : title} - Aether`
-    : defaultTitle;
+  if (typeof window !== 'undefined') {
+    document.title = title
+      ? `${title.length > 50 ? `${title.slice(0, 50)}...` : title} - Aether`
+      : defaultTitle;
+  }
 
   /**
    * 切换/离开对话时的清理 effect

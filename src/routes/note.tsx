@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { Lightbulb, Loader2, Plus } from 'lucide-react';
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
+import { ArrowLeft, Lightbulb, Loader2, Plus } from 'lucide-react';
 import { buildAttachmentsFromFiles } from '@/shared/attachments';
 import { collectClipboardFiles } from '@/lib/utils/file';
 import { NoteCard } from '@/features/notes/components/NoteCard';
@@ -23,7 +23,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/useToast';
 
-export const Route = createFileRoute('/app/notes')({
+export const Route = createFileRoute('/note')({
   component: NotesPage,
 });
 
@@ -182,9 +182,16 @@ function NotesPage() {
   };
 
   return (
-    <div className='flex h-full min-h-0 w-full flex-col'>
+    <div className='flex h-screen min-h-0 w-full flex-col'>
       <header className='flex h-14 shrink-0 items-center justify-between border-b px-6'>
-        <div className='flex items-center gap-2 text-(--text-primary)'>
+        <div className='flex min-w-0 items-center gap-3 text-(--text-primary)'>
+          <Link
+            to='/app'
+            className='inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-(--text-secondary) hover:bg-(--surface-hover) hover:text-(--text-primary)'
+            aria-label='Back to chat'
+          >
+            <ArrowLeft className='h-4 w-4' />
+          </Link>
           <Lightbulb className='h-5 w-5' />
           <h1 className='text-xl font-semibold md:text-2xl'>Notes</h1>
         </div>

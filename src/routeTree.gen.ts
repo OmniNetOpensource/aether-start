@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RenderTrackerDemoRouteImport } from './routes/render-tracker-demo'
+import { Route as NoteRouteImport } from './routes/note'
 import { Route as R404RouteImport } from './routes/404'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -20,7 +21,6 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-passw
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
-import { Route as AppNotesRouteImport } from './routes/app/notes'
 import { Route as ApiUploadAttachmentRouteImport } from './routes/api/upload-attachment'
 import { Route as ApiClientErrorsRouteImport } from './routes/api/client-errors'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
@@ -31,6 +31,11 @@ import { Route as ApiShareAssetsTokenAttachmentIdRouteImport } from './routes/ap
 const RenderTrackerDemoRoute = RenderTrackerDemoRouteImport.update({
   id: '/render-tracker-demo',
   path: '/render-tracker-demo',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NoteRoute = NoteRouteImport.update({
+  id: '/note',
+  path: '/note',
   getParentRoute: () => rootRouteImport,
 } as any)
 const R404Route = R404RouteImport.update({
@@ -83,11 +88,6 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/auth/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppNotesRoute = AppNotesRouteImport.update({
-  id: '/notes',
-  path: '/notes',
-  getParentRoute: () => AppRouteRoute,
-} as any)
 const ApiUploadAttachmentRoute = ApiUploadAttachmentRouteImport.update({
   id: '/api/upload-attachment',
   path: '/api/upload-attachment',
@@ -124,10 +124,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/note': typeof NoteRoute
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
-  '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
@@ -143,10 +143,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
+  '/note': typeof NoteRoute
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
-  '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
@@ -164,10 +164,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/app': typeof AppRouteRouteWithChildren
   '/404': typeof R404Route
+  '/note': typeof NoteRoute
   '/render-tracker-demo': typeof RenderTrackerDemoRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
-  '/app/notes': typeof AppNotesRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
@@ -186,10 +186,10 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/404'
+    | '/note'
     | '/render-tracker-demo'
     | '/api/client-errors'
     | '/api/upload-attachment'
-    | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
@@ -205,10 +205,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/404'
+    | '/note'
     | '/render-tracker-demo'
     | '/api/client-errors'
     | '/api/upload-attachment'
-    | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
@@ -225,10 +225,10 @@ export interface FileRouteTypes {
     | '/'
     | '/app'
     | '/404'
+    | '/note'
     | '/render-tracker-demo'
     | '/api/client-errors'
     | '/api/upload-attachment'
-    | '/app/notes'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
@@ -246,6 +246,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRouteRoute: typeof AppRouteRouteWithChildren
   R404Route: typeof R404Route
+  NoteRoute: typeof NoteRoute
   RenderTrackerDemoRoute: typeof RenderTrackerDemoRoute
   ApiClientErrorsRoute: typeof ApiClientErrorsRoute
   ApiUploadAttachmentRoute: typeof ApiUploadAttachmentRoute
@@ -267,6 +268,13 @@ declare module '@tanstack/react-router' {
       path: '/render-tracker-demo'
       fullPath: '/render-tracker-demo'
       preLoaderRoute: typeof RenderTrackerDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/note': {
+      id: '/note'
+      path: '/note'
+      fullPath: '/note'
+      preLoaderRoute: typeof NoteRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/404': {
@@ -339,13 +347,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app/notes': {
-      id: '/app/notes'
-      path: '/notes'
-      fullPath: '/app/notes'
-      preLoaderRoute: typeof AppNotesRouteImport
-      parentRoute: typeof AppRouteRoute
-    }
     '/api/upload-attachment': {
       id: '/api/upload-attachment'
       path: '/api/upload-attachment'
@@ -392,13 +393,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteRouteChildren {
-  AppNotesRoute: typeof AppNotesRoute
   AppIndexRoute: typeof AppIndexRoute
   AppCConversationIdRoute: typeof AppCConversationIdRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppNotesRoute: AppNotesRoute,
   AppIndexRoute: AppIndexRoute,
   AppCConversationIdRoute: AppCConversationIdRoute,
 }
@@ -411,6 +410,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRouteRoute: AppRouteRouteWithChildren,
   R404Route: R404Route,
+  NoteRoute: NoteRoute,
   RenderTrackerDemoRoute: RenderTrackerDemoRoute,
   ApiClientErrorsRoute: ApiClientErrorsRoute,
   ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,

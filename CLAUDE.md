@@ -68,12 +68,12 @@ TanStack Start file routes live in `src/routes/`.
 
 Important routes:
 
-- `src/routes/__root.tsx` - root shell, theme loader, responsive provider, tooltip, toast, Sentry boundary
+- `src/routes/__root.tsx` - root shell, theme loader, responsive provider, tooltip, toast, Sentry boundary, auth redirect for `/app` and `/note`
 - `src/routes/index.tsx` - landing route
 - `src/routes/app/route.tsx` - authenticated app shell
 - `src/routes/app/index.tsx` - new chat landing
 - `src/routes/app/c/$conversationId.tsx` - conversation page with artifact panel
-- `src/routes/app/notes.tsx` - notes page
+- `src/routes/note.tsx` - notes page
 - `src/routes/auth/*.tsx` - auth pages
 - `src/routes/share/$token.tsx` - public read-only shared conversation
 - `src/routes/api/assets/$key.ts` - private asset delivery from R2
@@ -387,7 +387,7 @@ When working on conversations, remember the change can touch:
 - artifact hydration and cleanup
 - share snapshot sanitization
 
-When working on auth-gated app routes, preserve the redirect behavior in `src/routes/app/route.tsx`.
+When working on auth-gated app routes, preserve the redirect behavior in `src/routes/__root.tsx`.
 
 When working on public share routes, preserve read-only behavior and noindex semantics.
 
