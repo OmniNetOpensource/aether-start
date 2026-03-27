@@ -63,6 +63,7 @@ export const initialChatSessionSelectionState: ChatSessionSelectionState = {
 type ChatSessionState = TreeSnapshot &
   ChatSessionSelectionState & {
     conversationId: string | null;
+    pageTitle: string;
   } & ArtifactState;
 
 type ChatSessionActions = {
@@ -86,6 +87,7 @@ type ChatSessionActions = {
   appendArtifactCode: (artifactId: string, delta: string) => void;
   completeArtifact: (artifactId: string) => void;
   failArtifact: (artifactId: string, message: string) => void;
+  setPageTitle: (title: string) => void;
   clearSession: () => void;
   getTreeState: () => TreeSnapshot;
   setTreeState: (partial: Partial<TreeSnapshot>) => void;
@@ -104,6 +106,7 @@ type ChatSessionActions = {
 export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>()((set, get) => ({
   ...createEmptyMessageState(),
   conversationId: null,
+  pageTitle: 'Aether',
   ...initialChatSessionSelectionState,
   ...initialArtifactState,
   setMessages: (messages) => {
@@ -381,11 +384,13 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
   setCurrentPrompt: (promptId) => {
     set({ currentPromptId: promptId });
   },
+  setPageTitle: (title) => set({ pageTitle: title }),
   clearSession: () => {
     const state = get();
     set({
       ...createEmptyMessageState(),
       conversationId: null,
+      pageTitle: 'Aether',
       ...initialArtifactState,
       currentModelId: state.currentModelId,
       currentPromptId: state.currentPromptId,

@@ -427,7 +427,7 @@ export const cancelAnswering = (reason: string) => {
  * 4. 消费返回的 SSE 流（sync_response + 后续 chat_event）
  * 5. 结束时 finalizeStream
  *
- * 取消方式：useConversationLoader 切换/离开对话时调用 cancelStreamSubscription 即可 abort
+ * 取消方式：对话页卸载时调用 cancelStreamSubscription 即可 abort
  */
 export const resumeRunningConversation = async (conversationId: string) => {
   let agentStatus: { status: ChatAgentStatus };
