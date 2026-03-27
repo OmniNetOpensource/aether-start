@@ -157,7 +157,7 @@ function ArtifactPanelBody() {
             key={selectedArtifact.id}
             title='Artifact preview'
             srcDoc={buildPreviewDocument(selectedArtifact.code)}
-            sandbox='allow-scripts'
+            sandbox='allow-scripts allow-same-origin'
             className='h-full w-full rounded-md border border-border/50 bg-background'
           />
         ) : (

@@ -54,7 +54,7 @@ const renderSpec: ChatTool = {
   function: {
     name: 'render',
     description:
-      'Create a visual artifact. Output must be a complete, self-contained HTML file that works directly in an iframe — no build step, no local imports. To use React, Vue, Three.js, or any library: load it from a CDN (e.g. https://esm.sh/react@19). Use <script type="module"> for ES modules. Tailwind CSS is available via CDN: <script src="https://cdn.tailwindcss.com"></script>',
+      'Create a visual artifact. Output must be a complete, self-contained HTML file that works directly in an iframe — no build step, no local imports. To use React with JSX: load Babel standalone (<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>) and use <script type="text/babel" data-type="module"> instead of <script type="module">. For other libraries without JSX: load from a CDN (e.g. https://esm.sh/vue@3) and use <script type="module">. Tailwind CSS: <script src="https://cdn.tailwindcss.com"></script>',
     parameters: {
       type: 'object',
       additionalProperties: false,
