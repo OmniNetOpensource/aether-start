@@ -4,6 +4,7 @@ import { deployToNetlifyFn } from '@/features/chat/server/functions/netlify-depl
 import { useResponsive } from '@/shared/providers/ResponsiveContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { cn } from '@/shared/lib/utils';
+import { toast } from '@/shared/useToast';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { buildPreviewDocument } from './preview-document';
 import { ArtifactCodeBlock } from './ArtifactCodeBlock';
@@ -46,6 +47,7 @@ function ArtifactPanelBody() {
         setDeployState({ url: result.url });
       })
       .catch(() => {
+        toast.error('Deploy failed');
         setDeployState('idle');
       });
   };
@@ -140,8 +142,7 @@ function ArtifactPanelBody() {
                   ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground',
               )}
-              onClick={() => canPreview && setArtifactView('preview')}
-              disabled={!canPreview}
+              onClick={() => setArtifactView('preview')}
             >
               <Eye className='mr-1 inline h-3 w-3' />
               Preview
@@ -150,27 +151,34 @@ function ArtifactPanelBody() {
         </div>
       </div>
 
-      {/* Main: content only */}
-      <div className='min-h-0 flex-1 overflow-hidden pt-4'>
-        {artifactView === 'preview' && canPreview ? (
-          <iframe
-            key={selectedArtifact.id}
-            title='Artifact preview'
-            srcDoc={buildPreviewDocument(selectedArtifact.code)}
-            sandbox='allow-scripts allow-same-origin'
-            className='h-full w-full rounded-md border border-border/50 bg-background'
+      {/* Main: code + preview both mounted; toggle slides one up / one down */}
+      <div className='relative min-h-0 flex-1 overflow-hidden pt-4'>
+        <div
+          key={`code-${selectedArtifact.id}`}
+          className={cn(
+            'absolute inset-0 overflow-auto p-4 text-xs leading-relaxed transition-[transform] duration-300 ease-out',
+            artifactView === 'code'
+              ? 'z-10 translate-y-0'
+              : 'pointer-events-none z-0 -translate-y-full',
+          )}
+        >
+          <ArtifactCodeBlock
+            code={selectedArtifact.code}
+            isCompleted={selectedArtifact.status === 'completed'}
           />
-        ) : (
-          <div
-            key={selectedArtifact.id}
-            className='min-h-0 h-full overflow-auto p-4 text-xs leading-relaxed'
-          >
-            <ArtifactCodeBlock
-              code={selectedArtifact.code}
-              isCompleted={selectedArtifact.status === 'completed'}
-            />
-          </div>
-        )}
+        </div>
+        <iframe
+          key={`preview-${selectedArtifact.id}`}
+          title='Artifact preview'
+          srcDoc={buildPreviewDocument(selectedArtifact.code)}
+          sandbox='allow-scripts allow-same-origin'
+          className={cn(
+            'absolute inset-0 h-full w-full rounded-md border border-border/50 bg-background transition-[transform] duration-300 ease-out',
+            artifactView === 'preview'
+              ? 'z-10 translate-y-0'
+              : 'pointer-events-none z-0 translate-y-full',
+          )}
+        />
       </div>
     </div>
   );
