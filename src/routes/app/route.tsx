@@ -2,7 +2,10 @@ import { lazy, Suspense } from 'react';
 import { Outlet, createFileRoute } from '@tanstack/react-router';
 import Sidebar from '@/features/sidebar/components/Sidebar';
 import { Composer } from '@/features/chat/composer/Composer';
-import { getAvailableModelsFn, getAvailablePromptsFn } from '@/features/chat/server/functions/models';
+import {
+  getAvailableModelsFn,
+  getAvailablePromptsFn,
+} from '@/features/chat/server/functions/models';
 import { NewChatButton } from '@/features/chat/components/NewChatButton';
 import { ArtifactToggleButton } from '@/features/chat/components/artifact/ArtifactToggleButton';
 import { ShareButton } from '@/features/share/components/ShareButton';

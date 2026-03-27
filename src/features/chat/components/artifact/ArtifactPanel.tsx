@@ -10,9 +10,7 @@ import { ArtifactCodeBlock } from './ArtifactCodeBlock';
 
 function ArtifactPanelBody() {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [deployState, setDeployState] = useState<
-    'idle' | 'deploying' | { url: string }
-  >('idle');
+  const [deployState, setDeployState] = useState<'idle' | 'deploying' | { url: string }>('idle');
   const artifacts = useChatSessionStore((state) => state.artifacts);
   const selectedArtifactId = useChatSessionStore((state) => state.selectedArtifactId);
   const artifactView = useChatSessionStore((state) => state.artifactView);
@@ -121,33 +119,33 @@ function ArtifactPanelBody() {
             </button>
           )}
           <div className='flex shrink-0 gap-0.5 rounded-md bg-(--surface-muted) p-0.5'>
-          <button
-            type='button'
-            className={cn(
-              'rounded-sm px-2 py-1 text-xs transition-colors',
-              artifactView === 'code'
-                ? 'bg-background text-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-            onClick={() => setArtifactView('code')}
-          >
-            <Braces className='mr-1 inline h-3 w-3' />
-            Code
-          </button>
-          <button
-            type='button'
-            className={cn(
-              'rounded-sm px-2 py-1 text-xs transition-colors',
-              artifactView === 'preview'
-                ? 'bg-background text-foreground shadow-xs'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-            onClick={() => canPreview && setArtifactView('preview')}
-            disabled={!canPreview}
-          >
-            <Eye className='mr-1 inline h-3 w-3' />
-            Preview
-          </button>
+            <button
+              type='button'
+              className={cn(
+                'rounded-sm px-2 py-1 text-xs transition-colors',
+                artifactView === 'code'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+              onClick={() => setArtifactView('code')}
+            >
+              <Braces className='mr-1 inline h-3 w-3' />
+              Code
+            </button>
+            <button
+              type='button'
+              className={cn(
+                'rounded-sm px-2 py-1 text-xs transition-colors',
+                artifactView === 'preview'
+                  ? 'bg-background text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+              onClick={() => canPreview && setArtifactView('preview')}
+              disabled={!canPreview}
+            >
+              <Eye className='mr-1 inline h-3 w-3' />
+              Preview
+            </button>
           </div>
         </div>
       </div>

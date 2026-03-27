@@ -11,7 +11,10 @@ import { log } from '@/features/chat/server/agents/services/logger';
 import { createChatProvider } from '@/features/chat/server/agents/services/provider-factory';
 import type { ProviderRunResult } from '@/features/chat/server/agents/services/provider-types';
 import { generateTitleFromConversation } from '@/features/chat/server/functions/chat-title';
-import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/server/agents/services/event-processor';
+import {
+  processEventToTree,
+  cloneTreeSnapshot,
+} from '@/features/chat/server/agents/services/event-processor';
 import {
   createConversationArtifact,
   getConversationById,

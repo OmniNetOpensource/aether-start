@@ -51,12 +51,7 @@ type ChatActionsRailProps = {
   scrollRef: RefObject<HTMLDivElement | null>;
 };
 
-function ChatActionsRail({
-  currentPath,
-  isMobile,
-  isStreaming,
-  scrollRef,
-}: ChatActionsRailProps) {
+function ChatActionsRail({ currentPath, isMobile, isStreaming, scrollRef }: ChatActionsRailProps) {
   const rafIdRef = useRef<number | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [currentIdx, setCurrentIdx] = useState(-1);

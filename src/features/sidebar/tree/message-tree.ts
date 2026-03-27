@@ -1,4 +1,9 @@
-import type { BranchInfo, ContentBlock, Message, ResearchItem } from '@/features/chat/types/message';
+import type {
+  BranchInfo,
+  ContentBlock,
+  Message,
+  ResearchItem,
+} from '@/features/chat/types/message';
 
 export type LegacyMessageNode = {
   id: string;
