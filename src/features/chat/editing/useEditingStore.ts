@@ -111,7 +111,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
     }
 
     if (useChatRequestStore.getState().status !== 'idle') {
-      cancelAnswering();
+      cancelAnswering('useEditingStore/submitEdit');
     }
 
     const trimmed = editingState.editedContent.trim();
@@ -160,7 +160,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
     }
 
     if (useChatRequestStore.getState().status !== 'idle') {
-      cancelAnswering();
+      cancelAnswering('useEditingStore/retryFromMessage');
     }
 
     if (targetNode.role === 'user') {

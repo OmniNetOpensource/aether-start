@@ -1,6 +1,8 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef } from 'react';
+import { createCodePlugin } from '@streamdown/code';
 import { Streamdown, defaultRehypePlugins, type PluginConfig } from 'streamdown';
 import { cjk } from '@streamdown/cjk';
+import { createMathPlugin } from '@streamdown/math';
 import 'streamdown/styles.css';
 import 'katex/dist/katex.min.css';
 
@@ -36,32 +38,12 @@ type Props = {
   isAnimating?: boolean;
 };
 
-const codeFencePattern = /```|~~~/;
-const mathPattern = /(^|[^\\])\$\$|(^|[^\\])\$[^$\n]+?\$|\\\(|\\\[/m;
-
-let codePluginPromise: Promise<PluginConfig['code']> | null = null;
-let mathPluginPromise: Promise<PluginConfig['math']> | null = null;
-
-const loadCodePlugin = () => {
-  if (!codePluginPromise) {
-    codePluginPromise = import('@streamdown/code').then(({ createCodePlugin }) =>
-      createCodePlugin({
-        themes: ['github-light', 'github-dark'],
-      }),
-    );
-  }
-
-  return codePluginPromise;
-};
-
-const loadMathPlugin = () => {
-  if (!mathPluginPromise) {
-    mathPluginPromise = import('@streamdown/math').then(({ createMathPlugin }) =>
-      createMathPlugin({ singleDollarTextMath: true }),
-    );
-  }
-
-  return mathPluginPromise;
+const plugins: PluginConfig = {
+  cjk,
+  code: createCodePlugin({
+    themes: ['github-light', 'github-dark'],
+  }),
+  math: createMathPlugin({ singleDollarTextMath: true }),
 };
 
 type StreamdownBlockProps = {
@@ -111,40 +93,7 @@ const StreamdownBlock = memo(function StreamdownBlock({
 });
 
 function MarkdownImpl({ content, isAnimating = false }: Props) {
-  const [codePlugin, setCodePlugin] = useState<PluginConfig['code']>();
-  const [mathPlugin, setMathPlugin] = useState<PluginConfig['math']>();
-  const needsCodePlugin = codeFencePattern.test(content);
-  const needsMathPlugin = mathPattern.test(content);
   const paragraphs = splitMarkdownParagraphs(content);
-  const plugins: PluginConfig = {
-    cjk,
-    ...(needsCodePlugin && codePlugin ? { code: codePlugin } : {}),
-    ...(needsMathPlugin && mathPlugin ? { math: mathPlugin } : {}),
-  };
-
-  useEffect(() => {
-    let cancelled = false;
-
-    if (needsCodePlugin && !codePlugin) {
-      void loadCodePlugin().then((plugin) => {
-        if (!cancelled) {
-          setCodePlugin(plugin);
-        }
-      });
-    }
-
-    if (needsMathPlugin && !mathPlugin) {
-      void loadMathPlugin().then((plugin) => {
-        if (!cancelled) {
-          setMathPlugin(plugin);
-        }
-      });
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [codePlugin, mathPlugin, needsCodePlugin, needsMathPlugin]);
 
   return (
     <div className='space-y-3 [&_b]:font-extrabold [&_strong]:font-extrabold'>

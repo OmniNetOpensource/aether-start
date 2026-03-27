@@ -118,7 +118,7 @@ export function useConversationLoader(loadingConversationId: string) {
     return () => {
       document.title = defaultTitle;
       resetLastEventId();
-      cancelStreamSubscription();
+      cancelStreamSubscription('useConversationLoader/cleanup');
       useEditingStore.getState().clear();
     };
   }, [loadingConversationId]);

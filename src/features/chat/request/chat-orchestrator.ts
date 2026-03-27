@@ -392,20 +392,20 @@ export const startChatRequest = async () => {
  * 取消订阅流式输出。
  * abort 本地 activeController，将 status 设为 idle。
  */
-export const cancelStreamSubscription = () => {
+export const cancelStreamSubscription = (reason: string) => {
   clearReconnectState();
   activeController?.abort();
   activeController = null;
 
-  useChatRequestStore.getState().setStatus('idle', 'cancelStreamSubscription');
+  useChatRequestStore.getState().setStatus('idle', `cancelStreamSubscription/${reason}`);
 };
 
 /**
  * 取消正在进行的 AI 回复。
  * 集成 cancelStreamSubscription 与 POST /abort 通知服务端。
  */
-export const cancelAnswering = () => {
-  cancelStreamSubscription();
+export const cancelAnswering = (reason: string) => {
+  cancelStreamSubscription(`cancelAnswering/${reason}`);
   const conversationId = useChatSessionStore.getState().conversationId;
   if (conversationId) {
     fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {

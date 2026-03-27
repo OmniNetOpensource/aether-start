@@ -250,7 +250,7 @@ export function Composer() {
 
     if (isBusy) {
       event.preventDefault();
-      cancelAnswering();
+      cancelAnswering('Composer/stopButton');
       return;
     }
 
