@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef } from 'react';
+import { lazy, Suspense } from 'react';
 
 const MarkdownImpl = lazy(() => import('./MarkdownImpl'));
 
