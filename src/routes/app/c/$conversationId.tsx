@@ -23,6 +23,7 @@ export function ConversationPage() {
   const initializeTree = useChatSessionStore((state) => state.initializeTree);
   const setConversationId = useChatSessionStore((state) => state.setConversationId);
   const setArtifacts = useChatSessionStore((state) => state.setArtifacts);
+  const setPageTitle = useChatSessionStore((state) => state.setPageTitle);
 
   useEffect(() => {
     if (currentConversationId === conversationId) return;
@@ -46,6 +47,7 @@ export function ConversationPage() {
         setConversationId(conversationId);
         initializeTree(messages, currentPath);
         setArtifacts(conversation.artifacts ?? []);
+        setPageTitle(conversation.title ?? 'Aether');
         const store = useChatSessionStore.getState();
         const modelId = conversation.model ?? '';
         store.setCurrentModel(modelId);
@@ -70,6 +72,7 @@ export function ConversationPage() {
     initializeTree,
     setConversationId,
     setArtifacts,
+    setPageTitle,
   ]);
 
   return <MessageList className='flex-1 min-h-0' />;

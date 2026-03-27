@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { Outlet, createFileRoute } from '@tanstack/react-router';
 import Sidebar from '@/features/sidebar/components/Sidebar';
 import { Composer } from '@/features/chat/composer/Composer';
@@ -13,6 +13,7 @@ import {
   AppShellRouteDataProvider,
   type AppShellRouteData,
 } from '@/features/sidebar/app-shell-route-data';
+import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { queryClient } from '@/features/sidebar/queries/query-client';
 import { conversationInfiniteQueryOptions } from '@/features/sidebar/queries/use-conversations';
 
@@ -38,6 +39,11 @@ export const Route = createFileRoute('/app')({
 
 function AppLayout() {
   const loaderData = Route.useLoaderData();
+  const pageTitle = useChatSessionStore((state) => state.pageTitle);
+
+  useEffect(() => {
+    document.title = pageTitle;
+  }, [pageTitle]);
 
   return (
     <AppShellRouteDataProvider value={loaderData}>

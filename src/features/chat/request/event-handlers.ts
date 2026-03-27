@@ -192,6 +192,12 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
   }
 
   if (event.type === 'conversation_updated') {
+    const store = useChatSessionStore.getState();
+
+    if (store.conversationId === event.conversationId && typeof event.title === 'string') {
+      store.setPageTitle(event.title);
+    }
+
     if (event.title) {
       const now = event.updated_at ?? new Date().toISOString();
       upsertConversationInCache({
