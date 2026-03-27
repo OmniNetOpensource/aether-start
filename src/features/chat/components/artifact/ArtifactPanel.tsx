@@ -1,14 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { Braces, ChevronDown, Eye, X } from 'lucide-react';
-import { useResponsive } from '@/components/ResponsiveContext';
+import { Braces, ChevronDown, ExternalLink, Eye, Loader2, X } from 'lucide-react';
+import { deployToNetlifyFn } from '@/features/chat/server/functions/netlify-deploy';
+import { useResponsive } from '@/shared/providers/ResponsiveContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { buildPreviewDocument } from './preview-document';
 import { ArtifactCodeBlock } from './ArtifactCodeBlock';
 
 function ArtifactPanelBody() {
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [deployState, setDeployState] = useState<
+    'idle' | 'deploying' | { url: string }
+  >('idle');
   const artifacts = useChatSessionStore((state) => state.artifacts);
   const selectedArtifactId = useChatSessionStore((state) => state.selectedArtifactId);
   const artifactView = useChatSessionStore((state) => state.artifactView);
@@ -16,6 +20,10 @@ function ArtifactPanelBody() {
   const selectArtifact = useChatSessionStore((state) => state.selectArtifact);
 
   const selectedArtifact = artifacts.find((a) => a.id === selectedArtifactId) ?? null;
+
+  useEffect(() => {
+    setDeployState('idle');
+  }, [selectedArtifact?.id]);
 
   if (!selectedArtifact) {
     return (
@@ -26,6 +34,23 @@ function ArtifactPanelBody() {
   }
 
   const canPreview = selectedArtifact.status === 'completed';
+
+  const handleDeploy = () => {
+    if (!canPreview || deployState === 'deploying') {
+      return;
+    }
+
+    setDeployState('deploying');
+    void deployToNetlifyFn({
+      data: { html: buildPreviewDocument(selectedArtifact.code) },
+    })
+      .then((result) => {
+        setDeployState({ url: result.url });
+      })
+      .catch(() => {
+        setDeployState('idle');
+      });
+  };
 
   return (
     <div className='flex h-full min-h-0 flex-col'>
@@ -66,7 +91,36 @@ function ArtifactPanelBody() {
             </div>
           </PopoverContent>
         </Popover>
-        <div className='flex shrink-0 gap-0.5 rounded-md bg-(--surface-muted) p-0.5'>
+        <div className='flex shrink-0 items-center gap-2'>
+          {deployState === 'deploying' ? (
+            <Loader2 className='h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground' />
+          ) : typeof deployState === 'object' && 'url' in deployState ? (
+            <a
+              href={deployState.url}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='flex max-w-40 shrink-0 items-center gap-1 truncate rounded-sm px-2 py-1 text-xs text-foreground underline-offset-2 hover:underline'
+            >
+              <ExternalLink className='h-3 w-3 shrink-0' />
+              <span className='truncate'>Open</span>
+            </a>
+          ) : (
+            <button
+              type='button'
+              disabled={!canPreview}
+              onClick={handleDeploy}
+              className={cn(
+                'flex shrink-0 items-center gap-1 rounded-sm px-2 py-1 text-xs transition-colors',
+                canPreview
+                  ? 'text-muted-foreground hover:bg-(--surface-hover) hover:text-foreground'
+                  : 'cursor-not-allowed text-muted-foreground/50',
+              )}
+            >
+              <ExternalLink className='h-3 w-3' />
+              Deploy
+            </button>
+          )}
+          <div className='flex shrink-0 gap-0.5 rounded-md bg-(--surface-muted) p-0.5'>
           <button
             type='button'
             className={cn(
@@ -94,6 +148,7 @@ function ArtifactPanelBody() {
             <Eye className='mr-1 inline h-3 w-3' />
             Preview
           </button>
+          </div>
         </div>
       </div>
 

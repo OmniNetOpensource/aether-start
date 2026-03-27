@@ -1,8 +1,8 @@
 import { useRef, type MouseEvent as ReactMouseEvent } from 'react';
-import { useMountEffect } from '@/hooks/useMountEffect';
-import { AetherLogo } from '@/components/AetherLogo';
+import { useMountEffect } from '@/shared/useMountEffect';
+import { AetherLogo } from '@/shared/components/AetherLogo';
 import { NewChatButton } from '@/features/chat/components/NewChatButton';
-import { useResponsive } from '@/components/ResponsiveContext';
+import { useResponsive } from '@/shared/providers/ResponsiveContext';
 import { NotesButton } from '@/features/notes/components/NotesButton';
 import { ConversationList } from '@/features/sidebar/components/ConversationList';
 import { ConversationSearchTrigger } from '@/features/sidebar/components/search/ConversationSearchTrigger';

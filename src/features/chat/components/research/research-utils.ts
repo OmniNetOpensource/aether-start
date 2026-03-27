@@ -1,4 +1,4 @@
-import type { Tool, ToolResult } from '@/types/message';
+import type { Tool, ToolResult } from '@/features/chat/types/message';
 
 export function getToolLifecycle(tool: Tool): {
   result?: ToolResult;

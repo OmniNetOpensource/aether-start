@@ -2,7 +2,7 @@ import type {
   ChatErrorCode,
   ChatErrorInfo,
   ChatServerToClientEvent,
-} from '@/types/chat-event-types';
+} from '@/features/chat/types/chat-event-types';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { upsertConversationInCache } from '@/features/sidebar/queries/use-conversations';
 

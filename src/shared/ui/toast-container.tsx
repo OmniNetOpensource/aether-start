@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useToastStore } from '@/stores/zustand/toast';
-import { Toast } from '@/components/ui/toast';
+import { useToastStore } from '@/shared/toastStore';
+import { Toast } from '@/shared/ui/toast';
 
 export function ToastContainer() {
   const toasts = useToastStore((state) => state.toasts);

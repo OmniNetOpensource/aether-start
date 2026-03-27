@@ -1,5 +1,5 @@
 import { createContext, useContext, useSyncExternalStore } from 'react';
-import { BREAKPOINTS, type DeviceType } from '@/lib/responsive-types';
+import { BREAKPOINTS, type DeviceType } from '@/shared/lib/responsive-types';
 
 const MOBILE_QUERY = `(max-width: ${BREAKPOINTS.mobileMax}px)`;
 const TABLET_QUERY = `(min-width: ${BREAKPOINTS.tabletMin}px) and (max-width: ${BREAKPOINTS.tabletMax}px)`;

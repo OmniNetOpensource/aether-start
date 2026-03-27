@@ -1,8 +1,8 @@
 import { X } from 'lucide-react';
-import { ImagePreview } from '@/components/ImagePreview';
-import { Button } from '@/components/ui/button';
+import { ImagePreview } from '@/shared/components/ImagePreview';
+import { Button } from '@/shared/ui/button';
 import { getAttachmentPreviewUrl } from '@/shared/attachments';
-import type { Attachment } from '@/types/message';
+import type { Attachment } from '@/features/chat/types/message';
 
 type PendingQuote = { id: string; text: string };
 

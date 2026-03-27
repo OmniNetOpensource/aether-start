@@ -3,8 +3,8 @@ import {
   stringifySearchClientPayload,
   type SearchClientResult,
 } from '@/features/chat/research/search-result-payload';
-import { log } from '@/server/agents/services/logger';
-import { getServerEnv } from '@/server/env';
+import { log } from '@/features/chat/server/agents/services/logger';
+import { getServerEnv } from '@/shared/server/env';
 
 type SearchArgs = {
   query: string;

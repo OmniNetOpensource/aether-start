@@ -1,4 +1,4 @@
-import { getServerEnv } from '@/server/env';
+import { getServerEnv } from '@/shared/server/env';
 
 const toJsonSafe = (value: unknown): unknown => {
   if (value instanceof Error) {

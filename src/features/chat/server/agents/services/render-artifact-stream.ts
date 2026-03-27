@@ -1,4 +1,4 @@
-import type { ChatServerToClientEvent } from '@/types/chat-api';
+import type { ChatServerToClientEvent } from '@/features/chat/types/chat-api';
 
 type KnownField = 'title' | 'code';
 type ParserPhase =

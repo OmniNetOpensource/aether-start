@@ -1,8 +1,8 @@
 import { AlertCircle } from 'lucide-react';
-import Markdown from '@/components/Markdown';
+import Markdown from '@/shared/components/Markdown';
 import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
 import { ResearchBlock } from '@/features/chat/components/research/ResearchBlock';
-import type { Message } from '@/types/message';
+import type { Message } from '@/features/chat/types/message';
 
 type ReadonlyMessageListProps = {
   messages: Message[];

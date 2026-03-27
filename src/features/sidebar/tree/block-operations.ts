@@ -6,7 +6,7 @@ import type {
   QuoteItem,
   ResearchItem,
   UserContentBlock,
-} from '@/types/message';
+} from '@/features/chat/types/message';
 import { cloneBlocks, cloneResearchItem } from './message-tree';
 
 type ToolLifecycleUpdate = { kind: 'tool_result'; tool: string; result: string };

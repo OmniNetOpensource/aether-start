@@ -1,10 +1,10 @@
-import type { BackendConfig } from '@/server/agents/services/model-provider-config';
+import type { BackendConfig } from '@/features/chat/server/agents/services/model-provider-config';
 import type {
   ChatErrorCode,
   ChatErrorInfo,
   ChatErrorProvider,
   ChatServerToClientEvent,
-} from '@/types/chat-api';
+} from '@/features/chat/types/chat-api';
 
 type ProviderErrorInput = {
   provider: Exclude<ChatErrorProvider, 'system'>;

@@ -4,8 +4,8 @@ import type {
   SharedConversationSnapshot,
   SharedMessageBlock,
   SharedMessageSnapshot,
-} from '@/types/share';
-import type { ResearchItem } from '@/types/message';
+} from '@/features/share/types/share';
+import type { ResearchItem } from '@/features/chat/types/message';
 
 type ConversationShareRecord = {
   user_id: string;

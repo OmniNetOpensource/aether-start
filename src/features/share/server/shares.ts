@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-import { getServerBindings } from '@/server/env';
-import { requireSession } from '@/server/functions/auth/session';
+import { getServerBindings } from '@/shared/server/env';
+import { requireSession } from '@/features/auth/server/session';
 import {
   getShareByConversation,
   getPublicShareByToken,
@@ -10,13 +10,13 @@ import {
   resolveStorageKeyForSharedAttachment,
   resolveThumbnailStorageKeyForSharedAttachment,
   upsertOrReactivateShare,
-} from '@/server/db/conversation-shares-db';
-import { getConversationById } from '@/server/db/conversations-db';
+} from '@/features/share/server/conversation-shares-db';
+import { getConversationById } from '@/features/sidebar/server/conversations-db';
 import type {
   SharedAttachmentSnapshot,
   SharedConversationSnapshot,
   SharedMessageBlock,
-} from '@/types/share';
+} from '@/features/share/types/share';
 
 const shareTokenSchema = z.string().min(1).max(128);
 

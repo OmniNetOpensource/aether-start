@@ -1,7 +1,7 @@
 import { ClipboardEvent, useRef, useState } from 'react';
 import { ImagePlus, Loader2, X } from 'lucide-react';
-import { ImagePreview } from '@/components/ImagePreview';
-import { Button } from '@/components/ui/button';
+import { ImagePreview } from '@/shared/components/ImagePreview';
+import { Button } from '@/shared/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -9,11 +9,11 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/hooks/useToast';
+} from '@/shared/ui/dialog';
+import { Textarea } from '@/shared/ui/textarea';
+import { toast } from '@/shared/useToast';
 import { getAttachmentPreviewUrl } from '@/shared/attachments';
-import { collectClipboardFiles } from '@/lib/utils/file';
+import { collectClipboardFiles } from '@/shared/lib/utils/file';
 import { useAttachmentUpload } from '@/features/notes/useAttachmentUpload';
 import type { NoteItem } from '@/features/notes/useNotesStore';
 

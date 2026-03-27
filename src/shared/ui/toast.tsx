@@ -8,8 +8,8 @@ import {
   AlertCircleIcon,
 } from 'lucide-react';
 
-import { cn } from '@/lib/utils';
-import { Toast as ToastType } from '@/stores/zustand/toast';
+import { cn } from '@/shared/lib/utils';
+import { Toast as ToastType } from '@/shared/toastStore';
 
 const toastVariants = cva(
   'relative flex items-start gap-3 rounded-md border p-4 shadow-lg transition-all',

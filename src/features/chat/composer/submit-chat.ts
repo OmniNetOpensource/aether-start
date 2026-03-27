@@ -1,6 +1,6 @@
 import { startChatRequest } from '@/features/chat/request/chat-orchestrator';
 import { buildUserBlocks } from '@/features/sidebar/tree/block-operations';
-import { toast } from '@/hooks/useToast';
+import { toast } from '@/shared/useToast';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { upsertConversationInCache } from '@/features/sidebar/queries/use-conversations';

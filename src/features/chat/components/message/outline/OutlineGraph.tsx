@@ -9,7 +9,7 @@ import {
   type NodeProps,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { Message } from '@/types/message';
+import type { Message } from '@/features/chat/types/message';
 import type { OutlineNode } from './build-outline-tree';
 import { truncateTextByWidth } from './preview-text';
 

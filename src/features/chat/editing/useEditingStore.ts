@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
-import { toast } from '@/hooks/useToast';
+import { toast } from '@/shared/useToast';
 import { startChatRequest, cancelAnswering } from '@/features/chat/request/chat-orchestrator';
 import { cloneBlocks, editMessage } from '@/features/sidebar/tree/message-tree';
 import {
@@ -10,7 +10,7 @@ import {
   extractQuotesFromBlocks,
 } from '@/features/sidebar/tree/block-operations';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
-import type { Attachment, UserContentBlock } from '@/types/message';
+import type { Attachment, UserContentBlock } from '@/features/chat/types/message';
 
 type EditingState = {
   messageId: number;

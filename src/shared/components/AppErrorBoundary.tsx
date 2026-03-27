@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { toast } from '@/hooks/useToast';
-import { reportClientError } from '@/lib/report-client-error';
+import { toast } from '@/shared/useToast';
+import { reportClientError } from '@/shared/lib/report-client-error';
 
 type Props = { children: ReactNode };
 

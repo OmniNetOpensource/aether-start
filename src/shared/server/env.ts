@@ -32,6 +32,7 @@ type ServerEnv = {
   JINA_API_KEY?: string;
   RESEND_API_KEY?: string;
   MINIMAX_API_KEY?: string;
+  NETIFY_TOKEN?: string;
   DB?: D1Database;
   CHAT_ASSETS?: R2Bucket;
   NODE_ENV?: string;
@@ -139,6 +140,7 @@ export const getServerEnv = (): ServerEnv => {
     RESEND_API_KEY: readString(bindings.RESEND_API_KEY) ?? readStringFromProcess('RESEND_API_KEY'),
     MINIMAX_API_KEY:
       readString(bindings.MINIMAX_API_KEY) ?? readStringFromProcess('MINIMAX_API_KEY'),
+    NETIFY_TOKEN: readString(bindings.NETIFY_TOKEN) ?? readStringFromProcess('NETIFY_TOKEN'),
     NODE_ENV: readString(bindings.NODE_ENV) ?? readStringFromProcess('NODE_ENV') ?? 'production',
     DB: bindings.DB,
     CHAT_ASSETS: bindings.CHAT_ASSETS,

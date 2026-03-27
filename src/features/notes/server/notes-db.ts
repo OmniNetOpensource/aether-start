@@ -1,4 +1,4 @@
-import type { Attachment } from '@/types/message';
+import type { Attachment } from '@/features/chat/types/message';
 
 export type NoteCursor = {
   updated_at: string;

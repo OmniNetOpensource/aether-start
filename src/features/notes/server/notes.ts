@@ -1,8 +1,8 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-import { requireSession } from '@/server/functions/auth/session';
-import { getServerBindings } from '@/server/env';
-import { deleteNoteById, listNotesPage, type NoteCursor, upsertNote } from '@/server/db/notes-db';
+import { requireSession } from '@/features/auth/server/session';
+import { getServerBindings } from '@/shared/server/env';
+import { deleteNoteById, listNotesPage, type NoteCursor, upsertNote } from '@/features/notes/server/notes-db';
 
 const cursorSchema = z
   .object({

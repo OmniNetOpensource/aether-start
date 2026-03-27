@@ -5,10 +5,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+} from '@/shared/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { authClient } from '@/features/auth/client/auth-client';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/shared/useTheme';
 
 let settingsModalModulePromise: Promise<typeof import('./SettingsModal')> | null = null;
 

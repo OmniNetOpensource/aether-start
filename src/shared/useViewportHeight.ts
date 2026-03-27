@@ -1,4 +1,4 @@
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { useMountEffect } from '@/shared/useMountEffect';
 
 /**
  * 设置并维护 --vh CSS 变量（1% 视口高度），用于替代 100vh。

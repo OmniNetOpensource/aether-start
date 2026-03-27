@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Lightbulb, Loader2, Plus } from 'lucide-react';
 import { buildAttachmentsFromFiles } from '@/shared/attachments';
-import { collectClipboardFiles } from '@/lib/utils/file';
+import { collectClipboardFiles } from '@/shared/lib/utils/file';
 import { NoteCard } from '@/features/notes/components/NoteCard';
 import { NoteEditDialog } from '@/features/notes/components/NoteEditDialog';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
@@ -19,9 +19,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/useToast';
+} from '@/shared/ui/alert-dialog';
+import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/useToast';
 
 export const Route = createFileRoute('/note/')({
   component: NotesPage,

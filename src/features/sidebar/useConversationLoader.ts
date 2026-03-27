@@ -24,9 +24,9 @@ import {
   useConversationsQuery,
   selectAllConversations,
 } from '@/features/sidebar/queries/use-conversations';
-import { getConversationFn } from '@/server/functions/conversations';
+import { getConversationFn } from '@/features/sidebar/server/conversations';
 import { buildCurrentPath } from './tree/message-tree';
-import type { Message } from '@/types/message';
+import type { Message } from '@/features/chat/types/message';
 
 /**
  * @param loadingConversationId - 当前路由参数中的对话 ID（来自 /app/c/$conversationId）

@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { useMountEffect } from '@/shared/useMountEffect';
 import { ChevronUp, ChevronDown, ArrowDown } from 'lucide-react';
 import { MessageItem } from './MessageItem';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { SelectionToolbar } from './selection-toolbar';
 import { OutlineButton } from './outline';
-import { Button } from '@/components/ui/button';
-import { useResponsive } from '@/components/ResponsiveContext';
+import { Button } from '@/shared/ui/button';
+import { useResponsive } from '@/shared/providers/ResponsiveContext';
 
 const LEAVE_TOLERANCE_PX = 1;
 

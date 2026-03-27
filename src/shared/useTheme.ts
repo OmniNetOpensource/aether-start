@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { useMountEffect } from '@/shared/useMountEffect';
 
 type Theme = 'light' | 'dark';
 

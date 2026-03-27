@@ -1,5 +1,5 @@
-import { requireSession } from '@/server/functions/auth/session';
-import { getServerEnv } from '@/server/env';
+import { requireSession } from '@/features/auth/server/session';
+import { getServerEnv } from '@/shared/server/env';
 
 const parseAllowlist = (value: string | undefined): Set<string> => {
   if (!value || typeof value !== 'string') {

@@ -1,8 +1,8 @@
 import { ChatTool, ToolDefinition, ToolHandler } from './types';
-import { log } from '@/server/agents/services/logger';
+import { log } from '@/features/chat/server/agents/services/logger';
 import { Supadata } from '@supadata/js';
-import { getServerEnv } from '@/server/env';
-import { arrayBufferToBase64 } from '@/server/base64';
+import { getServerEnv } from '@/shared/server/env';
+import { arrayBufferToBase64 } from '@/shared/server/base64';
 
 type FetchUrlArgs = {
   url: string;

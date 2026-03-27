@@ -2,19 +2,19 @@ import Anthropic from '@anthropic-ai/sdk';
 import {
   buildSystemPrompt,
   type BackendConfig,
-} from '@/server/agents/services/model-provider-config';
+} from '@/features/chat/server/agents/services/model-provider-config';
 import { log, logProviderCommunication } from './logger';
 import { buildProviderErrorEvent } from './provider-error';
-import { quotesToModelText } from '@/lib/conversation/tree/block-operations';
+import { quotesToModelText } from '@/features/sidebar/tree/block-operations';
 import { resolveAttachmentToBase64 } from './attachment-utils';
 import { RenderArtifactStreamParser } from './render-artifact-stream';
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
-} from '@/types/chat-api';
-import type { ChatTool } from '@/server/agents/tools/types';
-import type { SerializedMessage } from '@/types/message';
+} from '@/features/chat/types/chat-api';
+import type { ChatTool } from '@/features/chat/server/agents/tools/types';
+import type { SerializedMessage } from '@/features/chat/types/message';
 import type { ChatProvider, ChatProviderConfig } from './provider-types';
 
 type AnthropicImageSource = {

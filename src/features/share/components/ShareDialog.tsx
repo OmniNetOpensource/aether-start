@@ -1,20 +1,20 @@
 import { Check, Copy, Link2, Loader2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogFooter } from '@/components/ui/dialog';
-import { toast } from '@/hooks/useToast';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogFooter } from '@/shared/ui/dialog';
+import { toast } from '@/shared/useToast';
 import {
   createConversationShareFn,
   getConversationShareFn,
   revokeConversationShareFn,
-} from '@/server/functions/shares';
+} from '@/features/share/server/shares';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import {
   useConversationsQuery,
   selectAllConversations,
 } from '@/features/sidebar/queries/use-conversations';
-import type { ConversationShareStatus } from '@/types/share';
+import type { ConversationShareStatus } from '@/features/share/types/share';
 
 export type ShareDialogProps = {
   open: boolean;

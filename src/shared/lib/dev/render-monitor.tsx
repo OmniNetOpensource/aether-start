@@ -4,7 +4,7 @@
  */
 
 import { useLayoutEffect, useRef } from 'react';
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { useMountEffect } from '@/shared/useMountEffect';
 
 const FLASH_DURATION_MS = 700;
 const FLASH_CLASS = 'render-monitor-flash';

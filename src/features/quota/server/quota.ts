@@ -1,8 +1,8 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-import { requireSession } from '@/server/functions/auth/session';
-import { getServerBindings } from '@/server/env';
-import { getOrCreateUserQuota, redeemSingleUseCode } from '@/server/db/prompt-quota-db';
+import { requireSession } from '@/features/auth/server/session';
+import { getServerBindings } from '@/shared/server/env';
+import { getOrCreateUserQuota, redeemSingleUseCode } from '@/features/quota/server/prompt-quota-db';
 
 export const getQuotaFn = createServerFn({ method: 'GET' }).handler(async () => {
   const { DB } = getServerBindings();

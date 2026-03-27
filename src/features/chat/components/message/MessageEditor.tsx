@@ -1,11 +1,11 @@
 import { ClipboardEvent, KeyboardEvent, useEffect, useRef } from 'react';
 import { ArrowUp, ImagePlus, X } from 'lucide-react';
 import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
-import { useResponsive } from '@/components/ResponsiveContext';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { toast } from '@/hooks/useToast';
-import { cn } from '@/lib/utils';
+import { useResponsive } from '@/shared/providers/ResponsiveContext';
+import { Button } from '@/shared/ui/button';
+import { Textarea } from '@/shared/ui/textarea';
+import { toast } from '@/shared/useToast';
+import { cn } from '@/shared/lib/utils';
 import { buildAttachmentsFromFiles } from '@/shared/attachments';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';

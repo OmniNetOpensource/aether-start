@@ -12,13 +12,13 @@
  * 与 chat-agent 服务端配合，通过 SSE 接收 chat_event、chat_started、chat_finished 等事件，
  * 并调用 event-handlers 中的 applyChatEventToTree 更新 UI 状态。
  */
-import { toast } from '@/hooks/useToast';
+import { toast } from '@/shared/useToast';
 import { applyChatEventToTree } from './event-handlers';
 import { useChatRequestStore } from './useChatRequestStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
-import type { SerializedMessage } from '@/types/message';
-import type { ChatAgentStatus, MessageTreeSnapshot } from '@/types/chat-api';
-import type { ChatServerToClientEvent } from '@/types/chat-event-types';
+import type { SerializedMessage } from '@/features/chat/types/message';
+import type { ChatAgentStatus, MessageTreeSnapshot } from '@/features/chat/types/chat-api';
+import type { ChatServerToClientEvent } from '@/features/chat/types/chat-event-types';
 
 /** Agent 路由名，对应 /agents/chat-agent */
 const AGENT_NAME = 'chat-agent';
@@ -150,7 +150,7 @@ const handleSSEMessage = (event: string, raw: string) => {
       if (typeof payload.eventId !== 'number') return;
       if (payload.eventId <= lastEventId) return;
       lastEventId = payload.eventId;
-      setStatus('streaming', 'chat_event');
+
       applyChatEventToTree(payload.event as ChatServerToClientEvent);
       return;
     }

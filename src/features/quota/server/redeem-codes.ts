@@ -1,13 +1,13 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-import { requireAdminSession } from '@/server/functions/auth/admin';
-import { getServerBindings } from '@/server/env';
+import { requireAdminSession } from '@/features/auth/server/admin';
+import { getServerBindings } from '@/shared/server/env';
 import {
   createRedeemCode,
   adminListRedeemCodes,
   updateRedeemCodeStatus,
   type RedeemCodeCursor,
-} from '@/server/db/prompt-quota-db';
+} from '@/features/quota/server/prompt-quota-db';
 
 const cursorSchema = z
   .object({

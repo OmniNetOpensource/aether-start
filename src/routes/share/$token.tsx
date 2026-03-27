@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ReadonlyMessageList } from '@/features/share/components/ReadonlyMessageList';
 import { getPublicConversationShareFn } from '@/features/share/server/shares';
-import type { Message } from '@/types/message';
+import type { Message } from '@/features/chat/types/message';
 
 type PublicShareData = Awaited<ReturnType<typeof getPublicConversationShareFn>>;
 type ActivePublicShare = Extract<PublicShareData, { status: 'active' }>;

@@ -1,5 +1,5 @@
-import type { ArtifactLanguage } from '@/types/chat-api';
-import type { ConversationArtifact } from '@/types/conversation';
+import type { ArtifactLanguage } from '@/features/chat/types/chat-api';
+import type { ConversationArtifact } from '@/features/sidebar/types/conversation';
 
 export type ConversationListCursor = {
   is_pinned: 0 | 1;

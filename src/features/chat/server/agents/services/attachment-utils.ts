@@ -1,5 +1,5 @@
-import { arrayBufferToBase64, parseDataUrl } from '@/server/base64';
-import { getServerBindings } from '@/server/env';
+import { arrayBufferToBase64, parseDataUrl } from '@/shared/server/base64';
+import { getServerBindings } from '@/shared/server/env';
 import { log } from './logger';
 
 export type AttachmentInput = {

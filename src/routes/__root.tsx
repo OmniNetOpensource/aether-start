@@ -1,15 +1,15 @@
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { useMountEffect } from '@/shared/useMountEffect';
 import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/react-router';
 import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
-import { reportClientError } from '@/lib/report-client-error';
+import { reportClientError } from '@/shared/lib/report-client-error';
 
-import { useViewportHeight } from '@/hooks/useViewportHeight';
-import { TooltipProvider } from '@/components/ui/tooltip';
-import { ToastContainer } from '@/components/ui/toast-container';
-import { ResponsiveProvider } from '@/components/ResponsiveContext';
+import { useViewportHeight } from '@/shared/useViewportHeight';
+import { TooltipProvider } from '@/shared/ui/tooltip';
+import { ToastContainer } from '@/shared/ui/toast-container';
+import { ResponsiveProvider } from '@/shared/providers/ResponsiveContext';
 import { NotFound } from '@/routes/-not-found';
-import { getTheme } from '@/server/functions/theme';
-import { getSessionStateFn } from '@/server/functions/auth/session-state';
+import { getTheme } from '@/shared/server/theme';
+import { getSessionStateFn } from '@/features/auth/server/session-state';
 
 import appCss from '@/routes/globals.css?url';
 

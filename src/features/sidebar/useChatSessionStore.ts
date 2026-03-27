@@ -11,9 +11,9 @@ import {
   switchBranch,
 } from './tree/message-tree';
 import { applyAssistantAddition, type AssistantAddition } from './tree/block-operations';
-import type { ConversationArtifact } from '@/types/conversation';
-import type { ArtifactLanguage } from '@/types/chat-api';
-import type { AssistantMessage, BranchInfo, ContentBlock, Message } from '@/types/message';
+import type { ConversationArtifact } from '@/features/sidebar/types/conversation';
+import type { ArtifactLanguage } from '@/features/chat/types/chat-api';
+import type { AssistantMessage, BranchInfo, ContentBlock, Message } from '@/features/chat/types/message';
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 

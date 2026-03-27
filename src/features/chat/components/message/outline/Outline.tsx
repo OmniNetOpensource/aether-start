@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from 'react';
 import { GitBranch } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogTrigger } from '@/shared/ui/dialog';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { buildOutlineTree } from './build-outline-tree';

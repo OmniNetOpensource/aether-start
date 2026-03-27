@@ -1,4 +1,4 @@
-import type { Message } from '@/types/message';
+import type { Message } from '@/features/chat/types/message';
 import type { ChatServerToClientEvent } from './chat-event-types';
 
 export type {

@@ -6,14 +6,14 @@ import {
 } from '@/features/chat/research/search-result-payload';
 import { searchTool } from './search';
 import { renderTool } from './render';
-import { getServerEnv } from '@/server/env';
-import { log } from '@/server/agents/services/logger';
+import { getServerEnv } from '@/shared/server/env';
+import { log } from '@/features/chat/server/agents/services/logger';
 import type { ChatTool, ToolHandler } from './types';
 import type {
   PendingToolInvocation,
   ToolInvocationResult,
   ChatServerToClientEvent,
-} from '@/types/chat-api';
+} from '@/features/chat/types/chat-api';
 
 export const getAvailableTools = (): ChatTool[] => {
   const env = getServerEnv();

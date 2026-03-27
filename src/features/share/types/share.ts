@@ -1,4 +1,4 @@
-import type { Message, ResearchItem } from '@/types/message';
+import type { Message, ResearchItem } from '@/features/chat/types/message';
 
 export type SharedAttachmentSnapshot = {
   id: string;

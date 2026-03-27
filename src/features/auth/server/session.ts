@@ -1,5 +1,5 @@
 import { getRequestHeaders } from '@tanstack/react-start/server';
-import { getAuth, type AuthInstance } from '@/server/functions/auth/auth';
+import { getAuth, type AuthInstance } from '@/features/auth/server/auth';
 
 type AuthSession = AuthInstance['$Infer']['Session'];
 

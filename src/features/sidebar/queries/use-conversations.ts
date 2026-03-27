@@ -6,8 +6,8 @@ import {
   updateConversationTitleFn,
   clearConversationsFn,
   type ConversationListCursor,
-} from '@/server/functions/conversations';
-import type { ConversationDetail, ConversationMeta } from '@/types/conversation';
+} from '@/features/sidebar/server/conversations';
+import type { ConversationDetail, ConversationMeta } from '@/features/sidebar/types/conversation';
 import { queryClient } from './query-client';
 
 const PAGE_SIZE = 10;

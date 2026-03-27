@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from 'react';
 import { createPortal } from 'react-dom';
-import { cn } from '@/lib/utils';
-import { formatFileSize } from '@/lib/utils/file';
+import { cn } from '@/shared/lib/utils';
+import { formatFileSize } from '@/shared/lib/utils/file';
 
 type ImagePreviewProps = {
   url: string;

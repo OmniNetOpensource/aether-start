@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
 import { MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react';
-import { Shimmer } from '@/components/ai-elements/shimmer';
+import { Shimmer } from '@/shared/components/ai-elements/shimmer';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from '@/shared/ui/dropdown-menu';
 import {
   useDeleteConversation,
   useSetConversationPinned,
 } from '@/features/sidebar/queries/use-conversations';
-import type { ConversationMeta } from '@/types/conversation';
+import type { ConversationMeta } from '@/features/sidebar/types/conversation';
 
 const PLACEHOLDER_TITLES = ['New Chat', 'Untitled Chat'];
 

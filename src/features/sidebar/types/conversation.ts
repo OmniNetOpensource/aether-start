@@ -1,5 +1,5 @@
-import type { Message } from '@/types/message';
-import type { ArtifactLanguage } from '@/types/chat-api';
+import type { Message } from '@/features/chat/types/message';
+import type { ArtifactLanguage } from '@/features/chat/types/chat-api';
 
 export type ConversationArtifact = {
   id: string;

@@ -9,8 +9,8 @@
  */
 
 import { useState, useRef } from 'react';
-import { ttsSynthesizeFn } from '@/server/functions/tts';
-import { toast } from '@/hooks/useToast';
+import { ttsSynthesizeFn } from '@/features/chat/server/functions/tts';
+import { toast } from '@/shared/useToast';
 
 export type TtsState = 'idle' | 'loading' | 'playing';
 

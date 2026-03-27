@@ -1,10 +1,10 @@
 import { SubmitEvent, useState } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
-import { authClient } from '@/lib/auth/auth-client';
-import { Button } from '@/components/ui/button';
-import { PasswordInput } from '@/components/ui/password-input';
-import { cn } from '@/lib/utils';
+import { authClient } from '@/features/auth/client/auth-client';
+import { Button } from '@/shared/ui/button';
+import { PasswordInput } from '@/shared/ui/password-input';
+import { cn } from '@/shared/lib/utils';
 
 /** 服务端返回 token 无效 / 过期时，切换为「链接已失效」界面，引导用户重新走忘记密码。 */
 const isInvalidTokenError = (error: unknown) => {

@@ -1,23 +1,23 @@
 import { DurableObject } from 'cloudflare:workers';
-import { getAvailableTools, executeToolsGen } from '@/server/agents/tools/executor';
+import { getAvailableTools, executeToolsGen } from '@/features/chat/server/agents/tools/executor';
 import {
   getDefaultModelConfig,
   getModelConfig,
   getBackendConfig,
   getPromptById,
   getDefaultPromptId,
-} from '@/server/agents/services/model-provider-config';
-import { log } from '@/server/agents/services/logger';
-import { createChatProvider } from '@/server/agents/services/provider-factory';
-import type { ProviderRunResult } from '@/server/agents/services/provider-types';
-import { generateTitleFromConversation } from '@/server/functions/chat/chat-title';
-import { processEventToTree, cloneTreeSnapshot } from '@/server/agents/services/event-processor';
+} from '@/features/chat/server/agents/services/model-provider-config';
+import { log } from '@/features/chat/server/agents/services/logger';
+import { createChatProvider } from '@/features/chat/server/agents/services/provider-factory';
+import type { ProviderRunResult } from '@/features/chat/server/agents/services/provider-types';
+import { generateTitleFromConversation } from '@/features/chat/server/functions/chat-title';
+import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/server/agents/services/event-processor';
 import {
   createConversationArtifact,
   getConversationById,
   upsertConversation,
-} from '@/server/db/conversations-db';
-import { consumePromptQuotaOnAccept } from '@/server/db/prompt-quota-db';
+} from '@/features/sidebar/server/conversations-db';
+import { consumePromptQuotaOnAccept } from '@/features/quota/server/prompt-quota-db';
 import type {
   ArtifactLanguage,
   ChatAgentStatus,
@@ -26,8 +26,8 @@ import type {
   PendingToolInvocation,
   PersistedChatEvent,
   ToolInvocationResult,
-} from '@/types/chat-api';
-import type { Message, SerializedMessage } from '@/types/message';
+} from '@/features/chat/types/chat-api';
+import type { Message, SerializedMessage } from '@/features/chat/types/message';
 
 // Durable Object 只服务一个会话实例，所以这里记录的是“这一个会话”当前的运行态。
 // 前端恢复连接、轮询状态、发起中断时，都会依赖这里的信息判断该怎么继续。

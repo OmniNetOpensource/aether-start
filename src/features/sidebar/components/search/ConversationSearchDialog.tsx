@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { Loader2, Search } from 'lucide-react';
-import type { ConversationSearchItem } from '@/types/conversation';
+import type { ConversationSearchItem } from '@/features/sidebar/types/conversation';
 import {
   searchConversationsFn,
   type ConversationSearchCursor,
-} from '@/server/functions/conversations';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+} from '@/features/sidebar/server/conversations';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 
 const PAGE_SIZE = 20;
 

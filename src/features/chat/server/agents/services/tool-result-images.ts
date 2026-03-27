@@ -1,4 +1,4 @@
-import { parseDataUrl } from '@/server/base64';
+import { parseDataUrl } from '@/shared/server/base64';
 
 export type ParsedToolResultImage = {
   dataUrl: string;

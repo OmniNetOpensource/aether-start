@@ -1,11 +1,11 @@
 import { create } from 'zustand';
-import type { Attachment } from '@/types/message';
+import type { Attachment } from '@/features/chat/types/message';
 import {
   deleteNoteFn,
   listNotesPageFn,
   upsertNoteFn,
   type NotesCursor,
-} from '@/server/functions/notes';
+} from '@/features/notes/server/notes';
 
 export type NoteItem = {
   id: string;

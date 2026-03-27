@@ -2,8 +2,8 @@ import {
   getModelConfig,
   getBackendConfig,
   TITLE_GENERATION_MODEL_ID,
-} from '@/server/agents/services/model-provider-config';
-import { log } from '@/server/agents/services/logger';
+} from '@/features/chat/server/agents/services/model-provider-config';
+import { log } from '@/features/chat/server/agents/services/logger';
 
 const FALLBACK_TITLE = 'New Chat';
 
@@ -118,7 +118,7 @@ export const generateTitleFromConversation = async (
 
     log('TITLE', 'Sending title generation request', requestLog);
 
-    const { getOpenAIClient } = await import('@/server/agents/services/openai');
+    const { getOpenAIClient } = await import('@/features/chat/server/agents/services/openai');
     const client = getOpenAIClient(backendConfig);
     const response = await client.chat.completions.create(
       {

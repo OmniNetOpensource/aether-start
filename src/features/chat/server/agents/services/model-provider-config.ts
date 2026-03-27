@@ -1,4 +1,4 @@
-import { getServerEnv } from '@/server/env';
+import { getServerEnv } from '@/shared/server/env';
 
 export type ChatFormat = 'anthropic' | 'openai' | 'gemini' | 'openai-responses';
 export type ChatBackend =

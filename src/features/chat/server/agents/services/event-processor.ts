@@ -1,7 +1,7 @@
-import { applyAssistantAddition, cloneMessages } from '@/lib/conversation/tree/block-operations';
-import { addMessage, buildCurrentPath } from '@/lib/conversation/tree/message-tree';
-import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/types/chat-api';
-import type { AssistantMessage, Message } from '@/types/message';
+import { applyAssistantAddition, cloneMessages } from '@/features/sidebar/tree/block-operations';
+import { addMessage, buildCurrentPath } from '@/features/sidebar/tree/message-tree';
+import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/features/chat/types/chat-api';
+import type { AssistantMessage, Message } from '@/features/chat/types/message';
 
 type TreeState = MessageTreeSnapshot;
 

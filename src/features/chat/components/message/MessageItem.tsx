@@ -1,10 +1,10 @@
 import { useState, type ReactNode } from 'react';
-import Markdown from '@/components/Markdown';
-import { Message } from '@/types/message';
-import { getBranchInfo as getBranchInfoFn } from '@/lib/conversation/tree/message-tree';
+import Markdown from '@/shared/components/Markdown';
+import { Message } from '@/features/chat/types/message';
+import { getBranchInfo as getBranchInfoFn } from '@/features/sidebar/tree/message-tree';
 import { ResearchBlock } from '../research/ResearchBlock';
 import { Copy, Check, AlertCircle, Pencil, RotateCcw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/shared/ui/button';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useEditingStore } from '@/features/chat/editing/useEditingStore';

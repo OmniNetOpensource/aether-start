@@ -5,12 +5,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+} from '@/shared/ui/dropdown-menu';
+import { Button } from '@/shared/ui/button';
+import { cn } from '@/shared/lib/utils';
 import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { useMountEffect } from '@/shared/useMountEffect';
 
 const PROMPT_STORAGE_KEY = 'aether_current_prompt';
 

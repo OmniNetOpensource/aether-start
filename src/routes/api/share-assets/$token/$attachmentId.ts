@@ -6,7 +6,7 @@ import {
   resolveStorageKeyForSharedAttachment,
   resolveThumbnailStorageKeyForSharedAttachment,
 } from '@/features/share/server/conversation-shares-db';
-import { getServerBindings } from '@/server/env';
+import { getServerBindings } from '@/shared/server/env';
 
 const safeDecodeURIComponent = (value: string): string | null => {
   try {

@@ -5,7 +5,7 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { Resend } from 'resend';
-import { getServerEnv } from '@/server/env';
+import { getServerEnv } from '@/shared/server/env';
 import * as authSchema from './auth.schema';
 import { hashPassword, verifyPassword } from './crypto';
 

@@ -1,12 +1,12 @@
 import { Search, Globe, Wrench } from 'lucide-react';
-import Markdown from '@/components/Markdown';
+import Markdown from '@/shared/components/Markdown';
 import {
   parseSearchClientPayload,
   SEARCH_TOOL_NAMES,
   type SearchClientResult,
 } from '@/features/chat/research/search-result-payload';
-import type { ResearchItem, Tool } from '@/types/message';
-import type { StepStatus } from '@/components/ui/chain-of-thought';
+import type { ResearchItem, Tool } from '@/features/chat/types/message';
+import type { StepStatus } from '@/shared/ui/chain-of-thought';
 import {
   ChainOfThought,
   ChainOfThoughtHeader,
@@ -15,7 +15,7 @@ import {
   ChainOfThoughtSearchResults,
   ChainOfThoughtSearchResult,
   ChainOfThoughtImage,
-} from '@/components/ui/chain-of-thought';
+} from '@/shared/ui/chain-of-thought';
 import { getToolLifecycle, getSearchResultCount } from './research-utils';
 
 type SearchResultBadge = SearchClientResult;
@@ -42,6 +42,7 @@ function getStatusText(tool: Tool, isActive: boolean, toolName: string): string 
     if (!isActive) return '等待中...';
     if (SEARCH_TOOL_NAMES.has(toolName)) return '搜索中...';
     if (toolName === 'fetch_url') return '获取中...';
+    if (toolName === 'render') return '渲染中...';
     return '执行中...';
   }
 
@@ -188,6 +189,44 @@ function FetchStep({
   );
 }
 
+function RenderStep({
+  tool,
+  isActive,
+  hideConnector,
+}: {
+  tool: Tool;
+  isActive: boolean;
+  hideConnector: boolean;
+}) {
+  const status = getStatusText(tool, isActive, 'render');
+  const description = `render · ${status}`;
+
+  return (
+    <ChainOfThoughtStep
+      icon={
+        <svg
+          viewBox='0 0 24 24'
+          fill='none'
+          stroke='currentColor'
+          strokeWidth='2'
+          strokeLinecap='round'
+          strokeLinejoin='round'
+          className='h-full w-full'
+          aria-hidden
+        >
+          <rect x='3' y='3' width='18' height='18' rx='2' />
+          <path d='M3 9h18' />
+          <path d='M7 13h10' />
+          <path d='M7 17h6' />
+        </svg>
+      }
+      description={description}
+      status={getStepStatus(tool, isActive)}
+      hideConnector={hideConnector}
+    />
+  );
+}
+
 // Render a generic tool step
 function GenericToolStep({
   tool,
@@ -257,6 +296,17 @@ export function ResearchBlock({
           if (toolName === 'fetch_url') {
             return (
               <FetchStep
+                key={stepKey}
+                tool={tool}
+                isActive={itemIsActive}
+                hideConnector={isLastStep}
+              />
+            );
+          }
+
+          if (toolName === 'render') {
+            return (
+              <RenderStep
                 key={stepKey}
                 tool={tool}
                 isActive={itemIsActive}

@@ -1,7 +1,7 @@
 import { Link, useMatch } from '@tanstack/react-router';
 import { Lightbulb } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { Button } from '@/shared/ui/button';
+import { cn } from '@/shared/lib/utils';
 
 export function NotesButton() {
   const isActive = !!useMatch({ from: '/note/', shouldThrow: false });

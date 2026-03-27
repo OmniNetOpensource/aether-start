@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState } from 'react';
 import { Loader2, Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 

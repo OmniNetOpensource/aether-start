@@ -8,17 +8,17 @@ import {
   useId,
   useRef,
 } from 'react';
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { useMountEffect } from '@/shared/useMountEffect';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowUp, Loader2, Paperclip, Square } from 'lucide-react';
-import { useResponsive } from '@/components/ResponsiveContext';
+import { useResponsive } from '@/shared/providers/ResponsiveContext';
 import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { toast } from '@/hooks/useToast';
+import { Textarea } from '@/shared/ui/textarea';
+import { Button } from '@/shared/ui/button';
+import { toast } from '@/shared/useToast';
 import { cancelAnswering } from '@/features/chat/request/chat-orchestrator';
 import { submitMessage } from './submit-chat';
-import { cn } from '@/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { ModelSelector } from './ModelSelector';
@@ -124,7 +124,7 @@ export function Composer() {
   const hasText = input.trim().length > 0;
   const hasAttachments = pendingAttachments.length > 0;
   const sendDisabled =
-    isBusy || !!window.__preHydrationInput
+    isBusy || (typeof window !== 'undefined' && !!window.__preHydrationInput)
       ? false
       : (!hasText && !hasAttachments) || !currentModelId || uploading;
 

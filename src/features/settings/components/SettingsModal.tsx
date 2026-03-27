@@ -10,16 +10,16 @@ import { useNotesStore } from '@/features/notes/useNotesStore';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 import { queryClient } from '@/features/sidebar/queries/query-client';
 import { conversationListQueryKey } from '@/features/sidebar/queries/use-conversations';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { toast } from '@/hooks/useToast';
+import { Button } from '@/shared/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Input } from '@/shared/ui/input';
+import { toast } from '@/shared/useToast';
 import {
   adminCreateRedeemCodeFn,
   adminDeactivateRedeemCodeFn,
   adminListRedeemCodesFn,
-} from '@/server/functions/admin/redeem-codes';
-import { getQuotaFn, redeemCodeFn } from '@/server/functions/quota';
+} from '@/features/quota/server/redeem-codes';
+import { getQuotaFn, redeemCodeFn } from '@/features/quota/server/quota';
 
 type SettingsModalProps = {
   open: boolean;

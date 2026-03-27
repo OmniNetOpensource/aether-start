@@ -1,10 +1,10 @@
 import { SubmitEvent, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
-import { authClient } from '@/lib/auth/auth-client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { cn } from '@/lib/utils';
+import { authClient } from '@/features/auth/client/auth-client';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { cn } from '@/shared/lib/utils';
 
 /** 将忘记密码接口错误映射为页面提示（与 reset 页类似，独立一份避免与登录注册混用）。 */
 const getForgotPasswordErrorMessage = (error: unknown) => {

@@ -5,9 +5,9 @@
  * 上传后的资源存储在 Cloudflare R2，通过 /api/upload-attachment 接口完成。
  */
 
-import type { Attachment } from '@/types/message';
-import { MAX_IMAGE_SIZE } from '@/lib/utils/file';
-import { toast } from '@/hooks/useToast';
+import type { Attachment } from '@/features/chat/types/message';
+import { MAX_IMAGE_SIZE } from '@/shared/lib/utils/file';
+import { toast } from '@/shared/useToast';
 
 /** 上传成功后服务端返回的资源信息 */
 type UploadedAsset = {

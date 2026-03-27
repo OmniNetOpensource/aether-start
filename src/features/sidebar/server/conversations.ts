@@ -1,7 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-import { requireSession } from '@/server/functions/auth/session';
-import { getServerBindings } from '@/server/env';
+import { requireSession } from '@/features/auth/server/session';
+import { getServerBindings } from '@/shared/server/env';
 import {
   clearConversations,
   deleteConversationById,
@@ -11,7 +11,7 @@ import {
   searchConversations,
   updateConversationTitle,
   upsertConversation,
-} from '@/server/db/conversations-db';
+} from '@/features/sidebar/server/conversations-db';
 
 const listCursorSchema = z
   .object({

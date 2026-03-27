@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMountEffect } from '@/hooks/useMountEffect';
+import { useMountEffect } from '@/shared/useMountEffect';
 import { Bot, Check, ChevronDown } from 'lucide-react';
 import {
   Command,
@@ -10,10 +10,10 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/components/ui/command';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { useResponsive } from '@/components/ResponsiveContext';
+} from '@/shared/ui/command';
+import { Button } from '@/shared/ui/button';
+import { cn } from '@/shared/lib/utils';
+import { useResponsive } from '@/shared/providers/ResponsiveContext';
 import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
 import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
 

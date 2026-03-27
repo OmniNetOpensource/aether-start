@@ -14,8 +14,8 @@ import {
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Search } from 'lucide-react';
 
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
+import { cn } from '@/shared/lib/utils';
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandRoot>,
