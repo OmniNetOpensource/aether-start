@@ -35,11 +35,10 @@ import type { Message } from '@/features/chat/types/message';
 export function useConversationLoader(loadingConversationId: string) {
   const navigate = useNavigate();
   const currentConversationId = useChatSessionStore((state) => state.conversationId);
+
   const initializeTree = useChatSessionStore((state) => state.initializeTree);
   const setConversationId = useChatSessionStore((state) => state.setConversationId);
   const setArtifacts = useChatSessionStore((state) => state.setArtifacts);
-
-  const [isLoading, setIsLoading] = useState(currentConversationId !== loadingConversationId);
 
   /**
    * 主 effect：加载对话或恢复流式续传
@@ -48,11 +47,7 @@ export function useConversationLoader(loadingConversationId: string) {
    * - cleanup：abort 进行中的 resume 请求，标记 cancelled 避免竞态
    */
   useEffect(() => {
-    if (currentConversationId === loadingConversationId) {
-      void resumeRunningConversation(loadingConversationId);
-      return;
-    }
-
+    if (currentConversationId === loadingConversationId) return;
     let cancelled = false;
 
     /* 拉取新对话：getConversationFn 返回 messages、currentPath、artifacts、model 等 */
@@ -77,7 +72,6 @@ export function useConversationLoader(loadingConversationId: string) {
         const store = useChatSessionStore.getState();
         const modelId = conversation.model ?? '';
         store.setCurrentModel(modelId);
-        setIsLoading(false);
         void resumeRunningConversation(loadingConversationId);
       })
       .catch((error) => {
@@ -87,14 +81,18 @@ export function useConversationLoader(loadingConversationId: string) {
       });
 
     return () => {
+      document.title = defaultTitle;
+      resetLastEventId();
+      cancelStreamSubscription('useConversationLoader/cleanup');
+      useEditingStore.getState().clear();
       cancelled = true;
     };
   }, [
     loadingConversationId,
     currentConversationId,
     navigate,
-    setConversationId,
     initializeTree,
+    setConversationId,
     setArtifacts,
   ]);
 
@@ -109,19 +107,4 @@ export function useConversationLoader(loadingConversationId: string) {
       ? `${title.length > 50 ? `${title.slice(0, 50)}...` : title} - Aether`
       : defaultTitle;
   }
-
-  /**
-   * 切换/离开对话时的清理 effect
-   * 当 loadingConversationId 变化（切换对话）或组件卸载（离开页面）时执行
-   */
-  useEffect(() => {
-    return () => {
-      document.title = defaultTitle;
-      resetLastEventId();
-      cancelStreamSubscription('useConversationLoader/cleanup');
-      useEditingStore.getState().clear();
-    };
-  }, [loadingConversationId]);
-
-  return { isLoading };
 }

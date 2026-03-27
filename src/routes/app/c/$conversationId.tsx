@@ -8,11 +8,7 @@ export const Route = createFileRoute('/app/c/$conversationId')({
 
 export function ConversationPage() {
   const { conversationId } = Route.useParams();
-  const { isLoading } = useConversationLoader(conversationId);
-
-  if (isLoading) {
-    return null;
-  }
+  useConversationLoader(conversationId);
 
   return <MessageList className='flex-1 min-h-0' />;
 }
