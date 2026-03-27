@@ -1,4 +1,6 @@
-import MarkdownImpl from './MarkdownImpl';
+import { lazy, Suspense, useRef } from 'react';
+
+const MarkdownImpl = lazy(() => import('./MarkdownImpl'));
 
 type Props = {
   content: string;
@@ -6,7 +8,13 @@ type Props = {
 };
 
 function Markdown({ content, isAnimating = false }: Props) {
-  return <MarkdownImpl content={content} isAnimating={isAnimating} />;
+  return (
+    <div>
+      <Suspense fallback={<div className='whitespace-pre-wrap'>{content}</div>}>
+        <MarkdownImpl content={content} isAnimating={isAnimating} />
+      </Suspense>
+    </div>
+  );
 }
 
 export default Markdown;
