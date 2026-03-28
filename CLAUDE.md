@@ -4,187 +4,152 @@ This file gives Claude Code repository-specific guidance for working in this pro
 
 ## Project Overview
 
-`aether-start` is a TanStack Start application deployed to Cloudflare Workers. It is an authenticated AI chat product with:
+`aether-start` is a TanStack Start app deployed to Cloudflare Workers. The product is an authenticated AI chat app with:
 
-- streaming chat over Cloudflare Agents / WebSocket
-- multiple model providers and prompt presets
+- streaming chat over a Cloudflare Agent
+- multi-provider model selection and prompt presets
 - conversation persistence in Cloudflare D1
 - attachment storage in Cloudflare R2
-- notes, shares, quota, and Better Auth flows
-- artifact rendering and preview for HTML / React outputs
+- artifact generation and preview for HTML output
+- notes, sharing, settings, quota, and Better Auth flows
+- client error logging persisted to D1
 
-The codebase is feature-split, but imports still use compatibility aliases such as `@/server/*`, `@/lib/*`, and `@/types/*`. Those aliases do not always match the physical directory structure. Check `tsconfig.json` before assuming a module should live under `src/server/`.
+The repo is feature-split. The only app alias in `tsconfig.json` is `@/* -> src/*`. Older docs that mention `@/server/*`, `@/lib/*`, or `@/types/*` are stale.
+
+## Project Structure
+
+- `src/routes/` contains TanStack Start file routes.
+- `src/routes/__root.tsx` wires auth gating for `/app` and `/note`, theme loading, responsive context, tooltip provider, toast container, and client error reporting.
+- `src/routes/app/route.tsx` is the authenticated app shell.
+- `src/routes/app/c/$conversationId.tsx` loads a conversation into the client stores and resumes a running agent stream when needed.
+- `src/routes/share/$token.tsx` renders the public read-only share page.
+- `src/routes/api/assets/$key.ts` serves private R2 assets.
+- `src/routes/api/share-assets/$token/$attachmentId.ts` serves public shared assets.
+- `src/routes/api/upload-attachment.ts` uploads attachments into R2.
+- `src/routes/api/client-errors.ts` stores browser-side error reports in D1.
+- `src/routes/api/auth/$.ts` is the Better Auth entrypoint.
+
+Top-level features now live here:
+
+- `src/features/attachments/`
+- `src/features/auth/`
+- `src/features/chat/`
+- `src/features/conversations/`
+- `src/features/notes/`
+- `src/features/quota/`
+- `src/features/settings/`
+- `src/features/share/`
+
+Shared code now lives here:
+
+- `src/shared/app-shell/`
+- `src/shared/browser/`
+- `src/shared/core/`
+- `src/shared/design-system/`
+- `src/shared/test/`
+- `src/shared/worker/`
+
+Generated files:
+
+- `src/routeTree.gen.ts`
+- `src/features/auth/identity/auth.schema.ts`
+
+Do not edit generated files by hand unless the task is specifically about regenerating them.
 
 ## Commands
 
-Use `pnpm` for everything.
+Use `pnpm` for repo commands.
 
-- `pnpm install` - install dependencies
-- `pnpm dev` - start local dev server on port 3000
-- `pnpm build` - production build
-- `pnpm lint` - run Oxlint
-- `pnpm format` - format with Oxfmt
-- `pnpm format:check` - verify formatting (Oxfmt, no writes)
-- `pnpm type-check` - run TypeScript without emit
-- `pnpm check` - run type-check, lint, format check, and build
-- `pnpm test` - run Vitest once
-- `pnpm test:watch` - run Vitest in watch mode
-- `pnpm test:coverage` - run coverage
-- `pnpm test:e2e` - run Playwright tests
-- `pnpm auth:generate` - regenerate Better Auth schema output
-- `pnpm auth:migration:generate` - generate Better Auth migrations
-- `pnpm cf:typegen` - regenerate Cloudflare worker typings
-- `pnpm cf:migrate:local` - apply local D1 migrations
-- `pnpm cf:migrate:remote` - apply remote D1 migrations
-- `pnpm cf:deploy` - build and deploy to Cloudflare Workers
-- `pnpm cf:sync-secrets` - sync env values to Cloudflare
+- `pnpm install`
+- `pnpm dev`
+- `pnpm build`
+- `pnpm preview`
+- `pnpm lint`
+- `pnpm format`
+- `pnpm format:check`
+- `pnpm type-check`
+- `pnpm check`
+- `pnpm test:e2e`
+- `pnpm cf:typegen`
+- `pnpm cf:migrate:local`
+- `pnpm cf:migrate:remote`
+- `pnpm cf:deploy`
+- `pnpm cf:sync-secrets`
+
+Auth-related scripts still exist in `package.json`, but they currently point at legacy `src/features/auth/server/*` paths while the real auth code lives under `src/features/auth/identity/*`. Do not trust those paths blindly.
 
 ## Current Architecture
 
-### Physical Layout vs Alias Layout
+### App Shell And Route Data
 
-The real server-side layout is feature-local:
+- `src/routes/app/route.tsx` preloads available models and prompts, and prefetches the conversation list query.
+- `src/features/conversations/route-data/app-shell-route-data.tsx` holds the loader data context for the app shell.
+- `src/features/conversations/conversation-list/Sidebar.tsx` and related files own the left sidebar UI.
 
-- `src/features/chat/server/*`
-- `src/features/sidebar/server/*`
-- `src/features/share/server/*`
-- `src/features/notes/server/*`
-- `src/features/quota/server/*`
-- `src/features/auth/server/*`
-- `src/shared/server/*`
+### Chat Request Lifecycle
 
-Important alias examples:
+The request lifecycle now spans these files:
 
-- `@/server/env` -> `src/shared/server/env.ts`
-- `@/server/db/conversations-db` -> `src/features/sidebar/server/conversations-db.ts`
-- `@/server/functions/conversations` -> `src/features/sidebar/server/conversations.ts`
-- `@/server/functions/chat/*` -> `src/features/chat/server/functions/*`
+- `src/features/chat/session/useChatRequestStore.ts`
+- `src/features/chat/session/chat-orchestrator.ts`
+- `src/features/chat/session/event-handlers.ts`
+- `src/features/chat/agent-runtime/chat-agent.ts`
 
-If you do not check the alias mapping, it is easy to patch the wrong place.
+If chat streaming, reconnection, abort, or resume behavior changes, inspect all four together.
 
-### Routing
+### Conversation Session State
 
-TanStack Start file routes live in `src/routes/`.
+Conversation state no longer lives under `sidebar/`.
 
-Important routes:
+Important files:
 
-- `src/routes/__root.tsx` - root shell, theme loader, responsive provider, tooltip, toast, Sentry boundary, auth redirect for `/app` and `/note`
-- `src/routes/index.tsx` - landing route
-- `src/routes/app/route.tsx` - authenticated app shell
-- `src/routes/app/index.tsx` - new chat landing
-- `src/routes/app/c/$conversationId.tsx` - conversation page with artifact panel
-- `src/routes/note.tsx` - notes page
-- `src/routes/auth/*.tsx` - auth pages
-- `src/routes/share/$token.tsx` - public read-only shared conversation
-- `src/routes/api/assets/$key.ts` - private asset delivery from R2
-- `src/routes/api/share-assets/$token/$attachmentId.ts` - public shared attachment delivery
-- `src/routes/api/auth/$.ts` - Better Auth route handler
-- `src/routes/api/sentry.ts` - Sentry endpoint
+- `src/features/conversations/session/useChatSessionStore.ts`
+- `src/features/conversations/session/conversations.ts`
+- `src/features/conversations/session/conversations-db.ts`
+- `src/features/conversations/conversation-tree/`
+- `src/routes/app/c/$conversationId.tsx`
 
-Do not edit `src/routeTree.gen.ts` manually.
-
-### Frontend State
-
-State is store-based and centered on Zustand:
-
-- `src/features/chat/store/useChatRequestStore.ts` - request status and live request lifecycle
-- `src/features/chat/store/useComposerStore.ts` - composer UI state
-- `src/features/chat/store/useEditingStore.ts` - message editing state
-- `src/features/sidebar/store/useChatSessionStore.ts` - conversation tree, conversation list, selected model/prompt, artifact panel
-- `src/features/notes/store/useNotesStore.ts` - notes state
-- `src/shared/stores/toast.ts` - toast state
-
-If the bug affects loaded conversation content, route transitions, branch state, or artifacts, inspect `useConversationLoader.ts` and `useChatSessionStore.ts` before changing UI components in isolation.
-
-### Chat Flow
-
-The request lifecycle spans client UI, orchestration code, event handling, and a Cloudflare Agent.
-
-Main pieces:
-
-- `src/features/chat/store/useChatRequestStore.ts`
-- `src/features/chat/lib/api/chat-orchestrator.ts`
-- `src/features/chat/lib/api/event-handlers.ts`
-- `src/features/chat/server/agents/chat-agent.ts`
-
-The stream contract lives in:
-
-- `src/features/chat/types/chat-api.ts`
-- `src/features/chat/types/chat-event-types.ts`
-
-The event set now includes artifact events such as:
-
-- `artifact_started`
-- `artifact_title`
-- `artifact_language`
-- `artifact_code_delta`
-- `artifact_completed`
-- `artifact_failed`
+`$conversationId.tsx` loads the conversation inline with `getConversationFn`. There is no `useConversationLoader.ts` anymore.
 
 ### Artifacts
 
-Artifact support is now part of the main chat experience.
+Artifact support is part of the main chat experience.
 
-Client-side:
+Important files:
 
-- `src/features/chat/components/artifact/ArtifactPanel.tsx`
-- `src/features/chat/components/artifact/preview-document.ts`
-- `src/routes/app/c/$conversationId.tsx`
-
-Server-side:
-
-- `src/features/chat/server/agents/tools/render.ts`
-- `src/features/chat/server/agents/services/render-artifact-stream.ts`
-- `src/features/sidebar/server/conversations-db.ts`
+- `src/features/chat/artifact/ArtifactPanel.tsx`
+- `src/features/chat/artifact/ArtifactToggleButton.tsx`
+- `src/features/chat/artifact/render-tool.ts`
+- `src/features/chat/artifact/render-artifact-stream.ts`
+- `src/features/chat/agent-runtime/tool-executor.ts`
+- `src/features/conversations/session/conversations-db.ts`
 - `migrations/0015_conversation_artifacts.sql`
 
-`render` is a real model tool, not just a client affordance. If you change how artifacts stream, also check persistence, route loading, and delete/clear flows.
+Artifact stream events are defined in `src/features/chat/session/chat-event-types.ts` and applied in `src/features/chat/session/event-handlers.ts`.
 
-### Conversation State and Persistence
+### Models, Providers, And Backends
 
-Conversation client state is split between:
+Model catalog files:
 
-- the route loader hook in `src/features/sidebar/hooks/useConversationLoader.ts`
-- the session store in `src/features/sidebar/store/useChatSessionStore.ts`
-- message-tree helpers in `src/features/sidebar/lib/tree/`
+- `src/features/chat/model-catalog/model-provider-config.ts`
+- `src/features/chat/model-catalog/models.ts`
 
-Conversation persistence lives in:
+Provider runtime files:
 
-- `src/features/sidebar/server/conversations.ts` - server functions
-- `src/features/sidebar/server/conversations-db.ts` - D1 helpers
+- `src/features/chat/agent-runtime/provider-factory.ts`
+- `src/features/chat/agent-runtime/backends/anthropic.ts`
+- `src/features/chat/agent-runtime/backends/openai.ts`
+- `src/features/chat/agent-runtime/backends/openai-responses.ts`
+- `src/features/chat/agent-runtime/backends/gemini.ts`
 
-Important behavior:
-
-- conversations are user-scoped
-- metadata and bodies are split across tables
-- search uses FTS with a contains fallback for CJK queries
-- pinning affects sort order
-- role is persisted with the conversation
-- artifacts are loaded together with conversation detail
-
-### Model Providers, Models, and Prompts
-
-This project is no longer Anthropic-only.
-
-Provider adapters live in `src/features/chat/server/agents/services/`:
-
-- `anthropic.ts`
-- `openai.ts`
-- `openai-responses.ts`
-- `gemini.ts`
-- `provider-factory.ts`
-
-Model and prompt definitions live in `src/features/chat/server/agents/services/model-provider-config.ts`.
-Availability server functions live in `src/features/chat/server/functions/models.ts`.
-
-Supported provider formats currently include:
+Supported formats currently include:
 
 - `anthropic`
 - `openai`
 - `openai-responses`
 - `gemini`
 
-Current backends include:
+Configured backends currently include:
 
 - `rightcode-claude`
 - `rightcode-claude-sale`
@@ -195,133 +160,123 @@ Current backends include:
 - `ikun-openai`
 - `ikun-gemini`
 - `openrouter`
-- `cubence-claude`, `cubence-gemini`, `cubence-openai` (shared `CUBENCE_API_KEY` / `CUBENCE_BASE_URL`)
+- `cubence-claude`
+- `cubence-gemini`
+- `cubence-openai`
 
-If you add or rename a model/backend/provider, update `model-provider-config.ts` and the corresponding adapter/factory code together.
+### Tools
 
-### Tool Calling
-
-Tool execution lives in `src/features/chat/server/agents/tools/`.
+Tool execution lives in `src/features/chat/agent-runtime/tool-executor.ts`.
 
 Current tools:
 
 - `fetch_url`
 - `render`
-- `search`
+- `search` when `SERP_API_KEY` is available
 
-Availability rules:
+Tool implementations live in:
 
-- `render` is always available
-- `fetch_url` is always available
-- `search` requires `SERP_API_KEY`
-- `fetch_url` may use `JINA_API_KEY` and `SUPADATA_API_KEY` depending on content type
-
-Important files:
-
-- `executor.ts`
-- `fetch.ts`
-- `render.ts`
-- `search.ts`
-- `types.ts`
-
-### Feature-Local Server Functions
-
-The frontend entrypoints are mostly TanStack server functions imported through aliases.
-
-Key modules:
-
-- conversations: `src/features/sidebar/server/conversations.ts`
-- notes: `src/features/notes/server/notes.ts`
-- shares: `src/features/share/server/shares.ts`
-- quota: `src/features/quota/server/quota.ts`
-- models/prompts: `src/features/chat/server/functions/models.ts`
-- chat title / upload / tts: `src/features/chat/server/functions/*`
-- auth/session: `src/features/auth/server/*`
+- `src/features/chat/agent-runtime/fetch-tool.ts`
+- `src/features/chat/artifact/render-tool.ts`
+- `src/features/chat/research/search-tool.ts`
+- `src/features/chat/agent-runtime/tool-types.ts`
 
 ### Auth
 
-Auth uses Better Auth with Drizzle on D1.
+Auth code now lives under `identity/` and `session/`, not `server/`.
 
 Important files:
 
-- `src/features/auth/server/auth.ts`
-- `src/features/auth/server/session.ts`
-- `src/features/auth/server/session-state.ts`
+- `src/features/auth/identity/auth.ts`
+- `src/features/auth/identity/auth.schema.ts`
+- `src/features/auth/session/session.ts`
+- `src/features/auth/session/session-state.ts`
+- `src/features/auth/session/request.server.ts`
 - `src/routes/api/auth/$.ts`
 
 Current behavior includes:
 
 - email/password auth
-- email OTP
+- email OTP via Better Auth plugin
 - email verification
 - password reset
 - registration IP capture
 - last-login timestamp updates
-- route protection for `/app`
+- route protection for `/app` and `/note`
+- trusted origin expansion for `localhost` and `127.0.0.1`
 
-### Sharing and Assets
+### Sharing
 
-Shared conversations are read-only snapshots, not live conversations.
+Sharing is snapshot-based and read-only.
 
 Important files:
 
-- `src/features/share/server/shares.ts`
-- `src/features/share/server/conversation-shares-db.ts`
+- `src/features/share/share-record/shares.ts`
+- `src/features/share/share-record/conversation-shares-db.ts`
+- `src/features/share/share-dialog/ShareDialog.tsx`
 - `src/routes/share/$token.tsx`
-- `src/routes/api/share-assets/$token/$attachmentId.ts`
 
-Attachment uploads and private asset access live in:
+Public shares must stay read-only.
 
-- `src/routes/api/upload-attachment.ts`
-- `src/routes/api/assets/$key.ts`
+### Notes, Quota, Settings, Attachments
 
-When working on share routes, preserve read-only behavior and asset safety checks.
+- Notes: `src/features/notes/note-record/`, `src/features/notes/note-editor/`, `src/routes/note/index.tsx`
+- Quota: `src/features/quota/quota-balance/`, `src/features/quota/redeem-code/`
+- Settings: `src/features/settings/settings-dialog/`, `src/features/settings/profile-menu/`
+- Attachments: `src/features/attachments/attachment-upload/`, `src/features/attachments/attachment-preview/`
+
+### Worker Env And Bindings
+
+Worker env loading is centralized in:
+
+- `src/shared/worker/env.ts`
+- `src/shared/worker/env.server.ts`
+
+Required bindings:
+
+- `DB`
+- `CHAT_ASSETS`
 
 ## Testing
 
-Vitest:
+This repo currently has Playwright configured in `playwright.config.ts` and an E2E suite under `tests/e2e/`.
 
-- config: `vitest.config.ts`
-- test files: `src/**/*.test.{ts,tsx}`
-- environment: `happy-dom`
+Current E2E files include:
 
-Playwright:
+- `tests/e2e/chat-image.spec.ts`
+- `tests/e2e/global-setup.ts`
+- support files under `tests/e2e/setup/` and `tests/e2e/support/`
 
-- config: `playwright.config.ts`
-- test dir: `tests/e2e`
-- **Flexible auth / port**: optional `BETTER_AUTH_TRUSTED_ORIGINS` in `.env.local` — comma-separated origins (each entry expands `localhost` ↔ `127.0.0.1` for the same port). Use when the dev URL differs from `BETTER_AUTH_URL` (e.g. Playwright on another port).
-- **Optional bundled dev server**: `E2E_WEB_SERVER=1 pnpm test:e2e` starts Vite on `E2E_PORT` (default `3010`) and sets `baseURL` to `http://127.0.0.1:<port>` unless `E2E_BASE_URL` is set. Add matching origins to `BETTER_AUTH_TRUSTED_ORIGINS` (e.g. `http://127.0.0.1:3010` or list one host; the other is paired automatically).
+`pnpm test:e2e` is the only test script currently defined in `package.json`.
 
-**Do not create new test files.** Only the existing 14 curated tests are kept; they cover message-tree, block-operations, chat-orchestrator, useMessageTreeStore, useConversationsStore, useEditingStore, chat-agent, render-artifact-stream, openai-responses, provider-error, executor, logger, preview-text, and MessageItem.
+Use these env vars when running E2E:
+
+- `E2E_WEB_SERVER=1` to let Playwright start Vite
+- `E2E_PORT` to choose the dev server port
+- `E2E_BASE_URL` to override the base URL
+- `BETTER_AUTH_TRUSTED_ORIGINS` if auth origin allowlisting needs to include the Playwright origin
+
+Do not create new test files unless the task explicitly requires it.
 
 ## Migrations
 
 Migrations live in `migrations/`.
 
-Current migration history includes:
+The latest migrations currently include:
 
-- conversations
-- Better Auth tables
-- user scoping
-- conversation role
-- conversation search FTS
-- notes
-- prompt quota and redeem codes
-- conversation pinning
-- conversation shares
-- conversation artifacts
+- `0015_conversation_artifacts.sql`
+- `0016_client_error_logs.sql`
+- `0017_conversation_meta_model.sql`
 
-`0011_arena.sql` and `0012_drop_arena.sql` remain historical migrations only.
+`0011_arena.sql` and `0012_drop_arena.sql` are historical only.
 
-## Environment and Bindings
-
-Environment values are read through `src/shared/server/env.ts`, from Cloudflare bindings or `process.env`.
+## Environment And Secrets
 
 Important env keys include:
 
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL`
-- `BETTER_AUTH_TRUSTED_ORIGINS` (optional; comma-separated extra origins for Better Auth)
+- `BETTER_AUTH_TRUSTED_ORIGINS`
 - `ADMIN_EMAIL_ALLOWLIST`
 - `RESEND_API_KEY`
 - `SERP_API_KEY`
@@ -344,68 +299,34 @@ Important env keys include:
 - `OPENAI_BASE_URL_RIGHTCODE`
 - `ANTHROPIC_API_KEY_IKUNCODE`
 - `ANTHROPIC_BASE_URL_IKUNCODE`
-- `OPENAI_API_KEY_IKUNCODE` (ikun OpenAI Responses; base URL reuses `ANTHROPIC_BASE_URL_IKUNCODE`)
+- `OPENAI_API_KEY_IKUNCODE`
 - `GEMINI_API_KEY_IKUNCODE`
 - `GEMINI_BASE_URL_IKUNCODE`
+- `MINIMAX_API_KEY`
+- `NETIFY_TOKEN`
 
-Cloudflare bindings:
+Never commit real secrets.
 
-- `DB` - D1
-- `CHAT_ASSETS` - R2
-
-## Code Style and Expectations
+## Code Style And Expectations
 
 - TypeScript + React
-- follow existing local style; most edited files use 2-space indentation and single quotes, though some newer files still use double quotes
+- follow the existing local style in the file you are editing
+- keep code simple and readable
+- prefer existing feature boundaries over adding a new abstraction layer
 - do not introduce `useMemo`, `useCallback`, or `React.memo`
-- prefer existing TanStack Start patterns for routes and server functions
-- prefer existing feature/store boundaries instead of inventing another state layer
-- keep generated files generated
-
-Generated or generated-like files to avoid hand-editing unless required:
-
-- `src/routeTree.gen.ts`
-- `worker-configuration.d.ts`
-- `src/features/auth/server/auth.schema.ts`
-
-## Practical Guidance
-
-When working on chat behavior, inspect all linked layers before changing anything:
-
-- client store entry point
-- `chat-orchestrator.ts`
-- `event-handlers.ts`
-- `chat-agent.ts`
-
-When working on conversations, remember the change can touch:
-
-- conversation loader hook
-- chat session store
-- message tree helpers
-- D1 persistence
-- search index updates
-- artifact hydration and cleanup
-- share snapshot sanitization
-
-When working on auth-gated app routes, preserve the redirect behavior in `src/routes/__root.tsx`.
-
-When working on public share routes, preserve read-only behavior and noindex semantics.
+- keep `oxlint` and `tsc` clean
+- do not edit generated files manually
 
 ## 用户偏好
 
-1. 如果一个函数或者一个变量在文件里只被使用过一次，就不要单独写。
-2. 代码要简单优雅，变量名要直观，始终保持可读性，始终拒绝抽象。
-3. 不要写任何fallback或者错误兜底代码
-4. 用尽可能少的代码完成需求
+1. 如果一个函数或者变量在文件里只用一次，就不要单独拆出来。
+2. 代码要简单、直观、好读，变量名要让人一眼看懂，拒绝为了抽象而抽象。
+3. 不要写 fallback 或错误兜底代码。
+4. 用尽可能少的代码完成需求。
 
 ## Code Standards
 
-- Never typecast. Never use `as`
-
-- DO NOT Calling setState synchronously within an effect body
-
-- 用尽可能少的tailwind css 以及div来达成同样的效果
-
-- write extremely easy to consume code, optimize for how easy the code is to read. make the code skimmable. avoid cleverness. use early returns.reduce the number of possible states a function can be in with distriminated unions, remove any optionality that is not actual optional, never pass params for overriding code except strictly necessary
-
-- For React code, prefer modern patterns including useEffectEvent, startTransition, and useDeferredValue when appropriate if used by the team. Do not add useMemo /useCallback by default unless already used; follow the repo's React Compiler guidance.
+- Never typecast. Never use `as`.
+- Do not call `setState` synchronously inside an effect body.
+- 用尽可能少的 Tailwind CSS 和 `div` 达成同样效果。
+- Write extremely easy to consume code. Optimize for readability. Keep code skimmable. Avoid cleverness. Use early returns. Reduce the number of possible states. Prefer discriminated unions when they simplify the code. Remove optionality that is not real optionality. Do not add override parameters unless they are strictly necessary.
