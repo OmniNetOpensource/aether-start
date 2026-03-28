@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useMountEffect } from '@/shared/useMountEffect';
+import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 import { Bot, Check, ChevronDown } from 'lucide-react';
 import {
   Command,
@@ -10,12 +10,12 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from '@/shared/ui/command';
-import { Button } from '@/shared/ui/button';
-import { cn } from '@/shared/lib/utils';
-import { useResponsive } from '@/shared/providers/ResponsiveContext';
-import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+} from '@/shared/design-system/command';
+import { Button } from '@/shared/design-system/button';
+import { cn } from '@/shared/core/utils';
+import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
+import { useAppShellRouteData } from '@/features/conversations/route-data';
+import { useChatSessionStore } from '@/features/conversations/session';
 
 const MODEL_STORAGE_KEY = 'aether_current_model';
 

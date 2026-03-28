@@ -5,12 +5,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/shared/ui/dropdown-menu';
-import { Button } from '@/shared/ui/button';
-import { cn } from '@/shared/lib/utils';
-import { useAppShellRouteData } from '@/features/sidebar/app-shell-route-data';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
-import { useMountEffect } from '@/shared/useMountEffect';
+} from '@/shared/design-system/dropdown-menu';
+import { Button } from '@/shared/design-system/button';
+import { cn } from '@/shared/core/utils';
+import { useAppShellRouteData } from '@/features/conversations/route-data';
+import { useChatSessionStore } from '@/features/conversations/session';
+import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 
 const PROMPT_STORAGE_KEY = 'aether_current_prompt';
 
@@ -64,7 +64,7 @@ export function PromptSelector() {
           type='button'
           variant='ghost'
           size='sm'
-          aria-label={`选择提示词，当前为 ${currentPromptName}`}
+          aria-label={`选择提示词，当前�?${currentPromptName}`}
           title={currentPromptName}
           className={cn(
             toolButtonBaseClass,

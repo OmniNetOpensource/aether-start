@@ -8,19 +8,19 @@ import {
   useId,
   useRef,
 } from 'react';
-import { useMountEffect } from '@/shared/useMountEffect';
+import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowUp, Loader2, Paperclip, Square } from 'lucide-react';
-import { useResponsive } from '@/shared/providers/ResponsiveContext';
-import { AttachmentStack } from '@/features/chat/components/AttachmentStack';
-import { Textarea } from '@/shared/ui/textarea';
-import { Button } from '@/shared/ui/button';
-import { toast } from '@/shared/useToast';
-import { cancelAnswering } from '@/features/chat/request/chat-orchestrator';
+import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
+import { AttachmentStack } from '@/features/attachments/attachment-preview';
+import { Textarea } from '@/shared/design-system/textarea';
+import { Button } from '@/shared/design-system/button';
+import { toast } from '@/shared/app-shell/useToast';
+import { cancelAnswering } from '@/features/chat/session';
 import { submitMessage } from './submit-chat';
-import { cn } from '@/shared/lib/utils';
-import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import { cn } from '@/shared/core/utils';
+import { useChatRequestStore } from '@/features/chat/session';
+import { useChatSessionStore } from '@/features/conversations/session';
 import { ModelSelector } from './ModelSelector';
 import { PromptSelector } from './PromptSelector';
 import { useComposerStore } from './useComposerStore';

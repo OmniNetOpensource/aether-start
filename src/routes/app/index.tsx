@@ -1,8 +1,8 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { MessageList } from '@/features/chat/components/message/MessageList';
-import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
-import { useEditingStore } from '@/features/chat/editing/useEditingStore';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import { MessageList } from '@/features/chat/message-thread';
+import { useChatRequestStore } from '@/features/chat/session';
+import { useEditingStore } from '@/features/chat/message-thread';
+import { useChatSessionStore } from '@/features/conversations/session';
 
 function initNewChatPage() {
   if (typeof window === 'undefined') return;

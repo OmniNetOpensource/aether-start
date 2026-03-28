@@ -1,9 +1,9 @@
-import { startChatRequest } from '@/features/chat/request/chat-orchestrator';
-import { buildUserBlocks } from '@/features/sidebar/tree/block-operations';
-import { toast } from '@/shared/useToast';
-import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
-import { upsertConversationInCache } from '@/features/sidebar/queries/use-conversations';
+import { startChatRequest } from '@/features/chat/session';
+import { buildUserBlocks } from '@/features/conversations/conversation-tree';
+import { toast } from '@/shared/app-shell/useToast';
+import { useChatRequestStore } from '@/features/chat/session';
+import { useChatSessionStore } from '@/features/conversations/session';
+import { upsertConversationInCache } from '@/features/conversations/session';
 import { useComposerStore } from './useComposerStore';
 
 // 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求

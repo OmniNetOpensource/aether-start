@@ -44,6 +44,7 @@ export default defineConfig(({ command }) => {
     build: {
       sourcemap: enableBuildSourcemap,
       rollupOptions: {
+        external: ['cloudflare:workers'],
         output: {
           manualChunks: createManualChunk,
         },

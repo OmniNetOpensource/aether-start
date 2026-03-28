@@ -1,12 +1,12 @@
 import { SubmitEvent, useEffect, useRef, useState } from 'react';
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
-import { authClient } from '@/features/auth/client/auth-client';
-import { getSessionStateFn } from '@/features/auth/server/session-state';
-import { Button } from '@/shared/ui/button';
-import { Input } from '@/shared/ui/input';
-import { PasswordInput } from '@/shared/ui/password-input';
-import { cn } from '@/shared/lib/utils';
+import { authClient } from '@/features/auth/auth-client';
+import { getSessionStateFn } from '@/features/auth/session';
+import { Button } from '@/shared/design-system/button';
+import { Input } from '@/shared/design-system/input';
+import { PasswordInput } from '@/shared/design-system/password-input';
+import { cn } from '@/shared/core/utils';
 import {
   validateAuthSearch,
   getDefaultName,

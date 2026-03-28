@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
 import { ArrowLeft, Lightbulb, Loader2, Plus } from 'lucide-react';
-import { buildAttachmentsFromFiles } from '@/shared/attachments';
-import { collectClipboardFiles } from '@/shared/lib/utils/file';
-import { NoteCard } from '@/features/notes/components/NoteCard';
-import { NoteEditDialog } from '@/features/notes/components/NoteEditDialog';
-import { useChatRequestStore } from '@/features/chat/request/useChatRequestStore';
+import { buildAttachmentsFromFiles } from '@/features/attachments/attachment-upload';
+import { collectClipboardFiles } from '@/shared/browser/file';
+import { NoteCard } from '@/features/notes/note-list';
+import { NoteEditDialog } from '@/features/notes/note-editor';
+import { useChatRequestStore } from '@/features/chat/session';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
-import { useEditingStore } from '@/features/chat/editing/useEditingStore';
-import { useNotesStore, type NoteItem } from '@/features/notes/useNotesStore';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
+import { useEditingStore } from '@/features/chat/message-thread';
+import { useNotesStore, type NoteItem } from '@/features/notes/note-record';
+import { useChatSessionStore } from '@/features/conversations/session';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,9 +19,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '@/shared/ui/alert-dialog';
-import { Button } from '@/shared/ui/button';
-import { toast } from '@/shared/useToast';
+} from '@/shared/design-system/alert-dialog';
+import { Button } from '@/shared/design-system/button';
+import { toast } from '@/shared/app-shell/useToast';
 
 export const Route = createFileRoute('/note/')({
   component: NotesPage,

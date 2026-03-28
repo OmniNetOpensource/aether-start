@@ -1,23 +1,20 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Outlet, createFileRoute } from '@tanstack/react-router';
-import Sidebar from '@/features/sidebar/components/Sidebar';
+import Sidebar from '@/features/conversations/conversation-list';
 import { Composer } from '@/features/chat/composer/Composer';
-import {
-  getAvailableModelsFn,
-  getAvailablePromptsFn,
-} from '@/features/chat/server/functions/models';
-import { NewChatButton } from '@/features/chat/components/NewChatButton';
-import { ArtifactToggleButton } from '@/features/chat/components/artifact/ArtifactToggleButton';
-import { ShareButton } from '@/features/share/components/ShareButton';
+import { getAvailableModelsFn, getAvailablePromptsFn } from '@/features/chat/model-catalog';
+import { NewChatButton } from '@/features/chat/session';
+import { ArtifactToggleButton } from '@/features/chat/artifact';
+import { ShareButton } from '@/features/share/share-dialog';
 import {
   AppShellRouteDataProvider,
   type AppShellRouteData,
-} from '@/features/sidebar/app-shell-route-data';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
-import { queryClient } from '@/features/sidebar/queries/query-client';
-import { conversationInfiniteQueryOptions } from '@/features/sidebar/queries/use-conversations';
+} from '@/features/conversations/route-data';
+import { useChatSessionStore } from '@/features/conversations/session';
+import { queryClient } from '@/features/conversations/session';
+import { conversationInfiniteQueryOptions } from '@/features/conversations/session';
 
-const ArtifactPanel = lazy(() => import('@/features/chat/components/artifact/ArtifactPanel'));
+const ArtifactPanel = lazy(() => import('@/features/chat/artifact/ArtifactPanel'));
 
 export const Route = createFileRoute('/app')({
   loader: async (): Promise<AppShellRouteData> => {

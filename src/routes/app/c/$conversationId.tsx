@@ -1,16 +1,16 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import { MessageList } from '@/features/chat/components/message/MessageList';
+import { MessageList } from '@/features/chat/message-thread';
 import {
   resetLastEventId,
   cancelStreamSubscription,
   resumeRunningConversation,
-} from '@/features/chat/request/chat-orchestrator';
-import { useEditingStore } from '@/features/chat/editing/useEditingStore';
-import type { Message } from '@/features/chat/types/message';
-import { useChatSessionStore } from '@/features/sidebar/useChatSessionStore';
-import { getConversationFn } from '@/features/sidebar/server/conversations';
-import { buildCurrentPath } from '@/features/sidebar/tree/message-tree';
+} from '@/features/chat/session';
+import { useEditingStore } from '@/features/chat/message-thread';
+import type { Message } from '@/features/chat/message-thread';
+import { useChatSessionStore } from '@/features/conversations/session';
+import { getConversationFn } from '@/features/conversations/session';
+import { buildCurrentPath } from '@/features/conversations/conversation-tree';
 
 export const Route = createFileRoute('/app/c/$conversationId')({
   component: ConversationPage,

@@ -1,9 +1,9 @@
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { ReadonlyMessageList } from '@/features/share/components/ReadonlyMessageList';
-import { getPublicConversationShareFn } from '@/features/share/server/shares';
-import type { Message } from '@/features/chat/types/message';
+import { ReadonlyMessageList } from '@/features/share/public-thread';
+import { getPublicConversationShareFn } from '@/features/share/share-record';
+import type { Message } from '@/features/chat/message-thread';
 
 type PublicShareData = Awaited<ReturnType<typeof getPublicConversationShareFn>>;
 type ActivePublicShare = Extract<PublicShareData, { status: 'active' }>;

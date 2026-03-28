@@ -1,6 +1,6 @@
 import { createRouter } from '@tanstack/react-router';
 import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query';
-import { queryClient } from '@/features/sidebar/queries/query-client';
+import { queryClient } from '@/features/conversations/session';
 
 // Import the generated route tree
 import { routeTree } from './routeTree.gen';

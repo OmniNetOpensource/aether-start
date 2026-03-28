@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers';
 import { createServerEntry } from '@tanstack/react-start/server-entry';
 import type { RequestHandler } from '@tanstack/react-start/server';
 import type { Register } from '@tanstack/react-router';
-import { getSessionFromRequest } from '@/features/auth/server/session';
+import { getSessionFromRequest } from '@/features/auth/session';
 
 // 所有发往聊天 Durable Object 的请求都约定挂在这个前缀下：
 // /agents/chat-agent/<conversation-or-instance-name>/...
@@ -50,7 +50,7 @@ const fetch: RequestHandler<Register> = async (request, opts) => {
 
 // 必须把 Durable Object 类从 worker 入口导出。
 // Cloudflare 会根据这个导出和 wrangler 配置来注册 ChatAgent 绑定。
-export { ChatAgent } from '@/features/chat/server/agents/chat-agent';
+export { ChatAgent } from '@/features/chat/agent-runtime/chat-agent';
 
 // createServerEntry 会把上面的 fetch 处理器包装成 TanStack Start 认识的 worker 入口对象。
 const serverEntry = createServerEntry({

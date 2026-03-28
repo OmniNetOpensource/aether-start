@@ -1,15 +1,15 @@
-import { useMountEffect } from '@/shared/useMountEffect';
+import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/react-router';
-import { AppErrorBoundary } from '@/shared/components/AppErrorBoundary';
-import { reportClientError } from '@/shared/lib/report-client-error';
+import { AppErrorBoundary } from '@/shared/app-shell/AppErrorBoundary';
+import { reportClientError } from '@/shared/browser/report-client-error';
 
-import { useViewportHeight } from '@/shared/useViewportHeight';
-import { TooltipProvider } from '@/shared/ui/tooltip';
-import { ToastContainer } from '@/shared/ui/toast-container';
-import { ResponsiveProvider } from '@/shared/providers/ResponsiveContext';
+import { useViewportHeight } from '@/shared/app-shell/useViewportHeight';
+import { TooltipProvider } from '@/shared/design-system/tooltip';
+import { ToastContainer } from '@/shared/app-shell/toast-container';
+import { ResponsiveProvider } from '@/shared/app-shell/ResponsiveContext';
 import { NotFound } from '@/routes/-not-found';
-import { getTheme } from '@/shared/server/theme';
-import { getSessionStateFn } from '@/features/auth/server/session-state';
+import { getTheme } from '@/shared/app-shell/theme';
+import { getSessionStateFn } from '@/features/auth/session';
 
 import appCss from '@/routes/globals.css?url';
 
