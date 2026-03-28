@@ -56,7 +56,7 @@ function ArtifactPanelBody() {
   return (
     <div className='flex h-full min-h-0 flex-col'>
       {/* Header: history dropdown + view toggle */}
-      <div className='flex shrink-0 items-center justify-between gap-3 border-b border-border/50 px-1 pb-3'>
+      <div className='flex shrink-0 items-center justify-between gap-3 px-1 pb-3'>
         <Popover open={historyOpen} onOpenChange={setHistoryOpen}>
           <PopoverTrigger asChild>
             <button
@@ -174,7 +174,7 @@ function ArtifactPanelBody() {
           srcDoc={buildPreviewDocument(selectedArtifact.code)}
           sandbox='allow-scripts allow-same-origin'
           className={cn(
-            'absolute inset-0 h-full w-full rounded-md border border-border/50 bg-background transition-[transform] duration-300 ease-out',
+            'absolute inset-0 h-full w-full rounded-md bg-background transition-[transform] duration-300 ease-out',
             artifactView === 'preview'
               ? 'z-10 translate-y-0'
               : 'pointer-events-none z-0 translate-y-full',

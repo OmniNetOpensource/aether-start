@@ -255,7 +255,7 @@ export function MessageList() {
         <div
           role='log'
           aria-live='polite'
-          className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-44 ${widthClass} `}
+          className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-[80vh] ${widthClass} `}
         >
           {currentPath.map((messageId, index) => {
             const isLastMessage = index === currentPath.length - 1;

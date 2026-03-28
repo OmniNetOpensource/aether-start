@@ -18,7 +18,7 @@ function PopoverContent({
       <PopoverPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          'bg-(--surface-secondary) text-foreground data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-(--z-popover) w-72 origin-(--radix-popover-content-transform-origin) border-2 border-foreground p-4 shadow-[2px_3px_0_0_#e8e8e8] outline-hidden',
+          'bg-(--surface-secondary) text-foreground z-(--z-popover) w-72 origin-(--radix-popover-content-transform-origin) p-4 outline-hidden',
           className,
         )}
         style={{

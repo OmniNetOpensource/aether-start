@@ -72,11 +72,6 @@ textarea,
   transition-timing-function: var(--ease-out);
 }
 
-button:active,
-[role='button']:active {
-  transform: scale(0.97);
-}
-
 .horizontal-scroll {
   scrollbar-width: none;
   -ms-overflow-style: none;
