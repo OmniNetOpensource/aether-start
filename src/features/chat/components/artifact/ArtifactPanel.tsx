@@ -46,8 +46,9 @@ function ArtifactPanelBody() {
       .then((result) => {
         setDeployState({ url: result.url });
       })
-      .catch(() => {
-        toast.error('Deploy failed');
+      .catch((error: unknown) => {
+        console.error('[artifact deploy]', error);
+        toast.error(error instanceof Error ? error.message : 'Deploy failed');
         setDeployState('idle');
       });
   };

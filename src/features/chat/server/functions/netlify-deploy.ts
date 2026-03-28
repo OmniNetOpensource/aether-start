@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 import { requireSession } from '@/features/auth/server/session';
+import { log } from '@/features/chat/server/agents/services/logger';
 import { getServerEnv } from '@/shared/server/env';
 
 const crc32Table = (() => {
@@ -71,6 +72,11 @@ function buildZip(content: Uint8Array): Uint8Array {
 
 const inputSchema = z.object({ html: z.string().min(1) });
 
+const netlifySiteSchema = z.object({
+  url: z.string().optional(),
+  ssl_url: z.string().optional(),
+});
+
 export const deployToNetlifyFn = createServerFn({ method: 'POST' })
   .inputValidator(inputSchema)
   .handler(async ({ data }) => {
@@ -78,10 +84,17 @@ export const deployToNetlifyFn = createServerFn({ method: 'POST' })
 
     const { NETIFY_TOKEN } = getServerEnv();
     if (!NETIFY_TOKEN) {
+      log('NETLIFY_DEPLOY', 'missing_token', {});
       throw new Error('Netlify 未配置');
     }
 
-    const zipBytes = buildZip(new TextEncoder().encode(data.html));
+    const htmlBytes = new TextEncoder().encode(data.html);
+    const zipBytes = buildZip(htmlBytes);
+    log('NETLIFY_DEPLOY', 'request_start', {
+      htmlBytes: htmlBytes.length,
+      zipBytes: zipBytes.length,
+    });
+
     const zipCopy = new Uint8Array(zipBytes.length);
     zipCopy.set(zipBytes);
     const resp = await fetch('https://api.netlify.com/api/v1/sites', {
@@ -93,10 +106,29 @@ export const deployToNetlifyFn = createServerFn({ method: 'POST' })
       body: new Blob([zipCopy]),
     });
 
+    const responseText = await resp.text();
     if (!resp.ok) {
-      throw new Error(`Netlify deploy failed: ${resp.status}`);
+      log('NETLIFY_DEPLOY', 'netlify_http_error', {
+        status: resp.status,
+        statusText: resp.statusText,
+        body: responseText,
+      });
+      throw new Error(`Netlify deploy failed: ${resp.status} ${responseText}`);
     }
 
-    const { ssl_url } = z.object({ ssl_url: z.string() }).parse(await resp.json());
-    return { url: ssl_url };
+    const json: unknown = JSON.parse(responseText);
+    const nested = z.object({ site: netlifySiteSchema }).safeParse(json);
+    const flat = netlifySiteSchema.safeParse(json);
+    const site = nested.success ? nested.data.site : flat.success ? flat.data : null;
+    if (!site) {
+      log('NETLIFY_DEPLOY', 'netlify_response_shape', { body: responseText });
+      throw new Error('Netlify deploy: unexpected response');
+    }
+    const publicUrl = site.ssl_url ?? site.url;
+    if (!publicUrl) {
+      log('NETLIFY_DEPLOY', 'netlify_response_missing_urls', { body: responseText });
+      throw new Error('Netlify deploy: response missing url');
+    }
+    log('NETLIFY_DEPLOY', 'deploy_ok', { url: publicUrl });
+    return { url: publicUrl };
   });
