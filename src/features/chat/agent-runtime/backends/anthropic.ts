@@ -71,7 +71,6 @@ type AnthropicStreamChunk =
   | { type: 'stop'; stop_reason: string }
   | { type: 'thinking_blocks'; blocks: ThinkingBlockData[] };
 
-const ANTHROPIC_MAX_TOKENS = 64000;
 const THINKING_BUDGET_RATIO = 0.8;
 const THINKING_MIN_BUDGET_TOKENS = 1024;
 const ADAPTIVE_THINKING_MODEL = 'claude-opus-4-6';
@@ -99,6 +98,22 @@ type AnthropicThinkingParams =
         budget_tokens: number;
       };
     };
+
+const getMaxOutputTokens = (model: string) => {
+  if (model === 'claude-opus-4-6') {
+    return 128000;
+  }
+
+  if (
+    model === 'claude-opus-4-5-20251101' ||
+    model === 'claude-sonnet-4-6' ||
+    model === 'claude-haiku-4-5-20251001'
+  ) {
+    return 64000;
+  }
+
+  throw new Error(`Unsupported Anthropic model: ${model}`);
+};
 
 const getThinkingBudgetTokens = (maxTokens: number): number => {
   const proposedBudgetTokens = Math.floor(maxTokens * THINKING_BUDGET_RATIO);
@@ -203,7 +218,8 @@ async function* streamAnthropicCompletion(requestParams: {
   signal?: AbortSignal;
 }): AsyncGenerator<AnthropicStreamChunk> {
   const client = getClient(requestParams.backendConfig);
-  const thinkingParams = buildThinkingParams(requestParams.model, ANTHROPIC_MAX_TOKENS);
+  const maxTokens = getMaxOutputTokens(requestParams.model);
+  const thinkingParams = buildThinkingParams(requestParams.model, maxTokens);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const streamParams: any = {
@@ -211,7 +227,7 @@ async function* streamAnthropicCompletion(requestParams: {
     messages: requestParams.messages as Anthropic.MessageParam[],
     system: requestParams.system,
     tools: requestParams.tools as Anthropic.Tool[],
-    max_tokens: ANTHROPIC_MAX_TOKENS,
+    max_tokens: maxTokens,
     ...thinkingParams,
   };
 
