@@ -39,11 +39,6 @@ function findCurrentMessageIndex(container: HTMLElement): number {
   return closestIndex;
 }
 
-type MessageListProps = {
-  className?: string;
-  listClassName?: string;
-};
-
 type ChatActionsRailProps = {
   currentPath: number[];
   isMobile: boolean;
