@@ -42,7 +42,7 @@ const COMPOSER_DRAFT_STORAGE_KEY = 'aether_composer_draft';
 /**
  * 聊天输入区：附件与引用条、多行输入、提示词/模型选择与发送。
  *
- * 发送入口有两处：工具栏主按钮（见 handleSendClick），以及输入框 Ctrl+Enter（见 handleKeyDown）。
+ * 发送入口有两处：工具栏主按钮（见发送按钮 onClick），以及输入框 Ctrl+Enter（见 Textarea onKeyDown）。
  * 附件有三种入口：文件选择、粘贴图片/文件、拖放到外层容器。
  */
 export function Composer() {
@@ -53,8 +53,6 @@ export function Composer() {
   const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
   const pendingQuotes = useComposerStore((state) => state.pendingQuotes);
   const uploading = useComposerStore((state) => state.uploading);
-  const deviceType = useResponsive();
-  const isDesktop = deviceType === 'desktop';
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
   const removeQuote = useComposerStore((state) => state.removeQuote);
@@ -121,190 +119,109 @@ export function Composer() {
    * - 其余情况：无内容且无附件、无模型、或正在上传附件时禁用。
    */
   const isBusy = status !== 'idle';
-  const hasText = input.trim().length > 0;
-  const hasAttachments = pendingAttachments.length > 0;
   const sendDisabled =
     isBusy || (typeof window !== 'undefined' && !!window.__preHydrationInput)
       ? false
-      : (!hasText && !hasAttachments) || !currentModelId || uploading;
-
-  const toolButtonBaseClass =
-    'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)';
-
-  // Ctrl+Enter：与主按钮相同的发送路径（submitMessage + 必要时导航到新会话）
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
-      event.preventDefault();
-      void submitMessage((conversationId) =>
-        navigate({
-          to: '/app/c/$conversationId',
-          params: { conversationId },
-        }),
-      );
-    }
-  };
-
-  // 从剪贴板收文件：优先 files，否则遍历 items 里 kind === 'file'
-  const handlePaste = (event: ClipboardEvent<HTMLTextAreaElement>) => {
-    const clipboardData = event.clipboardData;
-    if (!clipboardData) {
-      return;
-    }
-
-    const pastedFiles: File[] = [];
-
-    if (clipboardData.files?.length) {
-      pastedFiles.push(...Array.from(clipboardData.files));
-    } else if (clipboardData.items?.length) {
-      for (const item of Array.from(clipboardData.items)) {
-        if (item.kind !== 'file') {
-          continue;
-        }
-
-        const file = item.getAsFile();
-        if (file) {
-          pastedFiles.push(file);
-        }
-      }
-    }
-
-    if (pastedFiles.length === 0) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (uploading) {
-      toast.info('Attachments are still uploading. Please wait.');
-      return;
-    }
-
-    void addAttachments(pastedFiles);
-  };
-
-  // 允许 drop：必须 preventDefault，否则浏览器默认不触发 drop
-  const handleDragOver = (event: DragEvent) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'copy';
-  };
-
-  const handleDrop = (event: DragEvent) => {
-    event.preventDefault();
-    const files = Array.from(event.dataTransfer.files ?? []);
-    if (!files.length) return;
-    if (uploading) {
-      toast.info('Attachments are still uploading. Please wait.');
-      return;
-    }
-    void addAttachments(files);
-  };
-
-  // 工具栏「回形针」选文件：清空 value 以便同一文件可重复选
-  const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    if (uploading) {
-      return;
-    }
-
-    const files = event.target.files;
-    if (!files || files.length === 0) {
-      return;
-    }
-
-    await addAttachments(Array.from(files));
-    event.target.value = '';
-  };
-
-  // 在不允许发送时点击主按钮：横向晃动提示，不触发发送
-  const triggerBlockedSendAnimation = (button: HTMLButtonElement) => {
-    if (typeof button.animate !== 'function') {
-      return;
-    }
-
-    button.animate(
-      [
-        { transform: 'translateX(0) scale(1)' },
-        { transform: 'translateX(-5px) scale(0.98)' },
-        { transform: 'translateX(5px) scale(0.98)' },
-        { transform: 'translateX(-4px) scale(0.985)' },
-        { transform: 'translateX(4px) scale(0.985)' },
-        { transform: 'translateX(-2px) scale(0.99)' },
-        { transform: 'translateX(2px) scale(0.99)' },
-        { transform: 'translateX(0) scale(1)' },
-      ],
-      {
-        duration: 440,
-        easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
-      },
-    );
-  };
-
-  /**
-   * 主按钮：禁用时晃动；流式/发送中时点按 = 取消回答；否则走 submitMessage。
-   * sendDisabled 在「忙」时为 false，因此这里用 isBusy 区分停止与发送。
-   */
-  const handleSendClick = (event: MouseEvent<HTMLButtonElement>) => {
-    if (sendDisabled) {
-      triggerBlockedSendAnimation(event.currentTarget);
-      return;
-    }
-
-    if (isBusy) {
-      event.preventDefault();
-      cancelAnswering('Composer/stopButton');
-      return;
-    }
-
-    void submitMessage((conversationId) =>
-      navigate({
-        to: '/app/c/$conversationId',
-        params: { conversationId },
-      }),
-    );
-  };
-
-  const composerBoxClass =
-    'relative z-10 flex w-full flex-col gap-2 rounded-xl bg-(--sidebar-surface) p-2 shadow-sm transition-shadow duration-200 focus-within:shadow-md';
-
-  // defaultValue 配合首屏 __preHydrationInput，减轻受控初次渲染与 store 同步之间的闪烁
-  const textarea = (
-    <Textarea
-      ref={textareaRef}
-      id='message-input'
-      name='message'
-      value={input}
-      defaultValue={window.__preHydrationInput ?? ''}
-      onChange={(event) => setInput(event.target.value)}
-      onKeyDown={handleKeyDown}
-      onPaste={handlePaste}
-      rows={1}
-      placeholder='Type your message...'
-      enterKeyHint={isDesktop ? undefined : 'enter'}
-      className='min-h-9 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:text-base'
-    />
-  );
-
-  // 容器宽度：窄屏占 90%，宽屏约半宽且不超过 max-w-2xl（与 tailwind 容器查询一致）
-  const widthClass = 'w-[90%] max-w-full @[921px]:w-[50%] @[921px]:max-w-2xl';
+      : (!input.trim().length && pendingAttachments.length === 0) || !currentModelId || uploading;
 
   return (
-    <div key='composer-wrapper' className='z-(--z-composer) w-full shrink-0 pb-3 md:pb-4'>
+    <div
+      key='composer-wrapper'
+      className='absolute bottom-8 z-(--z-composer) w-full shrink-0 pb-3 md:pb-4'
+    >
+      {/* 最外层：占满主栏宽度、不参与侧栏 flex 收缩，垫高底部留白；z 保证浮在对话内容之上 */}
       <div
         key='composer-bottom'
-        className={`relative mx-auto flex flex-col gap-2 ${widthClass}`}
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
+        className='relative bottom-2 mx-auto flex w-[90%] max-w-full flex-col gap-2 @[921px]:w-[50%] @[921px]:max-w-2xl'
+        onDragOver={(event: DragEvent) => {
+          event.preventDefault();
+          event.dataTransfer.dropEffect = 'copy';
+        }}
+        onDrop={(event: DragEvent) => {
+          event.preventDefault();
+          const files = Array.from(event.dataTransfer.files ?? []);
+          if (!files.length) return;
+          if (uploading) {
+            toast.info('Attachments are still uploading. Please wait.');
+            return;
+          }
+          void addAttachments(files);
+        }}
       >
-        {/* 已选附件与引用块，在输入框上方 */}
+        {/* 内容区容器：窄屏约 90% 宽、宽屏半宽且不超过 max-w-2xl；整块为拖放目标。首块为待发送附件缩略图 + 引用条，与下方输入区纵向 gap-2 分隔 */}
         <AttachmentStack
           items={pendingAttachments}
           quotes={pendingQuotes}
           onRemove={removeAttachment}
           onRemoveQuote={removeQuote}
         />
-        <div className={composerBoxClass}>
-          <div className='flex w-full items-end gap-2'>{textarea}</div>
-          {/* 左：附件 + 提示词；右：模型 + 发送 */}
+        {/* 输入卡片：圆角底衬 + 聚焦时加深阴影；z-10 保证在附件条之上叠放 */}
+        <div className='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border border-white/30 bg-white/80 p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md dark:border-white/10 dark:bg-zinc-900/50'>
+          {/* 主输入行：多行文本框占满宽，底部与工具栏对齐 */}
+          <div className='flex w-full items-end gap-2'>
+            <Textarea
+              ref={textareaRef}
+              id='message-input'
+              name='message'
+              value={input}
+              defaultValue={window.__preHydrationInput ?? ''}
+              onChange={(event) => setInput(event.target.value)}
+              onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
+                if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
+                  event.preventDefault();
+                  void submitMessage((conversationId) =>
+                    navigate({
+                      to: '/app/c/$conversationId',
+                      params: { conversationId },
+                    }),
+                  );
+                }
+              }}
+              onPaste={(event: ClipboardEvent<HTMLTextAreaElement>) => {
+                const clipboardData = event.clipboardData;
+                if (!clipboardData) {
+                  return;
+                }
+
+                const pastedFiles: File[] = [];
+
+                if (clipboardData.files?.length) {
+                  pastedFiles.push(...Array.from(clipboardData.files));
+                } else if (clipboardData.items?.length) {
+                  for (const item of Array.from(clipboardData.items)) {
+                    if (item.kind !== 'file') {
+                      continue;
+                    }
+
+                    const file = item.getAsFile();
+                    if (file) {
+                      pastedFiles.push(file);
+                    }
+                  }
+                }
+
+                if (pastedFiles.length === 0) {
+                  return;
+                }
+
+                event.preventDefault();
+
+                if (uploading) {
+                  toast.info('Attachments are still uploading. Please wait.');
+                  return;
+                }
+
+                void addAttachments(pastedFiles);
+              }}
+              rows={1}
+              placeholder='Type your message...'
+              enterKeyHint={useResponsive() === 'desktop' ? undefined : 'enter'}
+              className='min-h-9 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:text-base'
+            />
+          </div>
+          {/* 工具栏：左右分区 — 左为「附件 + 预设提示词」，右为「模型 + 发送」 */}
           <div className='flex items-center justify-between px-0.5'>
+            {/* 左侧工具：隐藏 file input + 回形针触发、PromptSelector */}
             <div className='flex items-center gap-1'>
               <span
                 title={
@@ -315,7 +232,19 @@ export function Composer() {
                   id={fileInputId}
                   type='file'
                   multiple
-                  onChange={handleFileChange}
+                  onChange={async (event: ChangeEvent<HTMLInputElement>) => {
+                    if (uploading) {
+                      return;
+                    }
+
+                    const files = event.target.files;
+                    if (!files || files.length === 0) {
+                      return;
+                    }
+
+                    await addAttachments(Array.from(files));
+                    event.target.value = '';
+                  }}
                   accept='image/jpeg,image/png,image/webp,image/gif'
                   className='sr-only'
                   data-testid='composer-file-input'
@@ -325,7 +254,7 @@ export function Composer() {
                   variant='ghost'
                   size='sm'
                   className={cn(
-                    toolButtonBaseClass,
+                    'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)',
                     'disabled:cursor-not-allowed disabled:text-(--text-primary)',
                   )}
                 >
@@ -351,13 +280,51 @@ export function Composer() {
               <PromptSelector />
             </div>
 
+            {/* 右侧工具：模型下拉 + 主操作按钮（发送 / 停止 / 禁用时晃动反馈） */}
             <div className='flex items-center gap-1'>
               <ModelSelector />
-              {/* 图标：发送中 spinner → 流式中停止方块 → 空闲箭头（可旋转强调可发） */}
               <Button
                 type='button'
                 aria-disabled={sendDisabled}
-                onClick={handleSendClick}
+                onClick={(event: MouseEvent<HTMLButtonElement>) => {
+                  if (sendDisabled) {
+                    const button = event.currentTarget;
+                    if (typeof button.animate !== 'function') {
+                      return;
+                    }
+
+                    button.animate(
+                      [
+                        { transform: 'translateX(0) scale(1)' },
+                        { transform: 'translateX(-5px) scale(0.98)' },
+                        { transform: 'translateX(5px) scale(0.98)' },
+                        { transform: 'translateX(-4px) scale(0.985)' },
+                        { transform: 'translateX(4px) scale(0.985)' },
+                        { transform: 'translateX(-2px) scale(0.99)' },
+                        { transform: 'translateX(2px) scale(0.99)' },
+                        { transform: 'translateX(0) scale(1)' },
+                      ],
+                      {
+                        duration: 440,
+                        easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
+                      },
+                    );
+                    return;
+                  }
+
+                  if (isBusy) {
+                    event.preventDefault();
+                    cancelAnswering('Composer/stopButton');
+                    return;
+                  }
+
+                  void submitMessage((conversationId) =>
+                    navigate({
+                      to: '/app/c/$conversationId',
+                      params: { conversationId },
+                    }),
+                  );
+                }}
                 size='icon'
                 data-testid='composer-send-button'
                 className={cn(

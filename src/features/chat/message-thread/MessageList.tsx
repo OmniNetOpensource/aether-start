@@ -246,7 +246,7 @@ function ChatActionsRail({ currentPath, isMobile, isStreaming, scrollRef }: Chat
   );
 }
 
-export function MessageList({ className, listClassName }: MessageListProps = {}) {
+export function MessageList() {
   const currentPath = useChatSessionStore((state) => state.currentPath);
   const isStreaming = useChatRequestStore((state) => state.status === 'streaming');
   const deviceType = useResponsive();
@@ -255,12 +255,12 @@ export function MessageList({ className, listClassName }: MessageListProps = {})
   const widthClass = 'w-[90%] @[921px]:w-[60%]';
 
   return (
-    <div className={`relative w-full h-full ${className ?? ''}`.trim()}>
+    <div className='relative w-full h-full'>
       <div ref={scrollRef} className='w-full h-full overflow-y-auto'>
         <div
           role='log'
           aria-live='polite'
-          className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-44 ${widthClass} ${listClassName ?? ''}`.trim()}
+          className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-44 ${widthClass} `}
         >
           {currentPath.map((messageId, index) => {
             const isLastMessage = index === currentPath.length - 1;

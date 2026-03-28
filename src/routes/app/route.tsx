@@ -53,19 +53,15 @@ function AppLayout() {
             <ShareButton />
             <NewChatButton variant='topbar' className='rounded-lg' />
           </div>
-          <div className='flex-1 min-h-0 flex flex-col bg-transparent overflow-hidden'>
-            <main className='relative flex min-h-0 flex-1'>
-              <div className='@container relative flex min-h-0 min-w-0 flex-1 flex-col'>
-                <div className='flex min-h-0 min-w-0 flex-1 flex-col'>
-                  <Outlet />
-                </div>
-                <Composer />
-              </div>
-              <Suspense>
-                <ArtifactPanel />
-              </Suspense>
-            </main>
-          </div>
+          <main className='relative flex flex-row flex-1 h-full w-full'>
+            <div className='@container relative h-full flex-1 min-w-0'>
+              <Outlet />
+              <Composer />
+            </div>
+            <Suspense>
+              <ArtifactPanel />
+            </Suspense>
+          </main>
         </div>
       </div>
     </AppShellRouteDataProvider>

@@ -18,12 +18,5 @@ export const Route = createFileRoute('/app/')({
 });
 
 function HomePage() {
-  const messages = useChatSessionStore((state) => state.messages);
-  const hasMessages = messages.length > 0;
-
-  if (!hasMessages) {
-    return null;
-  }
-
-  return <MessageList className='flex-1 min-h-0' />;
+  return <MessageList />;
 }

@@ -5,7 +5,14 @@
   "compatibility_date": "2026-02-05",
   "compatibility_flags": ["nodejs_compat", "no_handle_cross_request_promise_resolution"],
   "observability": {
-    "enabled": true,
+    "enabled": false,
+  },
+  "env": {
+    "production": {
+      "observability": {
+        "enabled": true,
+      },
+    },
   },
   "durable_objects": {
     "bindings": [
