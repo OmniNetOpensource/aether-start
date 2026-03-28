@@ -371,19 +371,21 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
 
-    // 背景任务负责持续产出事件并最终收尾；fetch 本身尽快把流返回即可。
-    // response stream 未关闭前 fetch 上下文不会结束，无需 waitUntil。
-    this.runChatInBackground(message, userId, signal)
-      .catch((error) => {
-        log('AGENT', 'runChatInBackground failed', {
-          error: error instanceof Error ? error.message : String(error),
-        });
-      })
-      .finally(() => {
-        this.abortController = null;
-        writer.close().catch(() => {});
-        this.writers.delete(writer);
-      });
+    // 客户端断连后 fetch 上下文会结束，但模型推理和最终 D1 落库仍需运行完成。
+    // waitUntil 让运行时在后台任务结束前不驱逐这个 Durable Object。
+    this.ctx.waitUntil(
+      this.runChatInBackground(message, userId, signal)
+        .catch((error) => {
+          log('AGENT', 'runChatInBackground failed', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        })
+        .finally(() => {
+          this.abortController = null;
+          writer.close().catch(() => {});
+          this.writers.delete(writer);
+        }),
+    );
 
     return new Response(readable, {
       headers: {
