@@ -156,7 +156,7 @@ export function Composer() {
           onRemoveQuote={removeQuote}
         />
         {/* 输入卡片：圆角底衬 + 聚焦时加深阴影；z-10 保证在附件条之上叠放 */}
-        <div className='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border border-white/30 bg-white/80 p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md dark:border-white/10 dark:bg-zinc-900/50'>
+        <div className='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border border-white/30 bg-white/50 p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md dark:border-white/10 dark:bg-zinc-900/50'>
           {/* 主输入行：多行文本框占满宽，底部与工具栏对齐 */}
           <div className='flex w-full items-end gap-2'>
             <Textarea
