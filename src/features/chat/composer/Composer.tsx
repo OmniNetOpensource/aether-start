@@ -292,6 +292,7 @@ export function Composer() {
               <ModelSelector />
               <Button
                 type='button'
+                aria-label='发送'
                 aria-disabled={sendDisabled}
                 onClick={(event: MouseEvent<HTMLButtonElement>) => {
                   if (sendDisabled) {
