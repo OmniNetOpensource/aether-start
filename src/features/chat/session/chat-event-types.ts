@@ -33,7 +33,7 @@ export type ChatServerToClientEvent =
   | {
       type: 'tool_call';
       tool: string;
-      args: Record<string, object | string | number | boolean>;
+      args: Record<string, unknown>;
       callId?: string;
     }
   | { type: 'tool_result'; tool: string; result: string; callId?: string }
@@ -47,6 +47,16 @@ export type ChatServerToClientEvent =
   | { type: 'artifact_code_delta'; artifactId: string; delta: string }
   | { type: 'artifact_completed'; artifactId: string }
   | { type: 'artifact_failed'; artifactId: string; message: string }
+  | {
+      type: 'ask_user_questions_requested';
+      callId: string;
+      questions: AskUserQuestionsQuestion[];
+    }
+  | {
+      type: 'ask_user_questions_answered';
+      callId: string;
+      answers: AskUserQuestionsAnswer[];
+    }
   | { type: 'error'; message: string; error?: ChatErrorInfo }
   | {
       type: 'conversation_created';
@@ -62,3 +72,7 @@ export type ChatServerToClientEvent =
       title?: string;
       updated_at: string;
     };
+import type {
+  AskUserQuestionsAnswer,
+  AskUserQuestionsQuestion,
+} from '@/features/chat/ask-user-questions/ask-user-questions';

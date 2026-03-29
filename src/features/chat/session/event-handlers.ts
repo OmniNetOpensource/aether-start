@@ -257,6 +257,24 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
     return;
   }
 
+  if (event.type === 'ask_user_questions_requested') {
+    useChatSessionStore.getState().appendToAssistant({
+      kind: 'ask_user_questions_requested',
+      callId: event.callId,
+      questions: event.questions,
+    });
+    return;
+  }
+
+  if (event.type === 'ask_user_questions_answered') {
+    useChatSessionStore.getState().appendToAssistant({
+      kind: 'ask_user_questions_answered',
+      callId: event.callId,
+      answers: event.answers,
+    });
+    return;
+  }
+
   if (event.type === 'error') {
     const rawMessage =
       typeof event.message === 'string' ? event.message : String(event.message ?? '');

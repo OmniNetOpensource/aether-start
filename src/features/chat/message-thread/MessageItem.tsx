@@ -1,3 +1,4 @@
+import { AskUserQuestionsCard } from '@/features/chat/ask-user-questions';
 import { useState, type ReactNode } from 'react';
 import Markdown from '@/shared/design-system/Markdown';
 import { Message } from '@/features/chat/message-thread';
@@ -7,6 +8,7 @@ import { Copy, Check, AlertCircle, Pencil, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { useChatRequestStore } from '@/features/chat/session';
+import { submitToolAnswer } from '@/features/chat/session';
 import { useEditingStore } from '@/features/chat/message-thread';
 import { MessageEditor } from './MessageEditor';
 import { BranchNavigator } from './BranchNavigator';
@@ -175,6 +177,16 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
                             messageIndex={index}
                           />
                         </div>
+                      );
+                    }
+
+                    if (block.type === 'ask_user_questions') {
+                      return (
+                        <AskUserQuestionsCard
+                          key={blockKey}
+                          block={block}
+                          onSubmit={(answers) => submitToolAnswer(block.callId, answers)}
+                        />
                       );
                     }
 

@@ -1,3 +1,7 @@
+import {
+  cloneAskUserQuestions,
+  cloneAskUserQuestionsAnswers,
+} from '@/features/chat/ask-user-questions/ask-user-questions';
 import type {
   BranchInfo,
   ContentBlock,
@@ -68,6 +72,13 @@ export const cloneBlocks = (blocks: ContentBlock[]): ContentBlock[] =>
       return {
         ...block,
         quotes: block.quotes.map((q) => ({ ...q })),
+      };
+    }
+    if (block.type === 'ask_user_questions') {
+      return {
+        ...block,
+        questions: cloneAskUserQuestions(block.questions),
+        answers: cloneAskUserQuestionsAnswers(block.answers),
       };
     }
     return { ...block };

@@ -76,6 +76,7 @@ type ChatSessionActions = {
   setConversationId: (id: string | null) => void;
   selectMessage: (messageId: number) => void;
   appendToAssistant: (addition: AssistantAddition) => void;
+  setAskUserQuestionsBlockStatus: (callId: string, status: 'pending' | 'submitting') => void;
   getBranchInfo: (messageId: number) => BranchInfo | null;
   navigateBranch: (messageId: number, depth: number, direction: 'prev' | 'next') => void;
   setCurrentModel: (modelId: string) => void;
@@ -232,6 +233,33 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
         currentPath: nextPath,
         latestRootId: nextLatestRootId,
         nextId,
+      };
+    }),
+  setAskUserQuestionsBlockStatus: (callId, status) =>
+    set((state) => {
+      const nextMessages = state.messages.map((message) => {
+        if (message.role !== 'assistant') {
+          return message;
+        }
+
+        const blocks = applyAssistantAddition(message.blocks, {
+          kind: 'ask_user_questions_status',
+          callId,
+          status,
+        });
+
+        if (blocks === message.blocks) {
+          return message;
+        }
+
+        return {
+          ...message,
+          blocks,
+        };
+      });
+
+      return {
+        messages: nextMessages,
       };
     }),
   getBranchInfo: (messageId) => getBranchInfo(get().messages, messageId),

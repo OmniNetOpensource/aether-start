@@ -1,3 +1,9 @@
+import {
+  cloneAskUserQuestions,
+  cloneAskUserQuestionsAnswers,
+  type AskUserQuestionsAnswer,
+  type AskUserQuestionsQuestion,
+} from '@/features/chat/ask-user-questions/ask-user-questions';
 import type {
   AssistantContentBlock,
   Attachment,
@@ -10,8 +16,29 @@ import type {
 import { cloneBlocks, cloneResearchItem } from './message-tree';
 
 type ToolLifecycleUpdate = { kind: 'tool_result'; tool: string; result: string };
+type AskUserQuestionsRequested = {
+  kind: 'ask_user_questions_requested';
+  callId: string;
+  questions: AskUserQuestionsQuestion[];
+};
+type AskUserQuestionsStatusUpdate = {
+  kind: 'ask_user_questions_status';
+  callId: string;
+  status: 'pending' | 'submitting';
+};
+type AskUserQuestionsAnswered = {
+  kind: 'ask_user_questions_answered';
+  callId: string;
+  answers: AskUserQuestionsAnswer[];
+};
 
-export type AssistantAddition = AssistantContentBlock | ResearchItem | ToolLifecycleUpdate;
+export type AssistantAddition =
+  | AssistantContentBlock
+  | ResearchItem
+  | ToolLifecycleUpdate
+  | AskUserQuestionsRequested
+  | AskUserQuestionsStatusUpdate
+  | AskUserQuestionsAnswered;
 
 export const cloneMessages = (messages: Message[]): Message[] =>
   messages.map(
@@ -121,6 +148,17 @@ export const applyAssistantAddition = (
     return fallback;
   };
 
+  const findAskUserQuestionsIndex = (targetBlocks: AssistantContentBlock[], callId: string) => {
+    for (let i = targetBlocks.length - 1; i >= 0; i -= 1) {
+      const block = targetBlocks[i];
+      if (block?.type === 'ask_user_questions' && block.callId === callId) {
+        return i;
+      }
+    }
+
+    return -1;
+  };
+
   if ('kind' in addition) {
     if (addition.kind === 'thinking') {
       const researchIndex = ensureResearchBlock(nextBlocks);
@@ -189,6 +227,62 @@ export const applyAssistantAddition = (
       }
 
       nextBlocks[researchIndex] = { ...researchBlock, items };
+      return nextBlocks;
+    }
+
+    if (addition.kind === 'ask_user_questions_requested') {
+      const targetIndex = findAskUserQuestionsIndex(nextBlocks, addition.callId);
+      const nextBlock = {
+        type: 'ask_user_questions' as const,
+        callId: addition.callId,
+        questions: cloneAskUserQuestions(addition.questions),
+        status: 'pending' as const,
+        answers: [],
+      };
+
+      if (targetIndex === -1) {
+        nextBlocks.push(nextBlock);
+      } else {
+        nextBlocks[targetIndex] = nextBlock;
+      }
+
+      return nextBlocks;
+    }
+
+    if (addition.kind === 'ask_user_questions_status') {
+      const targetIndex = findAskUserQuestionsIndex(nextBlocks, addition.callId);
+      if (targetIndex === -1) {
+        return nextBlocks;
+      }
+
+      const targetBlock = nextBlocks[targetIndex];
+      if (targetBlock.type !== 'ask_user_questions') {
+        return nextBlocks;
+      }
+
+      nextBlocks[targetIndex] = {
+        ...targetBlock,
+        status: addition.status,
+      };
+      return nextBlocks;
+    }
+
+    if (addition.kind === 'ask_user_questions_answered') {
+      const targetIndex = findAskUserQuestionsIndex(nextBlocks, addition.callId);
+      if (targetIndex === -1) {
+        return nextBlocks;
+      }
+
+      const targetBlock = nextBlocks[targetIndex];
+      if (targetBlock.type !== 'ask_user_questions') {
+        return nextBlocks;
+      }
+
+      nextBlocks[targetIndex] = {
+        ...targetBlock,
+        status: 'answered',
+        answers: cloneAskUserQuestionsAnswers(addition.answers),
+      };
       return nextBlocks;
     }
   }

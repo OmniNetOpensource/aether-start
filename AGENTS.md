@@ -44,7 +44,6 @@ Shared code now lives here:
 - `src/shared/browser/`
 - `src/shared/core/`
 - `src/shared/design-system/`
-- `src/shared/test/`
 - `src/shared/worker/`
 
 Generated files:
@@ -67,7 +66,6 @@ Use `pnpm` for repo commands.
 - `pnpm format:check`
 - `pnpm type-check`
 - `pnpm check`
-- `pnpm test:e2e`
 - `pnpm cf:typegen`
 - `pnpm cf:migrate:local`
 - `pnpm cf:migrate:remote`
@@ -237,24 +235,7 @@ Required bindings:
 
 ## Testing Guidance
 
-This repo currently has Playwright configured in `playwright.config.ts` and an E2E suite under `tests/e2e/`.
-
-Current E2E files include:
-
-- `tests/e2e/chat-image.spec.ts`
-- `tests/e2e/global-setup.ts`
-- support files under `tests/e2e/setup/` and `tests/e2e/support/`
-
-`pnpm test:e2e` is the only test script currently defined in `package.json`.
-
-Use these env vars when running E2E:
-
-- `E2E_WEB_SERVER=1` to let Playwright start Vite
-- `E2E_PORT` to choose the dev server port
-- `E2E_BASE_URL` to override the base URL
-- `BETTER_AUTH_TRUSTED_ORIGINS` if auth origin allowlisting needs to include the Playwright origin
-
-Do not create new test files unless the task explicitly requires it.
+There is no automated test suite. `package.json` does not define a test script.
 
 ## Migrations
 

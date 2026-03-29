@@ -1,6 +1,10 @@
 import { applyAssistantAddition, cloneMessages } from '@/features/conversations/conversation-tree';
 import { addMessage, buildCurrentPath } from '@/features/conversations/conversation-tree';
 import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/features/chat/session';
+import type {
+  AskUserQuestionsAnswer,
+  AskUserQuestionsQuestion,
+} from '@/features/chat/ask-user-questions/ask-user-questions';
 import type { AssistantMessage, Message } from '@/features/chat/message-thread';
 
 type TreeState = MessageTreeSnapshot;
@@ -45,7 +49,18 @@ const appendToAssistant = (
     | { type: 'error'; message: string }
     | { kind: 'thinking'; text: string }
     | { kind: 'tool'; data: { call: { tool: string; args: Record<string, unknown> } } }
-    | { kind: 'tool_result'; tool: string; result: string },
+    | { kind: 'tool_result'; tool: string; result: string }
+    | {
+        kind: 'ask_user_questions_requested';
+        callId: string;
+        questions: AskUserQuestionsQuestion[];
+      }
+    | { kind: 'ask_user_questions_status'; callId: string; status: 'pending' | 'submitting' }
+    | {
+        kind: 'ask_user_questions_answered';
+        callId: string;
+        answers: AskUserQuestionsAnswer[];
+      },
 ): TreeState => {
   const target = ensureAssistantTarget(state);
   const nextMessages = [...target.state.messages];
@@ -121,6 +136,22 @@ export const processEventToTree = (state: TreeState, event: ChatServerToClientEv
     return appendToAssistant(state, {
       type: 'error',
       message: typeof event.message === 'string' ? event.message : String(event.message ?? ''),
+    });
+  }
+
+  if (event.type === 'ask_user_questions_requested') {
+    return appendToAssistant(state, {
+      kind: 'ask_user_questions_requested',
+      callId: event.callId,
+      questions: event.questions,
+    });
+  }
+
+  if (event.type === 'ask_user_questions_answered') {
+    return appendToAssistant(state, {
+      kind: 'ask_user_questions_answered',
+      callId: event.callId,
+      answers: event.answers,
     });
   }
 

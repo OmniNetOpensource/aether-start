@@ -10,6 +10,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/desig
 
 const PAGE_SIZE = 20;
 
+const searchCache = new Map<
+  string,
+  { items: ConversationSearchItem[]; nextCursor: ConversationSearchCursor }
+>();
+
 const formatUpdatedAt = (value: string) => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
@@ -64,6 +69,14 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    const cached = searchCache.get(debouncedQuery);
+    if (cached) {
+      setItems(cached.items);
+      setCursor(cached.nextCursor);
+      setHasSearched(true);
+      return;
+    }
+
     const currentRequestId = requestIdRef.current + 1;
     requestIdRef.current = currentRequestId;
 
@@ -85,6 +98,7 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
           return;
         }
 
+        searchCache.set(debouncedQuery, page);
         setItems(page.items);
         setCursor(page.nextCursor);
         setHasSearched(true);

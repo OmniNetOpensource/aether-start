@@ -17,8 +17,7 @@
     "format": "oxfmt .",
     "format:check": "oxfmt --check .",
     "type-check": "tsc --noEmit",
-    "check": "pnpm type-check && pnpm lint && pnpm format:check && pnpm build",
-    "test:e2e": "playwright test"
+    "check": "pnpm type-check && pnpm lint && pnpm format:check && pnpm build"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
@@ -70,7 +69,6 @@
   "devDependencies": {
     "@better-auth/cli": "^1.4.20",
     "@cloudflare/vite-plugin": "^1.30.2",
-    "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/devtools-vite": "^0.5.2",
     "@types/node": "^25.3.3",

@@ -1,6 +1,7 @@
 import { AlertCircle } from 'lucide-react';
 import Markdown from '@/shared/design-system/Markdown';
 import { AttachmentStack } from '@/features/attachments/attachment-preview';
+import { AskUserQuestionsCard } from '@/features/chat/ask-user-questions';
 import { ResearchBlock } from '@/features/chat/research';
 import type { Message } from '@/features/chat/message-thread';
 
@@ -76,6 +77,10 @@ export function ReadonlyMessageList({ messages, isPhone = false }: ReadonlyMessa
                               />
                             </div>
                           );
+                        }
+
+                        if (block.type === 'ask_user_questions') {
+                          return <AskUserQuestionsCard key={blockKey} block={block} readonly />;
                         }
 
                         if (block.type === 'error') {

@@ -1,3 +1,9 @@
+import type {
+  AskUserQuestionsAnswer,
+  AskUserQuestionsBlockStatus,
+  AskUserQuestionsQuestion,
+} from '@/features/chat/ask-user-questions/ask-user-questions';
+
 type ToolCall = {
   tool: string;
   args: Record<string, unknown>;
@@ -36,6 +42,14 @@ type ResearchBlock = {
   items: ResearchItem[];
 };
 
+type AskUserQuestionsBlock = {
+  type: 'ask_user_questions';
+  callId: string;
+  questions: AskUserQuestionsQuestion[];
+  status: AskUserQuestionsBlockStatus;
+  answers: AskUserQuestionsAnswer[];
+};
+
 // --- Role-specific block types ---
 
 export type QuoteItem = { id: string; text: string };
@@ -48,6 +62,7 @@ export type UserContentBlock =
 export type AssistantContentBlock =
   | { type: 'content'; content: string }
   | ResearchBlock
+  | AskUserQuestionsBlock
   | { type: 'error'; message: string };
 
 export type ContentBlock = UserContentBlock | AssistantContentBlock;

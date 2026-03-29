@@ -7,6 +7,7 @@
  * �?chat-agent 服务端配合，通过 SSE 接收 chat_event、chat_started、chat_finished 等事件，
  * 并调�?event-handlers 中的 applyChatEventToTree 更新 UI 状态�? */
 import { toast } from '@/shared/app-shell/useToast';
+import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import { applyChatEventToTree } from './event-handlers';
 import { useChatRequestStore } from './useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
@@ -381,6 +382,44 @@ export const cancelAnswering = (reason: string) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
     }).catch(() => {});
+  }
+};
+
+export const submitToolAnswer = async (callId: string, answers: AskUserQuestionsAnswer[]) => {
+  const conversationId = useChatSessionStore.getState().conversationId;
+
+  if (!conversationId) {
+    throw new Error('Conversation not found');
+  }
+
+  useChatSessionStore.getState().setAskUserQuestionsBlockStatus(callId, 'submitting');
+
+  try {
+    const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/tool-answer`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ callId, answers }),
+    });
+
+    if (response.ok) {
+      return;
+    }
+
+    let message = `提交失败: ${response.status}`;
+
+    try {
+      const data = (await response.json()) as Record<string, unknown>;
+      if (typeof data.error === 'string' && data.error.trim()) {
+        message = data.error;
+      }
+    } catch {}
+
+    throw new Error(message);
+  } catch (error) {
+    useChatSessionStore.getState().setAskUserQuestionsBlockStatus(callId, 'pending');
+    toast.error(error instanceof Error ? error.message : '提交失败');
+    throw error;
   }
 };
 

@@ -113,6 +113,7 @@ export const getPreview = (message: Message): string => {
   let attachmentCount = 0;
   let errorMessage: string | null = null;
   let hasResearch = false;
+  let hasAskUserQuestions = false;
 
   for (const block of message.blocks) {
     if (block.type === 'attachments') {
@@ -128,6 +129,11 @@ export const getPreview = (message: Message): string => {
 
     if (block.type === 'research') {
       hasResearch = true;
+      continue;
+    }
+
+    if (block.type === 'ask_user_questions') {
+      hasAskUserQuestions = true;
     }
   }
 
@@ -141,6 +147,10 @@ export const getPreview = (message: Message): string => {
 
   if (hasResearch) {
     return '思考/工具调用';
+  }
+
+  if (hasAskUserQuestions) {
+    return '问答卡片';
   }
 
   return '空消息';

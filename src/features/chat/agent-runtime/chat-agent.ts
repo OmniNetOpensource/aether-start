@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { getAvailableTools, executeToolsGen } from '@/features/chat/agent-runtime';
+import { executeToolCall, getAvailableTools } from '@/features/chat/agent-runtime';
 import {
   getDefaultModelConfig,
   getModelConfig,
@@ -12,6 +12,13 @@ import { createChatProvider } from '@/features/chat/agent-runtime';
 import type { ProviderRunResult } from '@/features/chat/agent-runtime';
 import { generateTitleFromConversation } from '../session/chat-title';
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/agent-runtime';
+import {
+  buildAskUserQuestionsModelResult,
+  normalizeAskUserQuestionsAnswers,
+  parseAskUserQuestions,
+  parseAskUserQuestionsAnswerSubmission,
+  type AskUserQuestionsQuestion,
+} from '@/features/chat/ask-user-questions/ask-user-questions';
 import {
   createConversationArtifact,
   getConversationById,
@@ -126,6 +133,20 @@ type PendingArtifact = {
   code: string;
 };
 
+type PendingAskUserQuestions = {
+  callId: string;
+  conversationId: string;
+  ownerUserId: string;
+  questions: AskUserQuestionsQuestion[];
+  submittedByUserId: string | null;
+  answered: boolean;
+  waitForAnswer: {
+    resolve: (modelResult: string) => void;
+    reject: (error: unknown) => void;
+    clearAbortListener: () => void;
+  } | null;
+};
+
 // 这里只做最低限度的结构校验，保证后续逻辑不会直接踩到 undefined / 类型错误。
 const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   if (!isObject(body)) return null;
@@ -204,6 +225,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   // /chat 的首条流式连接和 /events 的补连都会挂在这里一起收广播。
   private writers = new Set<WritableStreamDefaultWriter<Uint8Array>>();
   private encoder = new TextEncoder();
+  private pendingAskUserQuestions = new Map<string, PendingAskUserQuestions>();
+  private liveEventSink: ((event: ChatServerToClientEvent) => Promise<void>) | null = null;
 
   // 第一次收到某个 conversation 的请求时，把实例和会话绑定起来。
   private ensureInitialized(name: string) {
@@ -243,6 +266,11 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     if (request.method === 'POST' && sub === 'abort') {
       if (!userId) return new Response('Unauthorized', { status: 401 });
       return this.handleAbort(request, userId);
+    }
+
+    if (request.method === 'POST' && sub === 'tool-answer') {
+      if (!userId) return new Response('Unauthorized', { status: 401 });
+      return this.handleToolAnswer(request, userId);
     }
 
     // 空子路径只返回轻量状态，给前端恢复页面时探测“这个会话是不是还在跑”。
@@ -459,6 +487,105 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     return Response.json({ ok: true });
   }
 
+  private waitForAskUserQuestionsAnswer(
+    conversationId: string,
+    userId: string,
+    callId: string,
+    questions: AskUserQuestionsQuestion[],
+    signal: AbortSignal,
+  ) {
+    if (signal.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+
+    if (this.pendingAskUserQuestions.has(callId)) {
+      throw new Error(`Interactive tool call already exists: ${callId}`);
+    }
+
+    return new Promise<string>((resolve, reject) => {
+      const clearAbortListener = () => signal.removeEventListener('abort', onAbort);
+      const onAbort = () => {
+        const pending = this.pendingAskUserQuestions.get(callId);
+        if (pending) {
+          pending.waitForAnswer = null;
+        }
+        clearAbortListener();
+        reject(new DOMException('Aborted', 'AbortError'));
+      };
+
+      signal.addEventListener('abort', onAbort, { once: true });
+      this.pendingAskUserQuestions.set(callId, {
+        callId,
+        conversationId,
+        ownerUserId: userId,
+        questions,
+        submittedByUserId: null,
+        answered: false,
+        waitForAnswer: {
+          resolve,
+          reject,
+          clearAbortListener,
+        },
+      });
+    });
+  }
+
+  private async handleToolAnswer(request: Request, userId: string): Promise<Response> {
+    if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    const payload = parseAskUserQuestionsAnswerSubmission(await request.json().catch(() => null));
+    if (!payload) {
+      return Response.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const pending = this.pendingAskUserQuestions.get(payload.callId);
+    if (!pending || pending.conversationId !== this.instanceName) {
+      return Response.json({ error: 'Tool call not found' }, { status: 404 });
+    }
+
+    if (pending.ownerUserId !== userId) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    if (pending.answered) {
+      return Response.json({ error: 'Tool call already answered' }, { status: 409 });
+    }
+
+    if (!this.liveEventSink || !pending.waitForAnswer) {
+      return Response.json(
+        { error: 'Conversation is not waiting for a tool answer' },
+        { status: 409 },
+      );
+    }
+
+    let answers;
+    try {
+      answers = normalizeAskUserQuestionsAnswers(pending.questions, payload.answers);
+    } catch (error) {
+      return Response.json(
+        { error: error instanceof Error ? error.message : 'Invalid answers' },
+        { status: 400 },
+      );
+    }
+
+    pending.answered = true;
+    pending.submittedByUserId = userId;
+
+    await this.liveEventSink({
+      type: 'ask_user_questions_answered',
+      callId: pending.callId,
+      answers,
+    });
+
+    pending.waitForAnswer.resolve(buildAskUserQuestionsModelResult(pending.questions, answers));
+    pending.waitForAnswer.clearAbortListener();
+    pending.waitForAnswer = null;
+
+    return Response.json({ ok: true });
+  }
+
   // ── Background chat execution ────────────────────────────────────────
 
   private async runChatInBackground(message: ChatRequestBody, userId: string, signal: AbortSignal) {
@@ -517,6 +644,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       }
       this.persistAndBroadcastEvent(event);
     };
+    this.liveEventSink = emitEvent;
 
     const throwIfAborted = () => {
       if (signal.aborted) {
@@ -618,6 +746,21 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
               ? 'tool_calls'
               : 'completed';
 
+        // 每次模型 stop 都落库一次，避免长 tool-use 链路中间断掉丢失进度。
+        try {
+          await this.persistConversationSnapshot(
+            message.conversationId,
+            userId,
+            cloneTreeSnapshot(workingTree),
+            message.model,
+            modelStopReason === 'completed',
+          );
+        } catch (error) {
+          log('AGENT', 'Intermediate snapshot persist failed', {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+
         if (modelStopReason === 'error') {
           finalStatus = 'error';
           break;
@@ -627,18 +770,64 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
           break;
         }
 
-        const toolGen = executeToolsGen(pendingToolCalls, signal);
-        let toolResults: ToolInvocationResult[] = [];
+        const toolResults: ToolInvocationResult[] = [];
 
-        while (true) {
-          const toolGenResult = await toolGen.next();
-          if (toolGenResult.done) {
-            toolResults = toolGenResult.value;
-            break;
-          }
-          // 工具执行过程本身也可能流式产出事件，例如开始、结果、报错。
-          await emitEvent(toolGenResult.value);
+        for (const toolCall of pendingToolCalls) {
           throwIfAborted();
+
+          if (toolCall.name === 'askuserquestions') {
+            try {
+              const questions = parseAskUserQuestions(toolCall.args);
+              await emitEvent({
+                type: 'ask_user_questions_requested',
+                callId: toolCall.id,
+                questions,
+              });
+
+              const modelResult = await this.waitForAskUserQuestionsAnswer(
+                message.conversationId,
+                userId,
+                toolCall.id,
+                questions,
+                signal,
+              );
+
+              toolResults.push({
+                id: toolCall.id,
+                name: toolCall.name,
+                result: modelResult,
+              });
+            } catch (error) {
+              const isAbortError =
+                (error instanceof DOMException && error.name === 'AbortError') ||
+                (error instanceof Error && error.name === 'AbortError') ||
+                signal.aborted;
+
+              if (isAbortError) {
+                throw error;
+              }
+
+              const errorMessage = error instanceof Error ? error.message : String(error);
+              log('TOOLS', 'Interactive askuserquestions failed', {
+                error: errorMessage,
+                callId: toolCall.id,
+              });
+              toolResults.push({
+                id: toolCall.id,
+                name: toolCall.name,
+                result: `Error executing askuserquestions: ${errorMessage}`,
+              });
+            }
+
+            continue;
+          }
+
+          const executedToolCall = await executeToolCall(toolCall, signal);
+          for (const event of executedToolCall.events) {
+            await emitEvent(event);
+            throwIfAborted();
+          }
+          toolResults.push(executedToolCall.result);
         }
 
         // provider 负责把“本轮输出 + 工具调用 + 工具结果”拼回消息格式，
@@ -668,6 +857,13 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         await emitEvent(toEventError(`错误：${errorMessage}`));
       }
     } finally {
+      this.liveEventSink = null;
+      for (const pending of this.pendingAskUserQuestions.values()) {
+        pending.waitForAnswer?.reject(new DOMException('Aborted', 'AbortError'));
+        pending.waitForAnswer?.clearAbortListener();
+      }
+      this.pendingAskUserQuestions.clear();
+
       if (finalStatus !== 'completed') {
         for (const artifact of pendingArtifacts.values()) {
           await emitEvent({
