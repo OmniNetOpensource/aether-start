@@ -5,6 +5,7 @@ import {
   cancelStreamSubscription,
   resumeRunningConversation,
 } from '@/features/chat/session';
+import { FallbackMessageList } from '@/features/chat/message-thread/FallbackMessageList';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import type { Message } from '@/features/chat/message-thread/message';
 import { useChatSessionStore } from '@/features/conversations/session';
@@ -79,7 +80,7 @@ export function ConversationPage() {
   ]);
 
   return (
-    <Suspense fallback={<div className='flex h-full min-h-0 w-full' />}>
+    <Suspense fallback={<FallbackMessageList />}>
       <MessageList />
     </Suspense>
   );
