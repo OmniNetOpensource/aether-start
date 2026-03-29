@@ -6,6 +6,7 @@ import {
   MouseEvent,
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
 } from 'react';
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
@@ -20,14 +21,13 @@ import { cancelAnswering } from '@/features/chat/session';
 import { submitMessage } from './submit-chat';
 import { cn } from '@/shared/core/utils';
 import { useChatRequestStore } from '@/features/chat/session';
-import { useChatSessionStore } from '@/features/conversations/session';
 import { ModelSelector } from './ModelSelector';
 import { PromptSelector } from './PromptSelector';
 import { useComposerStore } from './useComposerStore';
 
 /**
- * 首屏 hydration 前，根节点脚本可能把用户在输入框里已打的字放到 window 上，
- * 避免 React 接管时闪白或丢字。hydrate 后由 Composer 读入 store 并清掉。
+ * 首屏：localStorage 草稿写入 window、DOMContentLoaded 注入 textarea、input 同步 window。
+ * hydrate 前 Composer 用 useLayoutEffect 读入 store 并拆掉监听，避免闪白与丢字。
  */
 declare global {
   interface Window {
@@ -61,22 +61,24 @@ export function Composer() {
 
   // --- 请求状态（发送中/流式中决定主按钮图标与是否视为「忙」）---
   const status = useChatRequestStore((state) => state.status);
-  // --- 当前会话选中的模型：未选模型时不允许发送 ---
-  const currentModelId = useChatSessionStore((state) => state.currentModelId);
   // 隐藏 file input 与 label 关联，避免 id 冲突
   const fileInputId = useId();
 
-  // 挂载一次：把首屏 window 里的草稿写入 store + localStorage，并拆掉 document 上的临时 input 监听
-  useMountEffect(() => {
+  // paint 前：把首屏 window / DOM 里的内容写入 store（store 初始为 ''，hydration 会校正 DOM，故用 layout）
+  useLayoutEffect(() => {
     const pre = window.__preHydrationInput;
-    setInput(pre ?? '');
-    localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, pre ?? '');
+    const currentDomValue = textareaRef.current?.value ?? '';
+    const restoredInput = currentDomValue || pre || '';
+
+    setInput(restoredInput);
+    localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, restoredInput);
+
     delete window.__preHydrationInput;
     if (window.__preHydrationInputHandler) {
       document.removeEventListener('input', window.__preHydrationInputHandler);
       delete window.__preHydrationInputHandler;
     }
-  });
+  }, [setInput]);
 
   // 输入变化即持久化草稿，便于意外刷新后恢复
   useEffect(() => {
@@ -113,14 +115,22 @@ export function Composer() {
   /**
    * 主按钮是否「视觉上禁用」。
    * - 请求进行中（sending/streaming）：按钮可点，用于停止，不设为 disabled。
-   * - 仍存在 __preHydrationInput 时：首帧可能尚未同步完，避免误锁死按钮。
    * - 其余情况：无内容且无附件、无模型、或正在上传附件时禁用。
+   * 草稿在首帧 paint 前由 useLayoutEffect 写入 store，sendDisabled 与受控 input 一致。
    */
   const isBusy = status !== 'idle';
   const sendDisabled =
-    isBusy || (typeof window !== 'undefined' && !!window.__preHydrationInput)
+    isBusy || input.trim().length !== 0 || pendingAttachments.length > 0 || pendingQuotes.length > 0
       ? false
-      : (!input.trim().length && pendingAttachments.length === 0) || !currentModelId || uploading;
+      : true;
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    console.log('[Composer]', { input, sendDisabled });
+  }, [input, sendDisabled]);
 
   return (
     <div
@@ -162,7 +172,6 @@ export function Composer() {
               id='message-input'
               name='message'
               value={input}
-              defaultValue={typeof window !== 'undefined' ? (window.__preHydrationInput ?? '') : ''}
               onChange={(event) => setInput(event.target.value)}
               onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
                 if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {

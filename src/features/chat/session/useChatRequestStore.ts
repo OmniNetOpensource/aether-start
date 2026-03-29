@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { getZustandDevtoolsOptions } from '@/shared/browser/zustand-devtools';
 
 export type ChatStatus = 'idle' | 'sending' | 'streaming';
 
@@ -32,6 +33,6 @@ export const useChatRequestStore = create<{
         set({ status }, false, callsite ? `${name} @ ${callsite}` : name);
       },
     }),
-    { name: 'ChatRequestStore' },
+    getZustandDevtoolsOptions('ChatRequestStore'),
   ),
 );

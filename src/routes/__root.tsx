@@ -132,7 +132,7 @@ function RootComponent() {
 
 const themeInitScript = `(function(){var t=localStorage.getItem('theme');if(!t){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}if(t==='dark'){document.documentElement.classList.add('dark');}})();`;
 
-const preHydrationInputScript = `(function(){var k='aether_composer_draft';var v=localStorage.getItem(k);window.__preHydrationInput=v===null?'':v;window.__preHydrationInputHandler=function(e){if(e.target&&e.target.id==='message-input'){window.__preHydrationInput=e.target.value;}};document.addEventListener('input',window.__preHydrationInputHandler);})();`;
+const preHydrationInputScript = `(function(){var k='aether_composer_draft';var v=localStorage.getItem(k);window.__preHydrationInput=v===null?'':v;window.__preHydrationInputHandler=function(e){if(e.target&&e.target.id==='message-input'){window.__preHydrationInput=e.target.value;}};document.addEventListener('input',window.__preHydrationInputHandler);function inject(){var el=document.getElementById('message-input');if(el&&window.__preHydrationInput){el.value=window.__preHydrationInput;}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',inject);}else{inject();}})();`;
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   const theme = Route.useLoaderData();

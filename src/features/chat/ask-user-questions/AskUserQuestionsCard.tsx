@@ -101,7 +101,9 @@ export function AskUserQuestionsCard({
     >
       <div className='flex items-start justify-between gap-3 border-b border-border px-4 py-3.5'>
         <div className='min-w-0'>
-          <p className='text-[13px] font-medium leading-snug tracking-tight'>需要你先回答这组问题</p>
+          <p className='text-[13px] font-medium leading-snug tracking-tight'>
+            需要你先回答这组问题
+          </p>
           <p className='mt-1 text-xs leading-5 text-(--text-secondary)'>
             回答后，这条 assistant 消息会继续往下生成。
           </p>
@@ -111,11 +113,7 @@ export function AskUserQuestionsCard({
         </span>
       </div>
 
-      <fieldset
-        key={`${block.callId}-${currentPage}`}
-        disabled={isLocked}
-        className='min-w-0'
-      >
+      <fieldset key={`${block.callId}-${currentPage}`} disabled={isLocked} className='min-w-0'>
         <div className='space-y-1 px-4 pt-4'>
           <p className='text-[11px] font-medium uppercase tracking-[0.06em] text-(--text-tertiary)'>
             {question.header}
