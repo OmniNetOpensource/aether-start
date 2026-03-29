@@ -9,6 +9,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/design-system/dialog';
 import { authClient } from '@/features/auth/auth-client';
 import { useTheme } from '@/shared/app-shell/useTheme';
+import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
 let settingsModalModulePromise: Promise<typeof import('../settings-dialog/SettingsModal')> | null =
   null;
@@ -21,13 +22,15 @@ const loadSettingsModal = () => {
   return settingsModalModulePromise;
 };
 
-const SettingsModal = lazy(async () => {
-  const module = await loadSettingsModal();
+const SettingsModal = lazy(() =>
+  loadWithRetry(async () => {
+    const module = await loadSettingsModal();
 
-  return {
-    default: module.SettingsModal,
-  };
-});
+    return {
+      default: module.SettingsModal,
+    };
+  }),
+);
 
 type ProfileMenuProps = {
   isCollapsed?: boolean;

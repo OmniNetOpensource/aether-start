@@ -4,9 +4,12 @@ import { useChatRequestStore } from '@/features/chat/session';
 import { FallbackMessageList } from '@/features/chat/message-thread/FallbackMessageList';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import { useChatSessionStore } from '@/features/conversations/session';
+import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
 const MessageList = lazy(() =>
-  import('@/features/chat/message-thread/MessageList').then((m) => ({ default: m.MessageList })),
+  loadWithRetry(() =>
+    import('@/features/chat/message-thread/MessageList').then((m) => ({ default: m.MessageList })),
+  ),
 );
 
 function initNewChatPage() {

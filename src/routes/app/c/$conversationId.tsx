@@ -11,9 +11,12 @@ import type { Message } from '@/features/chat/message-thread/message';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { getConversationFn } from '@/features/conversations/session';
 import { buildCurrentPath } from '@/features/conversations/conversation-tree';
+import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
 const MessageList = lazy(() =>
-  import('@/features/chat/message-thread/MessageList').then((m) => ({ default: m.MessageList })),
+  loadWithRetry(() =>
+    import('@/features/chat/message-thread/MessageList').then((m) => ({ default: m.MessageList })),
+  ),
 );
 
 export const Route = createFileRoute('/app/c/$conversationId')({

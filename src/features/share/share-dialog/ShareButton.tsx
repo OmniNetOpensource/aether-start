@@ -4,6 +4,7 @@ import { Button } from '@/shared/design-system/button';
 import { Dialog, DialogContent } from '@/shared/design-system/dialog';
 import { useChatRequestStore } from '@/features/chat/session';
 import { useChatSessionStore } from '@/features/conversations/session';
+import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
 let shareDialogModulePromise: Promise<typeof import('./ShareDialog')> | null = null;
 
@@ -15,13 +16,15 @@ const loadShareDialog = () => {
   return shareDialogModulePromise;
 };
 
-const ShareDialog = lazy(async () => {
-  const module = await loadShareDialog();
+const ShareDialog = lazy(() =>
+  loadWithRetry(async () => {
+    const module = await loadShareDialog();
 
-  return {
-    default: module.ShareDialog,
-  };
-});
+    return {
+      default: module.ShareDialog,
+    };
+  }),
+);
 
 export function ShareButton() {
   const [open, setOpen] = useState(false);

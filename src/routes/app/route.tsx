@@ -13,8 +13,11 @@ import {
 import { useChatSessionStore } from '@/features/conversations/session';
 import { queryClient } from '@/features/conversations/session';
 import { conversationInfiniteQueryOptions } from '@/features/conversations/session';
+import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
-const ArtifactPanel = lazy(() => import('@/features/chat/artifact/ArtifactPanel'));
+const ArtifactPanel = lazy(() =>
+  loadWithRetry(() => import('@/features/chat/artifact/ArtifactPanel')),
+);
 
 export const Route = createFileRoute('/app')({
   loader: async (): Promise<AppShellRouteData> => {

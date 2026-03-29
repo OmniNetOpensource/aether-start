@@ -4,9 +4,10 @@ import { Button } from '@/shared/design-system/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/shared/design-system/dialog';
 import { useChatRequestStore } from '@/features/chat/session';
 import { useChatSessionStore } from '@/features/conversations/session';
+import { loadWithRetry } from '@/shared/browser/load-with-retry';
 import { buildOutlineTree } from './build-outline-tree';
 
-const OutlineGraph = lazy(() => import('./OutlineGraph'));
+const OutlineGraph = lazy(() => loadWithRetry(() => import('./OutlineGraph')));
 
 const SCROLL_RETRY_FRAMES = 4;
 

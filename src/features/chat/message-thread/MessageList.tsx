@@ -13,10 +13,13 @@ import { useChatSessionStore } from '@/features/conversations/session';
 import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
 import { Button } from '@/shared/design-system/button';
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
+import { loadWithRetry } from '@/shared/browser/load-with-retry';
 import { MessageItem } from './MessageItem';
 import { SelectionToolbar } from './selection-toolbar';
 
-const OutlineButton = lazy(() => import('./outline').then((m) => ({ default: m.OutlineButton })));
+const OutlineButton = lazy(() =>
+  loadWithRetry(() => import('./outline').then((m) => ({ default: m.OutlineButton }))),
+);
 
 const LEAVE_TOLERANCE_PX = 1;
 
