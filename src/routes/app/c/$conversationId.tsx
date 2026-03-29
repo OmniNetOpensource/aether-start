@@ -1,16 +1,19 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useEffect } from 'react';
-import { MessageList } from '@/features/chat/message-thread';
+import { Suspense, lazy, useEffect } from 'react';
 import {
   resetLastEventId,
   cancelStreamSubscription,
   resumeRunningConversation,
 } from '@/features/chat/session';
-import { useEditingStore } from '@/features/chat/message-thread';
-import type { Message } from '@/features/chat/message-thread';
+import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
+import type { Message } from '@/features/chat/message-thread/message';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { getConversationFn } from '@/features/conversations/session';
 import { buildCurrentPath } from '@/features/conversations/conversation-tree';
+
+const MessageList = lazy(() =>
+  import('@/features/chat/message-thread/MessageList').then((m) => ({ default: m.MessageList })),
+);
 
 export const Route = createFileRoute('/app/c/$conversationId')({
   component: ConversationPage,
@@ -75,5 +78,9 @@ export function ConversationPage() {
     setPageTitle,
   ]);
 
-  return <MessageList />;
+  return (
+    <Suspense fallback={<div className='flex h-full min-h-0 w-full' />}>
+      <MessageList />
+    </Suspense>
+  );
 }

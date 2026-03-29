@@ -1,4 +1,6 @@
 import {
+  Suspense,
+  lazy,
   useEffect,
   useRef,
   useState,
@@ -12,8 +14,9 @@ import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
 import { Button } from '@/shared/design-system/button';
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 import { MessageItem } from './MessageItem';
-import { OutlineButton } from './outline';
 import { SelectionToolbar } from './selection-toolbar';
+
+const OutlineButton = lazy(() => import('./outline').then((m) => ({ default: m.OutlineButton })));
 
 const LEAVE_TOLERANCE_PX = 1;
 
@@ -204,7 +207,9 @@ function ChatActionsRail({ currentPath, isMobile, isStreaming, scrollRef }: Chat
           onMouseLeave={isMobile ? undefined : handleMouseLeave}
           data-chat-actions-rail
         >
-          <OutlineButton />
+          <Suspense fallback={<div className='size-8 shrink-0' aria-hidden />}>
+            <OutlineButton />
+          </Suspense>
           <Button
             type='button'
             variant='ghost'

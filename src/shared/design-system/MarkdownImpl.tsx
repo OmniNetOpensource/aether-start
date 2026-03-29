@@ -9,8 +9,6 @@ import {
 } from 'streamdown';
 import { cjk } from '@streamdown/cjk';
 import { createMathPlugin } from '@streamdown/math';
-import 'streamdown/styles.css';
-import 'katex/dist/katex.min.css';
 import { Button } from '@/shared/design-system/button';
 import {
   Dialog,
@@ -175,14 +173,18 @@ const StreamdownBlock = memo(function StreamdownBlock({
       return;
     }
 
-    const h = Math.round(el.getBoundingClientRect().height);
-    if (h > 0) {
-      el.style.contentVisibility = 'auto';
-      el.style.containIntrinsicBlockSize = `${h}px`;
-    } else {
-      el.style.contentVisibility = '';
-      el.style.containIntrinsicBlockSize = '';
-    }
+    const frameId = requestAnimationFrame(() => {
+      const h = Math.round(el.getBoundingClientRect().height);
+      if (h > 0) {
+        el.style.contentVisibility = 'auto';
+        el.style.containIntrinsicBlockSize = `${h}px`;
+      } else {
+        el.style.contentVisibility = '';
+        el.style.containIntrinsicBlockSize = '';
+      }
+    });
+
+    return () => cancelAnimationFrame(frameId);
   }, [blockIsAnimating]);
 
   return (

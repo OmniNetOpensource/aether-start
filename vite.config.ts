@@ -8,20 +8,16 @@ import viteTsConfigPaths from 'vite-tsconfig-paths';
 import { resolve } from 'path';
 
 const createManualChunk = (id: string) => {
+  if (id.includes('node_modules/react-dom')) {
+    return 'vendor-react';
+  }
+
+  if (id.includes('node_modules/react')) {
+    return 'vendor-react';
+  }
+
   if (id.includes('node_modules/streamdown') || id.includes('node_modules/@streamdown/cjk')) {
     return 'markdown';
-  }
-
-  if (id.includes('node_modules/mermaid')) {
-    return 'mermaid';
-  }
-
-  if (id.includes('node_modules/@xyflow/react')) {
-    return 'xyflow';
-  }
-
-  if (id.includes('node_modules/framer-motion') || id.includes('node_modules/motion')) {
-    return 'motion';
   }
 
   return undefined;

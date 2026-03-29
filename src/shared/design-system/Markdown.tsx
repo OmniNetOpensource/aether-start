@@ -1,6 +1,9 @@
 import { lazy, Suspense } from 'react';
 
-const MarkdownImpl = lazy(() => import('./MarkdownImpl'));
+const MarkdownImpl = lazy(async () => {
+  await Promise.all([import('streamdown/styles.css'), import('katex/dist/katex.min.css')]);
+  return import('./MarkdownImpl');
+});
 
 type Props = {
   content: string;

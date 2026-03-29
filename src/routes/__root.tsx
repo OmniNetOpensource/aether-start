@@ -143,10 +143,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <script crossOrigin='anonymous' src='https://unpkg.com/react-scan/dist/auto.global.js' />
         )}
         <meta charSet='utf-8' />
-        <meta
-          name='viewport'
-          content='width=device-width, initial-scale=1'
-        />
+        <meta name='viewport' content='width=device-width, initial-scale=1' />
         <link rel='stylesheet' href={appCss} />
         <link rel='manifest' href='/manifest.webmanifest' />
         <link rel='icon' href='/aether-logo.svg' />

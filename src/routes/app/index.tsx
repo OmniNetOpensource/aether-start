@@ -1,8 +1,12 @@
+import { Suspense, lazy } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { MessageList } from '@/features/chat/message-thread';
 import { useChatRequestStore } from '@/features/chat/session';
-import { useEditingStore } from '@/features/chat/message-thread';
+import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import { useChatSessionStore } from '@/features/conversations/session';
+
+const MessageList = lazy(() =>
+  import('@/features/chat/message-thread/MessageList').then((m) => ({ default: m.MessageList })),
+);
 
 function initNewChatPage() {
   if (typeof window === 'undefined') return;
@@ -56,5 +60,9 @@ function HomePage() {
     return <Greeting />;
   }
 
-  return <MessageList />;
+  return (
+    <Suspense fallback={<div className='flex h-full min-h-0 w-full' />}>
+      <MessageList />
+    </Suspense>
+  );
 }
