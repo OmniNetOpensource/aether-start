@@ -11,7 +11,7 @@ import { ArtifactCodeBlock } from './ArtifactCodeBlock';
 
 function ArtifactPanelBody() {
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [deployState, setDeployState] = useState<'idle' | 'deploying' | { url: string }>('idle');
+  const [deployingArtifactId, setDeployingArtifactId] = useState<string | null>(null);
   const artifacts = useChatSessionStore((state) => state.artifacts);
   const selectedArtifactId = useChatSessionStore((state) => state.selectedArtifactId);
   const artifactView = useChatSessionStore((state) => state.artifactView);
@@ -19,10 +19,6 @@ function ArtifactPanelBody() {
   const selectArtifact = useChatSessionStore((state) => state.selectArtifact);
 
   const selectedArtifact = artifacts.find((a) => a.id === selectedArtifactId) ?? null;
-
-  useEffect(() => {
-    setDeployState('idle');
-  }, [selectedArtifact?.id]);
 
   if (!selectedArtifact) {
     return (
@@ -33,23 +29,50 @@ function ArtifactPanelBody() {
   }
 
   const canPreview = selectedArtifact.status === 'completed';
+  const isDeploying = deployingArtifactId === selectedArtifact.id;
+  const deployedAtLabel =
+    selectedArtifact.deployed_at === null
+      ? null
+      : new Date(selectedArtifact.deployed_at).toLocaleString('zh-CN', {
+          dateStyle: 'medium',
+          timeStyle: 'short',
+        });
 
   const handleDeploy = () => {
-    if (!canPreview || deployState === 'deploying') {
+    if (!canPreview || isDeploying) {
       return;
     }
 
-    setDeployState('deploying');
+    const artifactId = selectedArtifact.id;
+    setDeployingArtifactId(artifactId);
     void deployToNetlifyFn({
-      data: { html: buildPreviewDocument(selectedArtifact.code) },
+      data: {
+        artifactId,
+        html: buildPreviewDocument(selectedArtifact.code),
+      },
     })
       .then((result) => {
-        setDeployState({ url: result.url });
+        useChatSessionStore.setState((state) => ({
+          artifacts: state.artifacts.map((artifact) =>
+            artifact.id === artifactId
+              ? {
+                  ...artifact,
+                  deploy_url: result.url,
+                  deployed_at: result.deployed_at,
+                  updated_at: result.deployed_at,
+                }
+              : artifact,
+          ),
+        }));
       })
       .catch((error: unknown) => {
         console.error('[artifact deploy]', error);
         toast.error(error instanceof Error ? error.message : 'Deploy failed');
-        setDeployState('idle');
+      })
+      .finally(() => {
+        setDeployingArtifactId((currentArtifactId) =>
+          currentArtifactId === artifactId ? null : currentArtifactId,
+        );
       });
   };
 
@@ -93,11 +116,11 @@ function ArtifactPanelBody() {
           </PopoverContent>
         </Popover>
         <div className='flex shrink-0 items-center gap-2'>
-          {deployState === 'deploying' ? (
+          {isDeploying ? (
             <Loader2 className='h-3.5 w-3.5 shrink-0 animate-spin text-muted-foreground' />
-          ) : typeof deployState === 'object' && 'url' in deployState ? (
+          ) : selectedArtifact.deploy_url ? (
             <a
-              href={deployState.url}
+              href={selectedArtifact.deploy_url}
               target='_blank'
               rel='noopener noreferrer'
               className='flex max-w-40 shrink-0 items-center gap-1 truncate rounded-sm px-2 py-1 text-xs text-foreground underline-offset-2 hover:underline'
@@ -121,6 +144,11 @@ function ArtifactPanelBody() {
               Deploy
             </button>
           )}
+          {!isDeploying && deployedAtLabel ? (
+            <span className='shrink-0 text-xs text-muted-foreground'>
+              Deployed {deployedAtLabel}
+            </span>
+          ) : null}
           <div className='flex shrink-0 gap-0.5 rounded-md bg-(--surface-muted) p-0.5'>
             <button
               type='button'

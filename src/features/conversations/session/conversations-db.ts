@@ -108,6 +108,8 @@ const toConversationArtifact = (row: unknown): ConversationArtifact | null => {
 
   const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
   const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
+  const deployUrl = typeof row.deploy_url === 'string' ? row.deploy_url : null;
+  const deployedAt = typeof row.deployed_at === 'string' ? row.deployed_at : null;
 
   return {
     id: row.id,
@@ -115,6 +117,8 @@ const toConversationArtifact = (row: unknown): ConversationArtifact | null => {
     title: row.title,
     language,
     code: row.code,
+    deploy_url: deployUrl,
+    deployed_at: deployedAt,
     created_at: createdAt,
     updated_at: updatedAt,
   };
@@ -637,7 +641,7 @@ export const getConversationById = async (db: D1Database, id: string, userId: st
     db
       .prepare(
         `
-        SELECT id, conversation_id, title, language, code, created_at, updated_at
+        SELECT id, conversation_id, title, language, code, deploy_url, deployed_at, created_at, updated_at
         FROM conversation_artifacts
         WHERE user_id = ?1 AND conversation_id = ?2
         ORDER BY created_at DESC, id DESC
@@ -669,7 +673,7 @@ export const listConversationArtifacts = async (
   const rows = await db
     .prepare(
       `
-      SELECT id, conversation_id, title, language, code, created_at, updated_at
+      SELECT id, conversation_id, title, language, code, deploy_url, deployed_at, created_at, updated_at
       FROM conversation_artifacts
       WHERE user_id = ?1 AND conversation_id = ?2
       ORDER BY created_at DESC, id DESC

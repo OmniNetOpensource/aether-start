@@ -7,6 +7,8 @@ export type ConversationArtifact = {
   title: string;
   language: ArtifactLanguage;
   code: string;
+  deploy_url: string | null;
+  deployed_at: string | null;
   created_at: string;
   updated_at: string;
 };

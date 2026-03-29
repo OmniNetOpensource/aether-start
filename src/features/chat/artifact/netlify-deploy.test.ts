@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createHash } from 'node:crypto';
-import { deployHtmlToNetlify } from './netlify-deploy.ts';
+import { deployArtifactAndSaveDeployment, deployHtmlToNetlify } from './netlify-deploy.ts';
 
 const jsonResponse = (value: unknown) =>
   new Response(JSON.stringify(value), {
@@ -117,4 +117,58 @@ test('deployHtmlToNetlify uploads index.html with file-digest flow and waits for
   assert.equal(calls[3]?.method, 'GET');
   assert.equal(calls[4]?.url, 'https://api.netlify.com/api/v1/sites/site-123/deploys/deploy-456');
   assert.equal(calls[4]?.method, 'GET');
+});
+
+test('deployArtifactAndSaveDeployment persists deploy metadata after a successful deploy', async () => {
+  const persisted: Array<{
+    artifactId: string;
+    deployUrl: string;
+    deployedAt: string;
+  }> = [];
+
+  const result = await deployArtifactAndSaveDeployment({
+    artifactId: 'artifact-123',
+    html: '<!doctype html><html><body>ok</body></html>',
+    deploy: async (html) => {
+      assert.match(html, /<!doctype html>/i);
+      return { url: 'https://deploy.example' };
+    },
+    persist: async (deployment) => {
+      persisted.push(deployment);
+    },
+    now: () => '2026-03-30T12:34:56.000Z',
+  });
+
+  assert.deepEqual(persisted, [
+    {
+      artifactId: 'artifact-123',
+      deployUrl: 'https://deploy.example',
+      deployedAt: '2026-03-30T12:34:56.000Z',
+    },
+  ]);
+  assert.deepEqual(result, {
+    url: 'https://deploy.example',
+    deployed_at: '2026-03-30T12:34:56.000Z',
+  });
+});
+
+test('deployArtifactAndSaveDeployment does not persist deploy metadata when deploy fails', async () => {
+  let persisted = false;
+
+  await assert.rejects(
+    deployArtifactAndSaveDeployment({
+      artifactId: 'artifact-123',
+      html: '<!doctype html><html><body>ok</body></html>',
+      deploy: async () => {
+        throw new Error('deploy failed');
+      },
+      persist: async () => {
+        persisted = true;
+      },
+      now: () => '2026-03-30T12:34:56.000Z',
+    }),
+    /deploy failed/,
+  );
+
+  assert.equal(persisted, false);
 });

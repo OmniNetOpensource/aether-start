@@ -373,6 +373,8 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
               title: 'Untitled Artifact',
               language: 'html',
               code: '',
+              deploy_url: null,
+              deployed_at: null,
               created_at: now,
               updated_at: now,
               status: 'streaming',

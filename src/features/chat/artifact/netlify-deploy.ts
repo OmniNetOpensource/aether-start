@@ -1,7 +1,10 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
 
-const inputSchema = z.object({ html: z.string().min(1) });
+const inputSchema = z.object({
+  artifactId: z.string().min(1),
+  html: z.string().min(1),
+});
 const createSiteSchema = z.object({ id: z.string() });
 const createDeploySchema = z.object({ id: z.string() });
 const uploadFileSchema = z.object({ mime_type: z.string().optional() });
@@ -50,6 +53,34 @@ const parseJson = <T>(text: string, schema: z.ZodType<T>, label: string) => {
   }
   return parsed.data;
 };
+
+export async function deployArtifactAndSaveDeployment({
+  artifactId,
+  html,
+  deploy,
+  persist,
+  now = () => new Date().toISOString(),
+}: {
+  artifactId: string;
+  html: string;
+  deploy: (html: string) => Promise<{ url: string }>;
+  persist: (input: { artifactId: string; deployUrl: string; deployedAt: string }) => Promise<void>;
+  now?: () => string;
+}) {
+  const result = await deploy(html);
+  const deployedAt = now();
+
+  await persist({
+    artifactId,
+    deployUrl: result.url,
+    deployedAt,
+  });
+
+  return {
+    url: result.url,
+    deployed_at: deployedAt,
+  };
+}
 
 export async function deployHtmlToNetlify({
   html,
@@ -151,12 +182,13 @@ export async function deployHtmlToNetlify({
 export const deployToNetlifyFn = createServerFn({ method: 'POST' })
   .inputValidator(inputSchema)
   .handler(async ({ data }) => {
-    const [{ requireSession }, { log }, { getServerEnv }] = await Promise.all([
+    const [{ requireSession }, { log }, { getServerBindings, getServerEnv }] = await Promise.all([
       import('@/features/auth/session/request.server'),
       import('@/features/chat/agent-runtime/logger.server'),
       import('@/shared/worker/env.server'),
     ]);
-    await requireSession();
+    const session = await requireSession();
+    const { DB } = getServerBindings();
 
     const { NETIFY_TOKEN } = getServerEnv();
     if (!NETIFY_TOKEN) {
@@ -164,21 +196,57 @@ export const deployToNetlifyFn = createServerFn({ method: 'POST' })
       throw new Error('Netlify 未配置');
     }
 
-    log('NETLIFY_DEPLOY', 'request_start', {});
+    const artifactRow = await DB.prepare(
+      `
+      SELECT id
+      FROM conversation_artifacts
+      WHERE user_id = ?1 AND id = ?2
+      LIMIT 1
+      `,
+    )
+      .bind(session.user.id, data.artifactId)
+      .first();
+
+    if (!artifactRow || typeof artifactRow.id !== 'string') {
+      log('NETLIFY_DEPLOY', 'artifact_not_found', {
+        artifactId: data.artifactId,
+      });
+      throw new Error('Artifact not found');
+    }
+
+    log('NETLIFY_DEPLOY', 'request_start', {
+      artifactId: data.artifactId,
+    });
 
     try {
-      const result = await deployHtmlToNetlify({
+      const result = await deployArtifactAndSaveDeployment({
+        artifactId: data.artifactId,
         html: data.html,
-        netlifyToken: NETIFY_TOKEN,
+        deploy: (html) =>
+          deployHtmlToNetlify({
+            html,
+            netlifyToken: NETIFY_TOKEN,
+          }),
+        persist: async ({ artifactId, deployUrl, deployedAt }) => {
+          await DB.prepare(
+            `
+            UPDATE conversation_artifacts
+            SET deploy_url = ?1, deployed_at = ?2, updated_at = ?3
+            WHERE user_id = ?4 AND id = ?5
+            `,
+          )
+            .bind(deployUrl, deployedAt, deployedAt, session.user.id, artifactId)
+            .run();
+        },
       });
       log('NETLIFY_DEPLOY', 'deploy_ok', {
+        artifactId: data.artifactId,
         url: result.url,
-        htmlBytes: result.htmlBytes,
-        sha1: result.sha1,
+        deployedAt: result.deployed_at,
       });
-      return { url: result.url };
+      return result;
     } catch (error) {
-      log('NETLIFY_DEPLOY', 'deploy_error', { error });
+      log('NETLIFY_DEPLOY', 'deploy_error', { artifactId: data.artifactId, error });
       throw error;
     }
   });
