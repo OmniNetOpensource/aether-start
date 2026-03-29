@@ -41,7 +41,7 @@ function getServerSnapshot(): DeviceType {
 export function ResponsiveProvider({ children }: { children: React.ReactNode }) {
   const deviceType = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
-  return <ResponsiveContext.Provider value={deviceType}>{children}</ResponsiveContext.Provider>;
+  return <ResponsiveContext value={deviceType}>{children}</ResponsiveContext>;
 }
 
 export function useResponsive() {

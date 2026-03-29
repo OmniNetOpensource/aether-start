@@ -1,4 +1,4 @@
-import { SubmitEvent, useEffect, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { authClient } from '@/features/auth/auth-client';
@@ -34,6 +34,10 @@ export const Route = createFileRoute('/auth/login')({
   component: LoginPage,
 });
 
+type LoginFormState = {
+  error: string | null;
+};
+
 function LoginPage() {
   const navigate = useNavigate();
   const { redirect: redirectTarget, reset, email: initialEmail } = Route.useSearch();
@@ -41,9 +45,48 @@ function LoginPage() {
 
   const [email, setEmail] = useState(initialEmail ?? '');
   const [password, setPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showResetSuccess] = useState(reset === 'success');
+
+  const [formState, formAction, isPending] = useActionState(
+    async (_prev: LoginFormState, formData: FormData): Promise<LoginFormState> => {
+      const emailRaw = formData.get('email');
+      const passwordRaw = formData.get('password');
+      const normalizedEmail = typeof emailRaw === 'string' ? emailRaw.trim().toLowerCase() : '';
+      const passwordValue = typeof passwordRaw === 'string' ? passwordRaw : '';
+
+      if (!normalizedEmail || !passwordValue) {
+        return { error: '请输入邮箱和密码' };
+      }
+
+      const { error: signInError } = await authClient.signIn.email({
+        email: normalizedEmail,
+        password: passwordValue,
+      });
+
+      if (!signInError) {
+        await navigate({ href: target, replace: true });
+        return { error: null };
+      }
+
+      if (isEmailNotVerifiedError(signInError)) {
+        await navigate({
+          to: '/auth/register',
+          search: {
+            email: normalizedEmail,
+            redirect: redirectTarget,
+            verify: 'true',
+          },
+          replace: true,
+        });
+        return { error: null };
+      }
+
+      return { error: getErrorMessage(signInError, 'login') };
+    },
+    { error: null },
+  );
+
+  const errorMessage = formState.error;
 
   // 首屏已根据 `reset=success` 渲染提示；随后去掉该 query，避免用户复制链接或刷新时一直带 success。
   useEffect(() => {
@@ -51,45 +94,6 @@ function LoginPage() {
     const qs = redirectTarget ? `?redirect=${encodeURIComponent(redirectTarget)}` : '';
     void navigate({ href: `/auth/login${qs}`, replace: true });
   }, [navigate, redirectTarget, reset]);
-
-  const submit = async (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !password) {
-      setErrorMessage('请输入邮箱和密码');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage(null);
-
-    const { error: signInError } = await authClient.signIn.email({
-      email: normalizedEmail,
-      password,
-    });
-
-    if (!signInError) {
-      await navigate({ href: target, replace: true });
-      return;
-    }
-
-    // 未验证邮箱：去注册路由的验证面板（同一邮箱 + verify 模式），并保留原始 redirect。
-    if (isEmailNotVerifiedError(signInError)) {
-      await navigate({
-        to: '/auth/register',
-        search: {
-          email: normalizedEmail,
-          redirect: redirectTarget,
-          verify: 'true',
-        },
-        replace: true,
-      });
-      return;
-    }
-
-    setErrorMessage(getErrorMessage(signInError, 'login'));
-    setIsSubmitting(false);
-  };
 
   return (
     <div className='w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
@@ -133,19 +137,20 @@ function LoginPage() {
         </div>
       ) : null}
 
-      <form className='space-y-5' onSubmit={submit}>
+      <form className='space-y-5' action={formAction}>
         <div className='space-y-2'>
           <label className='text-sm font-medium text-(--text-secondary)' htmlFor='email'>
             邮箱
           </label>
           <Input
             id='email'
+            name='email'
             type='email'
             autoComplete='email'
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder='name@example.com'
-            disabled={isSubmitting}
+            disabled={isPending}
             className={cn(
               errorMessage &&
                 errorMessage.includes('邮箱') &&
@@ -170,11 +175,12 @@ function LoginPage() {
           </div>
           <PasswordInput
             id='password'
+            name='password'
             autoComplete='current-password'
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder='请输入密码'
-            disabled={isSubmitting}
+            disabled={isPending}
             className={cn(
               errorMessage &&
                 errorMessage.includes('密码') &&
@@ -207,8 +213,8 @@ function LoginPage() {
           ) : null}
         </div>
 
-        <Button className='w-full relative overflow-hidden' type='submit' disabled={isSubmitting}>
-          {isSubmitting ? (
+        <Button className='w-full relative overflow-hidden' type='submit' disabled={isPending}>
+          {isPending ? (
             <span className='flex items-center gap-2'>
               <Loader2 className='h-4 w-4 animate-spin' />
               <span>处理中...</span>

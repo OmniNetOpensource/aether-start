@@ -1,4 +1,4 @@
-import { SubmitEvent, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { Link, createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { authClient } from '@/features/auth/auth-client';
@@ -65,6 +65,10 @@ function RegisterPage() {
   );
 }
 
+type RegisterFormState = {
+  error: string | null;
+};
+
 /** 注册第一步：提交邮箱与密码后进入同路由的 verify 阶段。 */
 function RegisterForm({
   initialEmail,
@@ -78,49 +82,50 @@ function RegisterForm({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
-  const [formErrorMessage, setFormErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const submit = async (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !password || !confirmPassword) {
-      setFormErrorMessage('请输入邮箱和两次密码');
-      return;
-    }
+  const [formState, formAction, isPending] = useActionState(
+    async (_prev: RegisterFormState, formData: FormData): Promise<RegisterFormState> => {
+      const emailRaw = formData.get('email');
+      const passwordRaw = formData.get('password');
+      const confirmPasswordRaw = formData.get('confirmPassword');
+      const normalizedEmail = typeof emailRaw === 'string' ? emailRaw.trim().toLowerCase() : '';
+      const passwordValue = typeof passwordRaw === 'string' ? passwordRaw : '';
+      const confirmPasswordValue =
+        typeof confirmPasswordRaw === 'string' ? confirmPasswordRaw : '';
 
-    if (password !== confirmPassword) {
-      setFormErrorMessage('两次输入的密码不一致');
-      return;
-    }
+      if (!normalizedEmail || !passwordValue || !confirmPasswordValue) {
+        return { error: '请输入邮箱和两次密码' };
+      }
 
-    setIsSubmitting(true);
-    setFormErrorMessage(null);
+      if (passwordValue !== confirmPasswordValue) {
+        return { error: '两次输入的密码不一致' };
+      }
 
-    const { error: signUpError } = await authClient.signUp.email({
-      email: normalizedEmail,
-      password,
-      name: getDefaultName(normalizedEmail),
-    });
-
-    if (signUpError) {
-      setFormErrorMessage(getErrorMessage(signUpError, 'register'));
-      setIsSubmitting(false);
-      return;
-    }
-
-    setIsSubmitting(false);
-    setPassword('');
-    await navigate({
-      to: '/auth/register',
-      search: {
+      const { error: signUpError } = await authClient.signUp.email({
         email: normalizedEmail,
-        redirect: redirectTarget,
-        verify: 'true',
-      },
-      replace: true,
-    });
-  };
+        password: passwordValue,
+        name: getDefaultName(normalizedEmail),
+      });
+
+      if (signUpError) {
+        return { error: getErrorMessage(signUpError, 'register') };
+      }
+
+      await navigate({
+        to: '/auth/register',
+        search: {
+          email: normalizedEmail,
+          redirect: redirectTarget,
+          verify: 'true',
+        },
+        replace: true,
+      });
+      return { error: null };
+    },
+    { error: null },
+  );
+
+  const formErrorMessage = formState.error;
 
   return (
     <>
@@ -144,19 +149,20 @@ function RegisterForm({
         <p className='text-sm text-muted-foreground'>注册后即可开始使用</p>
       </div>
 
-      <form className='space-y-5' onSubmit={submit}>
+      <form className='space-y-5' action={formAction}>
         <div className='space-y-2'>
           <label className='text-sm font-medium text-(--text-secondary)' htmlFor='reg-email'>
             邮箱
           </label>
           <Input
             id='reg-email'
+            name='email'
             type='email'
             autoComplete='email'
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder='name@example.com'
-            disabled={isSubmitting}
+            disabled={isPending}
             className={cn(
               formErrorMessage &&
                 formErrorMessage.includes('邮箱') &&
@@ -172,11 +178,12 @@ function RegisterForm({
           </label>
           <PasswordInput
             id='reg-password'
+            name='password'
             autoComplete='new-password'
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             placeholder='至少 8 个字符'
-            disabled={isSubmitting}
+            disabled={isPending}
             className={cn(
               formErrorMessage &&
                 formErrorMessage.includes('密码') &&
@@ -195,11 +202,12 @@ function RegisterForm({
           </label>
           <PasswordInput
             id='reg-password-confirm'
+            name='confirmPassword'
             autoComplete='new-password'
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             placeholder='请再次输入密码'
-            disabled={isSubmitting}
+            disabled={isPending}
             className={cn(
               formErrorMessage &&
                 formErrorMessage.includes('密码') &&
@@ -219,10 +227,10 @@ function RegisterForm({
               value={verificationCode}
               onChange={(event) => setVerificationCode(event.target.value)}
               placeholder='请输入验证码'
-              disabled={isSubmitting}
+              disabled={isPending}
               className='flex-1'
             />
-            <Button type='button' variant='outline' disabled={isSubmitting}>
+            <Button type='button' variant='outline' disabled={isPending}>
               发送验证码
             </Button>
           </div>
@@ -251,8 +259,8 @@ function RegisterForm({
           ) : null}
         </div>
 
-        <Button className='relative w-full overflow-hidden' type='submit' disabled={isSubmitting}>
-          {isSubmitting ? (
+        <Button className='relative w-full overflow-hidden' type='submit' disabled={isPending}>
+          {isPending ? (
             <span className='flex items-center gap-2'>
               <Loader2 className='h-4 w-4 animate-spin' />
               <span>处理中...</span>

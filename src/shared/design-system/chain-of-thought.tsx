@@ -16,14 +16,14 @@ type ChainOfThoughtProps = React.ComponentProps<typeof CollapsiblePrimitive.Root
 
 function ChainOfThought({ defaultOpen = true, ...props }: ChainOfThoughtProps) {
   return (
-    <ChainOfThoughtContext.Provider value={{ open: props.open ?? defaultOpen }}>
+    <ChainOfThoughtContext value={{ open: props.open ?? defaultOpen }}>
       <CollapsiblePrimitive.Root
         data-slot='chain-of-thought'
         defaultOpen={defaultOpen}
         className='my-4 bg-transparent px-1 pt-0 pb-2'
         {...props}
       />
-    </ChainOfThoughtContext.Provider>
+    </ChainOfThoughtContext>
   );
 }
 

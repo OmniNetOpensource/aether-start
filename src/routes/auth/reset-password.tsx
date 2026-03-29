@@ -1,4 +1,4 @@
-import { SubmitEvent, useState } from 'react';
+import { useActionState, useState } from 'react';
 import { Link, createFileRoute, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { authClient } from '@/features/auth/auth-client';
@@ -10,7 +10,7 @@ import { cn } from '@/shared/core/utils';
 const isInvalidTokenError = (error: unknown) => {
   const message =
     typeof error === 'object' && error !== null && 'message' in error
-      ? String((error as { message?: unknown }).message ?? '')
+      ? String(error.message ?? '')
       : '';
 
   return message.includes('INVALID_TOKEN');
@@ -20,7 +20,7 @@ const isInvalidTokenError = (error: unknown) => {
 const getResetPasswordErrorMessage = (error: unknown) => {
   const message =
     typeof error === 'object' && error !== null && 'message' in error
-      ? String((error as { message?: unknown }).message ?? '')
+      ? String(error.message ?? '')
       : '';
 
   if (message.includes('INVALID_TOKEN')) {
@@ -56,68 +56,68 @@ export const Route = createFileRoute('/auth/reset-password')({
   component: ResetPasswordPage,
 });
 
+type ResetFormState = {
+  error: string | null;
+  tokenInvalid: boolean;
+};
+
 function ResetPasswordPage() {
   const navigate = useNavigate();
-  const { token, error } = Route.useSearch();
+  const { token, error: searchError } = Route.useSearch();
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  // 无 token 或邮件里已标记错误时，直接显示失效态，不展示密码表单。
-  const [isTokenInvalid, setIsTokenInvalid] = useState(!token || error === 'INVALID_TOKEN');
 
-  const submit = async (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    if (!token) {
-      setIsTokenInvalid(true);
-      setErrorMessage(null);
-      return;
-    }
-
-    if (!newPassword || !confirmPassword) {
-      setErrorMessage('请输入并确认新密码');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setErrorMessage('两次输入的密码不一致');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage(null);
-
-    try {
-      const { error: resetError } = await authClient.resetPassword({
-        token,
-        newPassword,
-      });
-
-      if (resetError) {
-        if (isInvalidTokenError(resetError)) {
-          setIsTokenInvalid(true);
-          setErrorMessage(null);
-          setIsSubmitting(false);
-          return;
-        }
-
-        setErrorMessage(getResetPasswordErrorMessage(resetError));
-        setIsSubmitting(false);
-        return;
+  const [formState, formAction, isPending] = useActionState(
+    async (prev: ResetFormState, formData: FormData): Promise<ResetFormState> => {
+      if (!token) {
+        return { error: null, tokenInvalid: true };
       }
 
-      // 与 login 页约定：`reset=success` 首屏展示绿色提示后会被 effect 清掉 query。
-      await navigate({
-        href: '/auth/login?reset=success',
-        replace: true,
-      });
-    } catch (resetError) {
-      setErrorMessage(getResetPasswordErrorMessage(resetError));
-      setIsSubmitting(false);
-    }
-  };
+      const newPasswordRaw = formData.get('newPassword');
+      const confirmPasswordRaw = formData.get('confirmPassword');
+      const newPasswordValue = typeof newPasswordRaw === 'string' ? newPasswordRaw : '';
+      const confirmPasswordValue = typeof confirmPasswordRaw === 'string' ? confirmPasswordRaw : '';
+
+      if (!newPasswordValue || !confirmPasswordValue) {
+        return { ...prev, error: '请输入并确认新密码' };
+      }
+
+      if (newPasswordValue !== confirmPasswordValue) {
+        return { ...prev, error: '两次输入的密码不一致' };
+      }
+
+      try {
+        const { error: resetError } = await authClient.resetPassword({
+          token,
+          newPassword: newPasswordValue,
+        });
+
+        if (resetError) {
+          if (isInvalidTokenError(resetError)) {
+            return { error: null, tokenInvalid: true };
+          }
+
+          return { ...prev, error: getResetPasswordErrorMessage(resetError) };
+        }
+
+        await navigate({
+          href: '/auth/login?reset=success',
+          replace: true,
+        });
+        return { error: null, tokenInvalid: false };
+      } catch (resetError) {
+        return { ...prev, error: getResetPasswordErrorMessage(resetError) };
+      }
+    },
+    {
+      error: null,
+      tokenInvalid: !token || searchError === 'INVALID_TOKEN',
+    },
+  );
+
+  const errorMessage = formState.error;
+  const isTokenInvalid = formState.tokenInvalid;
 
   return (
     <div className='w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
@@ -183,7 +183,7 @@ function ResetPasswordPage() {
       ) : (
         <form
           className='space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200'
-          onSubmit={submit}
+          action={formAction}
         >
           <div className='space-y-2'>
             <label className='text-sm font-medium text-(--text-secondary)' htmlFor='newPassword'>
@@ -191,11 +191,12 @@ function ResetPasswordPage() {
             </label>
             <PasswordInput
               id='newPassword'
+              name='newPassword'
               autoComplete='new-password'
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               placeholder='至少 8 位密码'
-              disabled={isSubmitting}
+              disabled={isPending}
               className={cn(
                 errorMessage &&
                   'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
@@ -213,11 +214,12 @@ function ResetPasswordPage() {
             </label>
             <PasswordInput
               id='confirmPassword'
+              name='confirmPassword'
               autoComplete='new-password'
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder='请再次输入新密码'
-              disabled={isSubmitting}
+              disabled={isPending}
               className={cn(
                 errorMessage &&
                   'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
@@ -253,9 +255,9 @@ function ResetPasswordPage() {
             <Button
               className='w-full relative overflow-hidden'
               type='submit'
-              disabled={isSubmitting}
+              disabled={isPending}
             >
-              {isSubmitting ? (
+              {isPending ? (
                 <span className='flex items-center gap-2'>
                   <Loader2 className='h-4 w-4 animate-spin' />
                   <span>提交中...</span>

@@ -1,4 +1,4 @@
-import { SubmitEvent, useState } from 'react';
+import { useActionState, useState } from 'react';
 import { Link, createFileRoute } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { authClient } from '@/features/auth/auth-client';
@@ -10,7 +10,7 @@ import { cn } from '@/shared/core/utils';
 const getForgotPasswordErrorMessage = (error: unknown) => {
   const message =
     typeof error === 'object' && error !== null && 'message' in error
-      ? String((error as { message?: unknown }).message ?? '')
+      ? String(error.message ?? '')
       : '';
 
   if (message.includes('INVALID_EMAIL')) {
@@ -39,44 +39,43 @@ export const Route = createFileRoute('/auth/forgot-password')({
   component: ForgotPasswordPage,
 });
 
+type ForgotFormState =
+  | { step: 'form'; error: string | null }
+  | { step: 'success'; email: string };
+
 function ForgotPasswordPage() {
   const { email: initialEmail } = Route.useSearch();
   const [email, setEmail] = useState(initialEmail ?? '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
-  const submit = async (event: SubmitEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      setErrorMessage('请输入邮箱');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setErrorMessage(null);
-
-    try {
-      const { error } = await authClient.requestPasswordReset({
-        email: normalizedEmail,
-        redirectTo: '/auth/reset-password',
-      });
-
-      if (error) {
-        setErrorMessage(getForgotPasswordErrorMessage(error));
-        setIsSubmitting(false);
-        return;
+  const [formState, formAction, isPending] = useActionState(
+    async (_prev: ForgotFormState, formData: FormData): Promise<ForgotFormState> => {
+      const emailRaw = formData.get('email');
+      const normalizedEmail = typeof emailRaw === 'string' ? emailRaw.trim().toLowerCase() : '';
+      if (!normalizedEmail) {
+        return { step: 'form', error: '请输入邮箱' };
       }
 
-      setIsSubmitted(true);
-    } catch (error) {
-      setErrorMessage(getForgotPasswordErrorMessage(error));
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+      try {
+        const { error } = await authClient.requestPasswordReset({
+          email: normalizedEmail,
+          redirectTo: '/auth/reset-password',
+        });
+
+        if (error) {
+          return { step: 'form', error: getForgotPasswordErrorMessage(error) };
+        }
+
+        return { step: 'success', email: normalizedEmail };
+      } catch (error) {
+        return { step: 'form', error: getForgotPasswordErrorMessage(error) };
+      }
+    },
+    { step: 'form', error: null },
+  );
+
+  const isSubmitted = formState.step === 'success';
+  const errorMessage = formState.step === 'form' ? formState.error : null;
+  const submittedEmail = formState.step === 'success' ? formState.email : '';
 
   return (
     <div className='w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
@@ -122,7 +121,7 @@ function ForgotPasswordPage() {
             </p>
           </div>
           <Button asChild className='w-full'>
-            <Link to='/auth/login' search={{ email: email.trim() || undefined }}>
+            <Link to='/auth/login' search={{ email: submittedEmail || undefined }}>
               返回登录
             </Link>
           </Button>
@@ -130,7 +129,7 @@ function ForgotPasswordPage() {
       ) : (
         <form
           className='space-y-5 animate-in fade-in slide-in-from-bottom-2 duration-200'
-          onSubmit={submit}
+          action={formAction}
         >
           <div className='space-y-2'>
             <label className='text-sm font-medium text-(--text-secondary)' htmlFor='email'>
@@ -138,12 +137,13 @@ function ForgotPasswordPage() {
             </label>
             <Input
               id='email'
+              name='email'
               type='email'
               autoComplete='email'
               value={email}
               onChange={(event) => setEmail(event.target.value)}
               placeholder='name@example.com'
-              disabled={isSubmitting}
+              disabled={isPending}
               className={cn(
                 errorMessage &&
                   'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
@@ -179,9 +179,9 @@ function ForgotPasswordPage() {
             <Button
               className='w-full relative overflow-hidden'
               type='submit'
-              disabled={isSubmitting}
+              disabled={isPending}
             >
-              {isSubmitting ? (
+              {isPending ? (
                 <span className='flex items-center gap-2'>
                   <Loader2 className='h-4 w-4 animate-spin' />
                   <span>发送中...</span>

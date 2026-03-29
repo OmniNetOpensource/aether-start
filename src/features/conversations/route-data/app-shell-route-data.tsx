@@ -17,9 +17,7 @@ export function AppShellRouteDataProvider({
   value: AppShellRouteData;
   children: ReactNode;
 }) {
-  return (
-    <AppShellRouteDataContext.Provider value={value}>{children}</AppShellRouteDataContext.Provider>
-  );
+  return <AppShellRouteDataContext value={value}>{children}</AppShellRouteDataContext>;
 }
 
 export const useAppShellRouteData = () => useContext(AppShellRouteDataContext);
