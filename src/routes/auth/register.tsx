@@ -90,8 +90,7 @@ function RegisterForm({
       const confirmPasswordRaw = formData.get('confirmPassword');
       const normalizedEmail = typeof emailRaw === 'string' ? emailRaw.trim().toLowerCase() : '';
       const passwordValue = typeof passwordRaw === 'string' ? passwordRaw : '';
-      const confirmPasswordValue =
-        typeof confirmPasswordRaw === 'string' ? confirmPasswordRaw : '';
+      const confirmPasswordValue = typeof confirmPasswordRaw === 'string' ? confirmPasswordRaw : '';
 
       if (!normalizedEmail || !passwordValue || !confirmPasswordValue) {
         return { error: '请输入邮箱和两次密码' };

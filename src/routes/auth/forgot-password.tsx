@@ -39,9 +39,7 @@ export const Route = createFileRoute('/auth/forgot-password')({
   component: ForgotPasswordPage,
 });
 
-type ForgotFormState =
-  | { step: 'form'; error: string | null }
-  | { step: 'success'; email: string };
+type ForgotFormState = { step: 'form'; error: string | null } | { step: 'success'; email: string };
 
 function ForgotPasswordPage() {
   const { email: initialEmail } = Route.useSearch();
@@ -176,11 +174,7 @@ function ForgotPasswordPage() {
           </div>
 
           <div className='space-y-3'>
-            <Button
-              className='w-full relative overflow-hidden'
-              type='submit'
-              disabled={isPending}
-            >
+            <Button className='w-full relative overflow-hidden' type='submit' disabled={isPending}>
               {isPending ? (
                 <span className='flex items-center gap-2'>
                   <Loader2 className='h-4 w-4 animate-spin' />

@@ -252,11 +252,7 @@ function ResetPasswordPage() {
           </div>
 
           <div className='space-y-3'>
-            <Button
-              className='w-full relative overflow-hidden'
-              type='submit'
-              disabled={isPending}
-            >
+            <Button className='w-full relative overflow-hidden' type='submit' disabled={isPending}>
               {isPending ? (
                 <span className='flex items-center gap-2'>
                   <Loader2 className='h-4 w-4 animate-spin' />
