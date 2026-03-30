@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react';
-import { Loader2, Moon, Settings, Sun } from 'lucide-react';
+import { Check, Loader2, Palette, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,6 +9,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/design-system/dialog';
 import { authClient } from '@/features/auth/auth-client';
 import { useTheme } from '@/shared/app-shell/useTheme';
+import { THEMES, THEME_LABELS } from '@/shared/app-shell/theme';
 import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
 let settingsModalModulePromise: Promise<typeof import('../settings-dialog/SettingsModal')> | null =
@@ -39,8 +40,9 @@ type ProfileMenuProps = {
 
 export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: ProfileMenuProps) {
   const { data: session } = authClient.useSession();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
 
   const displayName = session?.user.name || session?.user.email?.split('@')[0] || 'User';
@@ -48,6 +50,7 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
 
   const handleMenuOpenChange = (open: boolean) => {
     setMenuOpen(open);
+    if (!open) setThemeMenuOpen(false);
     onDropdownOpenChange(open);
   };
 
@@ -114,10 +117,33 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
 
               <div className='-mx-1 my-1 h-px bg-border' />
 
-              <DropdownMenuItem onSelect={toggleTheme}>
-                {theme === 'dark' ? <Sun className='h-4 w-4' /> : <Moon className='h-4 w-4' />}
-                {theme === 'dark' ? '浅色模式' : '深色模式'}
+              <DropdownMenuItem
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setThemeMenuOpen(!themeMenuOpen);
+                }}
+              >
+                <Palette className='h-4 w-4' />
+                主题: {THEME_LABELS[theme]}
               </DropdownMenuItem>
+
+              {themeMenuOpen &&
+                THEMES.map((t) => (
+                  <DropdownMenuItem
+                    key={t}
+                    onSelect={(e) => {
+                      e.preventDefault();
+                      setTheme(t);
+                    }}
+                  >
+                    {theme === t ? (
+                      <Check className='h-3.5 w-3.5' />
+                    ) : (
+                      <span className='h-3.5 w-3.5' />
+                    )}
+                    <span className='text-xs'>{THEME_LABELS[t]}</span>
+                  </DropdownMenuItem>
+                ))}
 
               <DropdownMenuItem
                 onPointerMove={() => {

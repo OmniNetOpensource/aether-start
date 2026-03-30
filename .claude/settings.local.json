@@ -27,7 +27,8 @@
       "Bash(pnpm build:*)",
       "Bash(node:*)",
       "Bash(xargs cat:*)",
-      "Bash(pnpm lint:*)"
+      "Bash(pnpm lint:*)",
+      "Bash(pnpm format:*)"
     ]
   }
 }

@@ -17,6 +17,7 @@ import { Route as NoteIndexRouteImport } from './routes/note/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ShareTokenRouteImport } from './routes/share/$token'
+import { Route as BenchmarkMarkdownRouteImport } from './routes/benchmark/markdown'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
@@ -66,6 +67,11 @@ const AppIndexRoute = AppIndexRouteImport.update({
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
   path: '/share/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BenchmarkMarkdownRoute = BenchmarkMarkdownRouteImport.update({
+  id: '/benchmark/markdown',
+  path: '/benchmark/markdown',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
@@ -131,6 +137,7 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
@@ -149,6 +156,7 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
   '/app': typeof AppIndexRoute
   '/auth': typeof AuthIndexRoute
@@ -170,6 +178,7 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
@@ -192,6 +201,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/auth/reset-password'
+    | '/benchmark/markdown'
     | '/share/$token'
     | '/app/'
     | '/auth/'
@@ -210,6 +220,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/auth/reset-password'
+    | '/benchmark/markdown'
     | '/share/$token'
     | '/app'
     | '/auth'
@@ -230,6 +241,7 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/auth/reset-password'
+    | '/benchmark/markdown'
     | '/share/$token'
     | '/app/'
     | '/auth/'
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   R404Route: typeof R404Route
   ApiClientErrorsRoute: typeof ApiClientErrorsRoute
   ApiUploadAttachmentRoute: typeof ApiUploadAttachmentRoute
+  BenchmarkMarkdownRoute: typeof BenchmarkMarkdownRoute
   ShareTokenRoute: typeof ShareTokenRoute
   NoteIndexRoute: typeof NoteIndexRoute
   ApiAssetsKeyRoute: typeof ApiAssetsKeyRoute
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       path: '/share/$token'
       fullPath: '/share/$token'
       preLoaderRoute: typeof ShareTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/benchmark/markdown': {
+      id: '/benchmark/markdown'
+      path: '/benchmark/markdown'
+      fullPath: '/benchmark/markdown'
+      preLoaderRoute: typeof BenchmarkMarkdownRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/reset-password': {
@@ -426,6 +446,7 @@ const rootRouteChildren: RootRouteChildren = {
   R404Route: R404Route,
   ApiClientErrorsRoute: ApiClientErrorsRoute,
   ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,
+  BenchmarkMarkdownRoute: BenchmarkMarkdownRoute,
   ShareTokenRoute: ShareTokenRoute,
   NoteIndexRoute: NoteIndexRoute,
   ApiAssetsKeyRoute: ApiAssetsKeyRoute,

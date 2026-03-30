@@ -1,4 +1,6 @@
 @custom-variant dark (&:is(.dark *));
+@custom-variant nord (&:is(.nord *));
+@custom-variant morandi (&:is(.morandi *));
 
 :root {
   /* Light Theme - Paperlike */
@@ -132,4 +134,102 @@ html.dark {
   --status-info-foreground: #1e3a8a;
 
   color-scheme: dark;
+}
+
+html.nord {
+  /* Nord Theme - Polar Night & Snow Storm */
+  --surface-primary: #2e3440;
+  --surface-secondary: #3b4252;
+  --surface-muted: #353b49;
+  --surface-hover: #434c5e;
+  --surface-active: #4c566a;
+
+  --border-primary: #d8dee9;
+
+  --text-primary: #eceff4;
+  --text-secondary: #d8dee9;
+  --text-tertiary: #7b88a1;
+
+  --interactive-primary: #88c0d0;
+  --interactive-primary-hover: #8fbcbb;
+  --interactive-secondary: #81a1c1;
+  --interactive-secondary-hover: #88c0d0;
+
+  --sidebar-surface: var(--surface-secondary);
+  --sidebar-reveal-hint: #333a48;
+
+  --content-accent: #88c0d0;
+  --content-accent-muted: #5e81ac;
+
+  --feedback-loading: #7b88a1;
+  --feedback-cursor: #88c0d0;
+
+  --code-inline-bg: #3b4252;
+
+  --shiki-dark-bg: transparent;
+  --shiki-dark: #d8dee9;
+
+  --status-destructive: #bf616a;
+  --status-destructive-hover: #d08770;
+  --status-destructive-foreground: #eceff4;
+  --status-destructive-muted: #3d2a2d;
+  --status-destructive-muted-hover: #4a3438;
+  --status-info: #88c0d0;
+  --status-info-muted: #1e2d33;
+  --status-info-foreground: #2e3440;
+  --status-success: #a3be8c;
+  --status-success-foreground: #2e3440;
+  --status-warning: #ebcb8b;
+  --status-warning-foreground: #2e3440;
+
+  color-scheme: dark;
+}
+
+html.morandi {
+  /* Morandi Theme - Muted, desaturated elegance */
+  --surface-primary: #e8e0d8;
+  --surface-secondary: #ede6df;
+  --surface-muted: #dfd8d0;
+  --surface-hover: #d5cdc4;
+  --surface-active: #cbc2b8;
+
+  --border-primary: #8a7e74;
+
+  --text-primary: #4a4039;
+  --text-secondary: #7a6e64;
+  --text-tertiary: #a89e94;
+
+  --interactive-primary: #8a7e74;
+  --interactive-primary-hover: #6e6258;
+  --interactive-secondary: #a89e94;
+  --interactive-secondary-hover: #8a7e74;
+
+  --sidebar-surface: var(--surface-secondary);
+  --sidebar-reveal-hint: #e2dbd3;
+
+  --content-accent: #b4967a;
+  --content-accent-muted: #c4ae98;
+
+  --feedback-loading: #a89e94;
+  --feedback-cursor: #8a7e74;
+
+  --code-inline-bg: #d8d0c8;
+
+  --sdm-bg: transparent;
+  --sdm-fg: #4a4039;
+
+  --status-destructive: #c4827a;
+  --status-destructive-hover: #b0746c;
+  --status-destructive-foreground: #faf5f0;
+  --status-destructive-muted: #f0e0dc;
+  --status-destructive-muted-hover: #e8d4ce;
+  --status-info: #8aacb8;
+  --status-info-muted: #e0eaee;
+  --status-info-foreground: #faf5f0;
+  --status-success: #9ab08c;
+  --status-success-foreground: #faf5f0;
+  --status-warning: #c8a87a;
+  --status-warning-foreground: #faf5f0;
+
+  color-scheme: light;
 }

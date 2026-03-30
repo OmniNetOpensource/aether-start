@@ -1,53 +1,44 @@
 import { useEffect, useState } from 'react';
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
-
-type Theme = 'light' | 'dark';
+import { type Theme, THEMES } from '@/shared/app-shell/theme';
 
 const THEME_STORAGE_KEY = 'theme';
 const DARK_QUERY = '(prefers-color-scheme: dark)';
 
-const applyHtmlClass = (theme: Theme) => {
-  if (typeof document === 'undefined') return;
-  const classList = document.documentElement.classList;
-  if (theme === 'dark') {
-    classList.add('dark');
-  } else {
-    classList.remove('dark');
-  }
-};
+const DARK_THEMES: ReadonlySet<Theme> = new Set(['dark', 'nord']);
 
-const getSystemTheme = (): Theme => {
-  if (typeof window === 'undefined') {
-    return 'light';
-  }
-  return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
+const isValidTheme = (value: string | null): value is Theme => THEMES.includes(value as Theme);
+
+const applyThemeClass = (theme: Theme) => {
+  if (typeof document === 'undefined') return;
+  const cl = document.documentElement.classList;
+  cl.remove('dark', 'nord', 'morandi');
+  if (DARK_THEMES.has(theme)) cl.add('dark');
+  if (theme !== 'light' && theme !== 'dark') cl.add(theme);
 };
 
 const getInitialTheme = (): Theme => {
   if (typeof window === 'undefined') return 'light';
 
   const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  if (stored === 'light' || stored === 'dark') {
-    return stored;
-  }
+  if (isValidTheme(stored)) return stored;
 
-  return getSystemTheme();
+  return window.matchMedia(DARK_QUERY).matches ? 'dark' : 'light';
 };
 
 export function useTheme() {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
   useEffect(() => {
-    applyHtmlClass(theme);
+    applyThemeClass(theme);
   }, [theme]);
 
   useMountEffect(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== THEME_STORAGE_KEY) return;
-      const next = event.newValue;
-      if (next !== 'light' && next !== 'dark') return;
-      setThemeState(next);
-      applyHtmlClass(next);
+      if (!isValidTheme(event.newValue)) return;
+      setThemeState(event.newValue);
+      applyThemeClass(event.newValue);
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
@@ -55,17 +46,11 @@ export function useTheme() {
 
   const setTheme = (next: Theme) => {
     setThemeState(next);
-
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(THEME_STORAGE_KEY, next);
     }
-    applyHtmlClass(next);
+    applyThemeClass(next);
   };
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    setTheme(next);
-  };
-
-  return { theme, toggleTheme } as const;
+  return { theme, setTheme } as const;
 }

@@ -17,36 +17,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/design-system/dialog';
+import { splitMarkdownParagraphs } from '@/shared/design-system/split-markdown-paragraphs';
 import 'streamdown/styles.css';
 import 'katex/dist/katex.min.css';
 import { useMountEffect } from '../app-shell/useMountEffect';
-
-function splitMarkdownParagraphs(text: string): string[] {
-  const lines = text.split('\n');
-  const paragraphs: string[] = [];
-  let current: string[] = [];
-  let inCodeBlock = false;
-
-  for (const line of lines) {
-    if (line.trim().startsWith('```')) {
-      inCodeBlock = !inCodeBlock;
-      current.push(line);
-    } else if (!inCodeBlock && line.trim() === '') {
-      if (current.length > 0) {
-        paragraphs.push(current.join('\n'));
-        current = [];
-      }
-    } else {
-      current.push(line);
-    }
-  }
-
-  if (current.length > 0) {
-    paragraphs.push(current.join('\n'));
-  }
-
-  return paragraphs;
-}
 
 type Props = {
   content: string;
