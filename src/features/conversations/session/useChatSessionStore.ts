@@ -339,7 +339,7 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
               errorMessage: null,
             })),
             selectedArtifactId: artifacts[0]?.id ?? null,
-            artifactPanelOpen: artifacts.length > 0,
+            artifactPanelOpen: false,
             activeStreamingArtifactId: null,
             artifactView: artifacts.length > 0 ? 'preview' : 'code',
           },
@@ -394,7 +394,6 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             return {
               artifacts: nextArtifacts,
               selectedArtifactId: artifactId,
-              artifactPanelOpen: true,
               activeStreamingArtifactId: artifactId,
               artifactView: 'code',
             };
@@ -432,17 +431,21 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
         ),
       appendArtifactCode: (artifactId, delta) =>
         set(
-          (state) => ({
-            artifacts: state.artifacts.map((artifact) =>
-              artifact.id === artifactId
-                ? {
-                    ...artifact,
-                    code: artifact.code + delta,
-                    updated_at: new Date().toISOString(),
-                  }
-                : artifact,
-            ),
-          }),
+          (state) => {
+            const openFromChunk = delta.length > 0;
+            return {
+              artifacts: state.artifacts.map((artifact) =>
+                artifact.id === artifactId
+                  ? {
+                      ...artifact,
+                      code: artifact.code + delta,
+                      updated_at: new Date().toISOString(),
+                    }
+                  : artifact,
+              ),
+              ...(openFromChunk ? { artifactPanelOpen: true } : {}),
+            };
+          },
           false,
           getActionName('chatSession/appendArtifactCode'),
         ),
@@ -460,7 +463,6 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
                 : artifact,
             ),
             selectedArtifactId: artifactId,
-            artifactPanelOpen: true,
             activeStreamingArtifactId:
               state.activeStreamingArtifactId === artifactId
                 ? null
@@ -484,7 +486,6 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
                 : artifact,
             ),
             selectedArtifactId: artifactId,
-            artifactPanelOpen: true,
             activeStreamingArtifactId:
               state.activeStreamingArtifactId === artifactId
                 ? null

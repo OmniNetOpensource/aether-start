@@ -2,10 +2,7 @@ import { lazy, Suspense } from 'react';
 import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
 const MarkdownImpl = lazy(() =>
-  loadWithRetry(async () => {
-    await Promise.all([import('streamdown/styles.css'), import('katex/dist/katex.min.css')]);
-    return import('./MarkdownImpl');
-  }),
+  loadWithRetry(() => import('./MarkdownImpl')),
 );
 
 type Props = {

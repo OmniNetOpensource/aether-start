@@ -1,4 +1,4 @@
-import { memo, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink } from 'lucide-react';
 import { createCodePlugin } from '@streamdown/code';
 import {
@@ -17,6 +17,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/design-system/dialog';
+import 'streamdown/styles.css';
+import 'katex/dist/katex.min.css';
 
 function splitMarkdownParagraphs(text: string): string[] {
   const lines = text.split('\n');
@@ -156,63 +158,55 @@ type StreamdownBlockProps = {
   plugins: PluginConfig;
 };
 
-const StreamdownBlock = memo(function StreamdownBlock({
+const StreamdownBlock = function StreamdownBlock({
   markdown,
   blockIsAnimating,
   plugins,
 }: StreamdownBlockProps) {
-  const wrapRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-
-    if (blockIsAnimating) {
-      el.style.contentVisibility = '';
-      el.style.containIntrinsicBlockSize = '';
-      return;
-    }
-
-    const frameId = requestAnimationFrame(() => {
-      const h = Math.round(el.getBoundingClientRect().height);
-      if (h > 0) {
-        el.style.contentVisibility = 'auto';
-        el.style.containIntrinsicBlockSize = `${h}px`;
-      } else {
-        el.style.contentVisibility = '';
-        el.style.containIntrinsicBlockSize = '';
-      }
-    });
-
-    return () => cancelAnimationFrame(frameId);
-  }, [blockIsAnimating]);
-
   return (
-    <div ref={wrapRef}>
-      <Streamdown
-        plugins={plugins}
-        rehypePlugins={[defaultRehypePlugins.sanitize, defaultRehypePlugins.harden]}
-        isAnimating={blockIsAnimating}
-        linkSafety={linkSafety}
-      >
-        {markdown}
-      </Streamdown>
-    </div>
+    <Streamdown
+      plugins={plugins}
+      rehypePlugins={[defaultRehypePlugins.sanitize, defaultRehypePlugins.harden]}
+      isAnimating={blockIsAnimating}
+      linkSafety={linkSafety}
+    >
+      {markdown}
+    </Streamdown>
   );
-});
+};
 
 function MarkdownImpl({ content, isAnimating = false }: Props) {
   const paragraphs = splitMarkdownParagraphs(content);
-
+  const ro = useRef<ResizeObserver>(
+    new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const node = entry.target;
+        if (!(node instanceof HTMLElement)) continue;
+        const h = Math.round(entry.borderBoxSize[0].blockSize);
+        if (h > 0) {
+          node.style.contentVisibility = 'auto';
+          node.style.containIntrinsicBlockSize = `${h}px`;
+        }
+      }
+    }),
+  );
   return (
     <div className='space-y-3 [&_b]:font-extrabold [&_strong]:font-extrabold'>
       {paragraphs.map((paragraph, i) => (
-        <StreamdownBlock
+        <div
           key={i}
-          markdown={paragraph}
-          blockIsAnimating={isAnimating && i === paragraphs.length - 1}
-          plugins={plugins}
-        />
+          ref={(node: HTMLDivElement | null) => {
+            if (!node) return;
+            ro.current.observe(node);
+            return () => ro.current.unobserve(node);
+          }}
+        >
+          <StreamdownBlock
+            markdown={paragraph}
+            blockIsAnimating={isAnimating && i === paragraphs.length - 1}
+            plugins={plugins}
+          />
+        </div>
       ))}
     </div>
   );
