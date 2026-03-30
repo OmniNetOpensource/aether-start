@@ -19,6 +19,7 @@ import {
 } from '@/shared/design-system/dialog';
 import 'streamdown/styles.css';
 import 'katex/dist/katex.min.css';
+import { useMountEffect } from '../app-shell/useMountEffect';
 
 function splitMarkdownParagraphs(text: string): string[] {
   const lines = text.split('\n');
@@ -156,22 +157,34 @@ type StreamdownBlockProps = {
   markdown: string;
   blockIsAnimating: boolean;
   plugins: PluginConfig;
+  observer: ResizeObserver;
 };
 
 const StreamdownBlock = function StreamdownBlock({
   markdown,
   blockIsAnimating,
   plugins,
+  observer,
 }: StreamdownBlockProps) {
+  const blockElRef = useRef<HTMLDivElement | null>(null);
+
+  useMountEffect(() => {
+    if (!blockElRef.current) return;
+    observer.observe(blockElRef.current);
+    return () => blockElRef.current && observer.unobserve(blockElRef.current);
+  });
+
   return (
-    <Streamdown
-      plugins={plugins}
-      rehypePlugins={[defaultRehypePlugins.sanitize, defaultRehypePlugins.harden]}
-      isAnimating={blockIsAnimating}
-      linkSafety={linkSafety}
-    >
-      {markdown}
-    </Streamdown>
+    <div ref={blockElRef}>
+      <Streamdown
+        plugins={plugins}
+        rehypePlugins={[defaultRehypePlugins.sanitize, defaultRehypePlugins.harden]}
+        isAnimating={blockIsAnimating}
+        linkSafety={linkSafety}
+      >
+        {markdown}
+      </Streamdown>
+    </div>
   );
 };
 
@@ -185,6 +198,7 @@ function MarkdownImpl({ content, isAnimating = false }: Props) {
         for (const entry of entries) {
           const node = entry.target;
           if (!(node instanceof HTMLElement)) continue;
+
           const h = Math.round(entry.borderBoxSize[0].blockSize);
           if (!node.style.contentVisibility) {
             node.style.contentVisibility = 'auto';
@@ -196,27 +210,19 @@ function MarkdownImpl({ content, isAnimating = false }: Props) {
     return ro.current;
   }
   useEffect(() => {
-    getObserver();
     return () => ro.current?.disconnect();
   }, []);
 
   return (
     <div className='space-y-3 [&_b]:font-extrabold [&_strong]:font-extrabold'>
       {paragraphs.map((paragraph, i) => (
-        <div
+        <StreamdownBlock
+          markdown={paragraph}
+          blockIsAnimating={isAnimating && i === paragraphs.length - 1}
+          plugins={plugins}
+          observer={getObserver()}
           key={i}
-          ref={(node: HTMLDivElement | null) => {
-            if (!node || !ro.current) return;
-            ro.current.observe(node);
-            return () => ro.current?.unobserve(node);
-          }}
-        >
-          <StreamdownBlock
-            markdown={paragraph}
-            blockIsAnimating={isAnimating && i === paragraphs.length - 1}
-            plugins={plugins}
-          />
-        </div>
+        />
       ))}
     </div>
   );
