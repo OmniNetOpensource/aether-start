@@ -1,9 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
-const MarkdownImpl = lazy(() =>
-  loadWithRetry(() => import('./MarkdownImpl')),
-);
+const MarkdownImpl = lazy(() => loadWithRetry(() => import('./MarkdownImpl')));
 
 type Props = {
   content: string;
