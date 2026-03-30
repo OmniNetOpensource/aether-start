@@ -48,7 +48,13 @@ export default defineConfig(({ command }) => {
     },
     resolve: {
       dedupe: ['react', 'react-dom'],
-      alias: [{ find: '@', replacement: resolve(__dirname, 'src') }],
+      alias: [
+        {
+          find: /^shiki$/,
+          replacement: resolve(__dirname, 'src/shared/design-system/shiki-bundle.ts'),
+        },
+        { find: '@', replacement: resolve(__dirname, 'src') },
+      ],
     },
     plugins: [
       ...(command === 'serve' ? [devtools()] : []),
