@@ -177,28 +177,38 @@ const StreamdownBlock = function StreamdownBlock({
 
 function MarkdownImpl({ content, isAnimating = false }: Props) {
   const paragraphs = splitMarkdownParagraphs(content);
-  const ro = useRef<ResizeObserver>(
-    new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const node = entry.target;
-        if (!(node instanceof HTMLElement)) continue;
-        const h = Math.round(entry.borderBoxSize[0].blockSize);
-        if (h > 0) {
-          node.style.contentVisibility = 'auto';
+  const ro = useRef<ResizeObserver | null>(null);
+
+  function getObserver() {
+    if (!ro.current) {
+      ro.current = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const node = entry.target;
+          if (!(node instanceof HTMLElement)) continue;
+          const h = Math.round(entry.borderBoxSize[0].blockSize);
+          if (!node.style.contentVisibility) {
+            node.style.contentVisibility = 'auto';
+          }
           node.style.containIntrinsicBlockSize = `${h}px`;
         }
-      }
-    }),
-  );
+      });
+    }
+    return ro.current;
+  }
+  useEffect(() => {
+    getObserver();
+    return () => ro.current?.disconnect();
+  }, []);
+
   return (
     <div className='space-y-3 [&_b]:font-extrabold [&_strong]:font-extrabold'>
       {paragraphs.map((paragraph, i) => (
         <div
           key={i}
           ref={(node: HTMLDivElement | null) => {
-            if (!node) return;
+            if (!node || !ro.current) return;
             ro.current.observe(node);
-            return () => ro.current.unobserve(node);
+            return () => ro.current?.unobserve(node);
           }}
         >
           <StreamdownBlock
