@@ -3,6 +3,7 @@ import { Braces, ChevronDown, ExternalLink, Eye, Loader2, X } from 'lucide-react
 import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/design-system/popover';
 import { cn } from '@/shared/core/utils';
+import { truncateMiddle } from '@/shared/core/truncate-middle';
 import { toast } from '@/shared/app-shell/useToast';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { buildPreviewDocument } from './preview-document';
@@ -87,7 +88,12 @@ function ArtifactPanelBody() {
               className='flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-(--surface-hover)'
               aria-label='选择 artifact'
             >
-              <span className='truncate font-medium text-foreground'>{selectedArtifact.title}</span>
+              <span
+                className='min-w-0 font-medium text-foreground'
+                title={selectedArtifact.title}
+              >
+                {truncateMiddle(selectedArtifact.title, 44)}
+              </span>
               <ChevronDown className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
             </button>
           </PopoverTrigger>
@@ -108,7 +114,9 @@ function ArtifactPanelBody() {
                     setHistoryOpen(false);
                   }}
                 >
-                  <div className='truncate font-medium'>{artifact.title}</div>
+                  <div className='font-medium' title={artifact.title}>
+                    {truncateMiddle(artifact.title, 36)}
+                  </div>
                   <div className='mt-0.5 text-xs text-muted-foreground'>{artifact.status}</div>
                 </button>
               ))}

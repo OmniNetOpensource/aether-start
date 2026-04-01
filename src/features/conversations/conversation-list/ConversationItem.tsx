@@ -10,6 +10,7 @@ import {
 } from '@/shared/design-system/dropdown-menu';
 import { useDeleteConversation, useSetConversationPinned } from '@/features/conversations/session';
 import type { ConversationMeta } from '@/features/conversations/session';
+import { truncateMiddle } from '@/shared/core/truncate-middle';
 
 const PLACEHOLDER_TITLES = ['New Chat', 'Untitled Chat'];
 
@@ -33,6 +34,7 @@ export function ConversationItem({
   onDropdownOpenChange,
 }: ConversationItemProps) {
   const title = conversation.title || 'Untitled Chat';
+  const displayTitle = truncateMiddle(title, 32);
   const useShimmer = isPlaceholderTitle(conversation.title);
   const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
@@ -95,18 +97,20 @@ export function ConversationItem({
             {conversation.is_pinned ? (
               <Pin className='size-3.5 shrink-0 text-(--text-tertiary)' />
             ) : null}
-            {useShimmer ? (
-              <Shimmer
-                as='span'
-                className='min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)'
-              >
-                {title}
-              </Shimmer>
-            ) : (
-              <span className='min-w-0 flex-1 truncate text-sm font-medium text-(--text-secondary)'>
-                {title}
-              </span>
-            )}
+            <span className='min-w-0 flex-1' title={title}>
+              {useShimmer ? (
+                <Shimmer
+                  as='span'
+                  className='block text-sm font-medium text-(--text-secondary)'
+                >
+                  {displayTitle}
+                </Shimmer>
+              ) : (
+                <span className='block text-sm font-medium text-(--text-secondary)'>
+                  {displayTitle}
+                </span>
+              )}
+            </span>
           </div>
         </div>
         <div className='relative z-20'>

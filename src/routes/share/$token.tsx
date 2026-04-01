@@ -2,6 +2,7 @@ import { Link, createFileRoute } from '@tanstack/react-router';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { ReadonlyMessageList } from '@/features/share/public-thread';
+import { truncateMiddle } from '@/shared/core/truncate-middle';
 import { getPublicConversationShareFn } from '@/features/share/share-record';
 import type { Message } from '@/features/chat/message-thread';
 
@@ -135,12 +136,14 @@ function SharedConversationPage() {
     );
   }
 
+  const headingText = data.title?.trim() || 'Aether 分享';
+
   return (
     <main className='h-screen w-full bg-(--surface-primary) overflow-y-auto'>
       <div className='pt-12 flex flex-col items-center'>
         <div className='w-full max-w-[390px] px-4 mb-8'>
-          <h1 className='text-2xl font-semibold text-(--text-primary)'>
-            {data.title?.trim() || 'Aether 分享'}
+          <h1 className='text-2xl font-semibold text-(--text-primary)' title={headingText}>
+            {truncateMiddle(headingText, 36)}
           </h1>
         </div>
         <div className='w-full max-w-[390px] pb-12'>

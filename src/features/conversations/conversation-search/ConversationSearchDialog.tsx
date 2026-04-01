@@ -7,6 +7,7 @@ import {
   type ConversationSearchCursor,
 } from '@/features/conversations/session';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/design-system/dialog';
+import { truncateMiddle } from '@/shared/core/truncate-middle';
 
 const PAGE_SIZE = 20;
 
@@ -232,6 +233,7 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
           <div className='flex flex-col gap-0.5'>
             {items.map((item) => {
               const title = item.title || '未命名会话';
+              const displayTitle = truncateMiddle(title, 48);
 
               return (
                 <button
@@ -241,8 +243,11 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
                   onClick={() => handleSelect(item)}
                 >
                   <div className='flex w-full items-baseline justify-between'>
-                    <span className='truncate text-base font-medium text-(--text-primary)'>
-                      {title}
+                    <span
+                      className='min-w-0 text-base font-medium text-(--text-primary)'
+                      title={title}
+                    >
+                      {displayTitle}
                     </span>
                     <span className='ml-4 shrink-0 text-xs text-(--text-tertiary) opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100'>
                       {formatUpdatedAt(item.updated_at)}
