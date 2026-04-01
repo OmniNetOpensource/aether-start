@@ -385,7 +385,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         updated_at: now,
       });
 
-      this.broadcast('conversation_update', {
+      this.persistAndBroadcastEvent({
+        type: 'conversation_updated',
         conversationId: message.conversationId,
         title,
         updated_at: now,
@@ -902,7 +903,6 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
       this.broadcast('chat_finished', { status: finalStatus });
       await this.closeAllWriters();
-      this.eventCache = [];
     }
   }
 
@@ -963,7 +963,8 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     });
 
     // 标题和更新时间变更后同步广播，让侧边栏列表和当前会话页保持一致。
-    this.broadcast('conversation_update', {
+    this.persistAndBroadcastEvent({
+      type: 'conversation_updated',
       conversationId,
       title: resolvedTitle,
       updated_at: now,

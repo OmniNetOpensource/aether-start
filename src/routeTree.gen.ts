@@ -14,6 +14,7 @@ import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as NoteIndexRouteImport } from './routes/note/index'
+import { Route as BenchmarkIndexRouteImport } from './routes/benchmark/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ShareTokenRouteImport } from './routes/share/$token'
@@ -52,6 +53,11 @@ const IndexRoute = IndexRouteImport.update({
 const NoteIndexRoute = NoteIndexRouteImport.update({
   id: '/note/',
   path: '/note/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BenchmarkIndexRoute = BenchmarkIndexRouteImport.update({
+  id: '/benchmark/',
+  path: '/benchmark/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthIndexRoute = AuthIndexRouteImport.update({
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
+  '/benchmark/': typeof BenchmarkIndexRoute
   '/note/': typeof NoteIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -160,6 +167,7 @@ export interface FileRoutesByTo {
   '/share/$token': typeof ShareTokenRoute
   '/app': typeof AppIndexRoute
   '/auth': typeof AuthIndexRoute
+  '/benchmark': typeof BenchmarkIndexRoute
   '/note': typeof NoteIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -182,6 +190,7 @@ export interface FileRoutesById {
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
+  '/benchmark/': typeof BenchmarkIndexRoute
   '/note/': typeof NoteIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/app/'
     | '/auth/'
+    | '/benchmark/'
     | '/note/'
     | '/api/assets/$key'
     | '/api/auth/$'
@@ -224,6 +234,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/app'
     | '/auth'
+    | '/benchmark'
     | '/note'
     | '/api/assets/$key'
     | '/api/auth/$'
@@ -245,6 +256,7 @@ export interface FileRouteTypes {
     | '/share/$token'
     | '/app/'
     | '/auth/'
+    | '/benchmark/'
     | '/note/'
     | '/api/assets/$key'
     | '/api/auth/$'
@@ -261,6 +273,7 @@ export interface RootRouteChildren {
   ApiUploadAttachmentRoute: typeof ApiUploadAttachmentRoute
   BenchmarkMarkdownRoute: typeof BenchmarkMarkdownRoute
   ShareTokenRoute: typeof ShareTokenRoute
+  BenchmarkIndexRoute: typeof BenchmarkIndexRoute
   NoteIndexRoute: typeof NoteIndexRoute
   ApiAssetsKeyRoute: typeof ApiAssetsKeyRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
@@ -302,6 +315,13 @@ declare module '@tanstack/react-router' {
       path: '/note'
       fullPath: '/note/'
       preLoaderRoute: typeof NoteIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/benchmark/': {
+      id: '/benchmark/'
+      path: '/benchmark'
+      fullPath: '/benchmark/'
+      preLoaderRoute: typeof BenchmarkIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth/': {
@@ -448,6 +468,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,
   BenchmarkMarkdownRoute: BenchmarkMarkdownRoute,
   ShareTokenRoute: ShareTokenRoute,
+  BenchmarkIndexRoute: BenchmarkIndexRoute,
   NoteIndexRoute: NoteIndexRoute,
   ApiAssetsKeyRoute: ApiAssetsKeyRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { Check, Copy, ExternalLink } from 'lucide-react';
 import { createCodePlugin } from '@streamdown/code';
 import {
@@ -17,10 +17,46 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/design-system/dialog';
-import { splitMarkdownParagraphs } from '@/shared/design-system/split-markdown-paragraphs';
 import 'streamdown/styles.css';
 import 'katex/dist/katex.min.css';
-import { useMountEffect } from '../app-shell/useMountEffect';
+
+function splitMarkdownParagraphs(text: string): string[] {
+  const lines = text.split('\n');
+  const paragraphs: string[] = [];
+  let current: string[] = [];
+  let inCodeBlock = false;
+
+  const flush = () => {
+    if (current.length === 0) return;
+    paragraphs.push(current.join('\n'));
+    current = [];
+  };
+
+  for (const line of lines) {
+    if (line.trim().startsWith('```')) {
+      if (!inCodeBlock) {
+        flush();
+        inCodeBlock = true;
+        current.push(line);
+      } else {
+        current.push(line);
+        inCodeBlock = false;
+        flush();
+      }
+      continue;
+    }
+    if (inCodeBlock) {
+      current.push(line);
+    } else if (line.trim() === '') {
+      flush();
+    } else {
+      current.push(line);
+    }
+  }
+
+  flush();
+  return paragraphs;
+}
 
 type Props = {
   content: string;
@@ -130,23 +166,24 @@ const linkSafety = {
 type StreamdownBlockProps = {
   markdown: string;
   blockIsAnimating: boolean;
-  plugins: PluginConfig;
   observer: ResizeObserver;
 };
 
-const StreamdownBlock = function StreamdownBlock({
+const StreamdownBlock = memo(function StreamdownBlock({
   markdown,
   blockIsAnimating,
-  plugins,
   observer,
 }: StreamdownBlockProps) {
   const blockElRef = useRef<HTMLDivElement | null>(null);
 
-  useMountEffect(() => {
-    if (!blockElRef.current) return;
-    observer.observe(blockElRef.current);
-    return () => blockElRef.current && observer.unobserve(blockElRef.current);
-  });
+  useEffect(() => {
+    const el = blockElRef.current;
+    if (!el) return;
+    observer.observe(el);
+    return () => {
+      observer.unobserve(el);
+    };
+  }, [blockIsAnimating, observer]);
 
   return (
     <div ref={blockElRef}>
@@ -160,7 +197,7 @@ const StreamdownBlock = function StreamdownBlock({
       </Streamdown>
     </div>
   );
-};
+});
 
 function MarkdownImpl({ content, isAnimating = false }: Props) {
   const paragraphs = splitMarkdownParagraphs(content);
@@ -193,7 +230,6 @@ function MarkdownImpl({ content, isAnimating = false }: Props) {
         <StreamdownBlock
           markdown={paragraph}
           blockIsAnimating={isAnimating && i === paragraphs.length - 1}
-          plugins={plugins}
           observer={getObserver()}
           key={i}
         />
