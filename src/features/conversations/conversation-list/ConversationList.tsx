@@ -41,7 +41,7 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
     return (
       <div className='flex items-center justify-center py-6 text-(--text-tertiary)'>
         <Loader2 className='h-4 w-4 animate-spin' />
-        <span className='ml-2 text-xs'>加载会话�?..</span>
+        <span className='ml-2 text-xs'>加载会话中…</span>
       </div>
     );
   }

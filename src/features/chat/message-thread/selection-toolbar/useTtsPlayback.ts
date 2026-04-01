@@ -1,8 +1,12 @@
 /**
- * 选区工具�?- TTS 朗读 Hook
+ * 选区工具栏 - TTS 朗读 Hook
  *
- * 负责�? * 1. 调用 ttsSynthesizeFn 将文本转为音频（hex 格式�? * 2. 解码 hex �?Uint8Array，创�?Blob �?Object URL
- * 3. 使用 Audio 元素播放，监�?ended/error 做清�? * 4. 管理 idle | loading | playing 三态，支持播放中点击停�? */
+ * 负责：
+ * 1. 调用 ttsSynthesizeFn 将文本转为音频（hex 格式）
+ * 2. 解码 hex 为 Uint8Array，创建 Blob 与 Object URL
+ * 3. 使用 Audio 元素播放，监听 ended/error 做清理
+ * 4. 管理 idle | loading | playing 三态，支持播放中点击停止
+ */
 
 import { useState, useRef } from 'react';
 import { ttsSynthesizeFn } from '../tts';
@@ -15,7 +19,7 @@ export function useTtsPlayback(text: string) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
-  /** 停止播放并释�?Audio �?Object URL，避免内存泄�?*/
+  /** 停止播放并释放 Audio 与 Object URL，避免内存泄漏 */
   const cleanup = () => {
     if (audioRef.current) {
       audioRef.current.pause();
@@ -27,7 +31,7 @@ export function useTtsPlayback(text: string) {
     }
   };
 
-  /** 朗读/停止：playing 时停止，否则发起 TTS 请求并播�?*/
+  /** 朗读/停止：playing 时停止，否则发起 TTS 请求并播放 */
   const handleTts = async () => {
     if (ttsState === 'playing') {
       cleanup();
@@ -41,7 +45,7 @@ export function useTtsPlayback(text: string) {
     try {
       const result = await ttsSynthesizeFn({ data: { text } });
 
-      // 服务端返�?hex 字符串，�?2 字符对应 1 字节
+      // 服务端返回 hex 字符串，每 2 字符对应 1 字节
       const hexStr = result.audio;
       const bytes = new Uint8Array(hexStr.length / 2);
       for (let i = 0; i < hexStr.length; i += 2) {
