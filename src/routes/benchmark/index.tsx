@@ -8,7 +8,8 @@ const benchmarks = [
   {
     to: '/benchmark/markdown',
     title: 'Markdown Streaming',
-    description: '对比 MarkdownImpl（段落拆分 + contentVisibility）与原生 Streamdown 在流式输出场景下的帧率和渲染耗时。',
+    description:
+      '对比 MarkdownImpl（段落拆分 + contentVisibility）与原生 Streamdown 在流式输出场景下的帧率和渲染耗时。',
   },
 ];
 

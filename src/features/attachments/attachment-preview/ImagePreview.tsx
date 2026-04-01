@@ -4,6 +4,18 @@ import { createPortal } from 'react-dom';
 import { cn } from '@/shared/core/utils';
 import { formatFileSize } from '@/shared/browser/file';
 
+function useImageLoaded(src: string) {
+  const [loaded, setLoaded] = useState(false);
+  const prevSrc = useRef(src);
+
+  if (prevSrc.current !== src) {
+    prevSrc.current = src;
+    setLoaded(false);
+  }
+
+  return { loaded, onLoad: () => setLoaded(true) };
+}
+
 type ImagePreviewProps = {
   url: string;
   previewUrl?: string;
@@ -93,6 +105,7 @@ export function ImagePreview({ url, previewUrl, name, size, className }: ImagePr
     };
   }, [isOpen, isDragging]);
 
+  const thumbnail = useImageLoaded(previewUrl ?? url);
   const sizeLabel = formatFileSize(size);
   const previewLabel = `${name} (${sizeLabel})`;
 
@@ -112,8 +125,12 @@ export function ImagePreview({ url, previewUrl, name, size, className }: ImagePr
         <img
           src={previewUrl ?? url}
           alt={name}
-          className='h-full w-full object-cover'
+          className={cn(
+            'h-full w-full object-cover transition-opacity duration-300',
+            thumbnail.loaded ? 'opacity-100' : 'opacity-0',
+          )}
           draggable={false}
+          onLoad={thumbnail.onLoad}
         />
       </button>
 

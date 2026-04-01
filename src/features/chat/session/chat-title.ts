@@ -3,16 +3,18 @@ import { getBackendConfig, log } from '@/features/chat/agent-runtime';
 
 const FALLBACK_TITLE = 'New Chat';
 
+const MAX_CONVERSATION_TITLE_CHARS = 60;
+
 const sanitizeTitle = (value: string) => {
   return value
     .replace(/^["'`]+|["'`]+$/g, '')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
+    .slice(0, MAX_CONVERSATION_TITLE_CHARS);
 };
 const CONVERSATION_TITLE_TIMEOUT_MS = 60_000;
 
-const TITLE_PROMPT =
-  'Based on this conversation, generate a short title (max 10 chars, no quotes). Use the same language as the conversation.';
+const TITLE_PROMPT = `Based on this conversation, generate a short title (max ${MAX_CONVERSATION_TITLE_CHARS} characters, no quotes). Use the same language as the conversation.`;
 
 export const generateTitleFromConversation = async (
   conversationTranscript: string,

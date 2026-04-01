@@ -1,6 +1,6 @@
 import type { ChatTool, ToolDefinition, ToolHandler } from '../agent-runtime/tool-types';
 
-const TITLE_MAX_LENGTH = 120;
+const TITLE_MAX_LENGTH = 200;
 const CODE_MAX_LENGTH = 200_000;
 
 export type RenderArgs = {
@@ -61,7 +61,7 @@ const renderSpec: ChatTool = {
       properties: {
         title: {
           type: 'string',
-          description: 'Short artifact title, 120 characters or fewer',
+          description: 'Short artifact title, 200 characters or fewer',
         },
         code: {
           type: 'string',

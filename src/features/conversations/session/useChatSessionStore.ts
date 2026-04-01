@@ -113,6 +113,8 @@ type ChatSessionActions = {
   clearSession: () => void;
   getTreeState: () => TreeSnapshot;
   setTreeState: (partial: Partial<TreeSnapshot>) => void;
+  stampUserMessageTime: (createdAt: string) => void;
+  stampAssistantCompletedAt: (completedAt: string) => void;
   addMessage: (
     role: Message['role'],
     blocks: ContentBlock[],
@@ -537,6 +539,42 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
           }),
           false,
           getActionName('chatSession/setTreeState'),
+        ),
+      stampUserMessageTime: (createdAt) =>
+        set(
+          (state) => {
+            const lastId = state.currentPath[state.currentPath.length - 1] ?? null;
+            if (!lastId) {
+              return state;
+            }
+            const target = state.messages[lastId - 1];
+            if (!target || target.role !== 'user') {
+              return state;
+            }
+            const nextMessages = [...state.messages];
+            nextMessages[lastId - 1] = { ...target, createdAt };
+            return { messages: nextMessages };
+          },
+          false,
+          getActionName('chatSession/stampUserMessageTime'),
+        ),
+      stampAssistantCompletedAt: (completedAt) =>
+        set(
+          (state) => {
+            const lastId = state.currentPath[state.currentPath.length - 1] ?? null;
+            if (!lastId) {
+              return state;
+            }
+            const target = state.messages[lastId - 1];
+            if (!target || target.role !== 'assistant') {
+              return state;
+            }
+            const nextMessages = [...state.messages];
+            nextMessages[lastId - 1] = { ...target, completedAt };
+            return { messages: nextMessages };
+          },
+          false,
+          getActionName('chatSession/stampAssistantCompletedAt'),
         ),
       addMessage: (role, blocks, createdAt) => {
         const result = addMessage(get().getTreeState(), role, blocks, createdAt);

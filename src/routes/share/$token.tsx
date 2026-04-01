@@ -16,6 +16,7 @@ const toReadonlyMessage = (message: SharedPageMessage): Message =>
         role: 'user',
         blocks: message.blocks as Extract<Message, { role: 'user' }>['blocks'],
         createdAt: message.createdAt,
+        completedAt: null,
         parentId: null,
         prevSibling: null,
         nextSibling: null,
@@ -26,6 +27,10 @@ const toReadonlyMessage = (message: SharedPageMessage): Message =>
         role: 'assistant',
         blocks: message.blocks as Extract<Message, { role: 'assistant' }>['blocks'],
         createdAt: message.createdAt,
+        completedAt:
+          'completedAt' in message && typeof message.completedAt === 'string'
+            ? message.completedAt
+            : null,
         parentId: null,
         prevSibling: null,
         nextSibling: null,

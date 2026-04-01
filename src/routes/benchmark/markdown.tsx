@@ -1,10 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
-import {
-  Streamdown,
-  defaultRehypePlugins,
-  type PluginConfig,
-} from 'streamdown';
+import { Streamdown, defaultRehypePlugins, type PluginConfig } from 'streamdown';
 import { createCodePlugin } from '@streamdown/code';
 import { cjk } from '@streamdown/cjk';
 import { createMathPlugin } from '@streamdown/math';
@@ -280,10 +276,18 @@ function MetricsBar({
     <div className='flex items-center gap-4 rounded-lg border px-4 py-2 text-sm font-mono'>
       <span className='font-semibold'>{label}</span>
       <span>
-        FPS: <b className={fps < 30 ? 'text-red-500' : fps < 50 ? 'text-yellow-500' : 'text-green-600'}>{fps}</b>
+        FPS:{' '}
+        <b className={fps < 30 ? 'text-red-500' : fps < 50 ? 'text-yellow-500' : 'text-green-600'}>
+          {fps}
+        </b>
       </span>
-      <span>Avg: <b>{avgFrameMs}ms</b></span>
-      <span>Long frames ({'>'}20ms): <b className={longFrames > 50 ? 'text-red-500' : ''}>{longFrames}</b></span>
+      <span>
+        Avg: <b>{avgFrameMs}ms</b>
+      </span>
+      <span>
+        Long frames ({'>'}20ms):{' '}
+        <b className={longFrames > 50 ? 'text-red-500' : ''}>{longFrames}</b>
+      </span>
     </div>
   );
 }
@@ -317,20 +321,29 @@ function SummaryTable({ a, b }: { a: Summary | null; b: Summary | null }) {
         {rows.map(({ label, key, unit }) => {
           const va = a[key];
           const vb = b[key];
-          const diff = key === 'totalFrames'
-            ? `${va > vb ? '+' : ''}${va - vb}`
-            : `${va < vb ? '-' : '+'}${Math.abs(Math.round((va - vb) * 100) / 100)}${unit}`;
+          const diff =
+            key === 'totalFrames'
+              ? `${va > vb ? '+' : ''}${va - vb}`
+              : `${va < vb ? '-' : '+'}${Math.abs(Math.round((va - vb) * 100) / 100)}${unit}`;
           const better = key === 'totalFrames' ? va >= vb : va <= vb;
           return (
             <tr key={key} className='border-b'>
               <td className='py-2 px-3'>{label}</td>
-              <td className={`text-right py-2 px-3 font-mono ${better ? 'text-green-600 font-semibold' : ''}`}>
-                {va}{unit}
+              <td
+                className={`text-right py-2 px-3 font-mono ${better ? 'text-green-600 font-semibold' : ''}`}
+              >
+                {va}
+                {unit}
               </td>
-              <td className={`text-right py-2 px-3 font-mono ${!better ? 'text-green-600 font-semibold' : ''}`}>
-                {vb}{unit}
+              <td
+                className={`text-right py-2 px-3 font-mono ${!better ? 'text-green-600 font-semibold' : ''}`}
+              >
+                {vb}
+                {unit}
               </td>
-              <td className={`text-right py-2 px-3 font-mono ${better ? 'text-green-600' : 'text-red-500'}`}>
+              <td
+                className={`text-right py-2 px-3 font-mono ${better ? 'text-green-600' : 'text-red-500'}`}
+              >
                 {diff}
               </td>
             </tr>
@@ -403,9 +416,10 @@ function BenchmarkPage() {
         <div className='space-y-2'>
           <h1 className='text-2xl font-bold'>Markdown Streaming Benchmark</h1>
           <p className='text-sm text-neutral-500'>
-            先运行 Optimized（MarkdownImpl），再运行 Baseline（单个 Streamdown），数据源为同一段字符串。
-            Phase 2 开始时左侧已是完整内容、右侧从零流式输出，属串行对比的正常现象。
-            每轮流式输出 {charCount.toLocaleString()} 字符，每 {CHUNK_INTERVAL_MS}ms 追加 {CHUNK_SIZE} 字符。
+            先运行 Optimized（MarkdownImpl），再运行 Baseline（单个
+            Streamdown），数据源为同一段字符串。 Phase 2
+            开始时左侧已是完整内容、右侧从零流式输出，属串行对比的正常现象。 每轮流式输出{' '}
+            {charCount.toLocaleString()} 字符，每 {CHUNK_INTERVAL_MS}ms 追加 {CHUNK_SIZE} 字符。
           </p>
         </div>
 
@@ -463,14 +477,26 @@ function BenchmarkPage() {
 
         <div className='grid grid-cols-2 gap-6'>
           <div className='space-y-3'>
-            <MetricsBar label='Optimized' fps={meterA.fps} longFrames={meterA.longFrames} avgFrameMs={meterA.avgFrameMs} />
+            <MetricsBar
+              label='Optimized'
+              fps={meterA.fps}
+              longFrames={meterA.longFrames}
+              avgFrameMs={meterA.avgFrameMs}
+            />
             <div className='h-[600px] overflow-y-auto rounded-lg border p-4'>
-              {streamA.text && <MarkdownImpl content={streamA.text} isAnimating={streamA.running} />}
+              {streamA.text && (
+                <MarkdownImpl content={streamA.text} isAnimating={streamA.running} />
+              )}
             </div>
           </div>
 
           <div className='space-y-3'>
-            <MetricsBar label='Baseline' fps={meterB.fps} longFrames={meterB.longFrames} avgFrameMs={meterB.avgFrameMs} />
+            <MetricsBar
+              label='Baseline'
+              fps={meterB.fps}
+              longFrames={meterB.longFrames}
+              avgFrameMs={meterB.avgFrameMs}
+            />
             <div className='h-[600px] overflow-y-auto rounded-lg border p-4'>
               {streamB.text && (
                 <Streamdown

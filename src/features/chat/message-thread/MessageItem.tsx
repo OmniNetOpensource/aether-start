@@ -88,6 +88,14 @@ type MessageItemProps = {
   isStreaming: boolean;
 };
 
+const formatMessageTime = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
 export function MessageItem({ messageId, index, depth, isStreaming }: MessageItemProps) {
   const messageFromStore = useChatSessionStore((state) => state.messages[messageId - 1]);
   const status = useChatRequestStore((s) => s.status);
@@ -133,6 +141,11 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
   const contentWidthClass = isUser ? 'w-full max-w-[90%]' : 'w-full';
 
   const shouldShowToolbar = !isEditing && (isUser || !isStreaming);
+  const timeLabel = isUser
+    ? formatMessageTime(message.createdAt)
+    : message.completedAt
+      ? formatMessageTime(message.completedAt)
+      : null;
 
   return (
     <div
@@ -215,6 +228,9 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
             </>
           )}
 
+          {timeLabel && (
+            <p className='mt-2 text-2xs text-neutral-500 dark:text-neutral-400'>{timeLabel}</p>
+          )}
           {shouldShowToolbar && (
             <div className='mt-4 flex items-center transition-opacity duration-150 opacity-100 pointer-events-auto'>
               {isUser && (
