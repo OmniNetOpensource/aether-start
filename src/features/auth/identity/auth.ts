@@ -151,6 +151,12 @@ const createAuth = () => {
           input: false,
           returned: false,
         },
+        lastLoginIp: {
+          type: 'string',
+          required: false,
+          input: false,
+          returned: false,
+        },
       },
     },
     advanced: {
@@ -194,9 +200,13 @@ const createAuth = () => {
       session: {
         create: {
           after: async (session) => {
+            const ip =
+              'ipAddress' in session && typeof session.ipAddress === 'string'
+                ? session.ipAddress
+                : null;
             await db
               .update(authSchema.user)
-              .set({ lastLoginAt: new Date() })
+              .set({ lastLoginAt: new Date(), lastLoginIp: ip })
               .where(eq(authSchema.user.id, session.userId));
           },
         },
@@ -217,7 +227,7 @@ const createAuth = () => {
           from: 'noreply@mail.forkicks.fun',
           to: user.email,
           subject: 'Aether 重置密码',
-          html: `<p>我们收到了重置密码请求�?/p><p>请点击以下链接设置新密码�?/p><p><a href="${url}">${url}</a></p><p>链接 1 小时内有效�?/p>`,
+          html: `<p>我们收到了重置密码请求。</p><p>请点击以下链接设置新密码：</p><p><a href="${url}">${url}</a></p><p>链接 1 小时内有效。</p>`,
         });
       },
       resetPasswordTokenExpiresIn: 3600,
@@ -257,7 +267,7 @@ const createAuth = () => {
             from: 'noreply@mail.forkicks.fun',
             to: email,
             subject: subjectMap[type],
-            html: `<p>你的验证码是�?/p><p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:16px 0">${otp}</p><p>验证�?5 分钟内有效，请勿泄露给他人�?/p>`,
+            html: `<p>你的验证码是：</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:16px 0">${otp}</p><p>验证码 5 分钟内有效，请勿泄露给他人。</p>`,
           });
         },
       }),

@@ -168,6 +168,8 @@ const toSharedMessageSnapshot = (
     id: value.id,
     role,
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : new Date().toISOString(),
+    completedAt:
+      role === 'assistant' && typeof value.completedAt === 'string' ? value.completedAt : null,
     blocks,
   };
 };
@@ -210,6 +212,7 @@ const buildPublicSnapshot = (
       id: message.id,
       role: message.role,
       createdAt: message.createdAt,
+      completedAt: message.completedAt,
       blocks: message.blocks.map((block) => {
         if (block.type !== 'attachments') {
           return block;

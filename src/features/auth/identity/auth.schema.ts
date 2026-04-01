@@ -11,6 +11,7 @@ export const user = sqliteTable('user', {
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .notNull(),
   lastLoginAt: integer('last_login_at', { mode: 'timestamp_ms' }),
+  lastLoginIp: text('last_login_ip'),
   updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
     .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
     .$onUpdate(() => /* @__PURE__ */ new Date())

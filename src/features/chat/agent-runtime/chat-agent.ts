@@ -365,7 +365,15 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
     const writer = writable.getWriter();
     this.writers.add(writer);
 
-    this.broadcast('chat_started', {});
+    const userMessageCreatedAt = new Date().toISOString();
+    const lastPathId = message.treeSnapshot.currentPath.at(-1);
+    if (lastPathId) {
+      const lastMsg = message.treeSnapshot.messages[lastPathId - 1];
+      if (lastMsg && lastMsg.role === 'user') {
+        lastMsg.createdAt = userMessageCreatedAt;
+      }
+    }
+    this.broadcast('chat_started', { userMessageCreatedAt });
 
     // 在模型真正开始跑之前先把用户刚发出的消息落库。
     // 这样哪怕后续 provider 初始化失败，用户输入也不会丢。
@@ -878,6 +886,16 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         }
       }
 
+      let assistantCompletedAt: string | undefined;
+      const lastTreeId = workingTree.currentPath.at(-1);
+      if (lastTreeId) {
+        const lastTreeMsg = workingTree.messages[lastTreeId - 1];
+        if (lastTreeMsg && lastTreeMsg.role === 'assistant') {
+          assistantCompletedAt = new Date().toISOString();
+          lastTreeMsg.completedAt = assistantCompletedAt;
+        }
+      }
+
       try {
         // 无论成功、失败还是中断，都把最新快照落库。
         // 只有完整成功的回复才会触发标题再生成，避免半成品覆盖原标题。
@@ -901,7 +919,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         updatedAt: Date.now(),
       };
 
-      this.broadcast('chat_finished', { status: finalStatus });
+      this.broadcast('chat_finished', { status: finalStatus, assistantCompletedAt });
       await this.closeAllWriters();
     }
   }

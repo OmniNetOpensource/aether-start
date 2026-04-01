@@ -76,6 +76,7 @@ type MessageFields = {
   nextSibling: number | null;
   latestChild: number | null;
   createdAt: string;
+  completedAt: string | null;
 };
 
 export type UserMessage = MessageFields & {

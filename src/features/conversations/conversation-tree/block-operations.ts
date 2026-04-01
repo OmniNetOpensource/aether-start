@@ -52,6 +52,7 @@ export const cloneMessages = (messages: Message[]): Message[] =>
         nextSibling: msg.nextSibling,
         latestChild: msg.latestChild,
         createdAt: msg.createdAt,
+        completedAt: msg.completedAt ?? null,
       }) as Message,
   );
 
@@ -64,7 +65,7 @@ export const extractContentFromBlocks = (blocks: ContentBlock[]) =>
 export const extractQuotesFromBlocks = (blocks: ContentBlock[]) =>
   blocks.flatMap((block) => (block.type === 'quotes' ? block.quotes : []));
 
-/** �?quotes 转为发给模型时的引用文本格式：多行逐行�?>，多条之间空一�?*/
+/** 将 quotes 转为发给模型时的引用文本格式：多行逐行以 > 开头，多条之间空一行 */
 export const quotesToModelText = (quotes: QuoteItem[]): string =>
   quotes
     .map((q) =>

@@ -157,9 +157,15 @@ const handleSSEMessage = (event: string, raw: string) => {
     }
     case 'chat_started':
       setStatus('streaming', 'chat_started');
+      if (typeof payload.userMessageCreatedAt === 'string') {
+        useChatSessionStore.getState().stampUserMessageTime(payload.userMessageCreatedAt);
+      }
       return;
     case 'chat_finished':
       clearReconnectState();
+      if (typeof payload.assistantCompletedAt === 'string') {
+        useChatSessionStore.getState().stampAssistantCompletedAt(payload.assistantCompletedAt);
+      }
       setStatus('idle', 'chat_finished');
       return;
     case 'sync_response': {

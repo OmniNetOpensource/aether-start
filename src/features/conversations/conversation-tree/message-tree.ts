@@ -163,6 +163,10 @@ export const normalizeMessageParentIds = (messages: Message[]): Message[] => {
       ({
         ...message,
         parentId: null,
+        completedAt:
+          'completedAt' in message && typeof message.completedAt === 'string'
+            ? message.completedAt
+            : null,
       }) as Message,
   );
 
@@ -219,6 +223,7 @@ export const addMessage = (
     nextSibling: null,
     latestChild: null,
     createdAt,
+    completedAt: null,
   } as Message;
 
   if (parentId !== null) {
@@ -364,6 +369,7 @@ export const editMessage = (
     nextSibling: target.nextSibling,
     latestChild: null,
     createdAt: new Date().toISOString(),
+    completedAt: null,
   } as Message;
 
   const nextMessages = [...messages];
@@ -422,6 +428,7 @@ export const createLinearMessages = (items: LinearMessageInput[]): MessageState 
       nextSibling: null,
       latestChild: index < items.length - 1 ? id + 1 : null,
       createdAt,
+      completedAt: null,
     } as Message);
     currentPath.push(id);
   }
@@ -486,6 +493,7 @@ export const migrateFromOldTree = (tree: LegacyMessageTree): MessageState => {
           ? (idMap.get(node.children[node.children.length - 1]) ?? null)
           : null,
       createdAt: node.createdAt ?? new Date().toISOString(),
+      completedAt: null,
     } as Message);
   }
 

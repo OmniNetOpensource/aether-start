@@ -30,6 +30,7 @@ export type SharedMessageSnapshot = {
   id: number;
   role: Message['role'];
   createdAt: string;
+  completedAt: string | null;
   blocks: SharedMessageBlock[];
 };
 
@@ -56,6 +57,7 @@ export type PublicSharedMessage = {
   id: number;
   role: Message['role'];
   createdAt: string;
+  completedAt: string | null;
   blocks: PublicSharedMessageBlock[];
 };
 

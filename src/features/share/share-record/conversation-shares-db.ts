@@ -136,6 +136,10 @@ const toSharedMessageSnapshot = (value: unknown): SharedMessageSnapshot | null =
     id: value.id,
     role: value.role,
     createdAt: value.createdAt,
+    completedAt:
+      value.role === 'assistant' && typeof value.completedAt === 'string'
+        ? value.completedAt
+        : null,
     blocks,
   };
 };
