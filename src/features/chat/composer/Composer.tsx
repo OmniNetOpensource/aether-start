@@ -135,12 +135,12 @@ export function Composer() {
   return (
     <div
       key='composer-wrapper'
-      className='absolute bottom-[2vh] z-(--z-composer) w-full shrink-0 pb-3 md:pb-4'
+      className='absolute bottom-[2vh] z-(--z-composer) w-full shrink-0 pb-3 md:pb-4 pointer-events-none'
     >
       {/* 最外层：占满主栏宽度、不参与侧栏 flex 收缩，垫高底部留白；z 保证浮在对话内容之上 */}
       <div
         key='composer-bottom'
-        className='relative bottom-2 mx-auto flex w-[90%] max-w-full flex-col gap-2 @[921px]:w-[50%] @[921px]:max-w-2xl'
+        className='relative bottom-2 mx-auto flex w-[90%] max-w-full flex-col gap-2 @[921px]:w-[50%] @[921px]:max-w-2xl pointer-events-auto'
         onDragOver={(event: DragEvent) => {
           event.preventDefault();
           event.dataTransfer.dropEffect = 'copy';
