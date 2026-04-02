@@ -75,7 +75,7 @@ export function NoteCard({ note, onEdit, onDelete, onStartConversation }: NoteCa
       {image ? (
         <div className='overflow-hidden rounded-lg border bg-(--surface-muted)'>
           <img
-            src={image.thumbnailUrl ?? image.url}
+            src={image.url}
             alt={image.name || '笔记图片'}
             className='h-28 w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]'
             loading='lazy'

@@ -18,7 +18,6 @@ function useImageLoaded(src: string) {
 
 type ImagePreviewProps = {
   url: string;
-  previewUrl?: string;
   name: string;
   size: number;
   className?: string;
@@ -28,7 +27,7 @@ const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 const SCALE_STEP = 0.1;
 
-export function ImagePreview({ url, previewUrl, name, size, className }: ImagePreviewProps) {
+export function ImagePreview({ url, name, size, className }: ImagePreviewProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -105,7 +104,7 @@ export function ImagePreview({ url, previewUrl, name, size, className }: ImagePr
     };
   }, [isOpen, isDragging]);
 
-  const thumbnail = useImageLoaded(previewUrl ?? url);
+  const imageLoaded = useImageLoaded(url);
   const sizeLabel = formatFileSize(size);
   const previewLabel = `${name} (${sizeLabel})`;
 
@@ -123,14 +122,14 @@ export function ImagePreview({ url, previewUrl, name, size, className }: ImagePr
         aria-label={`预览图片 ${name}`}
       >
         <img
-          src={previewUrl ?? url}
+          src={url}
           alt={name}
           className={cn(
             'h-full w-full object-cover transition-opacity duration-300',
-            thumbnail.loaded ? 'opacity-100' : 'opacity-0',
+            imageLoaded.loaded ? 'opacity-100' : 'opacity-0',
           )}
           draggable={false}
-          onLoad={thumbnail.onLoad}
+          onLoad={imageLoaded.onLoad}
         />
       </button>
 

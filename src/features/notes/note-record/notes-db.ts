@@ -40,10 +40,7 @@ const isAttachment = (value: unknown): value is Attachment => {
     value.mimeType.startsWith('image/') &&
     typeof value.url === 'string' &&
     value.url.length > 0 &&
-    (typeof value.storageKey === 'string' || typeof value.storageKey === 'undefined') &&
-    (typeof value.thumbnailUrl === 'string' || typeof value.thumbnailUrl === 'undefined') &&
-    (typeof value.thumbnailStorageKey === 'string' ||
-      typeof value.thumbnailStorageKey === 'undefined')
+    (typeof value.storageKey === 'string' || typeof value.storageKey === 'undefined')
   );
 };
 

@@ -33,8 +33,6 @@ type AttachmentBase = {
 export type Attachment = AttachmentBase & {
   url: string;
   storageKey?: string;
-  thumbnailUrl?: string;
-  thumbnailStorageKey?: string;
 };
 
 type ResearchBlock = {

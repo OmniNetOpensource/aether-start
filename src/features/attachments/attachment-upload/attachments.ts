@@ -60,10 +60,6 @@ const uploadBlobAsAsset = async (blob: Blob, filename: string): Promise<Uploaded
   return json;
 };
 
-/** 获取附件展示用的 URL，优先用缩略图，没有则用原图 */
-export const getAttachmentPreviewUrl = (attachment: Pick<Attachment, 'thumbnailUrl' | 'url'>) =>
-  attachment.thumbnailUrl || attachment.url;
-
 /**
  * 上传单张图片附件
  * 校验类型和大小后直接上传原图，成功后用返回的 url 渲染

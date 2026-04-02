@@ -1,7 +1,6 @@
 import { X } from 'lucide-react';
 import { ImagePreview } from '@/features/attachments/attachment-preview';
 import { Button } from '@/shared/design-system/button';
-import { getAttachmentPreviewUrl } from '@/features/attachments/attachment-upload';
 import type { Attachment } from '@/features/chat/message-thread';
 
 type PendingQuote = { id: string; text: string };
@@ -83,7 +82,6 @@ export function AttachmentStack({
               ) : (
                 <ImagePreview
                   url={entry.attachment.url}
-                  previewUrl={getAttachmentPreviewUrl(entry.attachment)}
                   name={entry.attachment.name}
                   size={entry.attachment.size}
                   className='!h-full !w-full !rounded-lg'

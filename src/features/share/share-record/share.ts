@@ -8,8 +8,6 @@ export type SharedAttachmentSnapshot = {
   mimeType: string;
   url: string;
   storageKey?: string;
-  thumbnailUrl?: string;
-  thumbnailStorageKey?: string;
 };
 
 export type SharedQuoteItem = { id: string; text: string };
@@ -39,10 +37,7 @@ export type SharedConversationSnapshot = {
   messages: SharedMessageSnapshot[];
 };
 
-export type PublicSharedAttachment = Omit<
-  SharedAttachmentSnapshot,
-  'storageKey' | 'thumbnailStorageKey'
->;
+export type PublicSharedAttachment = Omit<SharedAttachmentSnapshot, 'storageKey'>;
 
 export type PublicSharedQuoteItem = { id: string; text: string };
 

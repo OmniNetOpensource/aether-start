@@ -12,7 +12,6 @@ import {
 } from '@/shared/design-system/dialog';
 import { Textarea } from '@/shared/design-system/textarea';
 import { toast } from '@/shared/app-shell/useToast';
-import { getAttachmentPreviewUrl } from '@/features/attachments/attachment-upload';
 import { collectClipboardFiles } from '@/shared/browser/file';
 import { useAttachmentUpload } from '@/features/notes/attachment-intake';
 import type { NoteItem } from '@/features/notes/note-record';
@@ -86,7 +85,6 @@ export function NoteEditDialog({
                 <div key={attachment.id} className='group relative'>
                   <ImagePreview
                     url={attachment.url}
-                    previewUrl={getAttachmentPreviewUrl(attachment)}
                     name={attachment.name}
                     size={attachment.size}
                   />

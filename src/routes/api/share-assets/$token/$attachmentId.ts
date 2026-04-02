@@ -4,7 +4,6 @@ import {
   getPublicShareByToken,
   isSafeShareToken,
   resolveStorageKeyForSharedAttachment,
-  resolveThumbnailStorageKeyForSharedAttachment,
 } from '@/features/share/share-record';
 import { getServerBindings } from '@/shared/worker/env';
 
@@ -20,7 +19,7 @@ export const Route = createFileRoute('/api/share-assets/$token/$attachmentId')({
   server: {
     handlers: ({ createHandlers }) =>
       createHandlers({
-        GET: async ({ params, request }) => {
+        GET: async ({ params }) => {
           const token = safeDecodeURIComponent(params.token);
           if (!token || !isSafeShareToken(token)) {
             return new Response('Not Found', { status: 404 });
@@ -42,13 +41,7 @@ export const Route = createFileRoute('/api/share-assets/$token/$attachmentId')({
             return new Response('Not Found', { status: 404 });
           }
 
-          const url = new URL(request.url);
-          const variant = url.searchParams.get('variant');
-          const storageKey =
-            variant === 'thumbnail'
-              ? (resolveThumbnailStorageKeyForSharedAttachment(attachment) ??
-                resolveStorageKeyForSharedAttachment(attachment))
-              : resolveStorageKeyForSharedAttachment(attachment);
+          const storageKey = resolveStorageKeyForSharedAttachment(attachment);
           if (!storageKey) {
             return new Response('Not Found', { status: 404 });
           }

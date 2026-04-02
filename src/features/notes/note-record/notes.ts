@@ -24,8 +24,6 @@ const attachmentSchema = z.object({
   mimeType: z.string().min(1),
   url: z.string().min(1),
   storageKey: z.string().optional(),
-  thumbnailUrl: z.string().min(1).optional(),
-  thumbnailStorageKey: z.string().optional(),
 });
 
 const notePayloadSchema = z.object({

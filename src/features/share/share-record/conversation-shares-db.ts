@@ -95,9 +95,6 @@ const toSharedAttachment = (value: unknown): SharedAttachmentSnapshot | null => 
   }
 
   const storageKey = typeof value.storageKey === 'string' ? value.storageKey : undefined;
-  const thumbnailUrl = typeof value.thumbnailUrl === 'string' ? value.thumbnailUrl : undefined;
-  const thumbnailStorageKey =
-    typeof value.thumbnailStorageKey === 'string' ? value.thumbnailStorageKey : undefined;
 
   return {
     id: value.id,
@@ -107,8 +104,6 @@ const toSharedAttachment = (value: unknown): SharedAttachmentSnapshot | null => 
     mimeType: value.mimeType,
     url: value.url,
     storageKey,
-    thumbnailUrl,
-    thumbnailStorageKey,
   };
 };
 
@@ -229,20 +224,6 @@ export const resolveStorageKeyForSharedAttachment = (attachment: SharedAttachmen
   }
 
   return extractStorageKeyFromAssetUrl(attachment.url);
-};
-
-export const resolveThumbnailStorageKeyForSharedAttachment = (
-  attachment: SharedAttachmentSnapshot,
-) => {
-  if (attachment.thumbnailStorageKey && isSafeStorageKey(attachment.thumbnailStorageKey)) {
-    return attachment.thumbnailStorageKey;
-  }
-
-  if (attachment.thumbnailUrl) {
-    return extractStorageKeyFromAssetUrl(attachment.thumbnailUrl);
-  }
-
-  return null;
 };
 
 export const getShareByConversation = async (
