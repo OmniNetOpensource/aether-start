@@ -35,7 +35,10 @@ function Greeting({
   onPick: (text: string) => void;
 }) {
   return (
-    <div className='absolute inset-0 flex flex-col items-center px-4' style={{ paddingTop: '28vh' }}>
+    <div
+      className='absolute inset-0 flex flex-col items-center px-4'
+      style={{ paddingTop: '28vh' }}
+    >
       <div className='flex items-center gap-1 sm:gap-2 text-2xl sm:text-3xl font-medium text-muted-foreground'>
         <span>今天想</span>
         <div className='relative h-[1.2em] overflow-hidden text-foreground'>

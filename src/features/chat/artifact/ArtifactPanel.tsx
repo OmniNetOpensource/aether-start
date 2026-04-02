@@ -88,10 +88,7 @@ function ArtifactPanelBody() {
               className='flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-(--surface-hover)'
               aria-label='选择 artifact'
             >
-              <span
-                className='min-w-0 font-medium text-foreground'
-                title={selectedArtifact.title}
-              >
+              <span className='min-w-0 font-medium text-foreground' title={selectedArtifact.title}>
                 {truncateMiddle(selectedArtifact.title, 44)}
               </span>
               <ChevronDown className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />

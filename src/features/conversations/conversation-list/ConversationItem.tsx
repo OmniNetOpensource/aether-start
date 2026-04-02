@@ -99,10 +99,7 @@ export function ConversationItem({
             ) : null}
             <span className='min-w-0 flex-1' title={title}>
               {useShimmer ? (
-                <Shimmer
-                  as='span'
-                  className='block text-sm font-medium text-(--text-secondary)'
-                >
+                <Shimmer as='span' className='block text-sm font-medium text-(--text-secondary)'>
                   {displayTitle}
                 </Shimmer>
               ) : (

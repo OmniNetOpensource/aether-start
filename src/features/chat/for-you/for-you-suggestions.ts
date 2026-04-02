@@ -108,8 +108,7 @@ export const generateForYouSuggestionsFn = createServerFn({ method: 'POST' }).ha
       );
 
       const textBlock = message.content.find((block) => block.type === 'text');
-      const raw =
-        textBlock && 'text' in textBlock ? String(textBlock.text).trim() : '';
+      const raw = textBlock && 'text' in textBlock ? String(textBlock.text).trim() : '';
       const lines = parseSuggestionLines(raw);
 
       log('FOR_YOU', 'Received for-you suggestion response', {
