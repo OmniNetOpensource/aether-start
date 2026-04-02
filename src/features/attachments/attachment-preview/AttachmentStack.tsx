@@ -1,12 +1,12 @@
 import { X } from 'lucide-react';
 import { ImagePreview } from '@/features/attachments/attachment-preview';
 import { Button } from '@/shared/design-system/button';
-import type { Attachment } from '@/features/chat/message-thread';
+import type { PendingAttachment } from '@/features/chat/composer/useComposerStore';
 
 type PendingQuote = { id: string; text: string };
 
 type AttachmentStackProps = {
-  items: Attachment[];
+  items: PendingAttachment[];
   quotes?: PendingQuote[];
   onRemove?: (id: string) => void;
   onRemoveQuote?: (id: string) => void;
@@ -81,9 +81,10 @@ export function AttachmentStack({
                 </p>
               ) : (
                 <ImagePreview
-                  url={entry.attachment.url}
+                  url={entry.attachment.localUrl ?? entry.attachment.url}
                   name={entry.attachment.name}
                   size={entry.attachment.size}
+                  uploading={!!entry.attachment.localUrl}
                   className='!h-full !w-full !rounded-lg'
                 />
               )}

@@ -15,7 +15,7 @@ type UploadedAsset = {
 };
 
 /** 生成唯一附件 ID，优先用 crypto.randomUUID，否则用时间戳与随机数兜底 */
-const createAttachmentId = () =>
+export const createAttachmentId = () =>
   typeof crypto !== 'undefined' && crypto.randomUUID
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -24,7 +24,7 @@ const createAttachmentId = () =>
  * 校验文件是否为可上传的图片
  * @returns 校验失败时返回错误提示文案，通过时返回 null
  */
-const buildValidationMessage = (file: File) => {
+export const getAttachmentValidationMessage = (file: File) => {
   const mimeType = file.type || '';
   if (!mimeType.startsWith('image/')) {
     return `仅支持上传图片，已跳过「${file.name}」。`;
@@ -41,7 +41,7 @@ const buildValidationMessage = (file: File) => {
  * 将 blob 上传到 /api/upload-attachment，存入 R2
  * @returns 服务端返回的 storageKey 与 url
  */
-const uploadBlobAsAsset = async (blob: Blob, filename: string): Promise<UploadedAsset> => {
+export const uploadBlobToStorage = async (blob: Blob, filename: string): Promise<UploadedAsset> => {
   const formData = new FormData();
   formData.append('file', blob, filename);
 
@@ -66,14 +66,14 @@ const uploadBlobAsAsset = async (blob: Blob, filename: string): Promise<Uploaded
  * @returns 上传成功返回 Attachment，失败返回 null
  */
 export const uploadAttachmentFile = async (file: File): Promise<Attachment | null> => {
-  const validationMessage = buildValidationMessage(file);
+  const validationMessage = getAttachmentValidationMessage(file);
   if (validationMessage) {
     toast.warning(validationMessage);
     return null;
   }
 
   try {
-    const uploaded = await uploadBlobAsAsset(file, file.name);
+    const uploaded = await uploadBlobToStorage(file, file.name);
     return {
       id: createAttachmentId(),
       kind: 'image',

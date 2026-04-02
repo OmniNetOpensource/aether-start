@@ -1,5 +1,6 @@
 import { startChatRequest } from '@/features/chat/session';
 import { buildUserBlocks } from '@/features/conversations/conversation-tree';
+import type { Attachment } from '@/features/chat/message-thread';
 import { toast } from '@/shared/app-shell/useToast';
 import { useChatRequestStore } from '@/features/chat/session';
 import { useChatSessionStore } from '@/features/conversations/session';
@@ -23,15 +24,26 @@ export async function submitMessage(navigateToNewChat: (conversationId: string) 
   const hasAttachment = pendingAttachments.length > 0;
   const hasQuotes = pendingQuotes.length > 0;
   const hasModel = !!currentModelId;
+  const hasPendingUpload = pendingAttachments.some((item) => item.localUrl);
 
-  if (isBusy || (!hasContent && !hasAttachment && !hasQuotes) || !hasModel) {
+  if (isBusy || (!hasContent && !hasAttachment && !hasQuotes) || !hasModel || hasPendingUpload) {
     if (!hasModel) {
       toast.warning('Select a model before sending a message.');
     }
     return;
   }
 
-  sessionStore.addMessage('user', buildUserBlocks(input, pendingQuotes, pendingAttachments));
+  const attachmentsForMessage: Attachment[] = pendingAttachments.map((item) => ({
+    id: item.id,
+    kind: item.kind,
+    name: item.name,
+    size: item.size,
+    mimeType: item.mimeType,
+    url: item.url,
+    storageKey: item.storageKey,
+  }));
+
+  sessionStore.addMessage('user', buildUserBlocks(input, pendingQuotes, attachmentsForMessage));
   composerStore.clear();
 
   if (!sessionStore.conversationId) {

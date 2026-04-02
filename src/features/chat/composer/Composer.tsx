@@ -52,7 +52,9 @@ export function Composer() {
   const input = useComposerStore((state) => state.input);
   const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
   const pendingQuotes = useComposerStore((state) => state.pendingQuotes);
-  const uploading = useComposerStore((state) => state.uploading);
+  const uploading = useComposerStore((state) =>
+    state.pendingAttachments.some((item) => item.localUrl),
+  );
   const addAttachments = useComposerStore((state) => state.addAttachments);
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
   const removeQuote = useComposerStore((state) => state.removeQuote);
@@ -119,10 +121,9 @@ export function Composer() {
    * 草稿在首帧 paint 前由 useLayoutEffect 写入 store，sendDisabled 与受控 input 一致。
    */
   const isBusy = status !== 'idle';
-  const sendDisabled =
-    isBusy || input.trim().length !== 0 || pendingAttachments.length > 0 || pendingQuotes.length > 0
-      ? false
-      : true;
+  const hasComposerContent =
+    input.trim().length !== 0 || pendingAttachments.length > 0 || pendingQuotes.length > 0;
+  const sendDisabled = isBusy ? false : !hasComposerContent || uploading;
 
   useEffect(() => {
     if (!import.meta.env.DEV) {

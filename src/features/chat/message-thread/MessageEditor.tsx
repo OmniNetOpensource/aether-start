@@ -26,7 +26,9 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const submitEdit = useEditingStore((state) => state.submitEdit);
   const deviceType = useResponsive();
   const isDesktop = deviceType === 'desktop';
-  const uploading = useComposerStore((state) => state.uploading);
+  const uploading = useComposerStore((state) =>
+    state.pendingAttachments.some((item) => item.localUrl),
+  );
   const status = useChatRequestStore((state) => state.status);
   const currentModelId = useChatSessionStore((state) => state.currentModelId);
   const isBusy = status !== 'idle';

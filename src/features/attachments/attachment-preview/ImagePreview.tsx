@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { MouseEvent as ReactMouseEvent, WheelEvent as ReactWheelEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { Loader2 } from 'lucide-react';
 import { cn } from '@/shared/core/utils';
 import { formatFileSize } from '@/shared/browser/file';
 
@@ -21,13 +22,14 @@ type ImagePreviewProps = {
   name: string;
   size: number;
   className?: string;
+  uploading?: boolean;
 };
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 5;
 const SCALE_STEP = 0.1;
 
-export function ImagePreview({ url, name, size, className }: ImagePreviewProps) {
+export function ImagePreview({ url, name, size, className, uploading = false }: ImagePreviewProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scale, setScale] = useState(1);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -47,6 +49,10 @@ export function ImagePreview({ url, name, size, className }: ImagePreviewProps) 
   };
 
   const handleOpen = () => {
+    if (uploading) {
+      return;
+    }
+
     resetView();
     setIsOpen(true);
   };
@@ -119,7 +125,7 @@ export function ImagePreview({ url, name, size, className }: ImagePreviewProps) 
           className,
         )}
         title={previewLabel}
-        aria-label={`预览图片 ${name}`}
+        aria-label={uploading ? `上传中 ${name}` : `预览图片 ${name}`}
       >
         <img
           src={url}
@@ -131,6 +137,11 @@ export function ImagePreview({ url, name, size, className }: ImagePreviewProps) 
           draggable={false}
           onLoad={imageLoaded.onLoad}
         />
+        {uploading ? (
+          <span className='absolute inset-0 flex items-center justify-center bg-black/30'>
+            <Loader2 className='h-6 w-6 animate-spin text-white' aria-hidden />
+          </span>
+        ) : null}
       </button>
 
       {isOpen &&

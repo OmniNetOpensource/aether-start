@@ -1,24 +1,30 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { uploadAttachmentFile } from '@/features/attachments/attachment-upload';
+import {
+  createAttachmentId,
+  getAttachmentValidationMessage,
+  uploadBlobToStorage,
+} from '@/features/attachments/attachment-upload';
 import type { Attachment } from '@/features/chat/message-thread';
 import { getZustandDevtoolsOptions } from '@/shared/browser/zustand-devtools';
+import { toast } from '@/shared/app-shell/useToast';
 
 const UPLOAD_CONCURRENCY = 4;
 const STORE_FILE_NAME = 'useComposerStore.ts';
 
 type PendingQuote = { id: string; text: string };
 
+export type PendingAttachment = Attachment & { localUrl?: string };
+
 type ComposerState = {
   input: string;
-  pendingAttachments: Attachment[];
+  pendingAttachments: PendingAttachment[];
   pendingQuotes: PendingQuote[];
-  uploading: boolean;
 };
 
 type ComposerActions = {
   setInput: (value: string) => void;
-  setPendingAttachments: (attachments: Attachment[]) => void;
+  setPendingAttachments: (attachments: PendingAttachment[]) => void;
   addAttachments: (files: File[]) => Promise<void>;
   removeAttachment: (id: string) => void;
   addQuote: (text: string) => void;
@@ -43,11 +49,10 @@ const getActionName = (actionName: string) => {
 
 export const useComposerStore = create<ComposerState & ComposerActions>()(
   devtools(
-    (set, get) => ({
+    (set) => ({
       input: '',
       pendingAttachments: [],
       pendingQuotes: [],
-      uploading: false,
       setInput: (value) => set({ input: value }, false, getActionName('composer/setInput')),
       setPendingAttachments: (attachments) =>
         set(
@@ -56,26 +61,62 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
           getActionName('composer/setPendingAttachments'),
         ),
       addAttachments: async (files) => {
-        if (files.length === 0 || get().uploading) {
+        if (files.length === 0) {
           return;
         }
 
-        set({ uploading: true }, false, getActionName('composer/addAttachments/start'));
+        const queued: { file: File; id: string; localUrl: string }[] = [];
+        for (const file of files) {
+          const validationMessage = getAttachmentValidationMessage(file);
+          if (validationMessage) {
+            toast.warning(validationMessage);
+            continue;
+          }
+
+          const id = createAttachmentId();
+          const localUrl = URL.createObjectURL(file);
+          queued.push({ file, id, localUrl });
+        }
+
+        if (queued.length === 0) {
+          return;
+        }
+
+        set(
+          (state) => ({
+            pendingAttachments: [
+              ...state.pendingAttachments,
+              ...queued.map(
+                ({ file, id, localUrl }): PendingAttachment => ({
+                  id,
+                  kind: 'image',
+                  name: file.name,
+                  size: file.size,
+                  mimeType: file.type || '',
+                  url: '',
+                  localUrl,
+                }),
+              ),
+            ],
+          }),
+          false,
+          getActionName('composer/addAttachments/placeholders'),
+        );
 
         let running = 0;
-        const queue: Array<() => void> = [];
+        const waitQueue: Array<() => void> = [];
         const acquire = () =>
           new Promise<void>((resolve) => {
             if (running < UPLOAD_CONCURRENCY) {
               running += 1;
               resolve();
             } else {
-              queue.push(resolve);
+              waitQueue.push(resolve);
             }
           });
         const release = () => {
           running -= 1;
-          const next = queue.shift();
+          const next = waitQueue.shift();
           if (next) {
             running += 1;
             next();
@@ -83,32 +124,60 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
         };
 
         await Promise.allSettled(
-          files.map(async (file) => {
+          queued.map(async ({ file, id, localUrl }) => {
             await acquire();
             try {
-              const attachment = await uploadAttachmentFile(file);
-              if (attachment) {
-                set(
-                  (state) => ({
-                    pendingAttachments: [...state.pendingAttachments, attachment],
-                  }),
-                  false,
-                  getActionName('composer/addAttachments/append'),
-                );
-              }
+              const uploaded = await uploadBlobToStorage(file, file.name);
+              set(
+                (state) => ({
+                  pendingAttachments: state.pendingAttachments.map((item) =>
+                    item.id === id
+                      ? {
+                          id: item.id,
+                          kind: item.kind,
+                          name: item.name,
+                          size: item.size,
+                          mimeType: item.mimeType,
+                          url: uploaded.url,
+                          storageKey: uploaded.storageKey,
+                        }
+                      : item,
+                  ),
+                }),
+                false,
+                getActionName('composer/addAttachments/complete'),
+              );
+              URL.revokeObjectURL(localUrl);
+            } catch (error) {
+              const detail = error instanceof Error ? error.message : String(error || 'Unknown error');
+              console.error(`Failed to upload image "${file.name}"`, error);
+              toast.error(`上传图片「${file.name}」失败：${detail}`);
+              set(
+                (state) => ({
+                  pendingAttachments: state.pendingAttachments.filter((item) => item.id !== id),
+                }),
+                false,
+                getActionName('composer/addAttachments/fail'),
+              );
+              URL.revokeObjectURL(localUrl);
             } finally {
               release();
             }
           }),
         );
-
-        set({ uploading: false }, false, getActionName('composer/addAttachments/finish'));
       },
       removeAttachment: (id) =>
         set(
-          (state) => ({
-            pendingAttachments: state.pendingAttachments.filter((item) => item.id !== id),
-          }),
+          (state) => {
+            const removed = state.pendingAttachments.find((item) => item.id === id);
+            if (removed?.localUrl) {
+              URL.revokeObjectURL(removed.localUrl);
+            }
+
+            return {
+              pendingAttachments: state.pendingAttachments.filter((item) => item.id !== id),
+            };
+          },
           false,
           getActionName('composer/removeAttachment'),
         ),
@@ -137,7 +206,15 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
         ),
       clear: () =>
         set(
-          { input: '', pendingAttachments: [], pendingQuotes: [] },
+          (state) => {
+            for (const item of state.pendingAttachments) {
+              if (item.localUrl) {
+                URL.revokeObjectURL(item.localUrl);
+              }
+            }
+
+            return { input: '', pendingAttachments: [], pendingQuotes: [] };
+          },
           false,
           getActionName('composer/clear'),
         ),
