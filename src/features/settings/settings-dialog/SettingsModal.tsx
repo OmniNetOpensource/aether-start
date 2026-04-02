@@ -298,9 +298,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           {code.used_at ? (
                             <span className='ml-1 text-muted-foreground'>used</span>
                           ) : code.is_active ? (
-                            <span className='ml-1 text-success'>
-                              active
-                            </span>
+                            <span className='ml-1 text-success'>active</span>
                           ) : (
                             <span className='ml-1 text-muted-foreground'>inactive</span>
                           )}

@@ -142,10 +142,7 @@ function ForgotPasswordPage() {
               onChange={(event) => setEmail(event.target.value)}
               placeholder='name@example.com'
               disabled={isPending}
-              className={cn(
-                errorMessage &&
-                  'border-destructive focus-visible:ring-destructive',
-              )}
+              className={cn(errorMessage && 'border-destructive focus-visible:ring-destructive')}
               required
             />
           </div>

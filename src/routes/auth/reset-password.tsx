@@ -197,19 +197,13 @@ function ResetPasswordPage() {
               onChange={(event) => setNewPassword(event.target.value)}
               placeholder='至少 8 位密码'
               disabled={isPending}
-              className={cn(
-                errorMessage &&
-                  'border-destructive focus-visible:ring-destructive',
-              )}
+              className={cn(errorMessage && 'border-destructive focus-visible:ring-destructive')}
               required
             />
           </div>
 
           <div className='space-y-2'>
-            <label
-              className='text-sm font-medium text-secondary'
-              htmlFor='confirmPassword'
-            >
+            <label className='text-sm font-medium text-secondary' htmlFor='confirmPassword'>
               确认新密码
             </label>
             <PasswordInput
@@ -220,10 +214,7 @@ function ResetPasswordPage() {
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder='请再次输入新密码'
               disabled={isPending}
-              className={cn(
-                errorMessage &&
-                  'border-destructive focus-visible:ring-destructive',
-              )}
+              className={cn(errorMessage && 'border-destructive focus-visible:ring-destructive')}
               required
             />
           </div>

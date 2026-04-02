@@ -193,10 +193,7 @@ function RegisterForm({
         </div>
 
         <div className='space-y-2'>
-          <label
-            className='text-sm font-medium text-secondary'
-            htmlFor='reg-password-confirm'
-          >
+          <label className='text-sm font-medium text-secondary' htmlFor='reg-password-confirm'>
             确认密码
           </label>
           <PasswordInput

@@ -85,15 +85,11 @@ export function NoteCard({ note, onEdit, onDelete, onStartConversation }: NoteCa
 
       <div className='flex min-h-16 flex-1 flex-col gap-2'>
         {hasText ? (
-          <p className='whitespace-pre-wrap break-words text-sm text-secondary'>
-            {previewText}
-          </p>
+          <p className='whitespace-pre-wrap break-words text-sm text-secondary'>{previewText}</p>
         ) : (
           <p className='text-sm italic text-muted-foreground'>点击编辑添加内容</p>
         )}
-        <span className='text-xs text-muted-foreground'>
-          {formatRelativeTime(note.updated_at)}
-        </span>
+        <span className='text-xs text-muted-foreground'>{formatRelativeTime(note.updated_at)}</span>
       </div>
 
       <div className='flex items-center justify-between gap-2 pt-1'>

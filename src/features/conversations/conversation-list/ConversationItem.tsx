@@ -103,9 +103,7 @@ export function ConversationItem({
                   {displayTitle}
                 </Shimmer>
               ) : (
-                <span className='block text-sm font-medium text-secondary'>
-                  {displayTitle}
-                </span>
+                <span className='block text-sm font-medium text-secondary'>{displayTitle}</span>
               )}
             </span>
           </div>

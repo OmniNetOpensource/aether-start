@@ -131,9 +131,7 @@ function LoginPage() {
           >
             <path d='M20 6 9 17l-5-5' />
           </svg>
-          <p className='text-sm text-success'>
-            密码已重置，请使用新密码登录
-          </p>
+          <p className='text-sm text-success'>密码已重置，请使用新密码登录</p>
         </div>
       ) : null}
 

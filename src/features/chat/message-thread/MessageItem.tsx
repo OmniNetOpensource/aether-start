@@ -220,9 +220,7 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
             </>
           )}
 
-          {timeLabel && (
-            <p className='mt-2 text-2xs text-muted-foreground'>{timeLabel}</p>
-          )}
+          {timeLabel && <p className='mt-2 text-2xs text-muted-foreground'>{timeLabel}</p>}
           {shouldShowToolbar && (
             <div className='mt-4 flex items-center transition-opacity duration-150 opacity-100 pointer-events-auto'>
               {isUser && (

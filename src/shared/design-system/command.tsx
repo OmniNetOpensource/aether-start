@@ -17,11 +17,7 @@ import { Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/design-system/dialog';
 import { cn } from '@/shared/core/utils';
 
-function Command({
-  className,
-  ref,
-  ...props
-}: React.ComponentPropsWithRef<typeof CommandRoot>) {
+function Command({ className, ref, ...props }: React.ComponentPropsWithRef<typeof CommandRoot>) {
   return (
     <CommandRoot
       ref={ref}
@@ -95,10 +91,7 @@ function CommandList({
   );
 }
 
-function CommandEmpty({
-  ref,
-  ...props
-}: React.ComponentPropsWithRef<typeof CmdkCommandEmpty>) {
+function CommandEmpty({ ref, ...props }: React.ComponentPropsWithRef<typeof CmdkCommandEmpty>) {
   return (
     <CmdkCommandEmpty
       ref={ref}
@@ -131,11 +124,7 @@ function CommandSeparator({
   ...props
 }: React.ComponentPropsWithRef<typeof CmdkCommandSeparator>) {
   return (
-    <CmdkCommandSeparator
-      ref={ref}
-      className={cn('-mx-1 h-px bg-border', className)}
-      {...props}
-    />
+    <CmdkCommandSeparator ref={ref} className={cn('-mx-1 h-px bg-border', className)} {...props} />
   );
 }
 

@@ -243,10 +243,7 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
                   onClick={() => handleSelect(item)}
                 >
                   <div className='flex w-full items-baseline justify-between'>
-                    <span
-                      className='min-w-0 text-base font-medium text-foreground'
-                      title={title}
-                    >
+                    <span className='min-w-0 text-base font-medium text-foreground' title={title}>
                       {displayTitle}
                     </span>
                     <span className='ml-4 shrink-0 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100'>
@@ -267,9 +264,7 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
             ref={sentinelRef}
             className='flex items-center justify-center py-2 text-muted-foreground'
           >
-            {loadingMore ? (
-              <Loader2 className='size-4 animate-spin text-secondary' />
-            ) : null}
+            {loadingMore ? <Loader2 className='size-4 animate-spin text-secondary' /> : null}
           </div>
         ) : null}
       </div>

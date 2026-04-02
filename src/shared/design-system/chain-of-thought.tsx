@@ -145,9 +145,7 @@ function ChainOfThoughtStep({
 
       {/* Content column */}
       <div className='flex-1 min-w-0 pb-4'>
-        {description && (
-          <div className='text-xs text-secondary leading-relaxed'>{description}</div>
-        )}
+        {description && <div className='text-xs text-secondary leading-relaxed'>{description}</div>}
         {children && <div className={description ? 'mt-2' : ''}>{children}</div>}
       </div>
     </div>

@@ -4,11 +4,7 @@ import { Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/shared/core/utils';
 import { Input } from './input';
 
-function PasswordInput({
-  className,
-  ref,
-  ...props
-}: ComponentPropsWithRef<'input'>) {
+function PasswordInput({ className, ref, ...props }: ComponentPropsWithRef<'input'>) {
   const [showPassword, setShowPassword] = useState(false);
 
   return (
