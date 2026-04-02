@@ -1,18 +1,11 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { generateForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
 import { useChatRequestStore } from '@/features/chat/session';
-import { FallbackMessageList } from '@/features/chat/message-thread/FallbackMessageList';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
+import { MessageList } from '@/features/chat/message-thread/MessageList';
 import { useChatSessionStore } from '@/features/conversations/session';
-import { loadWithRetry } from '@/shared/browser/load-with-retry';
-
-const MessageList = lazy(() =>
-  loadWithRetry(() =>
-    import('@/features/chat/message-thread/MessageList').then((m) => ({ default: m.MessageList })),
-  ),
-);
 
 function initNewChatPage() {
   if (typeof window === 'undefined') return;
@@ -97,11 +90,10 @@ function Greeting({
 
 function HomePage() {
   const messages = useChatSessionStore((state) => state.messages);
-  const [dismissed, setDismissed] = useState(false);
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
 
   useEffect(() => {
-    if (messages.length !== 0 || dismissed) {
+    if (messages.length !== 0) {
       return;
     }
 
@@ -114,18 +106,10 @@ function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [messages.length, dismissed]);
+  }, [messages.length]);
 
   if (messages.length > 0) {
-    return (
-      <Suspense fallback={<FallbackMessageList />}>
-        <MessageList />
-      </Suspense>
-    );
-  }
-
-  if (dismissed) {
-    return null;
+    return <MessageList />;
   }
 
   return (
@@ -133,7 +117,6 @@ function HomePage() {
       suggestions={suggestions}
       onPick={(text) => {
         useComposerStore.getState().setInput(text);
-        setDismissed(true);
         void Promise.resolve().then(() => {
           document.getElementById('message-input')?.focus();
         });

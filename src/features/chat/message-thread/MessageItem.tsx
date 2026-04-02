@@ -164,16 +164,8 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
                 <div>
                   <AttachmentStack items={attachments} quotes={quotes} />
                   <div className='relative z-10 overflow-visible rounded-lg bg-(--surface-muted) px-4 py-3'>
-                    <div className='text-base leading-relaxed text-foreground wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
-                      {contentBlocks.map((block, blockIndex) => {
-                        const blockKey = `${index}-${blockIndex}`;
-
-                        if (block.type === 'content') {
-                          return <Markdown key={blockKey} content={block.content} />;
-                        }
-
-                        return null;
-                      })}
+                    <div className='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
+                      {contentBlocks.map((block) => block.content).join('\n\n')}
                     </div>
                   </div>
                 </div>
