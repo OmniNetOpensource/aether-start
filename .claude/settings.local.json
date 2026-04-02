@@ -28,7 +28,10 @@
       "Bash(node:*)",
       "Bash(xargs cat:*)",
       "Bash(pnpm lint:*)",
-      "Bash(pnpm format:*)"
+      "Bash(pnpm format:*)",
+      "Bash(sed \"s/.*className=''//\")",
+      "Bash(sed \"s/''.*$//\")",
+      "Bash(sed:*)"
     ]
   }
 }

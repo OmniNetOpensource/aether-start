@@ -1,7 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useChatSessionStore } from '@/features/conversations/session';
-import { useConversationsQuery, selectAllConversations } from '@/features/conversations/session';
+import {
+  useConversationsQuery,
+  selectAllConversations,
+  upsertConversationInCache,
+} from '@/features/conversations/session';
 import { ConversationItem } from './ConversationItem';
 
 type ConversationListProps = {
@@ -34,6 +38,21 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
     observer.observe(target);
     return () => observer.disconnect();
   }, [hasNextPage, fetchNextPage, isFetchingNextPage]);
+
+  useEffect(() => {
+    const ch = new BroadcastChannel('conversation_title');
+    ch.onmessage = (event: MessageEvent<{ id: string; title: string; updated_at: string }>) => {
+      upsertConversationInCache({
+        id: event.data.id,
+        title: event.data.title,
+        is_pinned: false,
+        pinned_at: null,
+        created_at: event.data.updated_at,
+        updated_at: event.data.updated_at,
+      });
+    };
+    return () => ch.close();
+  }, []);
 
   const conversations = selectAllConversations(data);
 

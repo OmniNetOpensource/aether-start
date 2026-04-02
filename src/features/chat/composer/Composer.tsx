@@ -107,6 +107,7 @@ export function Composer() {
         return;
       }
 
+      event.preventDefault();
       textareaRef.current?.focus();
     };
 

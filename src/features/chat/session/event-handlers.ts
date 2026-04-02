@@ -208,6 +208,9 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
         created_at: now,
         updated_at: now,
       });
+      const ch = new BroadcastChannel('conversation_title');
+      ch.postMessage({ id: event.conversationId, title: event.title, updated_at: now });
+      ch.close();
     }
     return;
   }
