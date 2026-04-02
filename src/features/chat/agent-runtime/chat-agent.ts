@@ -11,7 +11,7 @@ import { getBackendConfig } from './backend-config';
 import { createChatProvider } from '@/features/chat/agent-runtime';
 import type { ProviderRunResult } from '@/features/chat/agent-runtime';
 import { generateTitleFromConversation } from '../session/chat-title';
-import { generateAndPersistForYouSuggestions } from '@/features/chat/for-you/for-you-suggestions';
+import { generateAndPersistForYouSuggestions } from '@/features/chat/for-you/for-you-suggestions.server';
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/agent-runtime';
 import {
   buildAskUserQuestionsModelResult,
