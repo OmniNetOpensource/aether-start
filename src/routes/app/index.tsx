@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { getForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
-import { useChatRequestStore } from '@/features/chat/session';
+import { cancelStreamSubscription } from '@/features/chat/session';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import { MessageList } from '@/features/chat/message-thread/MessageList';
 import { useChatSessionStore } from '@/features/conversations/session';
@@ -10,7 +10,7 @@ import { useChatSessionStore } from '@/features/conversations/session';
 function initNewChatPage() {
   if (typeof window === 'undefined') return;
 
-  useChatRequestStore.getState().setStatus('idle', 'new_chat/enter');
+  cancelStreamSubscription('new_chat/enter');
   useEditingStore.getState().clear();
   useChatSessionStore.getState().clearSession();
 }

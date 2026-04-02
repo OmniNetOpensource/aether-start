@@ -19,14 +19,9 @@ export const Route = createFileRoute('/app/c/$conversationId')({
 export function ConversationPage() {
   const { conversationId } = Route.useParams();
   const navigate = useNavigate();
-  const currentConversationId = useChatSessionStore((state) => state.conversationId);
-  const initializeTree = useChatSessionStore((state) => state.initializeTree);
-  const setConversationId = useChatSessionStore((state) => state.setConversationId);
-  const setArtifacts = useChatSessionStore((state) => state.setArtifacts);
-  const setPageTitle = useChatSessionStore((state) => state.setPageTitle);
 
   useEffect(() => {
-    if (currentConversationId === conversationId) return;
+    if (useChatSessionStore.getState().conversationId === conversationId) return;
     let cancelled = false;
 
     void getConversationFn({ data: { id: conversationId } })
@@ -44,13 +39,12 @@ export function ConversationPage() {
           currentPath = buildCurrentPath(messages, messages[0].id);
         }
 
-        setConversationId(conversationId);
-        initializeTree(messages, currentPath);
-        setArtifacts(conversation.artifacts ?? []);
-        setPageTitle(conversation.title ?? 'Aether');
         const store = useChatSessionStore.getState();
-        const modelId = conversation.model ?? '';
-        store.setCurrentModel(modelId);
+        store.setConversationId(conversationId);
+        store.initializeTree(messages, currentPath);
+        store.setArtifacts(conversation.artifacts ?? []);
+        store.setPageTitle(conversation.title ?? 'Aether');
+        store.setCurrentModel(conversation.model ?? '');
         void resumeRunningConversation(conversationId);
       })
       .catch((error) => {
@@ -65,15 +59,7 @@ export function ConversationPage() {
       useEditingStore.getState().clear();
       cancelled = true;
     };
-  }, [
-    conversationId,
-    currentConversationId,
-    navigate,
-    initializeTree,
-    setConversationId,
-    setArtifacts,
-    setPageTitle,
-  ]);
+  }, [conversationId, navigate]);
 
   return <MessageList />;
 }
