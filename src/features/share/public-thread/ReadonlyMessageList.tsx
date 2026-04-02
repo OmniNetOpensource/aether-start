@@ -19,7 +19,7 @@ export function ReadonlyMessageList({ messages, isPhone = false }: ReadonlyMessa
     <div
       role='log'
       aria-live='polite'
-      className={`flex min-h-0 w-full flex-col ${listWidthClass}`.trim()}
+      className={`flex min-h-0 w-full flex-col font-serif ${listWidthClass}`.trim()}
     >
       {messages.map((message, index) => {
         const isUser = message.role === 'user';

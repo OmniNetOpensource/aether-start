@@ -263,7 +263,7 @@ export function MessageList() {
         <div
           role='log'
           aria-live='polite'
-          className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-[80vh] ${widthClass} `}
+          className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-[80vh] font-serif ${widthClass}`}
         >
           {currentPath.map((messageId, index) => {
             const isLastMessage = index === currentPath.length - 1;
