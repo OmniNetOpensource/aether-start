@@ -149,7 +149,8 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
               );
               URL.revokeObjectURL(localUrl);
             } catch (error) {
-              const detail = error instanceof Error ? error.message : String(error || 'Unknown error');
+              const detail =
+                error instanceof Error ? error.message : String(error || 'Unknown error');
               console.error(`Failed to upload image "${file.name}"`, error);
               toast.error(`上传图片「${file.name}」失败：${detail}`);
               set(
