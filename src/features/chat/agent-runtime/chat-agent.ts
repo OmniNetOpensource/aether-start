@@ -11,6 +11,7 @@ import { getBackendConfig } from './backend-config';
 import { createChatProvider } from '@/features/chat/agent-runtime';
 import type { ProviderRunResult } from '@/features/chat/agent-runtime';
 import { generateTitleFromConversation } from '../session/chat-title';
+import { generateAndPersistForYouSuggestions } from '@/features/chat/for-you/for-you-suggestions';
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/agent-runtime';
 import {
   buildAskUserQuestionsModelResult,
@@ -910,6 +911,14 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         finalStatus = 'error';
         log('AGENT', 'Persist final conversation snapshot failed', {
           error: error instanceof Error ? error.message : String(error),
+        });
+      }
+
+      if (finalStatus === 'completed') {
+        generateAndPersistForYouSuggestions(this.env.DB, userId).catch((error) => {
+          log('AGENT', 'For-you suggestion refresh failed', {
+            error: error instanceof Error ? error.message : String(error),
+          });
         });
       }
 

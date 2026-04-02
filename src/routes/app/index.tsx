@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
-import { generateForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
+import { getForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
 import { useChatRequestStore } from '@/features/chat/session';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import { MessageList } from '@/features/chat/message-thread/MessageList';
@@ -98,7 +98,7 @@ function HomePage() {
     }
 
     let cancelled = false;
-    void generateForYouSuggestionsFn().then((list) => {
+    void getForYouSuggestionsFn().then((list) => {
       if (!cancelled) {
         setSuggestions(list);
       }
