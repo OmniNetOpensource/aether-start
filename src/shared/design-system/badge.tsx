@@ -15,14 +15,11 @@ function Badge({ variant = 'default', className, asChild = false, ...props }: Ba
       className={cn(
         'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
         {
-          'bg-(--surface-secondary) text-(--text-primary) hover:bg-(--surface-hover)':
-            variant === 'default',
-          'bg-(--surface-muted) text-(--text-secondary) hover:bg-(--surface-hover)':
-            variant === 'secondary',
-          'border border-border bg-transparent text-(--text-secondary) hover:bg-(--surface-hover)':
+          'bg-surface text-foreground hover:bg-hover': variant === 'default',
+          'bg-muted text-secondary hover:bg-hover': variant === 'secondary',
+          'border border-border bg-transparent text-secondary hover:bg-hover':
             variant === 'outline',
-          'bg-(--status-destructive-muted) text-destructive hover:bg-(--status-destructive-muted-hover)':
-            variant === 'destructive',
+          'bg-destructive-muted text-destructive': variant === 'destructive',
         },
         className,
       )}

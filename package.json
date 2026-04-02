@@ -36,6 +36,7 @@
     "@shikijs/core": "3.23.0",
     "@shikijs/engine-javascript": "3.23.0",
     "@shikijs/langs": "3.23.0",
+    "@shikijs/themes": "3.23.0",
     "@streamdown/cjk": "^1.0.2",
     "@streamdown/code": "^1.0.3",
     "@streamdown/math": "^1.0.2",

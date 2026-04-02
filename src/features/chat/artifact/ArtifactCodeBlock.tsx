@@ -62,7 +62,7 @@ export function ArtifactCodeBlock({ code, isCompleted }: { code: string; isCompl
 
   if (!highlight) {
     return (
-      <pre className='m-0 whitespace-pre-wrap wrap-break-word rounded-md bg-(--surface-muted) p-0 text-foreground'>
+      <pre className='m-0 whitespace-pre-wrap wrap-break-word rounded-md bg-muted p-0 text-foreground'>
         <code>{code}</code>
       </pre>
     );

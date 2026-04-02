@@ -31,10 +31,10 @@ const toastVariants = cva(
 const iconVariants = cva('shrink-0', {
   variants: {
     variant: {
-      info: 'text-[color:var(--status-info)]',
-      success: 'text-[color:var(--status-success)]',
-      warning: 'text-[color:var(--status-warning)]',
-      error: 'text-[color:var(--status-destructive)]',
+      info: 'text-[color:var(--color-info)]',
+      success: 'text-[color:var(--color-success)]',
+      warning: 'text-[color:var(--color-warning)]',
+      error: 'text-[color:var(--color-destructive)]',
     },
   },
   defaultVariants: {
@@ -83,7 +83,7 @@ export function Toast({ toast, isExiting, onClose, onExited }: ToastProps) {
       <div className='flex-1 text-sm leading-relaxed'>{toast.message}</div>
       <button
         onClick={onClose}
-        className='shrink-0 rounded-sm text-(--text-secondary) transition-colors hover:text-(--text-primary) focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
+        className='shrink-0 rounded-sm text-secondary transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
         aria-label='Close'
       >
         <XIcon className='size-4' />

@@ -48,7 +48,7 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
       variant='ghost'
       size='sm'
       onClick={handleCopy}
-      className='text-2xs text-neutral-500 dark:text-neutral-400'
+      className='text-2xs text-muted-foreground'
       title='复制内容'
     >
       {isCopied ? (
@@ -74,7 +74,7 @@ const ActionButton = ({ onClick, disabled, title, icon }: ActionButtonProps) => 
     size='sm'
     onClick={onClick}
     disabled={disabled}
-    className='text-2xs text-neutral-500 dark:text-neutral-400'
+    className='text-2xs text-muted-foreground'
     title={title}
   >
     {icon}
@@ -163,14 +163,14 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
               ) : isUser ? (
                 <div>
                   <AttachmentStack items={attachments} quotes={quotes} />
-                  <div className='relative z-10 overflow-visible rounded-lg bg-(--surface-muted) px-4 py-3'>
+                  <div className='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'>
                     <div className='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
                       {contentBlocks.map((block) => block.content).join('\n\n')}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className='flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
+                <div className='flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-secondary wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
                   {assistantBlocks.map((block, blockIndex) => {
                     const blockKey = `${index}-${blockIndex}`;
                     if (block.type === 'research') {
@@ -199,7 +199,7 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
                       return (
                         <div
                           key={blockKey}
-                          className='flex items-start gap-2 rounded-lg border border-destructive bg-(--status-destructive-muted) px-3 py-2 text-sm text-destructive not-italic'
+                          className='flex items-start gap-2 rounded-lg border border-destructive bg-destructive-muted px-3 py-2 text-sm text-destructive not-italic'
                         >
                           <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
                           <div className='flex-1 whitespace-pre-wrap'>{block.message}</div>
@@ -221,7 +221,7 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
           )}
 
           {timeLabel && (
-            <p className='mt-2 text-2xs text-neutral-500 dark:text-neutral-400'>{timeLabel}</p>
+            <p className='mt-2 text-2xs text-muted-foreground'>{timeLabel}</p>
           )}
           {shouldShowToolbar && (
             <div className='mt-4 flex items-center transition-opacity duration-150 opacity-100 pointer-events-auto'>

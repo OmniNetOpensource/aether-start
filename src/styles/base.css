@@ -1,14 +1,13 @@
 html {
-  /* --vh: 1% 视口高度，由 JS 在 resize 时更新，解决移动端地址栏导致的视口变化 */
   --vh: 1vh;
-  background: var(--surface-primary);
+  background: var(--color-background);
   font-size: 20px;
   scroll-behavior: smooth;
 }
 
 body {
   background: transparent;
-  color: var(--text-primary);
+  color: var(--color-foreground);
   font-family: var(--font-body);
   margin: 0;
   min-height: calc(var(--vh) * 100);
@@ -18,13 +17,8 @@ body {
 }
 
 ::selection {
-  background-color: var(--content-accent-muted);
-  color: var(--text-primary);
-}
-
-html.dark ::selection {
-  background-color: var(--content-accent-muted);
-  color: var(--text-primary);
+  background-color: color-mix(in oklch, var(--color-accent) 40%, transparent);
+  color: var(--color-foreground);
 }
 
 @layer base {
@@ -44,4 +38,249 @@ html.dark ::selection {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Viewport height fix for mobile address bar */
+.h-screen {
+  height: calc(var(--vh) * 100);
+}
+.min-h-screen {
+  min-height: calc(var(--vh) * 100);
+}
+
+/* Horizontal scroll - hide scrollbar */
+.horizontal-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.horizontal-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* Liquid glass effect */
+.liquid-glass {
+  position: relative;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.5);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.liquid-glass::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.25) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    rgba(255, 255, 255, 0.15) 100%
+  );
+  pointer-events: none;
+}
+
+:is(.dark, .nord) .liquid-glass {
+  background: rgba(24, 24, 27, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+:is(.dark, .nord) .liquid-glass::before {
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.02) 50%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+}
+
+/* Interactive element transitions */
+button,
+input,
+select,
+textarea,
+[role='button'] {
+  transition-property: background-color, color, border-color, box-shadow, opacity, transform;
+  transition-duration: 0.2s;
+  transition-timing-function: var(--ease-out);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 99px;
+  transition: background 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+/* KaTeX Math Formula Styles */
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 0.5em 0;
+}
+
+.katex {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.katex-html {
+  white-space: normal;
+  word-wrap: break-word;
+}
+
+/* Streamdown Code Block Overrides */
+[data-streamdown='code-block-body'] code span::before {
+  display: none;
+}
+
+[data-streamdown='code-block-body'] pre {
+  width: max-content;
+  min-width: 100%;
+}
+
+[data-streamdown='code-block-download-button'] {
+  display: none;
+}
+
+[data-streamdown='code-block'] {
+  background-color: var(--color-background);
+  max-width: 100%;
+  min-width: 0;
+}
+
+[data-streamdown='code-block-body'] {
+  border: none;
+  min-width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+[data-streamdown='code-block-actions'] {
+  background: transparent;
+  border: none;
+}
+
+/* Tooltip enter animation */
+@starting-style {
+  [data-slot='tooltip-content'] {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* Keyframes */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes peeking-attachment-pop {
+  0% {
+    transform: translateY(24px);
+  }
+  45% {
+    transform: translateY(-16px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.animate-peeking-attachment-pop {
+  animation: peeking-attachment-pop 0.45s ease-out both;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: -100% 50%;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes render-monitor-flash {
+  0% {
+    box-shadow: 0 0 0 2px var(--color-accent);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+.render-monitor-flash {
+  animation: render-monitor-flash 0.7s var(--transition-smooth) forwards;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+}
+
+/* View Transitions */
+::view-transition {
+  pointer-events: none;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+  pointer-events: none;
 }

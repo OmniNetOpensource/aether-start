@@ -97,7 +97,7 @@ export function AttachmentStack({
                 size='icon'
                 aria-label='Remove quote'
                 onClick={() => onRemoveQuote(entry.id)}
-                className='absolute -right-1.5 -top-1.5 z-10 h-5 w-5 rounded-full bg-(--interactive-primary) text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500 hover:text-white'
+                className='absolute -right-1.5 -top-1.5 z-10 h-5 w-5 rounded-full bg-primary text-background opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500 hover:text-white'
               >
                 <X className='h-3 w-3' />
               </Button>
@@ -109,7 +109,7 @@ export function AttachmentStack({
                 size='icon'
                 aria-label='Remove attachment'
                 onClick={() => onRemove(entry.attachment.id)}
-                className='absolute -right-1.5 -top-1.5 z-10 h-5 w-5 rounded-full bg-(--interactive-primary) text-(--surface-primary) opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500 hover:text-white'
+                className='absolute -right-1.5 -top-1.5 z-10 h-5 w-5 rounded-full bg-primary text-background opacity-0 transition-opacity group-hover:opacity-100 hover:bg-red-500 hover:text-white'
               >
                 <X className='h-3 w-3' />
               </Button>

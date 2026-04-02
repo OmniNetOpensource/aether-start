@@ -5,19 +5,17 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/shared/core/utils';
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[background-color,color,border-color,box-shadow] duration-150 ease-[var(--ease-out)] disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-(--interactive-primary) focus-visible:ring-(--interactive-primary) focus-visible:ring-[3px] aria-invalid:ring-destructive dark:aria-invalid:ring-destructive aria-invalid:border-destructive",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[background-color,color,border-color,box-shadow] duration-150 ease-[var(--ease-out)] disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-primary focus-visible:ring-ring focus-visible:ring-[3px] aria-invalid:ring-destructive aria-invalid:border-destructive",
   {
     variants: {
       variant: {
-        default:
-          'bg-(--interactive-primary) text-(--surface-primary) hover:bg-(--interactive-primary-hover)',
+        default: 'bg-primary text-background hover:bg-primary-hover',
         destructive:
-          'bg-(--status-destructive) text-(--status-destructive-foreground) hover:bg-(--status-destructive-hover) focus-visible:ring-destructive dark:focus-visible:ring-destructive dark:hover:bg-(--status-destructive-hover)',
-        outline:
-          'border bg-(--surface-primary) shadow-xs hover:bg-(--surface-hover) hover:text-(--text-primary) dark:bg-(--surface-muted) dark:border-(--border-primary) dark:hover:bg-(--surface-hover)',
-        secondary: 'bg-(--surface-muted) text-(--text-primary) hover:bg-(--surface-hover)',
-        ghost: 'hover:bg-(--surface-hover) hover:text-(--text-primary)',
-        link: 'text-(--interactive-primary) underline-offset-4 hover:underline',
+          'bg-destructive text-destructive-foreground hover:bg-destructive-hover focus-visible:ring-destructive',
+        outline: 'border bg-background shadow-xs hover:bg-hover hover:text-foreground',
+        secondary: 'bg-muted text-foreground hover:bg-hover',
+        ghost: 'hover:bg-hover hover:text-foreground',
+        link: 'text-primary underline-offset-4 hover:underline',
       },
       size: {
         default: 'h-9 px-4 py-2 has-[>svg]:px-3',

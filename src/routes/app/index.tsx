@@ -62,7 +62,7 @@ function Greeting({
                 key={`${index}-${text}`}
                 type='button'
                 onClick={() => onPick(text)}
-                className='max-w-[min(100%,22rem)] truncate rounded-full border border-border bg-background/60 px-3 py-1.5 text-sm text-foreground transition hover:bg-(--surface-hover)'
+                className='max-w-[min(100%,22rem)] truncate rounded-full border border-border bg-background/60 px-3 py-1.5 text-sm text-foreground transition hover:bg-hover'
                 style={{ animation: `suggestionIn 0.4s ease-out ${index * 0.06}s both` }}
               >
                 {text}

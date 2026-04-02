@@ -205,28 +205,28 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
       </DialogHeader>
 
       <div className='flex items-center px-4 py-4'>
-        <Search className='size-6 text-(--text-secondary)' />
+        <Search className='size-6 text-secondary' />
         <input
           autoFocus
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder='你想找什么？'
-          className='ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-(--text-tertiary)'
+          className='ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-muted-foreground'
         />
-        {loading && <Loader2 className='size-5 animate-spin text-(--text-secondary)' />}
+        {loading && <Loader2 className='size-5 animate-spin text-secondary' />}
       </div>
 
-      <div className='h-[1px] w-full bg-(--surface-muted) dark:bg-(--surface-muted)' />
+      <div className='h-[1px] w-full bg-muted' />
 
       <div ref={listRootRef} className='max-h-[60vh] overflow-y-auto p-2'>
         {!debouncedQuery ? (
-          <p className='px-3 py-10 text-center text-sm text-(--text-tertiary)'>
+          <p className='px-3 py-10 text-center text-sm text-muted-foreground'>
             输入关键词搜索聊天记录
           </p>
         ) : null}
 
         {debouncedQuery && !loading && hasSearched && items.length === 0 ? (
-          <p className='px-3 py-10 text-center text-sm text-(--text-tertiary)'>没有找到相关会话</p>
+          <p className='px-3 py-10 text-center text-sm text-muted-foreground'>没有找到相关会话</p>
         ) : null}
 
         {items.length > 0 ? (
@@ -239,21 +239,21 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
                 <button
                   key={item.id}
                   type='button'
-                  className='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-(--surface-muted) active:scale-[0.98]'
+                  className='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-muted active:scale-[0.98]'
                   onClick={() => handleSelect(item)}
                 >
                   <div className='flex w-full items-baseline justify-between'>
                     <span
-                      className='min-w-0 text-base font-medium text-(--text-primary)'
+                      className='min-w-0 text-base font-medium text-foreground'
                       title={title}
                     >
                       {displayTitle}
                     </span>
-                    <span className='ml-4 shrink-0 text-xs text-(--text-tertiary) opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100'>
+                    <span className='ml-4 shrink-0 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100'>
                       {formatUpdatedAt(item.updated_at)}
                     </span>
                   </div>
-                  <span className='mt-0.5 truncate text-sm text-(--text-tertiary)'>
+                  <span className='mt-0.5 truncate text-sm text-muted-foreground'>
                     {item.excerpt || '暂无可展示内容'}
                   </span>
                 </button>
@@ -265,10 +265,10 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
         {items.length > 0 && (hasMore || loadingMore) ? (
           <div
             ref={sentinelRef}
-            className='flex items-center justify-center py-2 text-(--text-tertiary)'
+            className='flex items-center justify-center py-2 text-muted-foreground'
           >
             {loadingMore ? (
-              <Loader2 className='size-4 animate-spin text-(--text-secondary)' />
+              <Loader2 className='size-4 animate-spin text-secondary' />
             ) : null}
           </div>
         ) : null}
@@ -282,7 +282,7 @@ export function ConversationSearchDialog({ open, onOpenChange }: ConversationSea
     <Dialog open={open} onOpenChange={onOpenChange}>
       {open ? (
         <DialogContent
-          className='max-h-[80vh] overflow-hidden border-0 bg-white p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl dark:bg-(--surface-primary)'
+          className='max-h-[80vh] overflow-hidden border-0 bg-background p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl'
           showCloseButton={false}
         >
           <ConversationSearchContent onClose={() => onOpenChange(false)} />

@@ -121,7 +121,7 @@ export function ImagePreview({ url, name, size, className, uploading = false }: 
         onClick={handleOpen}
         className={cn(
           'relative h-20 w-20 overflow-hidden rounded-xl',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--interactive-primary)',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
           className,
         )}
         title={previewLabel}
@@ -147,7 +147,7 @@ export function ImagePreview({ url, name, size, className, uploading = false }: 
       {isOpen &&
         createPortal(
           <div
-            className='fixed inset-0 z-(--z-modal-backdrop) flex items-center justify-center bg-[#404040]'
+            className='fixed inset-0 z-(--z-modal-backdrop) flex items-center justify-center bg-black/50'
             onClick={handleClose}
             onWheel={(event) => event.preventDefault()}
             style={{ animation: 'fadeIn 0.2s ease-out' }}

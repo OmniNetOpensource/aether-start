@@ -184,10 +184,10 @@ function NotesPage() {
   return (
     <div className='flex h-screen min-h-0 w-full flex-col'>
       <header className='flex h-14 shrink-0 items-center justify-between border-b px-6'>
-        <div className='flex min-w-0 items-center gap-3 text-(--text-primary)'>
+        <div className='flex min-w-0 items-center gap-3 text-foreground'>
           <Link
             to='/app'
-            className='inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-(--text-secondary) hover:bg-(--surface-hover) hover:text-(--text-primary)'
+            className='inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-secondary hover:bg-hover hover:text-foreground'
             aria-label='Back to chat'
           >
             <ArrowLeft className='h-4 w-4' />
@@ -203,17 +203,17 @@ function NotesPage() {
 
       <div ref={scrollRootRef} className='min-h-0 flex-1 overflow-y-auto px-6 py-6'>
         {loading && !hasLoaded ? (
-          <div className='flex items-center justify-center py-10 text-(--text-tertiary)'>
+          <div className='flex items-center justify-center py-10 text-muted-foreground'>
             <Loader2 className='h-4 w-4 animate-spin' />
             <span className='ml-2 text-sm'>Loading notes...</span>
           </div>
         ) : (
           <div className='space-y-4'>
             {emptyStateVisible ? (
-              <div className='flex flex-col items-center justify-center rounded-xl border border-dashed border-(--border-primary) bg-(--surface-muted) px-8 py-12 text-center'>
-                <Lightbulb className='mb-4 h-12 w-12 text-(--text-tertiary)' />
-                <p className='text-base font-medium text-(--text-primary)'>No notes yet.</p>
-                <p className='mt-2 text-sm text-(--text-secondary)'>
+              <div className='flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted px-8 py-12 text-center'>
+                <Lightbulb className='mb-4 h-12 w-12 text-muted-foreground' />
+                <p className='text-base font-medium text-foreground'>No notes yet.</p>
+                <p className='mt-2 text-sm text-secondary'>
                   Create a note or paste text and images with Ctrl+V to turn your clipboard into a
                   note instantly.
                 </p>
@@ -239,7 +239,7 @@ function NotesPage() {
             {hasMore || loadingMore ? (
               <div
                 ref={sentinelRef}
-                className='flex items-center justify-center py-4 text-(--text-tertiary)'
+                className='flex items-center justify-center py-4 text-muted-foreground'
               >
                 {loadingMore ? (
                   <>
@@ -288,7 +288,7 @@ function NotesPage() {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className='bg-(--status-destructive) text-(--status-destructive-foreground) hover:bg-(--status-destructive)/90'
+              className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
               onClick={() => {
                 if (noteToDelete) {
                   void deleteNote(noteToDelete.id);

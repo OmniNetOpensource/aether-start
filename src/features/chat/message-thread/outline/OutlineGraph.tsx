@@ -104,7 +104,7 @@ const buildFlowElements = (
         source: String(node.messageId),
         target: String(child.id),
         style: {
-          stroke: pathEdge ? 'var(--interactive-primary)' : 'var(--border-primary)',
+          stroke: pathEdge ? 'var(--color-primary)' : 'var(--color-border)',
           strokeWidth: pathEdge ? 2 : 1.2,
           opacity: pathEdge ? 1 : 0.5,
         },
@@ -139,8 +139,8 @@ const roleLabel: Record<Message['role'], string> = {
 
 function MessageNode({ data }: NodeProps<Node<MessageNodeData, 'message'>>) {
   const meta = data.isOnPath
-    ? 'color-mix(in srgb, var(--text-primary) 72%, var(--surface-primary))'
-    : 'var(--text-tertiary)';
+    ? 'color-mix(in srgb, var(--color-foreground) 72%, var(--color-background))'
+    : 'var(--color-muted-foreground)';
 
   return (
     <div
@@ -149,8 +149,8 @@ function MessageNode({ data }: NodeProps<Node<MessageNodeData, 'message'>>) {
         width: NODE_W,
         height: NODE_H,
         background: data.isOnPath
-          ? 'color-mix(in srgb, var(--interactive-primary) 12%, var(--surface-primary))'
-          : 'var(--surface-secondary)',
+          ? 'color-mix(in srgb, var(--color-primary) 12%, var(--color-background))'
+          : 'var(--color-surface)',
       }}
       title={`${roleLabel[data.role]}: ${data.fullPreview}`}
     >
@@ -168,7 +168,7 @@ function MessageNode({ data }: NodeProps<Node<MessageNodeData, 'message'>>) {
       <div
         className='mt-0.5 truncate text-[11px] font-medium'
         style={{
-          color: data.isOnPath ? 'var(--text-primary)' : 'var(--text-secondary)',
+          color: data.isOnPath ? 'var(--color-foreground)' : 'var(--color-secondary)',
         }}
       >
         {data.preview}
@@ -197,14 +197,14 @@ export default function OutlineGraph({
 
   if (nodes.length === 0) {
     return (
-      <div className='flex h-60 items-center justify-center rounded-md border border-(--border-primary) text-xs text-(--text-tertiary)'>
+      <div className='flex h-60 items-center justify-center rounded-md border border-border text-xs text-muted-foreground'>
         No messages yet.
       </div>
     );
   }
 
   return (
-    <div className='h-[70vh] rounded-md border border-(--border-primary)'>
+    <div className='h-[70vh] rounded-md border border-border'>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -219,13 +219,13 @@ export default function OutlineGraph({
         elementsSelectable={false}
         minZoom={0.15}
         maxZoom={3}
-        style={{ background: 'var(--surface-primary)' }}
+        style={{ background: 'var(--color-background)' }}
       >
         <Background
           variant={BackgroundVariant.Dots}
           gap={20}
           size={0.8}
-          color='var(--border-primary)'
+          color='var(--color-border)'
         />
       </ReactFlow>
     </div>

@@ -132,7 +132,7 @@ function LinkSafetyModal({ isOpen, onClose, onConfirm, url }: LinkSafetyModalPro
             </DialogDescription>
           </DialogHeader>
           <div className='flex min-h-0 flex-1 items-center'>
-            <div className='w-full rounded-lg border bg-(--surface-muted) p-4 font-mono text-sm break-all sm:p-5 sm:text-base'>
+            <div className='w-full rounded-lg border bg-muted p-4 font-mono text-sm break-all sm:p-5 sm:text-base'>
               {url}
             </div>
           </div>

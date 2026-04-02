@@ -62,7 +62,7 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
 
   return (
     <div
-      className='border-t ink-border py-5 transition-all duration-500'
+      className='border-t border-border py-5 transition-all duration-500'
       style={{
         paddingLeft: isCollapsed ? 16 : 24,
         paddingRight: isCollapsed ? 16 : 24,
@@ -77,7 +77,7 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
             <DropdownMenuTrigger asChild>
               <button
                 type='button'
-                className='flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-(--surface-hover) hover:text-foreground'
+                className='flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-hover hover:text-foreground'
                 style={{
                   width: isCollapsed ? 40 : '100%',
                   height: isCollapsed ? 40 : 'auto',

@@ -67,7 +67,7 @@ export function ShareButton() {
           fallback={
             <Dialog open={open} onOpenChange={setOpen}>
               <DialogContent className='sm:max-w-md'>
-                <div className='flex items-center gap-2 py-6 text-sm text-(--text-tertiary)'>
+                <div className='flex items-center gap-2 py-6 text-sm text-muted-foreground'>
                   <Loader2 className='h-4 w-4 animate-spin' />
                   <span>Loading share tools...</span>
                 </div>

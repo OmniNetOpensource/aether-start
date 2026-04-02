@@ -17,7 +17,7 @@ export function ArtifactToggleButton() {
       type='button'
       variant='ghost'
       size='icon-lg'
-      className={cn('rounded-lg', artifactPanelOpen && 'bg-(--surface-hover) text-foreground')}
+      className={cn('rounded-lg', artifactPanelOpen && 'bg-hover text-foreground')}
       aria-label={artifactPanelOpen ? 'Close artifacts' : 'Open artifacts'}
       title={artifactPanelOpen ? 'Close artifacts' : 'Open artifacts'}
       onClick={() => setArtifactPanelOpen(!artifactPanelOpen)}

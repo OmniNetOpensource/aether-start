@@ -167,24 +167,24 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
           <section className='shrink-0 space-y-3' aria-labelledby='share-url-heading'>
             <h3
               id='share-url-heading'
-              className='flex items-center gap-2 text-sm font-medium text-(--text-primary)'
+              className='flex items-center gap-2 text-sm font-medium text-foreground'
             >
-              <Link2 className='h-4 w-4 shrink-0 text-(--text-tertiary)' />
+              <Link2 className='h-4 w-4 shrink-0 text-muted-foreground' />
               Share link
             </h3>
 
             {shareLoading ? (
               <div
-                className='flex h-20 items-center gap-2 rounded-lg border border-border bg-(--surface-muted) px-4'
+                className='flex h-20 items-center gap-2 rounded-lg border border-border bg-muted px-4'
                 aria-live='polite'
               >
-                <Loader2 className='h-4 w-4 shrink-0 animate-spin text-(--text-tertiary)' />
-                <span className='text-sm text-(--text-tertiary)'>Loading…</span>
+                <Loader2 className='h-4 w-4 shrink-0 animate-spin text-muted-foreground' />
+                <span className='text-sm text-muted-foreground'>Loading…</span>
               </div>
             ) : shareStatus === 'active' && shareUrl ? (
               <div className='space-y-3'>
                 <div className='flex gap-2'>
-                  <div className='min-w-0 flex-1 break-all rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-(--text-secondary)'>
+                  <div className='min-w-0 flex-1 break-all rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-secondary'>
                     {shareUrl}
                   </div>
                   <Button
@@ -211,7 +211,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
                     variant='ghost'
                     onClick={handleRevokeShare}
                     disabled={isLoading}
-                    className='text-(--text-tertiary) hover:text-destructive hover:bg-(--status-destructive-muted)'
+                    className='text-muted-foreground hover:text-destructive hover:bg-destructive-muted'
                   >
                     {shareActionLoading === 'revoke' ? (
                       <>
@@ -229,7 +229,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
               </div>
             ) : (
               <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                <p className='text-sm text-(--text-tertiary)'>
+                <p className='text-sm text-muted-foreground'>
                   {shareStatus === 'revoked'
                     ? 'Link was revoked. Create a new one to share again.'
                     : 'Anyone with the link can view this conversation.'}
@@ -262,7 +262,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
             type='button'
             variant='ghost'
             onClick={() => handleOpenChange(false)}
-            className='text-(--text-secondary)'
+            className='text-secondary'
           >
             Close
           </Button>

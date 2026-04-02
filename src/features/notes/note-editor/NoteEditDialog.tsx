@@ -94,7 +94,7 @@ export function NoteEditDialog({
                     size='icon'
                     aria-label='移除附件'
                     onClick={() => removeAttachment(attachment.id)}
-                    className='absolute right-1 top-1 h-6 w-6 rounded-full bg-[#404040] text-white transition-colors hover:bg-destructive'
+                    className='absolute right-1 top-1 h-6 w-6 rounded-full bg-black/50 text-white transition-colors hover:bg-destructive'
                   >
                     <X className='h-3.5 w-3.5' />
                   </Button>
@@ -105,7 +105,7 @@ export function NoteEditDialog({
 
           <div className='flex flex-col gap-2'>
             <div className='flex items-center justify-between gap-2'>
-              <span className='text-sm text-(--text-secondary)'>内容</span>
+              <span className='text-sm text-secondary'>内容</span>
               <Button
                 type='button'
                 variant='ghost'
@@ -128,7 +128,7 @@ export function NoteEditDialog({
               onPaste={handlePaste}
               placeholder='记录你的灵感...'
               rows={8}
-              className='border-border placeholder:text-muted-foreground min-h-40 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-(--interactive-primary) focus-visible:ring-[3px] disabled:cursor-not-allowed md:text-sm'
+              className='border-border placeholder:text-muted-foreground min-h-40 w-full resize-y rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] focus-visible:border-ring focus-visible:ring-ring focus-visible:ring-[3px] disabled:cursor-not-allowed md:text-sm'
             />
           </div>
 

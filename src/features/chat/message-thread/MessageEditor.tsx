@@ -152,14 +152,14 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
           onRemoveQuote={handleRemoveQuote}
         />
       ) : null}
-      <div className='relative flex w-full flex-col gap-2 rounded-xl border bg-(--surface-muted) p-3 shadow-sm'>
+      <div className='relative flex w-full flex-col gap-2 rounded-xl border bg-muted p-3 shadow-sm'>
         <Button
           type='button'
           variant='ghost'
           size='icon'
           aria-label='Cancel editing'
           onClick={cancelEditing}
-          className='absolute right-2 top-2 h-7 w-7 text-(--text-secondary) transition-colors hover:text-(--text-primary)'
+          className='absolute right-2 top-2 h-7 w-7 text-secondary transition-colors hover:text-foreground'
         >
           <X className='h-4 w-4' />
         </Button>
@@ -212,7 +212,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
             className={cn(
               'h-8 w-8 rounded-full transition-all duration-200',
               sendDisabled
-                ? 'cursor-not-allowed bg-(--surface-muted) text-(--text-tertiary)'
+                ? 'cursor-not-allowed bg-muted text-muted-foreground'
                 : 'hover:scale-105 active:scale-95',
             )}
           >

@@ -97,33 +97,33 @@ export function AskUserQuestionsCard({
   return (
     <section
       data-testid='ask-user-questions-card'
-      className='overflow-hidden rounded-md border border-border bg-(--surface-secondary) text-(--text-primary) shadow-xs'
+      className='overflow-hidden rounded-md border border-border bg-surface text-foreground shadow-xs'
     >
       <div className='flex items-start justify-between gap-3 border-b border-border px-4 py-3.5'>
         <div className='min-w-0'>
           <p className='text-[13px] font-medium leading-snug tracking-tight'>
             需要你先回答这组问题
           </p>
-          <p className='mt-1 text-xs leading-5 text-(--text-secondary)'>
+          <p className='mt-1 text-xs leading-5 text-secondary'>
             回答后，这条 assistant 消息会继续往下生成。
           </p>
         </div>
-        <span className='shrink-0 rounded border border-border px-2 py-0.5 text-[11px] font-medium tracking-wide text-(--text-tertiary)'>
+        <span className='shrink-0 rounded border border-border px-2 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground'>
           {getStatusLabel(block.status, readonly)}
         </span>
       </div>
 
       <fieldset key={`${block.callId}-${currentPage}`} disabled={isLocked} className='min-w-0'>
         <div className='space-y-1 px-4 pt-4'>
-          <p className='text-[11px] font-medium uppercase tracking-[0.06em] text-(--text-tertiary)'>
+          <p className='text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground'>
             {question.header}
           </p>
-          <p className='text-[13px] font-medium leading-snug text-(--text-primary)'>
+          <p className='text-[13px] font-medium leading-snug text-foreground'>
             {question.question}
           </p>
         </div>
 
-        <div className='mt-3 overflow-hidden rounded-md border border-border bg-(--surface-primary) mx-4'>
+        <div className='mt-3 overflow-hidden rounded-md border border-border bg-background mx-4'>
           {question.options.map((option, optionIndex) => {
             const inputId = `${block.callId}-${currentPage}-${optionIndex}`;
 
@@ -131,7 +131,7 @@ export function AskUserQuestionsCard({
               <label
                 key={inputId}
                 htmlFor={inputId}
-                className='flex cursor-pointer items-start gap-3 border-b border-border px-3 py-2.5 transition-[background-color,border-color] duration-150 ease-[var(--ease-out)] last:border-b-0 hover:bg-(--surface-hover) has-[:checked]:bg-(--surface-hover) has-[:checked]:shadow-[inset_2px_0_0_0_var(--interactive-primary)]'
+                className='flex cursor-pointer items-start gap-3 border-b border-border px-3 py-2.5 transition-[background-color,border-color] duration-150 ease-[var(--ease-out)] last:border-b-0 hover:bg-hover has-[:checked]:bg-hover has-[:checked]:shadow-[inset_2px_0_0_0_var(--color-primary)]'
               >
                 <input
                   id={inputId}
@@ -142,13 +142,13 @@ export function AskUserQuestionsCard({
                   onChange={() =>
                     handleOptionChange(currentPage, optionIndex, question.multiSelect)
                   }
-                  className='mt-0.5 h-3.5 w-3.5 shrink-0 accent-(--interactive-primary)'
+                  className='mt-0.5 h-3.5 w-3.5 shrink-0 accent-primary'
                 />
                 <span className='min-w-0 pl-0.5'>
-                  <span className='block text-[13px] font-medium leading-snug text-(--text-primary)'>
+                  <span className='block text-[13px] font-medium leading-snug text-foreground'>
                     {option.label}
                   </span>
-                  <span className='mt-0.5 block text-xs leading-relaxed text-(--text-secondary)'>
+                  <span className='mt-0.5 block text-xs leading-relaxed text-secondary'>
                     {option.description}
                   </span>
                 </span>
@@ -158,8 +158,8 @@ export function AskUserQuestionsCard({
         </div>
 
         {block.status === 'answered' && (
-          <div className='mx-4 mt-3 flex items-start gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-(--text-secondary)'>
-            <CheckCircle2 className='mt-0.5 h-3.5 w-3.5 shrink-0 text-(--text-tertiary)' />
+          <div className='mx-4 mt-3 flex items-start gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-secondary'>
+            <CheckCircle2 className='mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground' />
             <span>
               已选：
               {selectedOptionIndexes
@@ -180,9 +180,9 @@ export function AskUserQuestionsCard({
             onClick={() => setCurrentPage((p) => p - 1)}
             aria-label='上一题'
           >
-            <ChevronLeft className='h-4 w-4 text-(--text-secondary)' />
+            <ChevronLeft className='h-4 w-4 text-secondary' />
           </Button>
-          <span className='min-w-[3.25rem] text-center text-[11px] tabular-nums text-(--text-tertiary)'>
+          <span className='min-w-[3.25rem] text-center text-[11px] tabular-nums text-muted-foreground'>
             {currentPage + 1} / {totalPages}
           </span>
           <Button
@@ -193,7 +193,7 @@ export function AskUserQuestionsCard({
             onClick={() => setCurrentPage((p) => p + 1)}
             aria-label='下一题'
           >
-            <ChevronRight className='h-4 w-4 text-(--text-secondary)' />
+            <ChevronRight className='h-4 w-4 text-secondary' />
           </Button>
         </div>
 

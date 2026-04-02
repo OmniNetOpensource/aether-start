@@ -65,7 +65,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         variant='ghost'
         size='sm'
         onClick={handleQuote}
-        className='h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-(--surface-hover)'
+        className='h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-hover'
       >
         <Quote className='h-3.5 w-3.5' />
         引用
@@ -76,7 +76,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
         size='sm'
         onClick={handleTts}
         disabled={ttsState === 'loading'}
-        className='h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-(--surface-hover)'
+        className='h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-hover'
       >
         {ttsIcon}
         {ttsState === 'playing' ? '停止' : '朗读'}

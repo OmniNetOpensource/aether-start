@@ -31,7 +31,8 @@
       "Bash(pnpm format:*)",
       "Bash(sed \"s/.*className=''//\")",
       "Bash(sed \"s/''.*$//\")",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "Bash(gh repo:*)"
     ]
   }
 }

@@ -72,7 +72,7 @@ export function ModelSelector() {
         data-testid='model-selector'
         className={cn(
           toolButtonBaseClass,
-          'w-8 px-0 @[921px]:w-auto @[921px]:px-2.5 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground',
+          'w-8 px-0 @[921px]:w-auto @[921px]:px-2.5 group data-[state=open]:bg-hover data-[state=open]:text-foreground',
         )}
       >
         <span className='flex @[921px]:hidden'>

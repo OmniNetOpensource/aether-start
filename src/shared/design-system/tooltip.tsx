@@ -32,7 +32,7 @@ function TooltipContent({
       sideOffset={sideOffset}
       data-slot='tooltip-content'
       className={cn(
-        'z-(--z-tooltip) max-w-sm rounded-md border bg-(--surface-secondary) px-3 py-2 text-xs text-(--text-primary) shadow-md',
+        'z-(--z-tooltip) max-w-sm rounded-md border bg-surface px-3 py-2 text-xs text-foreground shadow-md',
         'transition-[transform,opacity] duration-[125ms] ease-[var(--ease-out)] origin-[var(--radix-tooltip-content-transform-origin)]',
         'data-[state=delayed-open]:opacity-100 data-[state=delayed-open]:scale-100',
         'data-[state=closed]:opacity-0 data-[state=closed]:scale-[0.97]',

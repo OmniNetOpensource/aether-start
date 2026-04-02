@@ -85,7 +85,7 @@ function ArtifactPanelBody() {
           <PopoverTrigger asChild>
             <button
               type='button'
-              className='flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-(--surface-hover)'
+              className='flex min-w-0 items-center gap-1.5 rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-hover'
               aria-label='选择 artifact'
             >
               <span className='min-w-0 font-medium text-foreground' title={selectedArtifact.title}>
@@ -103,8 +103,8 @@ function ArtifactPanelBody() {
                   className={cn(
                     'w-full rounded-md px-2.5 py-2 text-left text-sm transition-colors',
                     artifact.id === selectedArtifact.id
-                      ? 'bg-(--surface-active) text-foreground'
-                      : 'text-(--text-secondary) hover:bg-(--surface-hover) hover:text-foreground',
+                      ? 'bg-active text-foreground'
+                      : 'text-secondary hover:bg-hover hover:text-foreground',
                   )}
                   onClick={() => {
                     selectArtifact(artifact.id);
@@ -141,7 +141,7 @@ function ArtifactPanelBody() {
               className={cn(
                 'flex shrink-0 items-center gap-1 rounded-sm px-2 py-1 text-xs transition-colors',
                 canPreview
-                  ? 'text-muted-foreground hover:bg-(--surface-hover) hover:text-foreground'
+                  ? 'text-muted-foreground hover:bg-hover hover:text-foreground'
                   : 'cursor-not-allowed text-muted-foreground/50',
               )}
             >
@@ -154,7 +154,7 @@ function ArtifactPanelBody() {
               Deployed {deployedAtLabel}
             </span>
           ) : null}
-          <div className='flex shrink-0 gap-0.5 rounded-md bg-(--surface-muted) p-0.5'>
+          <div className='flex shrink-0 gap-0.5 rounded-md bg-muted p-0.5'>
             <button
               type='button'
               className={cn(
@@ -244,7 +244,7 @@ export default function ArtifactPanel() {
         <button
           type='button'
           onClick={() => setArtifactPanelOpen(false)}
-          className='absolute right-4 top-4 rounded-sm p-2 text-(--text-secondary) transition-colors hover:text-foreground'
+          className='absolute right-4 top-4 rounded-sm p-2 text-secondary transition-colors hover:text-foreground'
           aria-label='Close'
         >
           <X className='size-4' />
@@ -266,7 +266,7 @@ export default function ArtifactPanel() {
         !isResizing && 'transition-[width] duration-200',
         isResizing && '[&_iframe]:pointer-events-none',
         artifactPanelOpen ? 'w-[min(44vw,38rem)] min-w-88 px-5' : 'w-0 min-w-0 ',
-        'h-full bg-(--sidebar-surface)  py-4',
+        'h-full bg-surface  py-4',
       )}
       style={{
         transitionTimingFunction: 'cubic-bezier(0.23, 1, 0.32, 1)',

@@ -93,8 +93,8 @@ function SharedConversationPage() {
 
   if (loading || !data) {
     return (
-      <main className='flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6'>
-        <div className='flex items-center gap-2 text-(--text-secondary)'>
+      <main className='flex min-h-screen w-full items-center justify-center bg-background px-6'>
+        <div className='flex items-center gap-2 text-secondary'>
           <Loader2 className='h-4 w-4 animate-spin' />
           加载分享中...
         </div>
@@ -104,13 +104,13 @@ function SharedConversationPage() {
 
   if (data.status === 'not_found') {
     return (
-      <main className='flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6'>
+      <main className='flex min-h-screen w-full items-center justify-center bg-background px-6'>
         <div className='w-full max-w-md rounded-xl border border-border bg-background p-8 text-center'>
-          <h1 className='text-2xl font-semibold text-(--text-primary)'>分享不存在</h1>
-          <p className='mt-3 text-sm text-(--text-secondary)'>该链接无效，或已被删除。</p>
+          <h1 className='text-2xl font-semibold text-foreground'>分享不存在</h1>
+          <p className='mt-3 text-sm text-secondary'>该链接无效，或已被删除。</p>
           <Link
             to='/'
-            className='mt-6 inline-flex items-center rounded-lg bg-(--interactive-primary) px-4 py-2 text-sm text-(--surface-primary) hover:opacity-90'
+            className='mt-6 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm text-background hover:opacity-90'
           >
             返回首页
           </Link>
@@ -121,13 +121,13 @@ function SharedConversationPage() {
 
   if (data.status === 'revoked') {
     return (
-      <main className='flex min-h-screen w-full items-center justify-center bg-(--surface-primary) px-6'>
+      <main className='flex min-h-screen w-full items-center justify-center bg-background px-6'>
         <div className='w-full max-w-md rounded-xl border border-border bg-background p-8 text-center'>
-          <h1 className='text-2xl font-semibold text-(--text-primary)'>该分享已取消</h1>
-          <p className='mt-3 text-sm text-(--text-secondary)'>分享者已关闭此链接访问。</p>
+          <h1 className='text-2xl font-semibold text-foreground'>该分享已取消</h1>
+          <p className='mt-3 text-sm text-secondary'>分享者已关闭此链接访问。</p>
           <Link
             to='/'
-            className='mt-6 inline-flex items-center rounded-lg bg-(--interactive-primary) px-4 py-2 text-sm text-(--surface-primary) hover:opacity-90'
+            className='mt-6 inline-flex items-center rounded-lg bg-primary px-4 py-2 text-sm text-background hover:opacity-90'
           >
             返回首页
           </Link>
@@ -139,10 +139,10 @@ function SharedConversationPage() {
   const headingText = data.title?.trim() || 'Aether 分享';
 
   return (
-    <main className='h-screen w-full bg-(--surface-primary) overflow-y-auto'>
+    <main className='h-screen w-full bg-background overflow-y-auto'>
       <div className='pt-12 flex flex-col items-center'>
         <div className='w-full max-w-[390px] px-4 mb-8'>
-          <h1 className='text-2xl font-semibold text-(--text-primary)' title={headingText}>
+          <h1 className='text-2xl font-semibold text-foreground' title={headingText}>
             {truncateMiddle(headingText, 36)}
           </h1>
         </div>

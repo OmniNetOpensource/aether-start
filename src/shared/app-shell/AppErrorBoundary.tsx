@@ -13,26 +13,26 @@ function AppErrorPage(props: { error: Error | null }) {
 
   return (
     <div
-      className='fixed inset-0 z-[100] flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-auto bg-(--surface-primary) px-6 py-16'
+      className='fixed inset-0 z-[100] flex min-h-[100dvh] w-full flex-col items-center justify-center overflow-auto bg-background px-6 py-16'
       role='alert'
       aria-live='assertive'
     >
       <div
         aria-hidden
-        className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_60%_at_50%_-10%,color-mix(in_oklch,var(--content-accent)_18%,transparent)_0%,transparent_55%)]'
+        className='pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_100%_60%_at_50%_-10%,color-mix(in_oklch,var(--color-accent)_18%,transparent)_0%,transparent_55%)]'
       />
       <div className='relative w-full max-w-[420px]'>
-        <div className='rounded-[var(--radius)] border border-(--border-primary) border-opacity-[0.12] bg-(--surface-secondary) px-8 py-10 shadow-[0_0_0_1px_color-mix(in_oklch,var(--border-primary)_8%,transparent)]'>
-          <p className='text-[11px] font-semibold uppercase tracking-[0.22em] text-(--text-tertiary)'>
+        <div className='rounded-[var(--radius)] border border-border border-opacity-[0.12] bg-surface px-8 py-10 shadow-[0_0_0_1px_color-mix(in_oklch,var(--color-border)_8%,transparent)]'>
+          <p className='text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground'>
             Something went wrong
           </p>
-          <h1 className='mt-4 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-(--text-primary)'>
+          <h1 className='mt-4 text-[22px] font-semibold leading-tight tracking-[-0.02em] text-foreground'>
             出现错误
           </h1>
-          <p className='mt-2 text-sm leading-relaxed text-(--text-secondary)'>
+          <p className='mt-2 text-sm leading-relaxed text-secondary'>
             页面渲染时发生意外。你可以重新加载当前页，或返回应用首页。
           </p>
-          <pre className='mt-6 max-h-40 overflow-auto rounded-md border border-(--border-primary) border-opacity-[0.1] bg-(--surface-muted) px-3 py-2.5 font-mono text-[12px] leading-snug text-(--text-secondary) [scrollbar-width:thin]'>
+          <pre className='mt-6 max-h-40 overflow-auto rounded-md border border-border border-opacity-[0.1] bg-muted px-3 py-2.5 font-mono text-[12px] leading-snug text-secondary [scrollbar-width:thin]'>
             {detail}
           </pre>
           <div className='mt-8 flex flex-col gap-3 sm:flex-row sm:items-center'>

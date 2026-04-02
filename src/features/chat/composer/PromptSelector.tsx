@@ -55,7 +55,7 @@ export function PromptSelector() {
   });
 
   const toolButtonBaseClass =
-    'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)';
+    'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground';
 
   return (
     <DropdownMenu>
@@ -68,7 +68,7 @@ export function PromptSelector() {
           title={currentPromptName}
           className={cn(
             toolButtonBaseClass,
-            'w-8 px-0 @[921px]:w-auto @[921px]:px-2.5 group data-[state=open]:bg-(--surface-hover) data-[state=open]:text-foreground',
+            'w-8 px-0 @[921px]:w-auto @[921px]:px-2.5 group data-[state=open]:bg-hover data-[state=open]:text-foreground',
           )}
         >
           <MessageSquareText className='h-3.5 w-3.5' />

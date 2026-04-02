@@ -69,11 +69,11 @@ export function NoteCard({ note, onEdit, onDelete, onStartConversation }: NoteCa
           onEdit();
         }
       }}
-      className='group flex h-full cursor-pointer flex-col gap-3 rounded-xl border bg-background p-3 text-left transition-colors hover:bg-(--surface-hover) focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-(--interactive-primary)'
+      className='group flex h-full cursor-pointer flex-col gap-3 rounded-xl border bg-background p-3 text-left transition-colors hover:bg-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring'
       aria-label='编辑笔记'
     >
       {image ? (
-        <div className='overflow-hidden rounded-lg border bg-(--surface-muted)'>
+        <div className='overflow-hidden rounded-lg border bg-muted'>
           <img
             src={image.url}
             alt={image.name || '笔记图片'}
@@ -85,13 +85,13 @@ export function NoteCard({ note, onEdit, onDelete, onStartConversation }: NoteCa
 
       <div className='flex min-h-16 flex-1 flex-col gap-2'>
         {hasText ? (
-          <p className='whitespace-pre-wrap break-words text-sm text-(--text-secondary)'>
+          <p className='whitespace-pre-wrap break-words text-sm text-secondary'>
             {previewText}
           </p>
         ) : (
-          <p className='text-sm italic text-(--text-tertiary)'>点击编辑添加内容</p>
+          <p className='text-sm italic text-muted-foreground'>点击编辑添加内容</p>
         )}
-        <span className='text-xs text-(--text-tertiary)'>
+        <span className='text-xs text-muted-foreground'>
           {formatRelativeTime(note.updated_at)}
         </span>
       </div>
@@ -114,7 +114,7 @@ export function NoteCard({ note, onEdit, onDelete, onStartConversation }: NoteCa
           type='button'
           variant='ghost'
           size='icon'
-          className='h-8 w-8 text-(--text-tertiary) transition-opacity hover:text-destructive focus:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100'
+          className='h-8 w-8 text-muted-foreground transition-opacity hover:text-destructive focus:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100'
           aria-label='删除笔记'
           onClick={(event) => {
             event.stopPropagation();

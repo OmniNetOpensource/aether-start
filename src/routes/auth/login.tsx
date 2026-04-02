@@ -96,7 +96,7 @@ function LoginPage() {
   }, [navigate, redirectTarget, reset]);
 
   return (
-    <div className='w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
+    <div className='w-full max-w-sm rounded-2xl border bg-surface p-8 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
       <div className='mb-8 space-y-2 text-center'>
         <div className='mx-auto mb-6 flex h-12 w-12 rotate-3 cursor-default items-center justify-center rounded-xl bg-foreground text-background shadow-sm transition-transform hover:rotate-0 animate-in fade-in zoom-in-90 duration-300'>
           <svg
@@ -131,7 +131,7 @@ function LoginPage() {
           >
             <path d='M20 6 9 17l-5-5' />
           </svg>
-          <p className='text-sm text-emerald-600 dark:text-emerald-400'>
+          <p className='text-sm text-success'>
             密码已重置，请使用新密码登录
           </p>
         </div>
@@ -139,7 +139,7 @@ function LoginPage() {
 
       <form className='space-y-5' action={formAction}>
         <div className='space-y-2'>
-          <label className='text-sm font-medium text-(--text-secondary)' htmlFor='email'>
+          <label className='text-sm font-medium text-secondary' htmlFor='email'>
             邮箱
           </label>
           <Input
@@ -154,7 +154,7 @@ function LoginPage() {
             className={cn(
               errorMessage &&
                 errorMessage.includes('邮箱') &&
-                'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
+                'border-destructive focus-visible:ring-destructive',
             )}
             required
           />
@@ -162,13 +162,13 @@ function LoginPage() {
 
         <div className='space-y-2'>
           <div className='flex items-center justify-between'>
-            <label className='text-sm font-medium text-(--text-secondary)' htmlFor='password'>
+            <label className='text-sm font-medium text-secondary' htmlFor='password'>
               密码
             </label>
             <Link
               to='/auth/forgot-password'
               search={{ email: email.trim() || undefined }}
-              className='text-xs font-medium text-(--interactive-primary) hover:underline'
+              className='text-xs font-medium text-primary hover:underline'
             >
               忘记密码？
             </Link>
@@ -184,7 +184,7 @@ function LoginPage() {
             className={cn(
               errorMessage &&
                 errorMessage.includes('密码') &&
-                'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
+                'border-destructive focus-visible:ring-destructive',
             )}
             required
           />
@@ -192,7 +192,7 @@ function LoginPage() {
 
         <div className='min-h-[20px]'>
           {errorMessage ? (
-            <p className='flex items-center gap-1.5 text-sm text-(--status-destructive) animate-in fade-in slide-in-from-top-1 duration-200'>
+            <p className='flex items-center gap-1.5 text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200'>
               <svg
                 xmlns='http://www.w3.org/2000/svg'
                 width='14'
@@ -230,7 +230,7 @@ function LoginPage() {
         <Link
           to='/auth/register'
           search={{ redirect: redirectTarget }}
-          className='font-medium text-(--interactive-primary) hover:underline'
+          className='font-medium text-primary hover:underline'
         >
           注册
         </Link>

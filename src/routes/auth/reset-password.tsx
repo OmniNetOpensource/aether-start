@@ -120,13 +120,13 @@ function ResetPasswordPage() {
   const isTokenInvalid = formState.tokenInvalid;
 
   return (
-    <div className='w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
+    <div className='w-full max-w-sm rounded-2xl border bg-surface p-8 shadow-2xl backdrop-blur-xl  animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
       <div className='mb-8 space-y-2 text-center'>
         <div
           className={cn(
             'mx-auto mb-6 flex h-12 w-12 rotate-3 cursor-default items-center justify-center rounded-xl shadow-sm transition-transform hover:rotate-0 animate-in fade-in zoom-in-90 duration-300',
             isTokenInvalid
-              ? 'bg-(--status-destructive-muted) text-(--status-destructive)'
+              ? 'bg-destructive-muted text-destructive'
               : 'bg-foreground text-background',
           )}
         >
@@ -186,7 +186,7 @@ function ResetPasswordPage() {
           action={formAction}
         >
           <div className='space-y-2'>
-            <label className='text-sm font-medium text-(--text-secondary)' htmlFor='newPassword'>
+            <label className='text-sm font-medium text-secondary' htmlFor='newPassword'>
               新密码
             </label>
             <PasswordInput
@@ -199,7 +199,7 @@ function ResetPasswordPage() {
               disabled={isPending}
               className={cn(
                 errorMessage &&
-                  'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
+                  'border-destructive focus-visible:ring-destructive',
               )}
               required
             />
@@ -207,7 +207,7 @@ function ResetPasswordPage() {
 
           <div className='space-y-2'>
             <label
-              className='text-sm font-medium text-(--text-secondary)'
+              className='text-sm font-medium text-secondary'
               htmlFor='confirmPassword'
             >
               确认新密码
@@ -222,7 +222,7 @@ function ResetPasswordPage() {
               disabled={isPending}
               className={cn(
                 errorMessage &&
-                  'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
+                  'border-destructive focus-visible:ring-destructive',
               )}
               required
             />
@@ -230,7 +230,7 @@ function ResetPasswordPage() {
 
           <div className='min-h-[20px]'>
             {errorMessage ? (
-              <p className='flex items-center gap-1.5 text-sm text-(--status-destructive) animate-in fade-in slide-in-from-top-1 duration-200'>
+              <p className='flex items-center gap-1.5 text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200'>
                 <svg
                   xmlns='http://www.w3.org/2000/svg'
                   width='14'

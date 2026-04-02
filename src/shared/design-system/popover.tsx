@@ -18,7 +18,7 @@ function PopoverContent({
       <PopoverPrimitive.Content
         sideOffset={sideOffset}
         className={cn(
-          'bg-(--surface-secondary) text-foreground z-(--z-popover) w-72 origin-(--radix-popover-content-transform-origin) p-4 outline-hidden',
+          'bg-surface text-foreground z-(--z-popover) w-72 origin-(--radix-popover-content-transform-origin) p-4 outline-hidden',
           className,
         )}
         style={{

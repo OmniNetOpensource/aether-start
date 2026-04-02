@@ -17,137 +17,153 @@ import { Search } from 'lucide-react';
 import { Dialog, DialogContent, DialogTitle } from '@/shared/design-system/dialog';
 import { cn } from '@/shared/core/utils';
 
-const Command = React.forwardRef<
-  React.ElementRef<typeof CommandRoot>,
-  React.ComponentPropsWithoutRef<typeof CommandRoot>
->(({ className, ...props }, ref) => (
-  <CommandRoot
-    ref={ref}
-    className={cn(
-      'flex h-full w-full flex-col overflow-hidden rounded-md bg-(--surface-primary) text-(--text-primary)',
-      className,
-    )}
-    {...props}
-  />
-));
-Command.displayName = 'Command';
-
-/* Command is keyboard-initiated (100+ times/day) - no animation per Emil Design Engineering */
-const CommandDialog = ({
-  children,
-  label = 'Command menu',
-  contentClassName,
+function Command({
+  className,
+  ref,
   ...props
-}: React.ComponentProps<typeof CmdkCommandDialog>) => (
-  <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-    <DialogContent
-      className={cn(
-        'fixed top-[50%] left-[50%] w-full max-w-[calc(100vw-2rem)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2',
-        'overflow-hidden p-0 gap-0 rounded-lg border bg-(--surface-primary) shadow-lg sm:max-w-md',
-        contentClassName,
-      )}
-      showCloseButton={false}
-      animated={false}
-    >
-      <VisuallyHidden>
-        <DialogTitle>{label}</DialogTitle>
-      </VisuallyHidden>
-      {children}
-    </DialogContent>
-  </Dialog>
-);
-
-const CommandInput = React.forwardRef<
-  React.ElementRef<typeof CmdkCommandInput>,
-  React.ComponentPropsWithoutRef<typeof CmdkCommandInput>
->(({ className, ...props }, ref) => (
-  <div className='flex items-center border-b border-(--border-primary) px-3' cmdk-input-wrapper=''>
-    <Search className='mr-2 h-4 w-4 shrink-0 text-(--text-secondary)' />
-    <CmdkCommandInput
+}: React.ComponentPropsWithRef<typeof CommandRoot>) {
+  return (
+    <CommandRoot
       ref={ref}
       className={cn(
-        'flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-(--text-tertiary) disabled:cursor-not-allowed',
+        'flex h-full w-full flex-col overflow-hidden rounded-md bg-background text-foreground',
         className,
       )}
       {...props}
     />
-  </div>
-));
-CommandInput.displayName = 'CommandInput';
+  );
+}
 
-const CommandList = React.forwardRef<
-  React.ElementRef<typeof CmdkCommandList>,
-  React.ComponentPropsWithoutRef<typeof CmdkCommandList>
->(({ className, ...props }, ref) => (
-  <CmdkCommandList
-    ref={ref}
-    className={cn('max-h-72 overflow-y-auto overflow-x-hidden', className)}
-    {...props}
-  />
-));
-CommandList.displayName = 'CommandList';
+/* Command is keyboard-initiated (100+ times/day) - no animation per Emil Design Engineering */
+function CommandDialog({
+  children,
+  label = 'Command menu',
+  contentClassName,
+  ...props
+}: React.ComponentProps<typeof CmdkCommandDialog>) {
+  return (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      <DialogContent
+        className={cn(
+          'fixed top-[50%] left-[50%] w-full max-w-[calc(100vw-2rem)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2',
+          'overflow-hidden p-0 gap-0 rounded-lg border bg-background shadow-lg sm:max-w-md',
+          contentClassName,
+        )}
+        showCloseButton={false}
+        animated={false}
+      >
+        <VisuallyHidden>
+          <DialogTitle>{label}</DialogTitle>
+        </VisuallyHidden>
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-const CommandEmpty = React.forwardRef<
-  React.ElementRef<typeof CmdkCommandEmpty>,
-  React.ComponentPropsWithoutRef<typeof CmdkCommandEmpty>
->((props, ref) => (
-  <CmdkCommandEmpty
-    ref={ref}
-    className='py-6 text-center text-sm text-(--text-tertiary)'
-    {...props}
-  />
-));
-CommandEmpty.displayName = 'CommandEmpty';
+function CommandInput({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithRef<typeof CmdkCommandInput>) {
+  return (
+    <div className='flex items-center border-b border-border px-3' cmdk-input-wrapper=''>
+      <Search className='mr-2 h-4 w-4 shrink-0 text-secondary' />
+      <CmdkCommandInput
+        ref={ref}
+        className={cn(
+          'flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed',
+          className,
+        )}
+        {...props}
+      />
+    </div>
+  );
+}
 
-const CommandGroup = React.forwardRef<
-  React.ElementRef<typeof CmdkCommandGroup>,
-  React.ComponentPropsWithoutRef<typeof CmdkCommandGroup>
->(({ className, ...props }, ref) => (
-  <CmdkCommandGroup
-    ref={ref}
-    className={cn(
-      'overflow-hidden p-1 text-(--text-primary) [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-(--text-tertiary)',
-      className,
-    )}
-    {...props}
-  />
-));
-CommandGroup.displayName = 'CommandGroup';
+function CommandList({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithRef<typeof CmdkCommandList>) {
+  return (
+    <CmdkCommandList
+      ref={ref}
+      className={cn('max-h-72 overflow-y-auto overflow-x-hidden', className)}
+      {...props}
+    />
+  );
+}
 
-const CommandSeparator = React.forwardRef<
-  React.ElementRef<typeof CmdkCommandSeparator>,
-  React.ComponentPropsWithoutRef<typeof CmdkCommandSeparator>
->(({ className, ...props }, ref) => (
-  <CmdkCommandSeparator
-    ref={ref}
-    className={cn('-mx-1 h-px bg-(--border-primary)', className)}
-    {...props}
-  />
-));
-CommandSeparator.displayName = 'CommandSeparator';
+function CommandEmpty({
+  ref,
+  ...props
+}: React.ComponentPropsWithRef<typeof CmdkCommandEmpty>) {
+  return (
+    <CmdkCommandEmpty
+      ref={ref}
+      className='py-6 text-center text-sm text-muted-foreground'
+      {...props}
+    />
+  );
+}
 
-const CommandItem = React.forwardRef<
-  React.ElementRef<typeof CmdkCommandItem>,
-  React.ComponentPropsWithoutRef<typeof CmdkCommandItem>
->(({ className, ...props }, ref) => (
-  <CmdkCommandItem
-    ref={ref}
-    className={cn(
-      "relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-(--surface-hover) data-[selected=true]:text-(--text-primary) [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-      className,
-    )}
-    {...props}
-  />
-));
-CommandItem.displayName = 'CommandItem';
+function CommandGroup({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithRef<typeof CmdkCommandGroup>) {
+  return (
+    <CmdkCommandGroup
+      ref={ref}
+      className={cn(
+        'overflow-hidden p-1 text-foreground [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground',
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
-const CommandShortcut = ({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) => (
-  <span
-    className={cn('ml-auto text-xs tracking-widest text-(--text-tertiary)', className)}
-    {...props}
-  />
-);
-CommandShortcut.displayName = 'CommandShortcut';
+function CommandSeparator({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithRef<typeof CmdkCommandSeparator>) {
+  return (
+    <CmdkCommandSeparator
+      ref={ref}
+      className={cn('-mx-1 h-px bg-border', className)}
+      {...props}
+    />
+  );
+}
+
+function CommandItem({
+  className,
+  ref,
+  ...props
+}: React.ComponentPropsWithRef<typeof CmdkCommandItem>) {
+  return (
+    <CmdkCommandItem
+      ref={ref}
+      className={cn(
+        "relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-hover data-[selected=true]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
+function CommandShortcut({ className, ...props }: React.HTMLAttributes<HTMLSpanElement>) {
+  return (
+    <span
+      className={cn('ml-auto text-xs tracking-widest text-muted-foreground', className)}
+      {...props}
+    />
+  );
+}
 
 export {
   Command,

@@ -113,11 +113,11 @@ export default function Sidebar() {
         onMouseEnter={isMobile ? undefined : openSidebar}
         aria-label='展开侧边栏'
       />
-      <div className='pointer-events-none absolute left-0 top-1/2 z-(--z-sidebar) h-24 w-2 -translate-y-1/2 rounded-r-md bg-border transition-all duration-300 group-hover/sidebar-trigger:w-2.5 group-hover/sidebar-trigger:bg-(--border-primary)' />
+      <div className='pointer-events-none absolute left-0 top-1/2 z-(--z-sidebar) h-24 w-2 -translate-y-1/2 rounded-r-md bg-border transition-all duration-300 group-hover/sidebar-trigger:w-2.5 group-hover/sidebar-trigger:bg-border' />
 
       <aside
         ref={sidebarRef}
-        className='absolute left-0 top-0 z-(--z-sidebar) flex h-full w-64 -translate-x-full flex-col overflow-hidden bg-(--sidebar-surface) shadow-[2px_0_8px_-2px_#e8e8e8] transition-transform duration-300 ease-[var(--transition-smooth)] dark:shadow-[2px_0_8px_-2px_#0a0a0a] md:w-[22vw] md:min-w-65 md:max-w-90'
+        className='absolute left-0 top-0 z-(--z-sidebar) flex h-full w-64 -translate-x-full flex-col overflow-hidden bg-surface shadow-[2px_0_8px_-2px_var(--color-border)]/5 transition-transform duration-300 ease-[var(--transition-smooth)] md:w-[22vw] md:min-w-65 md:max-w-90'
         onMouseLeave={isMobile ? undefined : handleMouseLeave}
       >
         <div className='flex h-20 shrink-0 items-center px-6'>
@@ -131,13 +131,13 @@ export default function Sidebar() {
         </div>
 
         <div className='relative min-h-0 flex-1'>
-          <div className='pointer-events-none absolute left-0 right-0 top-0 z-10 h-6 bg-gradient-to-b from-(--sidebar-surface) to-transparent' />
+          <div className='pointer-events-none absolute left-0 right-0 top-0 z-10 h-6 bg-gradient-to-b from-surface to-transparent' />
           <div className='flex h-full min-h-0 flex-col px-6 py-6'>
             <div className='flex h-full min-h-0 flex-col gap-4 overflow-hidden'>
               <ConversationList onDropdownOpenChange={handleDropdownOpenChange} />
             </div>
           </div>
-          <div className='pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-6 bg-gradient-to-t from-(--sidebar-surface) to-transparent' />
+          <div className='pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-6 bg-gradient-to-t from-surface to-transparent' />
         </div>
 
         <ProfileMenu isCollapsed={false} onDropdownOpenChange={handleDropdownOpenChange} />

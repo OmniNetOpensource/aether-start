@@ -52,14 +52,14 @@ export function ReadonlyMessageList({ messages, isPhone = false }: ReadonlyMessa
               <div className={isUser ? 'w-full max-w-[90%] ml-auto' : 'w-full'}>
                 {shouldRenderBody &&
                   (isUser ? (
-                    <div className='rounded-lg bg-(--surface-muted) px-4 py-3'>
+                    <div className='rounded-lg bg-muted px-4 py-3'>
                       <AttachmentStack items={attachments} quotes={quotes} />
                       <div className='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
                         {contentBlocks.map((block) => block.content).join('\n\n')}
                       </div>
                     </div>
                   ) : (
-                    <div className='flex min-w-0 w-full flex-col space-y-3 text-base leading-relaxed text-(--text-secondary) wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
+                    <div className='flex min-w-0 w-full flex-col space-y-3 text-base leading-relaxed text-secondary wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
                       {assistantBlocks.map((block, blockIndex) => {
                         const blockKey = `${index}-${blockIndex}`;
 
@@ -83,7 +83,7 @@ export function ReadonlyMessageList({ messages, isPhone = false }: ReadonlyMessa
                           return (
                             <div
                               key={blockKey}
-                              className='flex items-start gap-2 rounded-lg border border-destructive bg-(--status-destructive-muted) px-3 py-2 text-sm text-destructive not-italic'
+                              className='flex items-start gap-2 rounded-lg border border-destructive bg-destructive-muted px-3 py-2 text-sm text-destructive not-italic'
                             >
                               <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
                               <div className='flex-1 whitespace-pre-wrap'>{block.message}</div>

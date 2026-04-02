@@ -1,0 +1,191 @@
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --color-background: #f3eee3;
+  --color-surface: #f7f1e6;
+  --color-muted: #ebe8e1;
+  --color-hover: #e4dfd5;
+  --color-active: #ddd6c9;
+  --color-foreground: #1a1a1a;
+  --color-secondary: #5c5a54;
+  --color-muted-foreground: #9c988e;
+  --color-border: #1a1a1a;
+  --color-primary: #1a1a1a;
+  --color-primary-hover: #000000;
+  --color-ring: #1a1a1a;
+  --color-accent: #a38b66;
+  --color-destructive: #bf616a;
+  --color-destructive-hover: #a8545d;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-muted: #fdf2f3;
+  --color-info: #81a1c1;
+  --color-info-foreground: #ffffff;
+  --color-success: #a3be8c;
+  --color-success-foreground: #ffffff;
+  --color-warning: #d08770;
+  --color-warning-foreground: #ffffff;
+
+  --sdm-bg: transparent;
+  --sdm-fg: #24292e;
+
+  --z-base: 0;
+  --z-card-inner: 1;
+  --z-sticky: 10;
+  --z-composer: 20;
+  --z-sidebar: 30;
+  --z-mobile-overlay: 40;
+  --z-mobile-sidebar: 41;
+  --z-floating: 50;
+  --z-draggable: 50;
+  --z-modal-backdrop: 60;
+  --z-modal-content: 61;
+  --z-popover: 70;
+  --z-tooltip: 80;
+  --z-toast: 90;
+
+  color-scheme: light;
+  --radius: 0.625rem;
+}
+
+html.dark {
+  --color-background: #161614;
+  --color-surface: #1c1a18;
+  --color-muted: #1a1917;
+  --color-hover: #262421;
+  --color-active: #2c2a26;
+  --color-foreground: #e3ded3;
+  --color-secondary: #a7a296;
+  --color-muted-foreground: #6d695f;
+  --color-border: #e3ded3;
+  --color-primary: #e3ded3;
+  --color-primary-hover: #ffffff;
+  --color-ring: #e3ded3;
+  --color-accent: #cbb693;
+  --color-destructive: #bf616a;
+  --color-destructive-hover: #d4737d;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-muted: #3d2a2d;
+  --color-info: #88c0d0;
+  --color-info-foreground: #1e3a8a;
+  --color-success: #a3be8c;
+  --color-success-foreground: #022c22;
+  --color-warning: #ebcb8b;
+  --color-warning-foreground: #451a03;
+
+  --shiki-dark-bg: transparent;
+  --shiki-dark: #e1e4e8;
+
+  color-scheme: dark;
+}
+
+html.nord {
+  --color-background: #2e3440;
+  --color-surface: #3b4252;
+  --color-muted: #353b49;
+  --color-hover: #434c5e;
+  --color-active: #4c566a;
+  --color-foreground: #eceff4;
+  --color-secondary: #d8dee9;
+  --color-muted-foreground: #7b88a1;
+  --color-border: #d8dee9;
+  --color-primary: #88c0d0;
+  --color-primary-hover: #8fbcbb;
+  --color-ring: #88c0d0;
+  --color-accent: #88c0d0;
+  --color-destructive: #bf616a;
+  --color-destructive-hover: #d08770;
+  --color-destructive-foreground: #eceff4;
+  --color-destructive-muted: #3d2a2d;
+  --color-info: #88c0d0;
+  --color-info-foreground: #2e3440;
+  --color-success: #a3be8c;
+  --color-success-foreground: #2e3440;
+  --color-warning: #ebcb8b;
+  --color-warning-foreground: #2e3440;
+
+  --shiki-dark-bg: transparent;
+  --shiki-dark: #d8dee9;
+
+  color-scheme: dark;
+}
+
+html.morandi {
+  --color-background: #e8e0d8;
+  --color-surface: #ede6df;
+  --color-muted: #dfd8d0;
+  --color-hover: #d5cdc4;
+  --color-active: #cbc2b8;
+  --color-foreground: #4a4039;
+  --color-secondary: #7a6e64;
+  --color-muted-foreground: #a89e94;
+  --color-border: #8a7e74;
+  --color-primary: #8a7e74;
+  --color-primary-hover: #6e6258;
+  --color-ring: #8a7e74;
+  --color-accent: #b4967a;
+  --color-destructive: #c4827a;
+  --color-destructive-hover: #b0746c;
+  --color-destructive-foreground: #faf5f0;
+  --color-destructive-muted: #f0e0dc;
+  --color-info: #8aacb8;
+  --color-info-foreground: #faf5f0;
+  --color-success: #9ab08c;
+  --color-success-foreground: #faf5f0;
+  --color-warning: #c8a87a;
+  --color-warning-foreground: #faf5f0;
+
+  --sdm-bg: transparent;
+  --sdm-fg: #4a4039;
+
+  color-scheme: light;
+}
+
+@theme inline {
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-muted: var(--color-muted);
+  --color-hover: var(--color-hover);
+  --color-active: var(--color-active);
+  --color-foreground: var(--color-foreground);
+  --color-secondary: var(--color-secondary);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-border: var(--color-border);
+  --color-primary: var(--color-primary);
+  --color-primary-hover: var(--color-primary-hover);
+  --color-ring: var(--color-ring);
+  --color-accent: var(--color-accent);
+  --color-destructive: var(--color-destructive);
+  --color-destructive-hover: var(--color-destructive-hover);
+  --color-destructive-foreground: var(--color-destructive-foreground);
+  --color-destructive-muted: var(--color-destructive-muted);
+  --color-info: var(--color-info);
+  --color-info-foreground: var(--color-info-foreground);
+  --color-success: var(--color-success);
+  --color-success-foreground: var(--color-success-foreground);
+  --color-warning: var(--color-warning);
+  --color-warning-foreground: var(--color-warning-foreground);
+
+  --font-sans:
+    system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --font-serif:
+    'Noto Serif SC', 'Noto Serif CJK SC', 'Source Han Serif SC', 'Source Serif 4', Georgia, serif;
+  --font-mono:
+    ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-body:
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans CJK SC', 'Segoe UI', system-ui,
+    sans-serif;
+  --text-2xs: 0.611rem;
+  --text-2xs--line-height: 1;
+
+  --transition-smooth: cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-spring: cubic-bezier(0.175, 0.885, 0.32, 1.1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --tw-ease: var(--ease-out);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}

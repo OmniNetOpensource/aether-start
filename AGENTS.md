@@ -309,3 +309,5 @@ Never commit real secrets.
 - Do not call `setState` synchronously inside an effect body.
 - 用尽可能少的 Tailwind CSS 和 `div` 达成同样效果。
 - Write extremely easy to consume code. Optimize for readability. Keep code skimmable. Avoid cleverness. Use early returns. Reduce the number of possible states. Prefer discriminated unions when they simplify the code. Remove optionality that is not real optionality. Do not add override parameters unless they are strictly necessary.
+
+- 能处理就处理，不能处理就别 catch——往上抛比假装没事好。catch 放在**有能力做出有意义响应的那一层**，不是每个函数都包一层。转化错误时保留原始信息（用 `cause`），别把底层细节直接扔给上层，也别把它丢掉。预期中的失败（网络断、输入非法）优雅降级；程序 bug 快速失败，别试图恢复一个你不理解的错误状态。异步错误必须有归宿，每个 Promise 都要有对应的 catch 或 await。不要用异常做流程控制，throw 是给异常情况用的。

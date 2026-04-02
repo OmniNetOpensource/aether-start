@@ -81,7 +81,7 @@ export function ConversationItem({
   return (
     <div
       className={`group relative flex-col w-full items-start justify-center gap-3 rounded-sm p-0.5 text-left transition-all  ${
-        isActive ? 'bg-(--surface-active)' : 'bg-transparent hover:bg-(--surface-hover)'
+        isActive ? 'bg-active' : 'bg-transparent hover:bg-hover'
       }`}
     >
       <Link
@@ -95,15 +95,15 @@ export function ConversationItem({
         <div className='pointer-events-none relative z-10 min-w-0 flex-1'>
           <div className='flex min-w-0 items-center gap-2'>
             {conversation.is_pinned ? (
-              <Pin className='size-3.5 shrink-0 text-(--text-tertiary)' />
+              <Pin className='size-3.5 shrink-0 text-muted-foreground' />
             ) : null}
             <span className='min-w-0 flex-1' title={title}>
               {useShimmer ? (
-                <Shimmer as='span' className='block text-sm font-medium text-(--text-secondary)'>
+                <Shimmer as='span' className='block text-sm font-medium text-secondary'>
                   {displayTitle}
                 </Shimmer>
               ) : (
-                <span className='block text-sm font-medium text-(--text-secondary)'>
+                <span className='block text-sm font-medium text-secondary'>
                   {displayTitle}
                 </span>
               )}
@@ -117,7 +117,7 @@ export function ConversationItem({
                 type='button'
                 onClick={handleMenuClick}
                 aria-label='Conversation actions'
-                className='flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-100 transition-opacity hover:bg-(--surface-hover) hover:text-foreground md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100'
+                className='flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-100 transition-opacity hover:bg-hover hover:text-foreground md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100'
               >
                 <MoreHorizontal className='size-4' />
               </button>

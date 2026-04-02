@@ -13,8 +13,8 @@ export function NotesButton() {
       variant='ghost'
       size='default'
       className={cn(
-        'group relative h-10 w-full justify-start overflow-hidden rounded-md border px-3 transition-all duration-300 ink-border bg-transparent text-(--text-secondary) hover:bg-(--surface-hover) hover:text-(--text-primary)',
-        isActive ? 'bg-(--surface-hover) text-(--text-primary)' : '',
+        'group relative h-10 w-full justify-start overflow-hidden rounded-md border px-3 transition-all duration-300 bg-transparent text-secondary hover:bg-hover hover:text-foreground',
+        isActive ? 'bg-hover text-foreground' : '',
       )}
       aria-label='灵感笔记'
     >

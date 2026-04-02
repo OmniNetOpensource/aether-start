@@ -76,7 +76,7 @@ function ThinkingStep({ text, hideConnector }: { text: string; hideConnector: bo
       icon={<div className='h-2 w-2 rounded-full bg-current' />}
       hideConnector={hideConnector}
     >
-      <div className='text-xs text-(--text-secondary) [&_p]:m-0'>
+      <div className='text-xs text-secondary [&_p]:m-0'>
         <Markdown content={text} />
       </div>
     </ChainOfThoughtStep>
@@ -179,7 +179,7 @@ function FetchStep({
           href={url}
           target='_blank'
           rel='noopener noreferrer'
-          className='text-xs text-muted-foreground hover:text-(--interactive-primary-hover) transition-colors break-all'
+          className='text-xs text-muted-foreground hover:text-primary-hover transition-colors break-all'
         >
           {url}
         </a>

@@ -166,7 +166,7 @@ export function Composer() {
           onRemoveQuote={removeQuote}
         />
         {/* 输入卡片：圆角底衬 + 聚焦时加深阴影；z-10 保证在附件条之上叠放 */}
-        <div className='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border border-white/30 bg-white/50 p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md dark:border-white/10 dark:bg-zinc-900/50'>
+        <div className='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md'>
           {/* 主输入行：多行文本框占满宽，底部与工具栏对齐 */}
           <div className='flex w-full items-end gap-2'>
             <Textarea
@@ -263,8 +263,8 @@ export function Composer() {
                   variant='ghost'
                   size='sm'
                   className={cn(
-                    'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-(--text-primary) hover:!text-(--text-primary)',
-                    'disabled:cursor-not-allowed disabled:text-(--text-primary)',
+                    'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground',
+                    'disabled:cursor-not-allowed disabled:text-foreground',
                   )}
                 >
                   <label
@@ -340,8 +340,8 @@ export function Composer() {
                 className={cn(
                   'h-9 w-9 shrink-0 rounded-full sm:h-10 sm:w-10 transition-all duration-200',
                   sendDisabled
-                    ? 'bg-(--surface-muted) text-(--text-tertiary) hover:bg-(--surface-muted) scale-90 cursor-not-allowed'
-                    : 'bg-(--interactive-primary) text-(--surface-primary) hover:bg-(--interactive-primary) hover:scale-105 active:scale-95',
+                    ? 'bg-muted text-muted-foreground hover:bg-muted scale-90 cursor-not-allowed'
+                    : 'bg-primary text-background hover:bg-primary hover:scale-105 active:scale-95',
                 )}
               >
                 {status === 'sending' ? (

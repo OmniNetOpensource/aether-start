@@ -44,9 +44,9 @@ function ChainOfThoughtHeader({
       data-slot='chain-of-thought-header'
       title='点击展开或收起'
       className={cn(
-        'group sticky top-0 z-0 flex w-full cursor-pointer items-center gap-1.5 py-0 text-xs font-medium text-(--text-tertiary)',
+        'group sticky top-0 z-0 flex w-full cursor-pointer items-center gap-1.5 py-0 text-xs font-medium text-muted-foreground',
         'bg-background -mx-1 px-1',
-        'hover:text-(--text-primary)',
+        'hover:text-foreground',
         'transition-colors duration-150',
         className,
       )}
@@ -54,7 +54,7 @@ function ChainOfThoughtHeader({
     >
       <ChevronRight
         aria-hidden
-        className='h-3.5 w-3.5 text-(--text-tertiary) transition-transform duration-200 group-data-[state=open]:rotate-90 group-hover:text-(--text-primary)'
+        className='h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90 group-hover:text-foreground'
       />
       <span>{children}</span>
     </CollapsiblePrimitive.CollapsibleTrigger>
@@ -104,14 +104,14 @@ function ChainOfThoughtStep({
 }: ChainOfThoughtStepProps) {
   const dotStatusStyles = {
     complete: 'opacity-100',
-    active: 'opacity-100 ring-1 ring-(--content-accent-muted)',
-    pending: 'text-(--text-tertiary)',
+    active: 'opacity-100 ring-1 ring-accent',
+    pending: 'text-muted-foreground',
   };
 
   const wrapperStatusStyles = {
     complete: '',
     active: '',
-    pending: 'text-(--text-tertiary)',
+    pending: 'text-muted-foreground',
   };
 
   const nodeContent = icon ?? (
@@ -133,20 +133,20 @@ function ChainOfThoughtStep({
       <div className='flex flex-col items-center pt-0.5'>
         <div
           className={cn(
-            'flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-(--text-secondary)',
+            'flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-secondary',
             icon && wrapperStatusStyles[status],
           )}
         >
           {nodeContent}
         </div>
-        {/* Connector line - lighter, hidden for last step */}
-        {!hideConnector && <div className='w-px flex-1 min-h-4 mt-0.5 bg-(--border-primary)' />}
+        {/* Connector line */}
+        {!hideConnector && <div className='w-px flex-1 min-h-4 mt-0.5 bg-border' />}
       </div>
 
       {/* Content column */}
       <div className='flex-1 min-w-0 pb-4'>
         {description && (
-          <div className='text-xs text-(--text-secondary) leading-relaxed'>{description}</div>
+          <div className='text-xs text-secondary leading-relaxed'>{description}</div>
         )}
         {children && <div className={description ? 'mt-2' : ''}>{children}</div>}
       </div>
@@ -187,14 +187,14 @@ function ChainOfThoughtSearchResult({
     <Badge
       variant='outline'
       className={cn(
-        'gap-1.5 px-2 py-0.5 text-[11px] max-w-full font-normal border-0 hover:bg-(--surface-hover) cursor-pointer transition-colors',
+        'gap-1.5 px-2 py-0.5 text-[11px] max-w-full font-normal border-0 hover:bg-hover cursor-pointer transition-colors',
         className,
       )}
     >
       {icon && <span className='shrink-0'>{icon}</span>}
       <span className='truncate min-w-0'>{children}</span>
       {url && (
-        <span className='shrink-0 text-(--text-tertiary)'>
+        <span className='shrink-0 text-muted-foreground'>
           {(() => {
             try {
               return new URL(url).host;
@@ -229,10 +229,10 @@ function ChainOfThoughtImage({ src, alt, caption, className, ...props }: ChainOf
       <img
         src={src}
         alt={alt}
-        className={cn('max-w-full rounded-lg border border-(--border-primary)', className)}
+        className={cn('max-w-full rounded-lg border border-border', className)}
         {...props}
       />
-      {caption && <div className='text-xs text-(--text-secondary)'>{caption}</div>}
+      {caption && <div className='text-xs text-secondary'>{caption}</div>}
     </div>
   );
 }

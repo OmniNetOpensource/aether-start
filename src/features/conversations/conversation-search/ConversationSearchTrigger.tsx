@@ -19,7 +19,7 @@ export function ConversationSearchTrigger({ variant = 'icon' }: ConversationSear
         size={isSidebar ? 'default' : 'icon-lg'}
         className={
           isSidebar
-            ? 'group relative h-10 w-full justify-start overflow-hidden rounded-md border px-3 transition-all duration-300 ink-border bg-transparent text-(--text-secondary) hover:bg-(--surface-hover) hover:text-(--text-primary)'
+            ? 'group relative h-10 w-full justify-start overflow-hidden rounded-md border px-3 transition-all duration-300 bg-transparent text-secondary hover:bg-hover hover:text-foreground'
             : 'rounded-lg'
         }
         aria-label='搜索聊天记录'

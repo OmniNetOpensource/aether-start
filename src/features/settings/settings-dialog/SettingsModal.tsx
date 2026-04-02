@@ -181,7 +181,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
         <div className='flex flex-col gap-6'>
           <div className='space-y-3'>
             <h3 className='text-sm font-medium text-muted-foreground'>Quota</h3>
-            <div className='space-y-3 rounded-lg border bg-(--surface-muted) p-3'>
+            <div className='space-y-3 rounded-lg border bg-muted p-3'>
               <div className='flex items-center justify-between'>
                 <span className='text-sm text-muted-foreground'>Remaining credits</span>
                 <span className='text-lg font-semibold'>
@@ -220,10 +220,10 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
 
           <div className='space-y-3'>
             <h3 className='text-sm font-medium text-muted-foreground'>Account</h3>
-            <div className='rounded-lg border bg-(--surface-muted) p-3'>
+            <div className='rounded-lg border bg-muted p-3'>
               <Button
                 variant='outline'
-                className='w-full justify-start gap-2 text-destructive hover:bg-(--status-destructive-muted) hover:text-destructive'
+                className='w-full justify-start gap-2 text-destructive hover:bg-destructive-muted hover:text-destructive'
                 onClick={handleSignOut}
                 disabled={isSigningOut}
               >
@@ -240,7 +240,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
           {isAdmin ? (
             <div className='space-y-3'>
               <h3 className='text-sm font-medium text-muted-foreground'>Redeem Codes</h3>
-              <div className='space-y-3 rounded-lg border bg-(--surface-muted) p-3'>
+              <div className='space-y-3 rounded-lg border bg-muted p-3'>
                 <div className='flex gap-2'>
                   <Input
                     placeholder='Code'
@@ -298,7 +298,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
                           {code.used_at ? (
                             <span className='ml-1 text-muted-foreground'>used</span>
                           ) : code.is_active ? (
-                            <span className='ml-1 text-emerald-600 dark:text-emerald-400'>
+                            <span className='ml-1 text-success'>
                               active
                             </span>
                           ) : (

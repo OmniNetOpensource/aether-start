@@ -52,8 +52,8 @@ export function NewChatButton({
       className={cn(
         'group relative h-10 overflow-hidden transition-all duration-300',
         isTopbar
-          ? 'w-10 rounded-lg hover:bg-(--surface-hover) hover:text-(--text-primary)'
-          : 'justify-start px-3 rounded-md border border-border bg-(--surface-muted) text-foreground shadow-[0_1px_2px_#e0e0e0] hover:shadow-[0_2px_6px_#d0d0d0] hover:bg-(--surface-hover) dark:shadow-[0_1px_2px_#1a1a1a] dark:hover:shadow-[0_2px_6px_#252525]',
+          ? 'w-10 rounded-lg hover:bg-hover hover:text-foreground'
+          : 'justify-start px-3 rounded-md border border-border bg-muted text-foreground shadow-xs hover:shadow-sm hover:bg-hover',
         className,
       )}
       style={isTopbar ? undefined : { width: isCollapsed ? 40 : '100%' }}

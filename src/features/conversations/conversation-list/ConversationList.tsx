@@ -58,7 +58,7 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
 
   if (isLoading && conversations.length === 0) {
     return (
-      <div className='flex items-center justify-center py-6 text-(--text-tertiary)'>
+      <div className='flex items-center justify-center py-6 text-muted-foreground'>
         <Loader2 className='h-4 w-4 animate-spin' />
         <span className='ml-2 text-xs'>加载会话中…</span>
       </div>
@@ -82,7 +82,7 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
         {hasNextPage || isFetchingNextPage ? (
           <div
             ref={sentinelRef}
-            className='flex items-center justify-center py-3 text-(--text-tertiary)'
+            className='flex items-center justify-center py-3 text-muted-foreground'
           >
             {isFetchingNextPage ? (
               <>

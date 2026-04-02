@@ -76,7 +76,7 @@ function ForgotPasswordPage() {
   const submittedEmail = formState.step === 'success' ? formState.email : '';
 
   return (
-    <div className='w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
+    <div className='w-full max-w-sm rounded-2xl border bg-surface p-8 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
       <div className='mb-8 space-y-2 text-center'>
         <div className='mx-auto mb-6 flex h-12 w-12 rotate-3 cursor-default items-center justify-center rounded-xl bg-foreground text-background shadow-sm transition-transform hover:rotate-0 animate-in fade-in zoom-in-90 duration-300'>
           <svg
@@ -114,7 +114,7 @@ function ForgotPasswordPage() {
             >
               <path d='M20 6 9 17l-5-5' />
             </svg>
-            <p className='text-sm text-emerald-600 dark:text-emerald-400'>
+            <p className='text-sm text-success'>
               如果该邮箱已注册，你将在几分钟内收到包含重置链接的邮件。
             </p>
           </div>
@@ -130,7 +130,7 @@ function ForgotPasswordPage() {
           action={formAction}
         >
           <div className='space-y-2'>
-            <label className='text-sm font-medium text-(--text-secondary)' htmlFor='email'>
+            <label className='text-sm font-medium text-secondary' htmlFor='email'>
               邮箱
             </label>
             <Input
@@ -144,7 +144,7 @@ function ForgotPasswordPage() {
               disabled={isPending}
               className={cn(
                 errorMessage &&
-                  'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
+                  'border-destructive focus-visible:ring-destructive',
               )}
               required
             />
@@ -152,7 +152,7 @@ function ForgotPasswordPage() {
 
           <div className='min-h-[20px]'>
             {errorMessage ? (
-              <p className='flex items-center gap-1.5 text-sm text-(--status-destructive) animate-in fade-in slide-in-from-top-1 duration-200'>
+              <p className='flex items-center gap-1.5 text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200'>
                 <svg
                   xmlns='http://www.w3.org/2000/svg'
                   width='14'

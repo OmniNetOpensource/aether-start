@@ -46,7 +46,7 @@ function RegisterPage() {
   const target = getSafeRedirectTarget(redirectTarget);
 
   return (
-    <div className='w-full max-w-sm rounded-2xl border bg-(--surface-secondary) p-8 shadow-2xl backdrop-blur-xl ink-border animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
+    <div className='w-full max-w-sm rounded-2xl border bg-surface p-8 shadow-2xl backdrop-blur-xl  animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
       {isVerifyMode ? (
         <VerifyEmailPanel
           key={normalizedRouteEmail}
@@ -150,7 +150,7 @@ function RegisterForm({
 
       <form className='space-y-5' action={formAction}>
         <div className='space-y-2'>
-          <label className='text-sm font-medium text-(--text-secondary)' htmlFor='reg-email'>
+          <label className='text-sm font-medium text-secondary' htmlFor='reg-email'>
             邮箱
           </label>
           <Input
@@ -165,14 +165,14 @@ function RegisterForm({
             className={cn(
               formErrorMessage &&
                 formErrorMessage.includes('邮箱') &&
-                'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
+                'border-destructive focus-visible:ring-destructive',
             )}
             required
           />
         </div>
 
         <div className='space-y-2'>
-          <label className='text-sm font-medium text-(--text-secondary)' htmlFor='reg-password'>
+          <label className='text-sm font-medium text-secondary' htmlFor='reg-password'>
             密码
           </label>
           <PasswordInput
@@ -186,7 +186,7 @@ function RegisterForm({
             className={cn(
               formErrorMessage &&
                 formErrorMessage.includes('密码') &&
-                'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
+                'border-destructive focus-visible:ring-destructive',
             )}
             required
           />
@@ -194,7 +194,7 @@ function RegisterForm({
 
         <div className='space-y-2'>
           <label
-            className='text-sm font-medium text-(--text-secondary)'
+            className='text-sm font-medium text-secondary'
             htmlFor='reg-password-confirm'
           >
             确认密码
@@ -210,14 +210,14 @@ function RegisterForm({
             className={cn(
               formErrorMessage &&
                 formErrorMessage.includes('密码') &&
-                'border-(--status-destructive) focus-visible:ring-(--status-destructive)',
+                'border-destructive focus-visible:ring-destructive',
             )}
             required
           />
         </div>
 
         <div className='space-y-2'>
-          <label className='text-sm font-medium text-(--text-secondary)' htmlFor='reg-code'>
+          <label className='text-sm font-medium text-secondary' htmlFor='reg-code'>
             验证码
           </label>
           <div className='flex gap-2'>
@@ -237,7 +237,7 @@ function RegisterForm({
 
         <div className='min-h-[20px]'>
           {formErrorMessage ? (
-            <p className='flex items-center gap-1.5 text-sm text-(--status-destructive) animate-in fade-in slide-in-from-top-1 duration-200'>
+            <p className='flex items-center gap-1.5 text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200'>
               <svg
                 xmlns='http://www.w3.org/2000/svg'
                 width='14'
@@ -275,7 +275,7 @@ function RegisterForm({
         <Link
           to='/auth/login'
           search={{ redirect: redirectTarget }}
-          className='font-medium text-(--interactive-primary) hover:underline'
+          className='font-medium text-primary hover:underline'
         >
           登录
         </Link>
@@ -397,7 +397,7 @@ function VerifyEmailPanel({
   return (
     <>
       <div className='mb-6 space-y-2 text-center'>
-        <div className='mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#e8e4dc] text-(--interactive-primary)'>
+        <div className='mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-primary'>
           <svg
             xmlns='http://www.w3.org/2000/svg'
             width='24'
@@ -435,8 +435,8 @@ function VerifyEmailPanel({
             onKeyDown={(event) => handleOtpKeyDown(index, event)}
             className={cn(
               'h-13 w-11 rounded-lg border bg-background text-center text-xl font-semibold outline-none transition-all',
-              'focus:border-(--interactive-primary) focus:ring-2 focus:ring-(--interactive-primary)',
-              verifyErrorMessage ? 'border-(--status-destructive)' : 'ink-border',
+              'focus:border-primary focus:ring-2 focus:ring-ring',
+              verifyErrorMessage ? 'border-destructive' : '',
             )}
             disabled={isVerifyingOtp}
             autoFocus={index === 0}
@@ -446,7 +446,7 @@ function VerifyEmailPanel({
 
       <div className='mb-4 min-h-[20px]'>
         {verifyErrorMessage ? (
-          <p className='text-center text-sm text-(--status-destructive) animate-in fade-in slide-in-from-top-1 duration-200'>
+          <p className='text-center text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200'>
             {verifyErrorMessage}
           </p>
         ) : null}

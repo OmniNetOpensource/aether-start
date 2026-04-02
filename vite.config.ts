@@ -16,7 +16,11 @@ const createManualChunk = (id: string) => {
     return 'vendor-react';
   }
 
-  if (id.includes('node_modules/streamdown') || id.includes('node_modules/@streamdown/cjk')) {
+  if (
+    id.includes('node_modules/streamdown') ||
+    id.includes('node_modules/@streamdown/cjk') ||
+    id.includes('node_modules/@streamdown/code')
+  ) {
     return 'markdown';
   }
 
