@@ -400,6 +400,34 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'openrouter',
   },
+  openrouterQwen36PlusFree: {
+    id: 'openrouterQwen36PlusFree',
+    name: 'qwen3.6-plus-free+openrouter',
+    model: 'qwen/qwen3.6-plus:free',
+    format: 'openai',
+    backend: 'openrouter',
+  },
+  openrouterGemma431bIt: {
+    id: 'openrouterGemma431bIt',
+    name: 'gemma-4-31b-it+openrouter',
+    model: 'google/gemma-4-31b-it',
+    format: 'openai',
+    backend: 'openrouter',
+  },
+  openrouterGrok420MultiAgent: {
+    id: 'openrouterGrok420MultiAgent',
+    name: 'grok-4.20-multi-agent+openrouter',
+    model: 'x-ai/grok-4.20-multi-agent',
+    format: 'openai',
+    backend: 'openrouter',
+  },
+  openrouterMimoV2Pro: {
+    id: 'openrouterMimoV2Pro',
+    name: 'mimo-v2-pro+openrouter',
+    model: 'xiaomi/mimo-v2-pro',
+    format: 'openai',
+    backend: 'openrouter',
+  },
 };
 
 export const getAvailableModels = (): { id: string; name: string }[] =>
