@@ -147,13 +147,19 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
 
               <DropdownMenuItem
                 onPointerMove={() => {
-                  void loadSettingsModal();
+                  void loadSettingsModal().catch((error) => {
+                    console.error('Failed to preload settings modal:', error);
+                  });
                 }}
                 onFocus={() => {
-                  void loadSettingsModal();
+                  void loadSettingsModal().catch((error) => {
+                    console.error('Failed to preload settings modal:', error);
+                  });
                 }}
                 onSelect={() => {
-                  void loadSettingsModal();
+                  void loadSettingsModal().catch((error) => {
+                    console.error('Failed to preload settings modal:', error);
+                  });
                   setSettingsOpen(true);
                 }}
               >

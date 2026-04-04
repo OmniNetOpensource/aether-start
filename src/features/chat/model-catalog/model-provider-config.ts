@@ -11,7 +11,8 @@ export type ChatBackend =
   | 'openrouter'
   | 'cubence-claude'
   | 'cubence-gemini'
-  | 'cubence-openai';
+  | 'cubence-openai'
+  | 'gemini-aistudio';
 
 export type ModelConfig = {
   id: string;
@@ -413,6 +414,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     model: 'google/gemma-4-31b-it',
     format: 'openai',
     backend: 'openrouter',
+  },
+  gemma431bItAistudio: {
+    id: 'gemma431bItAistudio',
+    name: 'gemma-4-31b-it+aistudio',
+    model: 'gemma-4-31b-it',
+    format: 'gemini',
+    backend: 'gemini-aistudio',
   },
   openrouterGrok420MultiAgent: {
     id: 'openrouterGrok420MultiAgent',

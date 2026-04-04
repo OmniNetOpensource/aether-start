@@ -115,6 +115,14 @@ const sleep = (ms: number) =>
   });
 
 const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
+  const waitForTurn = searchQueue;
+  let releaseQueue = () => {};
+  searchQueue = new Promise<void>((resolve) => {
+    releaseQueue = resolve;
+  });
+
+  await waitForTurn;
+
   const runTask = async () => {
     const now = Date.now();
     const elapsed = now - lastSearchAt;
@@ -128,10 +136,11 @@ const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
     return task();
   };
 
-  const queuedTask = searchQueue.catch(() => {}).then(runTask);
-
-  searchQueue = queuedTask.then(() => {}).catch(() => {});
-  return queuedTask;
+  try {
+    return await runTask();
+  } finally {
+    releaseQueue();
+  }
 };
 
 const performSearch = async (

@@ -30,7 +30,9 @@ export function ConversationList({ onDropdownOpenChange }: ConversationListProps
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
         if (isFetchingNextPage || !hasNextPage) return;
-        void fetchNextPage();
+        void fetchNextPage().catch((error) => {
+          console.error('Failed to fetch more conversations:', error);
+        });
       },
       { root, rootMargin: '120px' },
     );

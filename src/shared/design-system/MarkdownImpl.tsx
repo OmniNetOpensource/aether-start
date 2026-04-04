@@ -17,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/design-system/dialog';
+import { toast } from '@/shared/app-shell/useToast';
 import 'streamdown/styles.css';
 import 'katex/dist/katex.min.css';
 
@@ -104,18 +105,24 @@ function LinkSafetyModal({ isOpen, onClose, onConfirm, url }: LinkSafetyModalPro
   };
 
   const handleCopy = () => {
-    void navigator.clipboard.writeText(url).then(() => {
-      setCopied(true);
+    void navigator.clipboard.writeText(url).then(
+      () => {
+        setCopied(true);
 
-      if (copyTimerRef.current !== null) {
-        window.clearTimeout(copyTimerRef.current);
-      }
+        if (copyTimerRef.current !== null) {
+          window.clearTimeout(copyTimerRef.current);
+        }
 
-      copyTimerRef.current = window.setTimeout(() => {
-        setCopied(false);
-        copyTimerRef.current = null;
-      }, copyResetDelayMs);
-    });
+        copyTimerRef.current = window.setTimeout(() => {
+          setCopied(false);
+          copyTimerRef.current = null;
+        }, copyResetDelayMs);
+      },
+      (error) => {
+        console.error('Failed to copy external link:', error);
+        toast.error('Failed to copy link');
+      },
+    );
   };
 
   return (

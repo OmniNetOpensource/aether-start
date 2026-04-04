@@ -57,13 +57,13 @@ const getStatus = (value: unknown): number | undefined => {
 };
 
 const formatBackend = (baseURL: string): string => {
-  try {
-    const url = new URL(baseURL);
-    const path = url.pathname === '/' ? '' : url.pathname.replace(/\/$/, '');
-    return `${url.host}${path}`;
-  } catch {
+  if (!URL.canParse(baseURL)) {
     return baseURL;
   }
+
+  const url = new URL(baseURL);
+  const path = url.pathname === '/' ? '' : url.pathname.replace(/\/$/, '');
+  return `${url.host}${path}`;
 };
 
 const getCause = (value: unknown): unknown => {

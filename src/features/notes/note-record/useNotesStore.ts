@@ -8,6 +8,10 @@ import {
   type NotesCursor,
 } from '@/features/notes/note-record';
 import { getZustandDevtoolsOptions } from '@/shared/browser/zustand-devtools';
+import { toast } from '@/shared/app-shell/useToast';
+
+const wrapNoteError = (message: string, error: unknown) =>
+  new Error(message, error instanceof Error ? { cause: error } : undefined);
 
 export type NoteItem = {
   id: string;
@@ -107,7 +111,9 @@ export const useNotesStore = create<NotesState & NotesActions>()(
             cursor: page.nextCursor,
           }));
         } catch (error) {
-          console.error('Failed to load notes:', error);
+          const wrappedError = wrapNoteError('Failed to load notes', error);
+          console.error(wrappedError);
+          toast.error(wrappedError.message);
           set((state) => ({
             ...state,
             loading: false,
@@ -141,7 +147,9 @@ export const useNotesStore = create<NotesState & NotesActions>()(
             cursor: page.nextCursor,
           }));
         } catch (error) {
-          console.error('Failed to load more notes:', error);
+          const wrappedError = wrapNoteError('Failed to load more notes', error);
+          console.error(wrappedError);
+          toast.error(wrappedError.message);
           set((state) => ({
             ...state,
             loadingMore: false,
@@ -153,6 +161,7 @@ export const useNotesStore = create<NotesState & NotesActions>()(
 
       upsertNote: async (note) => {
         const normalized = normalizeNote(note);
+        const previousNotes = get().notes;
 
         set((state) => ({
           ...state,
@@ -170,11 +179,16 @@ export const useNotesStore = create<NotesState & NotesActions>()(
             },
           });
         } catch (error) {
-          console.error('Failed to upsert note:', error);
+          set((state) => ({
+            ...state,
+            notes: previousNotes,
+          }));
+          throw wrapNoteError('Failed to save note', error);
         }
       },
 
       deleteNote: async (id) => {
+        const previousNotes = get().notes;
         set((state) => ({
           ...state,
           notes: state.notes.filter((item) => item.id !== id),
@@ -183,7 +197,11 @@ export const useNotesStore = create<NotesState & NotesActions>()(
         try {
           await deleteNoteFn({ data: { id } });
         } catch (error) {
-          console.error('Failed to delete note:', error);
+          set((state) => ({
+            ...state,
+            notes: previousNotes,
+          }));
+          throw wrapNoteError('Failed to delete note', error);
         }
       },
 

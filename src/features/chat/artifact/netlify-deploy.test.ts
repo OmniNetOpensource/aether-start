@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import test from 'node:test';
 import { createHash } from 'node:crypto';
+import { test } from 'vitest';
 import { deployArtifactAndSaveDeployment, deployHtmlToNetlify } from './netlify-deploy.ts';
 
 const jsonResponse = (value: unknown) =>

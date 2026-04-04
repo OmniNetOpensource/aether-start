@@ -126,6 +126,18 @@ export function Composer() {
     input.trim().length !== 0 || pendingAttachments.length > 0 || pendingQuotes.length > 0;
   const sendDisabled = isBusy ? false : !hasComposerContent || uploading;
 
+  const handleSubmit = () => {
+    void submitMessage(async (conversationId) => {
+      await navigate({
+        to: '/app/c/$conversationId',
+        params: { conversationId },
+      });
+    }).catch((error) => {
+      console.error('Failed to submit message:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to send message');
+    });
+  };
+
   useEffect(() => {
     if (!import.meta.env.DEV) {
       return;
@@ -178,12 +190,7 @@ export function Composer() {
               onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
                 if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
                   event.preventDefault();
-                  void submitMessage((conversationId) =>
-                    navigate({
-                      to: '/app/c/$conversationId',
-                      params: { conversationId },
-                    }),
-                  );
+                  handleSubmit();
                 }
               }}
               onPaste={(event: ClipboardEvent<HTMLTextAreaElement>) => {
@@ -328,12 +335,7 @@ export function Composer() {
                     return;
                   }
 
-                  void submitMessage((conversationId) =>
-                    navigate({
-                      to: '/app/c/$conversationId',
-                      params: { conversationId },
-                    }),
-                  );
+                  handleSubmit();
                 }}
                 size='icon'
                 data-testid='composer-send-button'

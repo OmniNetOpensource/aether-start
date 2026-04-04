@@ -59,7 +59,9 @@ export function ConversationItem({
     deleteMutation.mutate(conversation.id);
 
     if (isActive) {
-      navigate({ to: '/app' });
+      void navigate({ to: '/app' }).catch((error) => {
+        console.error('Failed to navigate after deleting conversation:', error);
+      });
     }
   };
 

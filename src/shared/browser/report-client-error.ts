@@ -13,45 +13,59 @@ export type ClientErrorReportBody = {
   detail?: unknown;
 };
 
+const toSerializableDetail = (detail: unknown): unknown => {
+  if (detail === undefined) {
+    return undefined;
+  }
+
+  try {
+    JSON.stringify(detail);
+    return detail;
+  } catch (error) {
+    return {
+      message: error instanceof Error ? error.message : String(error),
+      value: String(detail),
+    };
+  }
+};
+
 export function reportClientError(payload: ClientErrorReportBody): void {
   if (typeof window === 'undefined') {
     return;
   }
 
-  try {
-    const body: Record<string, unknown> = {
-      kind: payload.kind,
-      message: payload.message,
-      pageUrl: payload.pageUrl,
-    };
-    if (payload.errorName !== undefined) {
-      body.errorName = payload.errorName;
-    }
-    if (payload.stack !== undefined) {
-      body.stack = payload.stack;
-    }
-    if (payload.componentStack !== undefined) {
-      body.componentStack = payload.componentStack;
-    }
-    if (payload.source !== undefined) {
-      body.source = payload.source;
-    }
-    if (payload.line !== undefined) {
-      body.line = payload.line;
-    }
-    if (payload.column !== undefined) {
-      body.column = payload.column;
-    }
-    if (payload.detail !== undefined) {
-      body.detail = payload.detail;
-    }
-
-    void fetch('/api/client-errors', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }).catch(() => {});
-  } catch {
-    // swallow — must not throw or recurse into global error handlers
+  const body: Record<string, unknown> = {
+    kind: payload.kind,
+    message: payload.message,
+    pageUrl: payload.pageUrl,
+  };
+  if (payload.errorName !== undefined) {
+    body.errorName = payload.errorName;
   }
+  if (payload.stack !== undefined) {
+    body.stack = payload.stack;
+  }
+  if (payload.componentStack !== undefined) {
+    body.componentStack = payload.componentStack;
+  }
+  if (payload.source !== undefined) {
+    body.source = payload.source;
+  }
+  if (payload.line !== undefined) {
+    body.line = payload.line;
+  }
+  if (payload.column !== undefined) {
+    body.column = payload.column;
+  }
+  if (payload.detail !== undefined) {
+    body.detail = toSerializableDetail(payload.detail);
+  }
+
+  void fetch('/api/client-errors', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  }).catch((error) => {
+    console.warn('Failed to report client error', error);
+  });
 }

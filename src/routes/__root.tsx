@@ -8,7 +8,6 @@ import { TooltipProvider } from '@/shared/design-system/tooltip';
 import { ToastContainer } from '@/shared/app-shell/toast-container';
 import { ResponsiveProvider } from '@/shared/app-shell/ResponsiveContext';
 import { NotFound } from '@/routes/-not-found';
-import { getTheme } from '@/shared/app-shell/theme';
 import { getSessionStateFn } from '@/features/auth/session';
 
 import appCss from '@/routes/globals.css?url';
@@ -33,7 +32,6 @@ export const Route = createRootRoute({
       href: `/auth/login?redirect=${encodeURIComponent(target)}`,
     });
   },
-  loader: () => getTheme(),
   component: RootComponent,
   head: () => ({
     meta: [
@@ -135,17 +133,8 @@ const themeInitScript = `(function(){var t=localStorage.getItem('theme');if(!t){
 const preHydrationInputScript = `(function(){var k='aether_composer_draft';var v=localStorage.getItem(k);window.__preHydrationInput=v===null?'':v;window.__preHydrationInputHandler=function(e){if(e.target&&e.target.id==='message-input'){window.__preHydrationInput=e.target.value;}};document.addEventListener('input',window.__preHydrationInputHandler);function inject(){var el=document.getElementById('message-input');if(el&&window.__preHydrationInput){el.value=window.__preHydrationInput;}}if(document.readyState==='loading'){document.addEventListener('DOMContentLoaded',inject);}else{inject();}})();`;
 
 function RootDocument({ children }: { children: React.ReactNode }) {
-  const theme = Route.useLoaderData();
   return (
-    <html
-      lang='en'
-      className={[
-        theme === 'dark' || theme === 'nord' ? 'dark' : '',
-        theme === 'nord' || theme === 'morandi' ? theme : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-    >
+    <html lang='en'>
       <head>
         {import.meta.env.DEV && (
           <script crossOrigin='anonymous' src='https://unpkg.com/react-scan/dist/auto.global.js' />

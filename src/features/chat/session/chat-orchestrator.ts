@@ -114,6 +114,26 @@ const isAbortError = (error: unknown) =>
   (error instanceof DOMException && error.name === 'AbortError') ||
   (error instanceof Error && error.name === 'AbortError');
 
+const getResponseErrorMessage = async (response: Response) => {
+  const contentType = response.headers.get('content-type') ?? '';
+  if (!contentType.includes('application/json')) {
+    return null;
+  }
+
+  const data = await response.json();
+  if (
+    typeof data === 'object' &&
+    data !== null &&
+    'error' in data &&
+    typeof data.error === 'string' &&
+    data.error.trim()
+  ) {
+    return data.error;
+  }
+
+  return null;
+};
+
 /**
  * 流结束后的收尾逻辑。
  * 异常结束时尝试自动重连；正常 idle 或无法重连时清理重连状态。
@@ -243,7 +263,7 @@ const consumeStreamResponse = async (response: Response) => {
     buffer += decoder.decode().replace(/\r\n/g, '\n');
     flush();
   } finally {
-    reader.cancel().catch(() => {});
+    await Promise.allSettled([reader.cancel()]);
   }
 };
 
@@ -342,7 +362,6 @@ export const startChatRequest = async () => {
 
     if (response.status === 409) {
       /* 服务端已有该对话的活跃流，视为 busy */
-      await response.json().catch(() => ({}));
       toast.warning(BUSY_WARNING);
       if (conversationId) {
         void resumeRunningConversation(conversationId);
@@ -405,12 +424,14 @@ export const cancelAnswering = (reason: string) => {
   cancelStreamSubscription(`cancelAnswering/${reason}`);
   const conversationId = useChatSessionStore.getState().conversationId;
   if (conversationId) {
-    fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
+    void fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
-    }).catch(() => {});
+    }).catch((error) => {
+      console.error('Failed to notify abort:', error);
+    });
   }
 };
 
@@ -435,14 +456,7 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
       return;
     }
 
-    let message = `提交失败: ${response.status}`;
-
-    try {
-      const data = (await response.json()) as Record<string, unknown>;
-      if (typeof data.error === 'string' && data.error.trim()) {
-        message = data.error;
-      }
-    } catch {}
+    const message = (await getResponseErrorMessage(response)) ?? `提交失败: ${response.status}`;
 
     throw new Error(message);
   } catch (error) {
@@ -469,9 +483,13 @@ export const resumeRunningConversation = async (conversationId: string) => {
 
   try {
     agentStatus = await checkAgentStatus(conversationId);
-  } catch {
+  } catch (error) {
+    console.error('Failed to probe agent status:', error);
     if (reconnectConversationId === conversationId) {
       scheduleAutoReconnect(conversationId);
+    } else {
+      useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/statusProbe');
+      toast.error(error instanceof Error ? error.message : '请求失败');
     }
     return;
   }

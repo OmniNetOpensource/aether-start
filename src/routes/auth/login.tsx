@@ -38,7 +38,7 @@ type LoginFormState = {
   error: string | null;
 };
 
-function LoginPage() {
+export function LoginPage() {
   const navigate = useNavigate();
   const { redirect: redirectTarget, reset, email: initialEmail } = Route.useSearch();
   const target = getSafeRedirectTarget(redirectTarget);
@@ -92,7 +92,9 @@ function LoginPage() {
   useEffect(() => {
     if (reset !== 'success') return;
     const qs = redirectTarget ? `?redirect=${encodeURIComponent(redirectTarget)}` : '';
-    void navigate({ href: `/auth/login${qs}`, replace: true });
+    void navigate({ href: `/auth/login${qs}`, replace: true }).catch((error) => {
+      console.error('Failed to reset login URL state:', error);
+    });
   }, [navigate, redirectTarget, reset]);
 
   return (

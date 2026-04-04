@@ -204,18 +204,18 @@ export const isSafeStorageKey = (storageKey: string) =>
   storageKey.startsWith(STORAGE_KEY_PREFIX) && !storageKey.includes('..');
 
 export const extractStorageKeyFromAssetUrl = (url: string): string | null => {
-  try {
-    const parsed = new URL(url, 'https://aether.local');
-    if (!parsed.pathname.startsWith(ASSET_ROUTE_PREFIX)) {
-      return null;
-    }
-
-    const encodedKey = parsed.pathname.slice(ASSET_ROUTE_PREFIX.length);
-    const decodedKey = decodeURIComponent(encodedKey);
-    return isSafeStorageKey(decodedKey) ? decodedKey : null;
-  } catch {
+  if (!URL.canParse(url, 'https://aether.local')) {
     return null;
   }
+
+  const parsed = new URL(url, 'https://aether.local');
+  if (!parsed.pathname.startsWith(ASSET_ROUTE_PREFIX)) {
+    return null;
+  }
+
+  const encodedKey = parsed.pathname.slice(ASSET_ROUTE_PREFIX.length);
+  const decodedKey = decodeURIComponent(encodedKey);
+  return isSafeStorageKey(decodedKey) ? decodedKey : null;
 };
 
 export const resolveStorageKeyForSharedAttachment = (attachment: SharedAttachmentSnapshot) => {

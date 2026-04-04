@@ -39,7 +39,7 @@ export const Route = createFileRoute('/auth/register')({
 });
 
 /** 根据是否处于「验证邮箱」阶段，在表单与 OTP 面板之间切换。 */
-function RegisterPage() {
+export function RegisterPage() {
   const { email: routeEmail, redirect: redirectTarget, verify } = Route.useSearch();
   const normalizedRouteEmail = routeEmail?.trim().toLowerCase() ?? '';
   const isVerifyMode = verify === 'true' && normalizedRouteEmail.length > 0;
@@ -82,6 +82,17 @@ function RegisterForm({
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [sendCodeError, setSendCodeError] = useState<string | null>(null);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const [sendCooldownSeconds, setSendCooldownSeconds] = useState(0);
+
+  useEffect(() => {
+    if (sendCooldownSeconds <= 0) return;
+    const id = setInterval(() => {
+      setSendCooldownSeconds((seconds) => (seconds <= 1 ? 0 : seconds - 1));
+    }, 1000);
+    return () => clearInterval(id);
+  }, [sendCooldownSeconds]);
 
   const [formState, formAction, isPending] = useActionState(
     async (_prev: RegisterFormState, formData: FormData): Promise<RegisterFormState> => {
@@ -125,6 +136,31 @@ function RegisterForm({
   );
 
   const formErrorMessage = formState.error;
+  const inlineErrorMessage = formErrorMessage ?? sendCodeError;
+
+  const sendVerificationCode = async () => {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setSendCodeError('请输入邮箱');
+      return;
+    }
+    if (sendCooldownSeconds > 0 || isSendingCode) return;
+
+    setSendCodeError(null);
+    setIsSendingCode(true);
+    const { error } = await authClient.emailOtp.sendVerificationOtp({
+      email: normalizedEmail,
+      type: 'email-verification',
+    });
+    setIsSendingCode(false);
+
+    if (error) {
+      setSendCodeError(getErrorMessage(error, 'register'));
+      return;
+    }
+
+    setSendCooldownSeconds(30);
+  };
 
   return (
     <>
@@ -159,7 +195,10 @@ function RegisterForm({
             type='email'
             autoComplete='email'
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setSendCodeError(null);
+            }}
             placeholder='name@example.com'
             disabled={isPending}
             className={cn(
@@ -226,14 +265,23 @@ function RegisterForm({
               disabled={isPending}
               className='flex-1'
             />
-            <Button type='button' variant='outline' disabled={isPending}>
-              发送验证码
+            <Button
+              type='button'
+              variant='outline'
+              disabled={isPending || isSendingCode || sendCooldownSeconds > 0}
+              onClick={sendVerificationCode}
+            >
+              {isSendingCode
+                ? '发送中...'
+                : sendCooldownSeconds > 0
+                  ? `${sendCooldownSeconds} 秒后重试`
+                  : '发送验证码'}
             </Button>
           </div>
         </div>
 
         <div className='min-h-[20px]'>
-          {formErrorMessage ? (
+          {inlineErrorMessage ? (
             <p className='flex items-center gap-1.5 text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200'>
               <svg
                 xmlns='http://www.w3.org/2000/svg'
@@ -250,7 +298,7 @@ function RegisterForm({
                 <line x1='12' x2='12' y1='8' y2='12' />
                 <line x1='12' x2='12.01' y1='16' y2='16' />
               </svg>
-              {formErrorMessage}
+              {inlineErrorMessage}
             </p>
           ) : null}
         </div>

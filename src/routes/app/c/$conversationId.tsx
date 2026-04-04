@@ -24,12 +24,13 @@ export function ConversationPage() {
     if (useChatSessionStore.getState().conversationId === conversationId) return;
     let cancelled = false;
 
-    void getConversationFn({ data: { id: conversationId } })
-      .then((conversation) => {
+    void (async () => {
+      try {
+        const conversation = await getConversationFn({ data: { id: conversationId } });
         if (cancelled) return;
 
         if (!conversation) {
-          navigate({ to: '/404', replace: true });
+          await navigate({ to: '/404', replace: true });
           return;
         }
 
@@ -46,12 +47,12 @@ export function ConversationPage() {
         store.setPageTitle(conversation.title ?? 'Aether');
         store.setCurrentModel(conversation.model ?? '');
         void resumeRunningConversation(conversationId);
-      })
-      .catch((error) => {
+      } catch (error) {
         if (cancelled) return;
         console.error('Failed to load conversation:', error);
-        navigate({ to: '/404', replace: true });
-      });
+        await navigate({ to: '/404', replace: true });
+      }
+    })();
 
     return () => {
       resetLastEventId();

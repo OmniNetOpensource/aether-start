@@ -19,9 +19,7 @@ const parseFetchUrlArgs = (args: unknown): FetchUrlArgs => {
     throw new Error('fetch_url requires a non-empty URL string');
   }
 
-  try {
-    new URL(url);
-  } catch {
+  if (!URL.canParse(url)) {
     throw new Error('Invalid URL format');
   }
 
@@ -43,6 +41,14 @@ const sleep = (ms: number) =>
   });
 
 const enqueueFetchUrlCall = async <T>(task: () => Promise<T>): Promise<T> => {
+  const waitForTurn = fetchUrlQueue;
+  let releaseQueue = () => {};
+  fetchUrlQueue = new Promise<void>((resolve) => {
+    releaseQueue = resolve;
+  });
+
+  await waitForTurn;
+
   const runTask = async () => {
     const now = Date.now();
     const elapsed = now - lastFetchUrlAt;
@@ -56,39 +62,40 @@ const enqueueFetchUrlCall = async <T>(task: () => Promise<T>): Promise<T> => {
     return task();
   };
 
-  const queuedTask = fetchUrlQueue.catch(() => {}).then(runTask);
-
-  fetchUrlQueue = queuedTask.then(() => {}).catch(() => {});
-  return queuedTask;
+  try {
+    return await runTask();
+  } finally {
+    releaseQueue();
+  }
 };
 
 // Image URL detection
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.ico'];
 
 const isDirectImageUrl = (url: string): boolean => {
-  try {
-    const parsedUrl = new URL(url);
-    const pathname = parsedUrl.pathname.toLowerCase();
-
-    if (IMAGE_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
-      return true;
-    }
-
-    const imageHostPatterns = [
-      /^i\.imgur\.com/,
-      /^images\.unsplash\.com/,
-      /^pbs\.twimg\.com/,
-      /\.cloudinary\.com.*\/image\//,
-      /\.githubusercontent\.com.*\.(png|jpg|jpeg|gif|webp)$/i,
-    ];
-
-    const host = parsedUrl.host.toLowerCase();
-    const fullPath = host + pathname;
-
-    return imageHostPatterns.some((pattern) => pattern.test(fullPath));
-  } catch {
+  if (!URL.canParse(url)) {
     return false;
   }
+
+  const parsedUrl = new URL(url);
+  const pathname = parsedUrl.pathname.toLowerCase();
+
+  if (IMAGE_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
+    return true;
+  }
+
+  const imageHostPatterns = [
+    /^i\.imgur\.com/,
+    /^images\.unsplash\.com/,
+    /^pbs\.twimg\.com/,
+    /\.cloudinary\.com.*\/image\//,
+    /\.githubusercontent\.com.*\.(png|jpg|jpeg|gif|webp)$/i,
+  ];
+
+  const host = parsedUrl.host.toLowerCase();
+  const fullPath = host + pathname;
+
+  return imageHostPatterns.some((pattern) => pattern.test(fullPath));
 };
 
 type ImageResult = {

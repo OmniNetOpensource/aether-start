@@ -193,13 +193,7 @@ function ChainOfThoughtSearchResult({
       <span className='truncate min-w-0'>{children}</span>
       {url && (
         <span className='shrink-0 text-muted-foreground'>
-          {(() => {
-            try {
-              return new URL(url).host;
-            } catch {
-              return url;
-            }
-          })()}
+          {URL.canParse(url) ? new URL(url).host : url}
         </span>
       )}
     </Badge>

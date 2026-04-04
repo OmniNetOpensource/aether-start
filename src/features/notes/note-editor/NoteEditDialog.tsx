@@ -61,13 +61,17 @@ export function NoteEditDialog({
     }
 
     const now = new Date().toISOString();
-    await onSave({
-      ...note,
-      content,
-      attachments,
-      updated_at: now,
-    });
-    onOpenChange(false);
+    try {
+      await onSave({
+        ...note,
+        content,
+        attachments,
+        updated_at: now,
+      });
+      onOpenChange(false);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : '保存失败');
+    }
   };
 
   return (

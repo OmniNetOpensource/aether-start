@@ -27,28 +27,28 @@ const requireEnvValue = (value: string | undefined, key: string, fallbackForCli?
 };
 
 const toOrigin = (value: string) => {
-  try {
-    return new URL(value).origin;
-  } catch {
+  if (!URL.canParse(value)) {
     return value;
   }
+
+  return new URL(value).origin;
 };
 
 const trustedOriginsForBaseURL = (value: string) => {
   const primary = toOrigin(value);
   const origins = [primary];
-  try {
-    const u = new URL(primary);
-    if (!u.port) {
-      return origins;
-    }
-    if (u.hostname === 'localhost') {
-      origins.push(`${u.protocol}//127.0.0.1:${u.port}`);
-    } else if (u.hostname === '127.0.0.1') {
-      origins.push(`${u.protocol}//localhost:${u.port}`);
-    }
-  } catch {
-    // keep primary only
+  if (!URL.canParse(primary)) {
+    return origins;
+  }
+
+  const u = new URL(primary);
+  if (!u.port) {
+    return origins;
+  }
+  if (u.hostname === 'localhost') {
+    origins.push(`${u.protocol}//127.0.0.1:${u.port}`);
+  } else if (u.hostname === '127.0.0.1') {
+    origins.push(`${u.protocol}//localhost:${u.port}`);
   }
   return origins;
 };

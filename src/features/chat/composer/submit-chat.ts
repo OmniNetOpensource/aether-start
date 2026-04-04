@@ -8,7 +8,9 @@ import { upsertConversationInCache } from '@/features/conversations/session';
 import { useComposerStore } from './useComposerStore';
 
 // 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
-export async function submitMessage(navigateToNewChat: (conversationId: string) => void) {
+export async function submitMessage(
+  navigateToNewChat: (conversationId: string) => Promise<void> | void,
+) {
   const composerStore = useComposerStore.getState();
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
@@ -54,7 +56,7 @@ export async function submitMessage(navigateToNewChat: (conversationId: string) 
     const now = new Date().toISOString();
 
     sessionStore.setConversationId(conversationId);
-    navigateToNewChat(conversationId);
+    await navigateToNewChat(conversationId);
     upsertConversationInCache({
       id: conversationId,
       title: 'New Chat',

@@ -75,6 +75,17 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 const asString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
 
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+const readJsonRequest = async (request: Request, message: string) => {
+  try {
+    return await request.json();
+  } catch (error) {
+    throw new Error(message, { cause: error });
+  }
+};
+
 // 标题生成只需要覆盖最近一段有效对话，截断可以控制 token 成本。
 const MAX_TITLE_TRANSCRIPT_CHARS = 4_000;
 
@@ -286,9 +297,15 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
   private sendSSE(writer: WritableStreamDefaultWriter<Uint8Array>, event: string, data: unknown) {
     // 单个连接写失败时只移除它自己，不影响其他订阅者继续收流。
-    writer
+    void writer
       .write(this.encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
-      .catch(() => this.writers.delete(writer));
+      .catch((error) => {
+        this.writers.delete(writer);
+        log('AGENT', 'Failed to write SSE event', {
+          event,
+          error: getErrorMessage(error),
+        });
+      });
   }
 
   private broadcast(event: string, data: unknown) {
@@ -300,7 +317,15 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   private async closeAllWriters() {
     const writers = [...this.writers];
     this.writers.clear();
-    await Promise.allSettled(writers.map((writer) => writer.close().catch(() => {})));
+    const results = await Promise.allSettled(writers.map((writer) => writer.close()));
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'rejected') {
+        log('AGENT', 'Failed to close SSE writer', {
+          writerIndex: index,
+          error: getErrorMessage(result.reason),
+        });
+      }
+    }
   }
 
   // ── POST /chat ───────────────────────────────────────────────────────
@@ -308,7 +333,14 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   // 接收一次新的聊天请求，完成鉴权、并发保护、quota 扣减，并立刻返回 SSE 流。
   // 真正的模型执行在后台进行，这样前端可以第一时间开始监听事件。
   private async handleChat(request: Request, userId: string): Promise<Response> {
-    const rawBody = await request.json().catch(() => null);
+    let rawBody: unknown;
+    try {
+      rawBody = await readJsonRequest(request, 'Invalid chat request body');
+    } catch (error) {
+      log('AGENT', 'Failed to parse chat request body', error);
+      return Response.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
     const message = parseChatRequestBody(rawBody);
 
     if (!message) {
@@ -420,7 +452,11 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
         })
         .finally(() => {
           this.abortController = null;
-          writer.close().catch(() => {});
+          void writer.close().catch((error) => {
+            log('AGENT', 'Failed to close chat response writer', {
+              error: getErrorMessage(error),
+            });
+          });
           this.writers.delete(writer);
         }),
     );
@@ -439,8 +475,19 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   // 给断线重连或页面恢复用的事件补拉入口。
   // 先回放 lastEventId 之后的缓存事件，再按当前状态决定是否继续挂长连接。
   private async handleEvents(request: Request, userId: string): Promise<Response> {
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    const lastEventId = Number(body.lastEventId ?? 0);
+    let rawBody: unknown;
+    try {
+      rawBody = await readJsonRequest(request, 'Invalid events request body');
+    } catch (error) {
+      log('AGENT', 'Failed to parse events request body', error);
+      return Response.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    if (!isObject(rawBody)) {
+      return Response.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const lastEventId = Number(rawBody.lastEventId ?? 0);
 
     // /events 虽然是只读补拉，但仍然只能由会话拥有者访问。
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
@@ -466,7 +513,11 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       this.writers.add(writer);
     } else {
       // Not running — write sync data and close
-      writer.close().catch(() => {});
+      void writer.close().catch((error) => {
+        log('AGENT', 'Failed to close sync response writer', {
+          error: getErrorMessage(error),
+        });
+      });
     }
 
     return new Response(readable, {
@@ -481,13 +532,10 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   // ── POST /abort ──────────────────────────────────────────────────────
 
   // 中断当前运行中的请求。这里返回 ok，只表示中断信号已经发出。
-  private async handleAbort(request: Request, userId: string): Promise<Response> {
+  private async handleAbort(_request: Request, userId: string): Promise<Response> {
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
       return new Response('Unauthorized', { status: 401 });
     }
-
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
-    void body;
 
     if (this.runtimeState.status !== 'running' || !this.abortController) {
       return Response.json({ ok: true });
@@ -545,7 +593,15 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    const payload = parseAskUserQuestionsAnswerSubmission(await request.json().catch(() => null));
+    let rawBody: unknown;
+    try {
+      rawBody = await readJsonRequest(request, 'Invalid tool answer request body');
+    } catch (error) {
+      log('AGENT', 'Failed to parse tool answer request body', error);
+      return Response.json({ error: 'Invalid request body' }, { status: 400 });
+    }
+
+    const payload = parseAskUserQuestionsAnswerSubmission(rawBody);
     if (!payload) {
       return Response.json({ error: 'Invalid request body' }, { status: 400 });
     }

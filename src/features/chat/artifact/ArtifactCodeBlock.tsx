@@ -43,17 +43,25 @@ export function ArtifactCodeBlock({ code, isCompleted }: { code: string; isCompl
 
     let cancelled = false;
 
-    void loadCodePlugin().then((plugin) => {
-      if (cancelled) return;
+    void loadCodePlugin().then(
+      (plugin) => {
+        if (cancelled) return;
 
-      const apply = (result: HighlightResult) => {
-        highlightCache.set(code, result);
-        if (!cancelled) setHighlight(result);
-      };
+        const apply = (result: HighlightResult) => {
+          highlightCache.set(code, result);
+          if (!cancelled) setHighlight(result);
+        };
 
-      const result = plugin.highlight({ code, language: lang, themes: plugin.getThemes() }, apply);
-      if (result) apply(result);
-    });
+        const result = plugin.highlight(
+          { code, language: lang, themes: plugin.getThemes() },
+          apply,
+        );
+        if (result) apply(result);
+      },
+      (error) => {
+        console.error('Failed to load code highlighter:', error);
+      },
+    );
 
     return () => {
       cancelled = true;

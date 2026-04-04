@@ -98,11 +98,16 @@ function HomePage() {
     }
 
     let cancelled = false;
-    void getForYouSuggestionsFn().then((list) => {
-      if (!cancelled) {
-        setSuggestions(list);
+    void (async () => {
+      try {
+        const list = await getForYouSuggestionsFn();
+        if (!cancelled) {
+          setSuggestions(list);
+        }
+      } catch (error) {
+        console.error('Failed to load for-you suggestions:', error);
       }
-    });
+    })();
     return () => {
       cancelled = true;
     };
@@ -117,7 +122,7 @@ function HomePage() {
       suggestions={suggestions}
       onPick={(text) => {
         useComposerStore.getState().setInput(text);
-        void Promise.resolve().then(() => {
+        queueMicrotask(() => {
           document.getElementById('message-input')?.focus();
         });
       }}

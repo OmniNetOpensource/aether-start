@@ -186,5 +186,15 @@ export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
     };
   }
 
+  if (backend === 'gemini-aistudio') {
+    const apiKey = env.GEMINI_API_KEY_AISTUDIO;
+    if (!apiKey) throw new Error('Missing GEMINI_API_KEY_AISTUDIO');
+    return {
+      apiKey,
+      baseURL: 'https://generativelanguage.googleapis.com',
+      defaultHeaders: { 'User-Agent': 'aether' },
+    };
+  }
+
   throw new Error(`Unknown backend: ${backend}`);
 };

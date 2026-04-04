@@ -132,6 +132,8 @@ function NotesPage() {
           });
 
           toast.success('Note created from clipboard');
+        } catch (error) {
+          toast.error(error instanceof Error ? error.message : 'Failed to create note');
         } finally {
           setCreatingByPaste(false);
         }
@@ -174,7 +176,9 @@ function NotesPage() {
     composer.setInput(note.content ?? '');
     composer.setPendingAttachments(note.attachments ?? []);
 
-    void navigate({ to: '/app' });
+    void navigate({ to: '/app' }).catch((error) => {
+      toast.error(error instanceof Error ? error.message : 'Failed to open chat');
+    });
   };
 
   const handleCreateNote = () => {
@@ -291,7 +295,9 @@ function NotesPage() {
               className='bg-destructive text-destructive-foreground hover:bg-destructive/90'
               onClick={() => {
                 if (noteToDelete) {
-                  void deleteNote(noteToDelete.id);
+                  void deleteNote(noteToDelete.id).catch((error) => {
+                    toast.error(error instanceof Error ? error.message : 'Failed to delete note');
+                  });
                   setNoteToDelete(null);
                 }
               }}

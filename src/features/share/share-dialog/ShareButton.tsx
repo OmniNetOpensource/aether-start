@@ -48,13 +48,19 @@ export function ShareButton() {
           isBusy ? 'Sharing is unavailable while a response is streaming.' : 'Share conversation'
         }
         onPointerEnter={() => {
-          void loadShareDialog();
+          void loadShareDialog().catch((error) => {
+            console.error('Failed to preload share dialog:', error);
+          });
         }}
         onFocus={() => {
-          void loadShareDialog();
+          void loadShareDialog().catch((error) => {
+            console.error('Failed to preload share dialog:', error);
+          });
         }}
         onClick={() => {
-          void loadShareDialog();
+          void loadShareDialog().catch((error) => {
+            console.error('Failed to preload share dialog:', error);
+          });
           setOpen(true);
         }}
         disabled={isBusy}
