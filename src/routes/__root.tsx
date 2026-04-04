@@ -134,7 +134,7 @@ const preHydrationInputScript = `(function(){var k='aether_composer_draft';var v
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang='en'>
+    <html lang='en' suppressHydrationWarning>
       <head>
         {import.meta.env.DEV && (
           <script crossOrigin='anonymous' src='https://unpkg.com/react-scan/dist/auto.global.js' />

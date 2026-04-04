@@ -255,6 +255,8 @@ const createAuth = () => {
             return;
           }
 
+          console.log('[sendVerificationOTP]', { type, email });
+
           const resend = new Resend(resendApiKey);
           const subjectMap = {
             'email-verification': 'Aether 邮箱验证',
@@ -263,12 +265,15 @@ const createAuth = () => {
             'change-email': 'Aether 更换邮箱',
           } as const;
 
-          await resend.emails.send({
+          const sendResult = await resend.emails.send({
             from: 'noreply@mail.forkicks.fun',
             to: email,
             subject: subjectMap[type],
             html: `<p>你的验证码是：</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px;margin:16px 0">${otp}</p><p>验证码 5 分钟内有效，请勿泄露给他人。</p>`,
           });
+          if (sendResult.error) {
+            throw new Error(sendResult.error.message, { cause: sendResult.error });
+          }
         },
       }),
     ],
