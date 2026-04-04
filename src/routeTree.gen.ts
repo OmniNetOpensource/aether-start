@@ -19,10 +19,8 @@ import { Route as AuthIndexRouteImport } from './routes/auth/index'
 import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ShareTokenRouteImport } from './routes/share/$token'
 import { Route as BenchmarkMarkdownRouteImport } from './routes/benchmark/markdown'
-import { Route as AuthResetPasswordRouteImport } from './routes/auth/reset-password'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
-import { Route as AuthForgotPasswordRouteImport } from './routes/auth/forgot-password'
 import { Route as ApiUploadAttachmentRouteImport } from './routes/api/upload-attachment'
 import { Route as ApiClientErrorsRouteImport } from './routes/api/client-errors'
 import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
@@ -80,11 +78,6 @@ const BenchmarkMarkdownRoute = BenchmarkMarkdownRouteImport.update({
   path: '/benchmark/markdown',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
-  id: '/reset-password',
-  path: '/reset-password',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
 const AuthRegisterRoute = AuthRegisterRouteImport.update({
   id: '/register',
   path: '/register',
@@ -93,11 +86,6 @@ const AuthRegisterRoute = AuthRegisterRouteImport.update({
 const AuthLoginRoute = AuthLoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
-const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
-  id: '/forgot-password',
-  path: '/forgot-password',
   getParentRoute: () => AuthRouteRoute,
 } as any)
 const ApiUploadAttachmentRoute = ApiUploadAttachmentRouteImport.update({
@@ -139,10 +127,8 @@ export interface FileRoutesByFullPath {
   '/404': typeof R404Route
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
-  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
@@ -159,10 +145,8 @@ export interface FileRoutesByTo {
   '/404': typeof R404Route
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
-  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
   '/app': typeof AppIndexRoute
@@ -182,10 +166,8 @@ export interface FileRoutesById {
   '/404': typeof R404Route
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
-  '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
-  '/auth/reset-password': typeof AuthResetPasswordRoute
   '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
   '/app/': typeof AppIndexRoute
@@ -206,10 +188,8 @@ export interface FileRouteTypes {
     | '/404'
     | '/api/client-errors'
     | '/api/upload-attachment'
-    | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
-    | '/auth/reset-password'
     | '/benchmark/markdown'
     | '/share/$token'
     | '/app/'
@@ -226,10 +206,8 @@ export interface FileRouteTypes {
     | '/404'
     | '/api/client-errors'
     | '/api/upload-attachment'
-    | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
-    | '/auth/reset-password'
     | '/benchmark/markdown'
     | '/share/$token'
     | '/app'
@@ -248,10 +226,8 @@ export interface FileRouteTypes {
     | '/404'
     | '/api/client-errors'
     | '/api/upload-attachment'
-    | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/register'
-    | '/auth/reset-password'
     | '/benchmark/markdown'
     | '/share/$token'
     | '/app/'
@@ -352,13 +328,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BenchmarkMarkdownRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/auth/reset-password': {
-      id: '/auth/reset-password'
-      path: '/reset-password'
-      fullPath: '/auth/reset-password'
-      preLoaderRoute: typeof AuthResetPasswordRouteImport
-      parentRoute: typeof AuthRouteRoute
-    }
     '/auth/register': {
       id: '/auth/register'
       path: '/register'
@@ -371,13 +340,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/auth/login'
       preLoaderRoute: typeof AuthLoginRouteImport
-      parentRoute: typeof AuthRouteRoute
-    }
-    '/auth/forgot-password': {
-      id: '/auth/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/auth/forgot-password'
-      preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/api/upload-attachment': {
@@ -440,18 +402,14 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 )
 
 interface AuthRouteRouteChildren {
-  AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
-  AuthResetPasswordRoute: typeof AuthResetPasswordRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
-  AuthForgotPasswordRoute: AuthForgotPasswordRoute,
   AuthLoginRoute: AuthLoginRoute,
   AuthRegisterRoute: AuthRegisterRoute,
-  AuthResetPasswordRoute: AuthResetPasswordRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 
