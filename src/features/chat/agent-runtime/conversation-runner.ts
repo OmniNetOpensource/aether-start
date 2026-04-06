@@ -78,14 +78,6 @@ const asString = (value: unknown): string | null =>
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
-const readJsonRequest = async (request: Request, message: string) => {
-  try {
-    return await request.json();
-  } catch (error) {
-    throw new Error(message, { cause: error });
-  }
-};
-
 // 标题生成只需要覆盖最近一段有效对话，截断可以控制 token 成本。
 const MAX_TITLE_TRANSCRIPT_CHARS = 4_000;
 
@@ -335,7 +327,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   private async handleChat(request: Request, userId: string): Promise<Response> {
     let rawBody: unknown;
     try {
-      rawBody = await readJsonRequest(request, 'Invalid chat request body');
+      rawBody = await request.json();
     } catch (error) {
       log('AGENT', 'Failed to parse chat request body', error);
       return Response.json({ error: 'Invalid request body' }, { status: 400 });
@@ -477,7 +469,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   private async handleEvents(request: Request, userId: string): Promise<Response> {
     let rawBody: unknown;
     try {
-      rawBody = await readJsonRequest(request, 'Invalid events request body');
+      rawBody = await request.json();
     } catch (error) {
       log('AGENT', 'Failed to parse events request body', error);
       return Response.json({ error: 'Invalid request body' }, { status: 400 });
@@ -593,9 +585,9 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    let rawBody: unknown;
+    let rawBody: Record<string, unknown>;
     try {
-      rawBody = await readJsonRequest(request, 'Invalid tool answer request body');
+      rawBody = await request.json();
     } catch (error) {
       log('AGENT', 'Failed to parse tool answer request body', error);
       return Response.json({ error: 'Invalid request body' }, { status: 400 });
