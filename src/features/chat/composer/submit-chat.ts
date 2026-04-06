@@ -1,8 +1,8 @@
-import { startChatRequest } from '@/features/chat/session';
+import { startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { buildUserBlocks } from '@/features/conversations/conversation-tree';
 import type { Attachment } from '@/features/chat/message-thread';
 import { toast } from '@/shared/app-shell/useToast';
-import { useChatRequestStore } from '@/features/chat/session';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { upsertConversationInCache } from '@/features/conversations/session';
 import { useComposerStore } from './useComposerStore';

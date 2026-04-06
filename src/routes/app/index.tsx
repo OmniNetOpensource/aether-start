@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { getForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
-import { cancelStreamSubscription } from '@/features/chat/session';
+import { cancelStreamSubscription } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 

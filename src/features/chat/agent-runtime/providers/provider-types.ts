@@ -2,7 +2,7 @@ import type {
   ChatServerToClientEvent,
   PendingToolInvocation,
   ToolInvocationResult,
-} from '@/features/chat/session';
+} from '@/features/chat/chat-api';
 import type { ChatTool } from '../tool-types';
 import type { BackendConfig } from './backend-config';
 import type { SerializedMessage } from '@/features/chat/message-thread';

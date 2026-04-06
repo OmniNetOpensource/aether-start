@@ -5,7 +5,7 @@ import { buildAttachmentsFromFiles } from '@/features/attachments/attachment-upl
 import { collectClipboardFiles } from '@/shared/browser/file';
 import { NoteCard } from '@/features/notes/note-list';
 import { NoteEditDialog } from '@/features/notes/note-editor';
-import { useChatRequestStore } from '@/features/chat/session';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { useEditingStore } from '@/features/chat/message-thread';
 import { useNotesStore, type NoteItem } from '@/features/notes/note-record';

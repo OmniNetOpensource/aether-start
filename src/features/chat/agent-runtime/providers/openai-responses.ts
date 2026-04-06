@@ -11,7 +11,7 @@ import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
-} from '@/features/chat/session';
+} from '@/features/chat/chat-api';
 import type { ChatTool } from '../tool-types';
 import type { SerializedMessage } from '@/features/chat/message-thread';
 import type { ChatProvider, ChatProviderConfig } from './provider-types';

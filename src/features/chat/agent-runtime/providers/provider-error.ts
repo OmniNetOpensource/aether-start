@@ -4,7 +4,7 @@ import type {
   ChatErrorInfo,
   ChatErrorProvider,
   ChatServerToClientEvent,
-} from '@/features/chat/session';
+} from '@/features/chat/chat-api';
 
 type ProviderErrorInput = {
   provider: Exclude<ChatErrorProvider, 'system'>;

@@ -8,7 +8,7 @@ import {
   type RefObject,
 } from 'react';
 import { ChevronUp, ChevronDown, ArrowDown } from 'lucide-react';
-import { useChatRequestStore } from '@/features/chat/session';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
 import { Button } from '@/shared/design-system/button';

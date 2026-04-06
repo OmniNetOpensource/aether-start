@@ -1,4 +1,4 @@
-import type { ArtifactLanguage } from '@/features/chat/session';
+import type { ArtifactLanguage } from '@/features/chat/chat-api';
 import type { ConversationArtifact } from '@/features/conversations/session';
 
 export type ConversationListCursor = {

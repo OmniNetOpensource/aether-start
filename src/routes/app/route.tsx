@@ -4,7 +4,7 @@ import { MessageList } from '@/features/chat/message-thread/MessageList';
 import Sidebar from '@/features/conversations/conversation-list';
 import { Composer } from '@/features/chat/composer/Composer';
 import { getAvailableModelsFn, getAvailablePromptsFn } from '@/features/chat/model-catalog';
-import { NewChatButton } from '@/features/chat/session';
+import { NewChatButton } from '@/features/conversations/conversation-list/NewChatButton';
 import { ArtifactToggleButton } from '@/features/chat/artifact';
 import { ShareButton } from '@/features/share/share-dialog';
 import {

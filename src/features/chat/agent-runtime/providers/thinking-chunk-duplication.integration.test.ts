@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { describe, expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { OpenAIChatProvider } from './openai';
-import type { ChatServerToClientEvent } from '@/features/chat/session';
+import type { ChatServerToClientEvent } from '@/features/chat/chat-api';
 import { processEventToTree } from '@/features/chat/agent-runtime/event-processor';
 import { createEmptyMessageState } from '@/features/conversations/conversation-tree/message-tree';
 import { ResearchBlock } from '@/features/chat/research/ResearchBlock';

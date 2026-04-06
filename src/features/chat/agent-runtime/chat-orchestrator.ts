@@ -15,11 +15,14 @@
 import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import { applyChatEventToTree } from './event-handlers';
-import { useChatRequestStore } from './useChatRequestStore';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import type { SerializedMessage } from '@/features/chat/message-thread';
-import type { ChatAgentStatus, MessageTreeSnapshot } from '@/features/chat/session';
-import type { ChatServerToClientEvent } from '@/features/chat/session';
+import type {
+  ChatAgentStatus,
+  ChatServerToClientEvent,
+  MessageTreeSnapshot,
+} from '@/features/chat/chat-api';
 
 /** Agent 路由名，对应 /agents/conversation-runner */
 const AGENT_NAME = 'conversation-runner';

@@ -10,7 +10,7 @@ import { log } from '@/features/chat/agent-runtime';
 import { getBackendConfig } from './providers/backend-config';
 import { createChatProvider } from '@/features/chat/agent-runtime';
 import type { ProviderRunResult } from '@/features/chat/agent-runtime';
-import { generateTitleFromConversation } from '../session/chat-title';
+import { generateTitleFromConversation } from './chat-title';
 import { generateAndPersistForYouSuggestions } from '@/features/chat/for-you/for-you-suggestions.server';
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/agent-runtime';
 import {
@@ -34,7 +34,7 @@ import type {
   PendingToolInvocation,
   PersistedChatEvent,
   ToolInvocationResult,
-} from '@/features/chat/session';
+} from '@/features/chat/chat-api';
 import type { Message, SerializedMessage } from '@/features/chat/message-thread';
 
 // Durable Object 只服务一个会话实例，所以这里记录的是“这一个会话”当前的运行态。
