@@ -1,5 +1,5 @@
 import { AskUserQuestionsCard } from '@/features/chat/ask-user-questions';
-import { useState, type ReactNode } from 'react';
+import { memo, useState, type ReactNode } from 'react';
 import Markdown from '@/shared/design-system/Markdown';
 import { Message } from '@/features/chat/message-thread';
 import { getBranchInfo as getBranchInfoFn } from '@/features/conversations/conversation-tree';
@@ -96,7 +96,12 @@ const formatMessageTime = (iso: string) =>
     minute: '2-digit',
   });
 
-export function MessageItem({ messageId, index, depth, isStreaming }: MessageItemProps) {
+export const MessageItem = memo(function MessageItem({
+  messageId,
+  index,
+  depth,
+  isStreaming,
+}: MessageItemProps) {
   const messageFromStore = useChatSessionStore((state) => state.messages[messageId - 1]);
   const status = useChatRequestStore((s) => s.status);
   const isEditing = useEditingStore((state) => state.editingState?.messageId === messageId);
@@ -263,4 +268,4 @@ export function MessageItem({ messageId, index, depth, isStreaming }: MessageIte
       </div>
     </div>
   );
-}
+});

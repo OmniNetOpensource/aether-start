@@ -135,18 +135,6 @@ const convertToolsToOpenAI = (tools: ChatTool[]): OpenAITool[] => {
 };
 
 const extractThinkingTexts = (delta: Record<string, unknown>): string[] => {
-  const thinkingTexts: string[] = [];
-
-  const tryPush = (value: unknown) => {
-    if (typeof value === 'string' && value.trim()) {
-      thinkingTexts.push(value);
-    }
-  };
-
-  tryPush(delta.thinking);
-  tryPush(delta.reasoning);
-  tryPush(delta.reasoning_content);
-
   const detailCandidates = [
     delta.reasoning_details,
     delta.reasoningDetails,
@@ -158,21 +146,45 @@ const extractThinkingTexts = (delta: Record<string, unknown>): string[] => {
       continue;
     }
 
+    const detailTexts: string[] = [];
+
     for (const item of candidate) {
       if (typeof item === 'string') {
-        tryPush(item);
+        if (item.trim()) {
+          detailTexts.push(item);
+        }
         continue;
       }
 
       if (item && typeof item === 'object') {
         const detail = item as Record<string, unknown>;
-        tryPush(detail.text);
-        tryPush(detail.content);
+        if (typeof detail.text === 'string' && detail.text.trim()) {
+          detailTexts.push(detail.text);
+        }
+        if (typeof detail.content === 'string' && detail.content.trim()) {
+          detailTexts.push(detail.content);
+        }
       }
+    }
+
+    if (detailTexts.length > 0) {
+      return [...new Set(detailTexts)];
     }
   }
 
-  return thinkingTexts;
+  const flatCandidates = [
+    delta.reasoning_content,
+    delta.reasoning,
+    delta.thinking,
+  ];
+
+  for (const candidate of flatCandidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return [candidate];
+    }
+  }
+
+  return [];
 };
 
 export async function convertToOpenAIMessages(
