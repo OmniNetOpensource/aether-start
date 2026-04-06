@@ -101,7 +101,8 @@ const getRenderedThinkingText = (events: ChatServerToClientEvent[]) => {
   }
 
   const researchBlock = assistantMessage.blocks.find(
-    (block): block is Extract<AssistantContentBlock, { type: 'research' }> => block.type === 'research',
+    (block): block is Extract<AssistantContentBlock, { type: 'research' }> =>
+      block.type === 'research',
   );
   if (!researchBlock) {
     return '';
@@ -127,72 +128,68 @@ const getRenderedThinkingText = (events: ChatServerToClientEvent[]) => {
 };
 
 describe('thinking chunk duplication', () => {
-  it(
-    'fails when the rendered page would show duplicated thinking chunks from one real mimo response',
-    async () => {
-      if (!process.env.OPENROUTER_API_KEY) {
-        throw new Error('Missing OPENROUTER_API_KEY');
-      }
+  it('fails when the rendered page would show duplicated thinking chunks from one real mimo response', async () => {
+    if (!process.env.OPENROUTER_API_KEY) {
+      throw new Error('Missing OPENROUTER_API_KEY');
+    }
 
-      let events: ChatServerToClientEvent[] | null = null;
-      let lastError: unknown = null;
+    let events: ChatServerToClientEvent[] | null = null;
+    let lastError: unknown = null;
 
-      for (let attempt = 1; attempt <= 4; attempt += 1) {
-        try {
-          events = await runProviderProbe();
+    for (let attempt = 1; attempt <= 4; attempt += 1) {
+      try {
+        events = await runProviderProbe();
+        break;
+      } catch (error) {
+        lastError = error;
+        if (attempt === 4) {
           break;
-        } catch (error) {
-          lastError = error;
-          if (attempt === 4) {
-            break;
-          }
-          await delay(attempt * 3000);
         }
+        await delay(attempt * 3000);
       }
+    }
 
-      if (!events) {
-        const metadataMessage = readMetadataMessage(lastError);
-        if (metadataMessage) {
-          throw new Error(metadataMessage, { cause: lastError });
-        }
-        throw lastError;
+    if (!events) {
+      const metadataMessage = readMetadataMessage(lastError);
+      if (metadataMessage) {
+        throw new Error(metadataMessage, { cause: lastError });
       }
+      throw lastError;
+    }
 
-      const answerEvents = events.filter(
-        (event): event is Extract<ChatServerToClientEvent, { type: 'content' }> =>
-          event.type === 'content',
-      );
-      const { thinkingEvents, duplicatePairs } = findConsecutiveDuplicateThinkingChunks(events);
-      const renderedThinkingText = getRenderedThinkingText(events);
+    const answerEvents = events.filter(
+      (event): event is Extract<ChatServerToClientEvent, { type: 'content' }> =>
+        event.type === 'content',
+    );
+    const { thinkingEvents, duplicatePairs } = findConsecutiveDuplicateThinkingChunks(events);
+    const renderedThinkingText = getRenderedThinkingText(events);
 
-      const renderedDuplicateChunks = duplicatePairs.filter((pair) =>
-        renderedThinkingText.includes(`${pair.content}${pair.content}`),
-      );
+    const renderedDuplicateChunks = duplicatePairs.filter((pair) =>
+      renderedThinkingText.includes(`${pair.content}${pair.content}`),
+    );
 
-      console.log(
-        JSON.stringify(
-          {
-            model: 'xiaomi/mimo-v2-pro',
-            eventCount: events.length,
-            thinkingEventCount: thinkingEvents.length,
-            answerChunkCount: answerEvents.length,
-            consecutiveDuplicateThinkingPairs: duplicatePairs.length,
-            renderedThinkingLength: renderedThinkingText.length,
-            renderedDuplicateChunkCount: renderedDuplicateChunks.length,
-            firstThinkingChunks: thinkingEvents.slice(0, 12),
-            firstAnswerChunks: answerEvents.slice(0, 12),
-          },
-          null,
-          2,
-        ),
-      );
+    console.log(
+      JSON.stringify(
+        {
+          model: 'xiaomi/mimo-v2-pro',
+          eventCount: events.length,
+          thinkingEventCount: thinkingEvents.length,
+          answerChunkCount: answerEvents.length,
+          consecutiveDuplicateThinkingPairs: duplicatePairs.length,
+          renderedThinkingLength: renderedThinkingText.length,
+          renderedDuplicateChunkCount: renderedDuplicateChunks.length,
+          firstThinkingChunks: thinkingEvents.slice(0, 12),
+          firstAnswerChunks: answerEvents.slice(0, 12),
+        },
+        null,
+        2,
+      ),
+    );
 
-      expect(events.length).toBeGreaterThan(0);
-      expect(thinkingEvents.length).toBeGreaterThan(0);
-      expect(answerEvents.length).toBeGreaterThan(0);
-      expect(renderedThinkingText.length).toBeGreaterThan(0);
-      expect(renderedDuplicateChunks).toEqual([]);
-    },
-    90_000,
-  );
+    expect(events.length).toBeGreaterThan(0);
+    expect(thinkingEvents.length).toBeGreaterThan(0);
+    expect(answerEvents.length).toBeGreaterThan(0);
+    expect(renderedThinkingText.length).toBeGreaterThan(0);
+    expect(renderedDuplicateChunks).toEqual([]);
+  }, 90_000);
 });

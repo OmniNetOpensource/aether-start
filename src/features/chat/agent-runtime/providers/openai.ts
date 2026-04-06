@@ -172,11 +172,7 @@ const extractThinkingTexts = (delta: Record<string, unknown>): string[] => {
     }
   }
 
-  const flatCandidates = [
-    delta.reasoning_content,
-    delta.reasoning,
-    delta.thinking,
-  ];
+  const flatCandidates = [delta.reasoning_content, delta.reasoning, delta.thinking];
 
   for (const candidate of flatCandidates) {
     if (typeof candidate === 'string' && candidate.trim()) {
