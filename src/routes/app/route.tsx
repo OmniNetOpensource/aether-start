@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect } from 'react';
 import { Outlet, createFileRoute } from '@tanstack/react-router';
+import { MessageList } from '@/features/chat/message-thread/MessageList';
 import Sidebar from '@/features/conversations/conversation-list';
 import { Composer } from '@/features/chat/composer/Composer';
 import { getAvailableModelsFn, getAvailablePromptsFn } from '@/features/chat/model-catalog';
@@ -40,7 +41,6 @@ export const Route = createFileRoute('/app')({
 function AppLayout() {
   const loaderData = Route.useLoaderData();
   const pageTitle = useChatSessionStore((state) => state.pageTitle);
-
   useEffect(() => {
     document.title = pageTitle;
   }, [pageTitle]);
@@ -58,6 +58,7 @@ function AppLayout() {
           </div>
           <main className='relative flex flex-row flex-1 min-h-0 min-w-0'>
             <div className='@container relative h-full flex-1 min-w-0'>
+              <MessageList />
               <Outlet />
               <Composer />
             </div>

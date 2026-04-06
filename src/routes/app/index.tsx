@@ -4,7 +4,6 @@ import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { getForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
 import { cancelStreamSubscription } from '@/features/chat/session';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
-import { MessageList } from '@/features/chat/message-thread/MessageList';
 import { useChatSessionStore } from '@/features/conversations/session';
 
 function initNewChatPage() {
@@ -89,15 +88,10 @@ function Greeting({
 }
 
 function HomePage() {
-  const messages = useChatSessionStore((state) => state.messages);
   const input = useComposerStore((state) => state.input);
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
 
   useEffect(() => {
-    if (messages.length !== 0) {
-      return;
-    }
-
     let cancelled = false;
     void (async () => {
       try {
@@ -112,11 +106,7 @@ function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [messages.length]);
-
-  if (messages.length > 0) {
-    return <MessageList />;
-  }
+  }, []);
 
   if (input.trim() !== '') {
     return null;

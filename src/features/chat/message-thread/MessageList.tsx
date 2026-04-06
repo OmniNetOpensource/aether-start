@@ -250,12 +250,17 @@ function ChatActionsRail({ currentPath, isMobile, isStreaming, scrollRef }: Chat
 }
 
 export function MessageList() {
+  const messages = useChatSessionStore((state) => state.messages);
   const currentPath = useChatSessionStore((state) => state.currentPath);
   const isStreaming = useChatRequestStore((state) => state.status === 'streaming');
   const deviceType = useResponsive();
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const widthClass = 'w-[90%] @[921px]:w-[60%]';
+
+  if (messages.length === 0) {
+    return null;
+  }
 
   return (
     <div className='relative w-full h-full'>
