@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
-import { buildSystemPrompt, type BackendConfig } from '../backend-config';
+import { buildSystemPrompt, type BackendConfig } from './backend-config';
 import { log, logProviderCommunication } from '../logger';
 import { quotesToModelText } from '@/features/conversations/conversation-tree';
-import { buildProviderErrorEvent } from '../provider-error';
+import { buildProviderErrorEvent } from './provider-error';
 import { resolveAttachmentToBase64 } from '../attachment-utils';
 import { parseToolResultImage } from '../tool-result-images';
 import { RenderArtifactStreamParser } from '../../artifact/render-artifact-stream';
@@ -12,9 +12,9 @@ import type {
   ChatServerToClientEvent,
   ToolInvocationResult,
 } from '@/features/chat/session';
-import type { ChatTool } from '@/features/chat/agent-runtime';
+import type { ChatTool } from '../tool-types';
 import type { SerializedMessage } from '@/features/chat/message-thread';
-import type { ChatProvider, ChatProviderConfig } from '../provider-types';
+import type { ChatProvider, ChatProviderConfig } from './provider-types';
 
 export type OpenAIResponsesMessage = OpenAI.Responses.ResponseInputItem;
 

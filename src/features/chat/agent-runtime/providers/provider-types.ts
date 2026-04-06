@@ -3,7 +3,7 @@ import type {
   PendingToolInvocation,
   ToolInvocationResult,
 } from '@/features/chat/session';
-import type { ChatTool } from '@/features/chat/agent-runtime';
+import type { ChatTool } from '../tool-types';
 import type { BackendConfig } from './backend-config';
 import type { SerializedMessage } from '@/features/chat/message-thread';
 

@@ -89,7 +89,7 @@ The request lifecycle now spans these files:
 - `src/features/chat/session/useChatRequestStore.ts`
 - `src/features/chat/session/chat-orchestrator.ts`
 - `src/features/chat/session/event-handlers.ts`
-- `src/features/chat/agent-runtime/chat-agent.ts`
+- `src/features/chat/agent-runtime/conversation-runner.ts`
 
 If chat streaming, reconnection, abort, or resume behavior changes, inspect all four together.
 
@@ -132,11 +132,11 @@ Model catalog files:
 
 Provider runtime files:
 
-- `src/features/chat/agent-runtime/provider-factory.ts`
-- `src/features/chat/agent-runtime/backends/anthropic.ts`
-- `src/features/chat/agent-runtime/backends/openai.ts`
-- `src/features/chat/agent-runtime/backends/openai-responses.ts`
-- `src/features/chat/agent-runtime/backends/gemini.ts`
+- `src/features/chat/agent-runtime/providers/provider-factory.ts`
+- `src/features/chat/agent-runtime/providers/anthropic.ts`
+- `src/features/chat/agent-runtime/providers/openai.ts`
+- `src/features/chat/agent-runtime/providers/openai-responses.ts`
+- `src/features/chat/agent-runtime/providers/gemini.ts`
 
 Supported formats currently include:
 

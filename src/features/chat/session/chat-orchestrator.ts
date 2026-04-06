@@ -9,7 +9,7 @@
  * - 恢复正在进行的对话流（resumeRunningConversation）
  * - 消费 SSE 流并分发事件到消息树
  *
- * 与 chat-agent 服务端配合，通过 SSE 接收 chat_event、chat_started、chat_finished 等事件，
+ * 与 conversation-runner 服务端配合，通过 SSE 接收 chat_event、chat_started、chat_finished 等事件，
  * 并调用 event-handlers 中的 applyChatEventToTree 更新 UI 状态。
  */
 import { toast } from '@/shared/app-shell/useToast';
@@ -21,8 +21,8 @@ import type { SerializedMessage } from '@/features/chat/message-thread';
 import type { ChatAgentStatus, MessageTreeSnapshot } from '@/features/chat/session';
 import type { ChatServerToClientEvent } from '@/features/chat/session';
 
-/** Agent 路由名，对应 /agents/chat-agent */
-const AGENT_NAME = 'chat-agent';
+/** Agent 路由名，对应 /agents/conversation-runner */
+const AGENT_NAME = 'conversation-runner';
 /** 对话已在生成回复时的提示文案 */
 const BUSY_WARNING = 'This conversation is already generating a response.';
 /** 未选择角色时的提示文案 */
@@ -269,7 +269,7 @@ const consumeStreamResponse = async (response: Response) => {
 
 /**
  * 探测指定对话的 Agent 状态。
- * GET /agents/chat-agent/:conversationId，返回 idle | running | completed | aborted | error。
+ * GET /agents/conversation-runner/:conversationId，返回 idle | running | completed | aborted | error。
  * 404 视为 idle。
  */
 export const checkAgentStatus = async (
@@ -305,7 +305,7 @@ export const checkAgentStatus = async (
  * 1. 校验 status 为 idle、已选模型
  * 2. 若无 conversationId，创建新对话并导航到 /app/c/:id
  * 3. 构建 body（idempotencyKey、model、promptId、conversationHistory、treeSnapshot）
- * 4. 取消之前的请求，发起 POST /agents/chat-agent/:conversationId/chat
+ * 4. 取消之前的请求，发起 POST /agents/conversation-runner/:conversationId/chat
  * 5. 处理 409（busy）与 402（配额超限）
  * 6. 消费 SSE 流，结束时 finalizeStream
  *
@@ -472,7 +472,7 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
  * 流程：
  * 1. 调用 checkAgentStatus；若非 running 且 lastEventId 为 0（新进入对话页）则直接 idle 返回
  * 2. 创建 AbortController，通过 activeController 与 cancelStreamSubscription 联动
- * 3. POST /agents/chat-agent/:conversationId/events，body 为 { lastEventId }
+ * 3. POST /agents/conversation-runner/:conversationId/events，body 为 { lastEventId }
  * 4. 消费返回的 SSE 流（sync_response + 后续 chat_event）
  * 5. 结束时 finalizeStream
  *

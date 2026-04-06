@@ -90,6 +90,7 @@ function Greeting({
 
 function HomePage() {
   const messages = useChatSessionStore((state) => state.messages);
+  const input = useComposerStore((state) => state.input);
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -115,6 +116,10 @@ function HomePage() {
 
   if (messages.length > 0) {
     return <MessageList />;
+  }
+
+  if (input.trim() !== '') {
+    return null;
   }
 
   return (

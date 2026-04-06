@@ -7,19 +7,19 @@ export async function createChatProvider(
 ): Promise<ChatProvider> {
   switch (format) {
     case 'anthropic': {
-      const { createAnthropicAdapter } = await import('./backends/anthropic');
+      const { createAnthropicAdapter } = await import('./anthropic');
       return createAnthropicAdapter(config);
     }
     case 'openai': {
-      const { createOpenAIAdapter } = await import('./backends/openai');
+      const { createOpenAIAdapter } = await import('./openai');
       return createOpenAIAdapter(config);
     }
     case 'openai-responses': {
-      const { createOpenAIResponsesAdapter } = await import('./backends/openai-responses');
+      const { createOpenAIResponsesAdapter } = await import('./openai-responses');
       return createOpenAIResponsesAdapter(config);
     }
     case 'gemini': {
-      const { createGeminiAdapter } = await import('./backends/gemini');
+      const { createGeminiAdapter } = await import('./gemini');
       return createGeminiAdapter(config);
     }
   }

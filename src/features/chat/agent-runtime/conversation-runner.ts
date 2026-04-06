@@ -7,7 +7,7 @@ import {
   getDefaultPromptId,
 } from '@/features/chat/model-catalog';
 import { log } from '@/features/chat/agent-runtime';
-import { getBackendConfig } from './backend-config';
+import { getBackendConfig } from './providers/backend-config';
 import { createChatProvider } from '@/features/chat/agent-runtime';
 import type { ProviderRunResult } from '@/features/chat/agent-runtime';
 import { generateTitleFromConversation } from '../session/chat-title';
@@ -39,7 +39,7 @@ import type { Message, SerializedMessage } from '@/features/chat/message-thread'
 
 // Durable Object 只服务一个会话实例，所以这里记录的是“这一个会话”当前的运行态。
 // 前端恢复连接、轮询状态、发起中断时，都会依赖这里的信息判断该怎么继续。
-type ChatAgentState = {
+type ConversationRunnerState = {
   status: ChatAgentStatus;
   conversationId: string | null;
   ownerUserId: string | null;
@@ -47,8 +47,8 @@ type ChatAgentState = {
 };
 
 // 这里显式列出会被 provider、tool、持久化层读取到的绑定。
-// 这样看这个文件时就能直接知道 ChatAgent 依赖了哪些运行环境能力。
-type ChatAgentEnv = Cloudflare.Env & {
+// 这样看这个文件时就能直接知道 ConversationRunner 依赖了哪些运行环境能力。
+type ConversationRunnerEnv = Cloudflare.Env & {
   DB: D1Database;
   CHAT_ASSETS: R2Bucket;
   ANTHROPIC_API_KEY_RIGHTCODE?: string;
@@ -217,7 +217,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
 
 // 这个 Durable Object 以 conversation 为粒度串行化整次对话：
 // 接收请求、推送 SSE、执行工具调用、缓存事件，并在结束后落库快照。
-export class ChatAgent extends DurableObject<ChatAgentEnv> {
+export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   // instanceName 对应 URL 里的 conversationId。
   // 一个 Durable Object 实例一旦绑定某个会话，后续请求都应该落到同一个实例里。
   private instanceName: string | null = null;
@@ -227,7 +227,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
   // eventCache 用来支持断线重连。前端带上 lastEventId 后，可以从这里补拉遗漏事件。
   private eventCache: PersistedChatEvent[] = [];
   private nextEventId = 1;
-  private runtimeState: ChatAgentState = {
+  private runtimeState: ConversationRunnerState = {
     status: 'idle',
     conversationId: null,
     ownerUserId: null,
@@ -250,10 +250,10 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
-    // 路由形如 /agents/chat-agent/<conversationId>[/chat|events|abort]。
+    // 路由形如 /agents/conversation-runner/<conversationId>[/chat|events|abort]。
     // Durable Object 入口不走 TanStack Router，所以这里手动拆路径。
     const segments = url.pathname.split('/');
-    const nameIndex = segments.indexOf('chat-agent');
+    const nameIndex = segments.indexOf('conversation-runner');
     const name = nameIndex >= 0 && segments.length > nameIndex + 1 ? segments[nameIndex + 1] : null;
 
     if (name) {
@@ -763,7 +763,7 @@ export class ChatAgent extends DurableObject<ChatAgentEnv> {
 
       const backendConfig = getBackendConfig(modelConfig.backend);
 
-      // provider 层屏蔽了不同模型供应商的格式差异，ChatAgent 只关心统一接口。
+      // provider 层屏蔽了不同模型供应商的格式差异，ConversationRunner 只关心统一接口。
       const provider = await createChatProvider(modelConfig.format, {
         model: modelConfig.model,
         backendConfig,
