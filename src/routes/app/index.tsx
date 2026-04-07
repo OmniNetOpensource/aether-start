@@ -4,7 +4,7 @@ import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { getForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
 import { cancelStreamSubscription } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
-import { useChatSessionStore } from '@/features/conversations/session';
+import { useChatSessionStore, useIsNewChat } from '@/features/conversations/session';
 
 function initNewChatPage() {
   if (typeof window === 'undefined') return;
@@ -88,7 +88,7 @@ function Greeting({
 }
 
 function HomePage() {
-  const input = useComposerStore((state) => state.input);
+  const isNewChat = useIsNewChat();
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
 
   useEffect(() => {
@@ -108,7 +108,7 @@ function HomePage() {
     };
   }, []);
 
-  if (input.trim() !== '') {
+  if (!isNewChat) {
     return null;
   }
 
