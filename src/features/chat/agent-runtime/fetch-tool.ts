@@ -239,10 +239,7 @@ const fetchMarkdownWithFirecrawl = async (url: string, signal?: AbortSignal): Pr
 
     if (!response.ok) {
       const errText =
-        typeof raw === 'object' &&
-        raw !== null &&
-        'error' in raw &&
-        typeof raw.error === 'string'
+        typeof raw === 'object' && raw !== null && 'error' in raw && typeof raw.error === 'string'
           ? raw.error
           : `${response.status} ${response.statusText}`;
       log('FETCH', `Firecrawl HTTP error: ${errText}`);

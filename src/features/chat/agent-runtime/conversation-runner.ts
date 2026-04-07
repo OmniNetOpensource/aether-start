@@ -1122,14 +1122,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       }
     } finally {
       // 始终收口：清理交互状态、补 artifact、最终落库、广播结束并关闭所有 SSE 连接。
-      await this.finalize(
-        runState,
-        message,
-        userId,
-        workingTree,
-        artifactAccumulator,
-        emitEvent,
-      );
+      await this.finalize(runState, message, userId, workingTree, artifactAccumulator, emitEvent);
     }
   }
 
