@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import type {
-  AskUserQuestionsAnswer,
-  AskUserQuestionsBlockStatus,
-} from '@/features/chat/ask-user-questions/ask-user-questions';
+import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import type { AssistantMessage } from '@/features/chat/message-thread';
 import { Button } from '@/shared/design-system/button';
 
@@ -16,22 +13,6 @@ type AskUserQuestionsCardProps = {
   block: AskUserQuestionsBlock;
   readonly?: boolean;
   onSubmit?: (answers: AskUserQuestionsAnswer[]) => Promise<void>;
-};
-
-const getStatusLabel = (status: AskUserQuestionsBlockStatus, readonly: boolean) => {
-  if (readonly) {
-    return '只读';
-  }
-
-  if (status === 'answered') {
-    return '已提交';
-  }
-
-  if (status === 'submitting') {
-    return '提交中';
-  }
-
-  return '等待回答';
 };
 
 const toAnswerMap = (answers: AskUserQuestionsAnswer[]) => {
@@ -99,20 +80,6 @@ export function AskUserQuestionsCard({
       data-testid='ask-user-questions-card'
       className='overflow-hidden rounded-md border border-border bg-surface text-foreground shadow-xs'
     >
-      <div className='flex items-start justify-between gap-3 border-b border-border px-4 py-3.5'>
-        <div className='min-w-0'>
-          <p className='text-[13px] font-medium leading-snug tracking-tight'>
-            需要你先回答这组问题
-          </p>
-          <p className='mt-1 text-xs leading-5 text-secondary'>
-            回答后，这条 assistant 消息会继续往下生成。
-          </p>
-        </div>
-        <span className='shrink-0 rounded border border-border px-2 py-0.5 text-[11px] font-medium tracking-wide text-muted-foreground'>
-          {getStatusLabel(block.status, readonly)}
-        </span>
-      </div>
-
       <fieldset key={`${block.callId}-${currentPage}`} disabled={isLocked} className='min-w-0'>
         <div className='space-y-1 px-4 pt-4'>
           <p className='text-[11px] font-medium uppercase tracking-[0.06em] text-muted-foreground'>
@@ -197,18 +164,18 @@ export function AskUserQuestionsCard({
           </Button>
         </div>
 
-        {!readonly && (
-          <Button type='button' disabled={!canSubmit} onClick={() => void handleSubmit()} size='sm'>
-            {block.status === 'submitting' ? (
-              <>
-                <Loader2 className='h-4 w-4 animate-spin' />
-                提交中
-              </>
-            ) : (
-              '提交回答'
-            )}
-          </Button>
-        )}
+        <Button type='button' disabled={!canSubmit} onClick={() => void handleSubmit()} size='sm'>
+          {block.status === 'submitting' ? (
+            <>
+              <Loader2 className='h-4 w-4 animate-spin' />
+              提交中
+            </>
+          ) : block.status === 'answered' ? (
+            '已提交'
+          ) : (
+            '提交回答'
+          )}
+        </Button>
       </div>
     </section>
   );
