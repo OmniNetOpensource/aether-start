@@ -25,7 +25,6 @@ export default function Sidebar() {
 
   const openSidebar = () => {
     sidebarRef.current?.classList.remove('-translate-x-full');
-    document.body.style.overflow = 'hidden';
   };
 
   const handleSidebarTriggerClick = (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -37,7 +36,6 @@ export default function Sidebar() {
   const closeSidebar = () => {
     openDropdownRef.current = false;
     sidebarRef.current?.classList.add('-translate-x-full');
-    document.body.style.overflow = '';
   };
 
   const handleMouseLeave = (event: ReactMouseEvent<HTMLElement>) => {
@@ -61,7 +59,6 @@ export default function Sidebar() {
     const closeSidebarFromOutside = () => {
       openDropdownRef.current = false;
       sidebarRef.current?.classList.add('-translate-x-full');
-      document.body.style.overflow = '';
     };
 
     const handlePointerDownOutside = (event: PointerEvent) => {
@@ -86,7 +83,6 @@ export default function Sidebar() {
     const closeSidebarOnEscape = () => {
       openDropdownRef.current = false;
       sidebarRef.current?.classList.add('-translate-x-full');
-      document.body.style.overflow = '';
     };
 
     const handleEsc = (event: KeyboardEvent) => {
@@ -99,12 +95,6 @@ export default function Sidebar() {
     return () => window.removeEventListener('keydown', handleEsc);
   });
 
-  useMountEffect(() => {
-    return () => {
-      document.body.style.overflow = '';
-    };
-  });
-
   return (
     <div className='relative z-(--z-sidebar) h-full w-0 shrink-0 group/sidebar-trigger'>
       <div
@@ -113,11 +103,11 @@ export default function Sidebar() {
         onMouseEnter={isMobile ? undefined : openSidebar}
         aria-label='展开侧边栏'
       />
-      <div className='pointer-events-none absolute left-0 top-1/2 z-(--z-sidebar) h-24 w-2 -translate-y-1/2 rounded-r-md bg-border transition-all duration-300 group-hover/sidebar-trigger:w-2.5 group-hover/sidebar-trigger:bg-border' />
+      <div className='pointer-events-none absolute left-0 top-1/2 z-(--z-sidebar) h-24 w-2 -translate-y-1/2 rounded-r-md bg-border transition-[width,background-color] duration-300 group-hover/sidebar-trigger:w-2.5 group-hover/sidebar-trigger:bg-border' />
 
       <aside
         ref={sidebarRef}
-        className='absolute left-0 top-0 z-(--z-sidebar) flex h-full w-64 -translate-x-full flex-col overflow-hidden bg-surface shadow-[2px_0_8px_-2px_var(--color-border)]/5 transition-transform duration-300 ease-[var(--transition-smooth)] md:w-[22vw] md:min-w-65 md:max-w-90'
+        className='absolute left-0 top-0 z-(--z-sidebar) flex h-full w-64 -translate-x-full flex-col overflow-hidden border-r border-border/25 bg-surface transition-transform duration-300 ease-[var(--transition-smooth)] md:w-[22vw] md:min-w-65 md:max-w-90'
         onMouseLeave={isMobile ? undefined : handleMouseLeave}
       >
         <div className='flex h-20 shrink-0 items-center px-6'>

@@ -12,7 +12,7 @@ import type {
 } from '@/features/chat/chat-api';
 import type { ChatTool } from '../tool-types';
 import type { SerializedMessage } from '@/features/chat/message-thread';
-import type { ChatProvider, ChatProviderConfig } from './provider-types';
+import type { ChatProvider, ChatProviderConfig, ProviderRunResult } from './provider-types';
 
 type AnthropicImageSource = {
   type: 'base64';
@@ -394,11 +394,6 @@ type AnthropicChatProviderConfig = {
   systemPrompt: string;
 };
 
-export type ProviderRunResult = {
-  pendingToolCalls: PendingToolInvocation[];
-  thinkingBlocks: ThinkingBlockData[];
-};
-
 export class AnthropicChatProvider {
   private readonly model: string;
   private readonly backendConfig: BackendConfig;
@@ -430,11 +425,12 @@ export class AnthropicChatProvider {
     let currentToolName = '';
     let currentToolJson = '';
     let currentRenderParser: RenderArtifactStreamParser | null = null;
-    let stopReason = '';
+    let assistantText = '';
 
     const emptyResult: ProviderRunResult = {
       pendingToolCalls: [],
       thinkingBlocks: [],
+      assistantText: '',
     };
 
     try {
@@ -451,6 +447,7 @@ export class AnthropicChatProvider {
         }
 
         if (chunk.type === 'text') {
+          assistantText += chunk.text;
           yield { type: 'content', content: chunk.text };
         } else if (chunk.type === 'thinking') {
           yield { type: 'thinking', content: chunk.thinking };
@@ -475,7 +472,6 @@ export class AnthropicChatProvider {
             }
           }
         } else if (chunk.type === 'stop') {
-          stopReason = chunk.stop_reason;
           if (currentToolId && currentToolName) {
             let toolArguments: Record<string, unknown> = {};
             try {
@@ -498,6 +494,12 @@ export class AnthropicChatProvider {
               name: currentToolName,
               args: toolArguments,
             });
+            yield {
+              type: 'tool_call',
+              tool: currentToolName,
+              args: toolArguments,
+              callId: currentToolId,
+            };
           }
           log('ANTHROPIC', 'Received stop chunk', {
             chunk,
@@ -529,11 +531,7 @@ export class AnthropicChatProvider {
       return emptyResult;
     }
 
-    if (stopReason === 'end_turn' || pendingToolCalls.length === 0) {
-      return emptyResult;
-    }
-
-    return { pendingToolCalls, thinkingBlocks };
+    return { pendingToolCalls, thinkingBlocks, assistantText };
   }
 }
 
@@ -542,11 +540,11 @@ export function createAnthropicAdapter(config: ChatProviderConfig): ChatProvider
   return {
     convertMessages: (history) => convertToAnthropicMessages(history),
     run: (messages, signal) => provider.run(messages, signal),
-    formatToolContinuation: (assistantText, runResult, pendingToolCalls, toolResults) =>
+    formatToolContinuation: (runResult, toolResults) =>
       formatToolContinuation(
-        assistantText,
+        runResult.assistantText,
         runResult.thinkingBlocks as ThinkingBlockData[],
-        pendingToolCalls,
+        runResult.pendingToolCalls,
         toolResults,
       ),
   };

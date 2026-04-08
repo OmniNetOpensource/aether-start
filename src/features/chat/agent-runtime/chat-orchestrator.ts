@@ -203,9 +203,7 @@ const handleSSEMessage = (event: string, raw: string) => {
           const record = item as Record<string, unknown>;
           if (typeof record.eventId === 'number' && record.eventId > lastEventId) {
             lastEventId = record.eventId;
-            applyChatEventToTree(record.event as ChatServerToClientEvent, {
-              bypassDisplayBuffer: true,
-            });
+            applyChatEventToTree(record.event as ChatServerToClientEvent);
           }
         }
       }

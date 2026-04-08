@@ -166,45 +166,22 @@ export const enhanceServerErrorMessage = (safeMessage: string, errorInfo?: ChatE
   );
 };
 
-export const applyChatEventToTree = (
-  event: ChatServerToClientEvent,
-  options?: { bypassDisplayBuffer?: boolean },
-) => {
-  const bypass = options?.bypassDisplayBuffer ?? false;
-
+export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
   if (event.type === 'content') {
     const addition =
       typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    if (bypass) {
-      useChatSessionStore.getState().appendToAssistant({
-        type: 'content',
-        content: addition,
-      });
-    } else {
-      enqueueStreamContent(addition);
-    }
+    enqueueStreamContent(addition);
     return;
   }
 
   if (event.type === 'thinking') {
     const text = typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    if (bypass) {
-      useChatSessionStore.getState().appendToAssistant({
-        kind: 'thinking',
-        text,
-      });
-    } else {
-      enqueueStreamThinking(text);
-    }
+    enqueueStreamThinking(text);
     return;
   }
 
   if (event.type === 'artifact_code_delta') {
-    if (bypass) {
-      useChatSessionStore.getState().appendArtifactCode(event.artifactId, event.delta);
-    } else {
-      enqueueStreamArtifactCode(event.artifactId, event.delta);
-    }
+    enqueueStreamArtifactCode(event.artifactId, event.delta);
     return;
   }
 

@@ -1,7 +1,7 @@
 import { useChatSessionStore } from '@/features/conversations/session';
 
 /** 每帧最多展示多少个 Unicode 码位（展开字符串迭代），过大则调快，过小则更平滑 */
-const CHARS_PER_FRAME = 24;
+const CHARS_PER_FRAME = 14;
 
 type Segment =
   | { kind: 'content'; text: string }
