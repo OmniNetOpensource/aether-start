@@ -325,12 +325,11 @@ export const startChatRequest = async () => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
-  if (requestStore.status !== 'idle') return;
-
   resetLastEventId();
 
   if (!sessionStore.currentModelId) {
     toast.warning(SELECT_MODEL_WARNING);
+    requestStore.setStatus('idle', 'startChatRequest/noModel');
     return;
   }
 
@@ -481,7 +480,7 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
  * 恢复正在进行的对话流（如页面刷新后重新进入对话页）。
  *
  * 流程：
- * 1. 调用 checkAgentStatus；若非 running 且 lastEventId 为 0（新进入对话页）则直接 idle 返回
+ * 1. 将 status 设为 sending，再调用 checkAgentStatus；若非 running 则 idle 返回
  * 2. 创建 AbortController，通过 activeController 与 cancelStreamSubscription 联动
  * 3. POST /agents/conversation-runner/:conversationId/events，body 为 { lastEventId }
  * 4. 消费返回的 SSE 流（sync_response + 后续 chat_event）
@@ -490,6 +489,8 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
  * 取消方式：对话页卸载时调用 cancelStreamSubscription 即可 abort
  */
 export const resumeRunningConversation = async (conversationId: string) => {
+  useChatRequestStore.getState().setStatus('sending', 'resumeRunningConversation');
+
   let agentStatus: { status: ChatAgentStatus };
 
   try {
@@ -513,8 +514,6 @@ export const resumeRunningConversation = async (conversationId: string) => {
 
   const controller = new AbortController();
   activeController = controller;
-
-  useChatRequestStore.getState().setStatus('sending', 'resumeRunningConversation');
 
   try {
     const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/events`, {

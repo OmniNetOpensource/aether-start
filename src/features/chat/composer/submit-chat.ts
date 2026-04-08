@@ -46,6 +46,7 @@ export async function submitMessage(
   }));
 
   sessionStore.addMessage('user', buildUserBlocks(input, pendingQuotes, attachmentsForMessage));
+  requestStore.setStatus('sending', 'submitMessage');
   composerStore.clear();
 
   if (!sessionStore.conversationId) {
