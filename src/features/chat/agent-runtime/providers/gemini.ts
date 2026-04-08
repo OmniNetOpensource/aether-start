@@ -1,13 +1,12 @@
 import {
-  GoogleGenAI,
   createFunctionResponsePartFromBase64,
   createPartFromFunctionResponse,
 } from '@google/genai';
 import type * as genai from '@google/genai';
-import { buildSystemPrompt, type BackendConfig } from '../backend-config';
+import { buildSystemPrompt, type BackendConfig } from './backend-config';
 import { log, logProviderCommunication } from '../logger';
 import { quotesToModelText } from '@/features/conversations/conversation-tree';
-import { buildProviderErrorEvent } from '../provider-error';
+import { buildProviderErrorEvent } from './provider-error';
 import { resolveAttachmentToBase64 } from '../attachment-utils';
 import { parseToolResultImage } from '../tool-result-images';
 import { buildRenderArtifactEvents } from '../../artifact/render-artifact-stream';
@@ -15,10 +14,12 @@ import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
-} from '@/features/chat/session';
-import type { ChatTool } from '@/features/chat/agent-runtime';
+} from '@/features/chat/chat-api';
+import type { ChatTool } from '../tool-types';
 import type { SerializedMessage } from '@/features/chat/message-thread';
-import type { ChatProvider, ChatProviderConfig } from '../provider-types';
+import type { ChatProvider, ChatProviderConfig } from './provider-types';
+import { getGeminiClient } from './gemini-client';
+import { buildGeminiThinkingConfig } from './gemini-thinking-config';
 
 export type GeminiMessage = genai.Content;
 
@@ -32,16 +33,6 @@ type GeminiChatProviderConfig = {
   backendConfig: BackendConfig;
   tools: ChatTool[];
   systemPrompt: string;
-};
-
-export const getGeminiClient = (config: BackendConfig) => {
-  return new GoogleGenAI({
-    apiKey: config.apiKey,
-    httpOptions: {
-      baseUrl: config.baseURL,
-      headers: config.defaultHeaders,
-    },
-  });
 };
 
 const getClient = getGeminiClient;
@@ -190,10 +181,7 @@ export class GeminiChatProvider {
       const config: genai.GenerateContentConfig = {
         abortSignal: signal,
         systemInstruction: systemParts.join('\n\n'),
-        thinkingConfig: {
-          includeThoughts: true,
-          thinkingBudget: -1,
-        },
+        thinkingConfig: buildGeminiThinkingConfig(this.model),
       };
 
       if (this.geminiTools) {

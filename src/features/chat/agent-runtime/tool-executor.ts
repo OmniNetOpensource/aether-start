@@ -14,7 +14,7 @@ import type {
   PendingToolInvocation,
   ToolInvocationResult,
   ChatServerToClientEvent,
-} from '@/features/chat/session';
+} from '@/features/chat/chat-api';
 
 export const getAvailableTools = (): ChatTool[] => {
   const env = getServerEnv();

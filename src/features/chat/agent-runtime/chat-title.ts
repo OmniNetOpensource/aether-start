@@ -116,7 +116,7 @@ export const generateTitleFromConversation = async (
 
     log('TITLE', 'Sending title generation request', requestLog);
 
-    const { getOpenAIClient } = await import('@/features/chat/agent-runtime/backends/openai');
+    const { getOpenAIClient } = await import('@/features/chat/agent-runtime/providers/openai');
     const client = getOpenAIClient(backendConfig);
     const response = await client.chat.completions.create(
       {

@@ -7,7 +7,7 @@ import { Textarea } from '@/shared/design-system/textarea';
 import { toast } from '@/shared/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
 import { buildAttachmentsFromFiles } from '@/features/attachments/attachment-upload';
-import { useChatRequestStore } from '@/features/chat/session';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { useEditingStore } from '@/features/chat/message-thread';
 import { useChatSessionStore } from '@/features/conversations/session';

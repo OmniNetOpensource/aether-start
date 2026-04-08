@@ -16,7 +16,7 @@ import {
   type AssistantAddition,
 } from '../conversation-tree/block-operations';
 import type { ConversationArtifact } from '@/features/conversations/session';
-import type { ArtifactLanguage } from '@/features/chat/session';
+import type { ArtifactLanguage } from '@/features/chat/chat-api';
 import type {
   AssistantMessage,
   BranchInfo,

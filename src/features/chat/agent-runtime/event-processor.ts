@@ -1,6 +1,6 @@
 import { applyAssistantAddition, cloneMessages } from '@/features/conversations/conversation-tree';
 import { addMessage, buildCurrentPath } from '@/features/conversations/conversation-tree';
-import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/features/chat/session';
+import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/features/chat/chat-api';
 import type {
   AskUserQuestionsAnswer,
   AskUserQuestionsQuestion,

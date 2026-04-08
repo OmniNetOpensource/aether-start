@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { getForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
-import { cancelStreamSubscription } from '@/features/chat/session';
+import { cancelStreamSubscription } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
-import { MessageList } from '@/features/chat/message-thread/MessageList';
-import { useChatSessionStore } from '@/features/conversations/session';
+import { useChatSessionStore, useIsNewChat } from '@/features/conversations/session';
 
 function initNewChatPage() {
   if (typeof window === 'undefined') return;
@@ -89,14 +88,10 @@ function Greeting({
 }
 
 function HomePage() {
-  const messages = useChatSessionStore((state) => state.messages);
+  const isNewChat = useIsNewChat();
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
 
   useEffect(() => {
-    if (messages.length !== 0) {
-      return;
-    }
-
     let cancelled = false;
     void (async () => {
       try {
@@ -111,10 +106,10 @@ function HomePage() {
     return () => {
       cancelled = true;
     };
-  }, [messages.length]);
+  }, []);
 
-  if (messages.length > 0) {
-    return <MessageList />;
+  if (!isNewChat) {
+    return null;
   }
 
   return (

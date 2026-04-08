@@ -2,7 +2,7 @@ import { lazy, Suspense, useState } from 'react';
 import { GitBranch } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
 import { Dialog, DialogContent, DialogTrigger } from '@/shared/design-system/dialog';
-import { useChatRequestStore } from '@/features/chat/session';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { loadWithRetry } from '@/shared/browser/load-with-retry';
 import { buildOutlineTree } from './build-outline-tree';

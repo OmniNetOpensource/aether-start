@@ -1,8 +1,8 @@
 import OpenAI from 'openai';
-import { buildSystemPrompt, type BackendConfig } from '../backend-config';
+import { buildSystemPrompt, type BackendConfig } from './backend-config';
 import { log, logProviderCommunication, shouldLogProviderCommunication } from '../logger';
 import { quotesToModelText } from '@/features/conversations/conversation-tree';
-import { buildProviderErrorEvent } from '../provider-error';
+import { buildProviderErrorEvent } from './provider-error';
 import { resolveAttachmentToBase64 } from '../attachment-utils';
 import { parseToolResultImage } from '../tool-result-images';
 import { RenderArtifactStreamParser } from '../../artifact/render-artifact-stream';
@@ -10,10 +10,10 @@ import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
-} from '@/features/chat/session';
-import type { ChatTool } from '@/features/chat/agent-runtime';
+} from '@/features/chat/chat-api';
+import type { ChatTool } from '../tool-types';
 import type { SerializedMessage } from '@/features/chat/message-thread';
-import type { ChatProvider, ChatProviderConfig } from '../provider-types';
+import type { ChatProvider, ChatProviderConfig } from './provider-types';
 
 type OpenAIContentPart =
   | { type: 'text'; text: string }
@@ -135,18 +135,6 @@ const convertToolsToOpenAI = (tools: ChatTool[]): OpenAITool[] => {
 };
 
 const extractThinkingTexts = (delta: Record<string, unknown>): string[] => {
-  const thinkingTexts: string[] = [];
-
-  const tryPush = (value: unknown) => {
-    if (typeof value === 'string' && value.trim()) {
-      thinkingTexts.push(value);
-    }
-  };
-
-  tryPush(delta.thinking);
-  tryPush(delta.reasoning);
-  tryPush(delta.reasoning_content);
-
   const detailCandidates = [
     delta.reasoning_details,
     delta.reasoningDetails,
@@ -158,21 +146,41 @@ const extractThinkingTexts = (delta: Record<string, unknown>): string[] => {
       continue;
     }
 
+    const detailTexts: string[] = [];
+
     for (const item of candidate) {
       if (typeof item === 'string') {
-        tryPush(item);
+        if (item.trim()) {
+          detailTexts.push(item);
+        }
         continue;
       }
 
       if (item && typeof item === 'object') {
         const detail = item as Record<string, unknown>;
-        tryPush(detail.text);
-        tryPush(detail.content);
+        if (typeof detail.text === 'string' && detail.text.trim()) {
+          detailTexts.push(detail.text);
+        }
+        if (typeof detail.content === 'string' && detail.content.trim()) {
+          detailTexts.push(detail.content);
+        }
       }
+    }
+
+    if (detailTexts.length > 0) {
+      return [...new Set(detailTexts)];
     }
   }
 
-  return thinkingTexts;
+  const flatCandidates = [delta.reasoning_content, delta.reasoning, delta.thinking];
+
+  for (const candidate of flatCandidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return [candidate];
+    }
+  }
+
+  return [];
 };
 
 export async function convertToOpenAIMessages(

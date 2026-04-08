@@ -2,7 +2,7 @@ import { Suspense, lazy, useState } from 'react';
 import { Loader2, Share2 } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
 import { Dialog, DialogContent } from '@/shared/design-system/dialog';
-import { useChatRequestStore } from '@/features/chat/session';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { loadWithRetry } from '@/shared/browser/load-with-retry';
 

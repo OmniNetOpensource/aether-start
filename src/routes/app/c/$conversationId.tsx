@@ -4,10 +4,9 @@ import {
   resetLastEventId,
   cancelStreamSubscription,
   resumeRunningConversation,
-} from '@/features/chat/session';
+} from '@/features/chat/agent-runtime/chat-orchestrator';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import type { Message } from '@/features/chat/message-thread/message';
-import { MessageList } from '@/features/chat/message-thread/MessageList';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { getConversationFn } from '@/features/conversations/session';
 import { buildCurrentPath } from '@/features/conversations/conversation-tree';
@@ -62,5 +61,5 @@ export function ConversationPage() {
     };
   }, [conversationId, navigate]);
 
-  return <MessageList />;
+  return null;
 }

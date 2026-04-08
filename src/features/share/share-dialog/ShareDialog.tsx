@@ -8,7 +8,7 @@ import {
   getConversationShareFn,
   revokeConversationShareFn,
 } from '@/features/share/share-record';
-import { useChatRequestStore } from '@/features/chat/session';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { useConversationsQuery, selectAllConversations } from '@/features/conversations/session';
 import type { ConversationShareStatus } from '@/features/share/share-record';

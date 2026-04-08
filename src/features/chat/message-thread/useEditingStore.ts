@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { useChatRequestStore } from '@/features/chat/session';
+import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { toast } from '@/shared/app-shell/useToast';
-import { startChatRequest, cancelAnswering } from '@/features/chat/session';
+import { cancelAnswering, startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { cloneBlocks, editMessage } from '@/features/conversations/conversation-tree';
 import {
   buildUserBlocks,

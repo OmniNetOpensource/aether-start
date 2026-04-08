@@ -158,7 +158,7 @@ const fetchDirectImage = async (url: string, signal?: AbortSignal): Promise<stri
   }
 };
 
-const performFetchUrl = async (url: string, signal?: AbortSignal): Promise<string> => {
+export const fetchMarkdownWithJina = async (url: string, signal?: AbortSignal): Promise<string> => {
   const jinaUrl = `https://r.jina.ai/${url}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 80_000);
@@ -199,6 +199,89 @@ const performFetchUrl = async (url: string, signal?: AbortSignal): Promise<strin
         ? (error as Error).message
         : String(error);
     log('FETCH', `Error: ${message}`);
+    return `Error: ${message}`;
+  } finally {
+    signal?.removeEventListener('abort', linkedAbort);
+    clearTimeout(timeoutId);
+  }
+};
+
+const fetchMarkdownWithFirecrawl = async (url: string, signal?: AbortSignal): Promise<string> => {
+  const { FIRECRAWL_API_KEY } = getServerEnv();
+  if (!FIRECRAWL_API_KEY) {
+    log('FETCH', 'Missing FIRECRAWL_API_KEY');
+    return 'Error: FIRECRAWL_API_KEY is not set';
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 80_000);
+  const linkedAbort = () => controller.abort();
+  signal?.addEventListener('abort', linkedAbort);
+
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
+      },
+      body: JSON.stringify({ url, formats: ['markdown'] }),
+      signal: controller.signal,
+    });
+
+    let raw: unknown;
+    try {
+      raw = await response.json();
+    } catch {
+      log('FETCH', 'Firecrawl: response was not JSON');
+      return `Error: HTTP ${response.status} ${response.statusText}`;
+    }
+
+    if (!response.ok) {
+      const errText =
+        typeof raw === 'object' && raw !== null && 'error' in raw && typeof raw.error === 'string'
+          ? raw.error
+          : `${response.status} ${response.statusText}`;
+      log('FETCH', `Firecrawl HTTP error: ${errText}`);
+      return `Error: ${errText}`;
+    }
+
+    if (typeof raw !== 'object' || raw === null) {
+      log('FETCH', 'Firecrawl: invalid JSON body');
+      return 'Error: Invalid Firecrawl response';
+    }
+
+    if ('success' in raw && raw.success === false) {
+      const errMsg =
+        'error' in raw && typeof raw.error === 'string' ? raw.error : 'Firecrawl scrape failed';
+      log('FETCH', `Firecrawl: ${errMsg}`);
+      return `Error: ${errMsg}`;
+    }
+
+    if (!('data' in raw) || typeof raw.data !== 'object' || raw.data === null) {
+      log('FETCH', 'Firecrawl: missing data');
+      return 'Error: Invalid Firecrawl response';
+    }
+
+    const data = raw.data;
+    if (!('markdown' in data) || typeof data.markdown !== 'string') {
+      log('FETCH', 'Firecrawl: missing markdown');
+      return 'Error: Invalid Firecrawl response';
+    }
+
+    return data.markdown;
+  } catch (error) {
+    const isAbortError =
+      typeof error === 'object' &&
+      error !== null &&
+      'name' in error &&
+      (error as { name?: string }).name === 'AbortError';
+    const message = isAbortError
+      ? 'Request timed out'
+      : typeof error === 'object' && error !== null
+        ? (error as Error).message
+        : String(error);
+    log('FETCH', `Firecrawl error: ${message}`);
     return `Error: ${message}`;
   } finally {
     signal?.removeEventListener('abort', linkedAbort);
@@ -285,7 +368,7 @@ const fetchUrl: ToolHandler = async (args, signal) => {
     return enqueueFetchUrlCall(() => fetchDirectImage(url, signal));
   }
 
-  return enqueueFetchUrlCall(() => performFetchUrl(url, signal));
+  return enqueueFetchUrlCall(() => fetchMarkdownWithFirecrawl(url, signal));
 };
 
 const fetchUrlSpec: ChatTool = {

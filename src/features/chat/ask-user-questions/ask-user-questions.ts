@@ -1,144 +1,48 @@
+import { z } from 'zod';
 import type { ChatTool } from '@/features/chat/agent-runtime/tool-types';
 
-export type AskUserQuestionsOption = {
-  label: string;
-  description: string;
-};
+const OptionSchema = z.object({
+  label: z.string().trim().min(1),
+  description: z.string().trim().min(1),
+});
 
-export type AskUserQuestionsQuestion = {
-  header: string;
-  question: string;
-  options: AskUserQuestionsOption[];
-  multiSelect: boolean;
-};
+const QuestionSchema = z.object({
+  header: z.string().trim().min(1),
+  question: z.string().trim().min(1),
+  options: z.array(OptionSchema).min(1),
+  multiSelect: z.boolean().default(false),
+});
 
-export type AskUserQuestionsAnswer = {
-  questionIndex: number;
-  selectedOptionIndexes: number[];
-};
+const QuestionsPayloadSchema = z.object({
+  questions: z.array(QuestionSchema).min(1),
+});
+
+const AnswerSchema = z.object({
+  questionIndex: z.int().nonnegative(),
+  selectedOptionIndexes: z
+    .array(z.int().nonnegative())
+    .transform((arr) => [...new Set(arr)].sort((a, b) => a - b)),
+});
+
+const AnswerSubmissionSchema = z.object({
+  callId: z.string().trim().min(1),
+  answers: z.array(AnswerSchema),
+});
+
+export type AskUserQuestionsOption = z.infer<typeof OptionSchema>;
+export type AskUserQuestionsQuestion = z.infer<typeof QuestionSchema>;
+export type AskUserQuestionsAnswer = z.output<typeof AnswerSchema>;
 
 export type AskUserQuestionsBlockStatus = 'pending' | 'submitting' | 'answered';
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === 'object' && value !== null;
-
-const readNonEmptyString = (value: unknown, field: string) => {
-  if (typeof value !== 'string') {
-    throw new Error(`${field} must be a string`);
-  }
-
-  const nextValue = value.trim();
-  if (!nextValue) {
-    throw new Error(`${field} must be a non-empty string`);
-  }
-
-  return nextValue;
-};
-
-const normalizeIndexes = (value: unknown, field: string) => {
-  if (!Array.isArray(value)) {
-    throw new Error(`${field} must be an array`);
-  }
-
-  const indexes = value.map((item) => {
-    if (typeof item !== 'number' || !Number.isInteger(item) || item < 0) {
-      throw new Error(`${field} must contain non-negative integers`);
-    }
-
-    return item;
-  });
-
-  const uniqueIndexes = [...new Set(indexes)];
-  if (uniqueIndexes.length !== indexes.length) {
-    throw new Error(`${field} contains duplicate indexes`);
-  }
-
-  return uniqueIndexes.sort((left, right) => left - right);
-};
-
-export const parseAskUserQuestions = (value: unknown): AskUserQuestionsQuestion[] => {
-  if (!isRecord(value)) {
-    throw new Error('askuserquestions requires an object payload');
-  }
-
-  if (!Array.isArray(value.questions) || value.questions.length === 0) {
-    throw new Error('askuserquestions requires a non-empty questions array');
-  }
-
-  return value.questions.map((item, index) => {
-    if (!isRecord(item)) {
-      throw new Error(`questions[${index}] must be an object`);
-    }
-
-    if (!Array.isArray(item.options) || item.options.length === 0) {
-      throw new Error(`questions[${index}].options must be a non-empty array`);
-    }
-
-    return {
-      header: readNonEmptyString(item.header, `questions[${index}].header`),
-      question: readNonEmptyString(item.question, `questions[${index}].question`),
-      options: item.options.map((option, optionIndex) => {
-        if (!isRecord(option)) {
-          throw new Error(`questions[${index}].options[${optionIndex}] must be an object`);
-        }
-
-        return {
-          label: readNonEmptyString(
-            option.label,
-            `questions[${index}].options[${optionIndex}].label`,
-          ),
-          description: readNonEmptyString(
-            option.description,
-            `questions[${index}].options[${optionIndex}].description`,
-          ),
-        };
-      }),
-      multiSelect: item.multiSelect === true,
-    };
-  });
-};
+export const parseAskUserQuestions = (value: Record<string, unknown>): AskUserQuestionsQuestion[] =>
+  QuestionsPayloadSchema.parse(value).questions;
 
 export const parseAskUserQuestionsAnswerSubmission = (
-  value: unknown,
+  value: Record<string, unknown>,
 ): { callId: string; answers: AskUserQuestionsAnswer[] } | null => {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const callId = typeof value.callId === 'string' ? value.callId.trim() : '';
-  if (!callId || !Array.isArray(value.answers)) {
-    return null;
-  }
-
-  try {
-    return {
-      callId,
-      answers: value.answers.map((answer, index) => {
-        if (!isRecord(answer)) {
-          throw new Error(`answers[${index}] must be an object`);
-        }
-
-        const questionIndex = answer.questionIndex;
-        if (
-          typeof questionIndex !== 'number' ||
-          !Number.isInteger(questionIndex) ||
-          questionIndex < 0
-        ) {
-          throw new Error(`answers[${index}].questionIndex must be a non-negative integer`);
-        }
-
-        return {
-          questionIndex,
-          selectedOptionIndexes: normalizeIndexes(
-            answer.selectedOptionIndexes,
-            `answers[${index}].selectedOptionIndexes`,
-          ),
-        };
-      }),
-    };
-  } catch {
-    return null;
-  }
+  const result = AnswerSubmissionSchema.safeParse(value);
+  return result.success ? result.data : null;
 };
 
 export const normalizeAskUserQuestionsAnswers = (

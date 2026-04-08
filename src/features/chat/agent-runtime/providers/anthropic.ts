@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { buildSystemPrompt, type BackendConfig } from '../backend-config';
+import { buildSystemPrompt, type BackendConfig } from './backend-config';
 import { log, logProviderCommunication } from '../logger';
-import { buildProviderErrorEvent } from '../provider-error';
+import { buildProviderErrorEvent } from './provider-error';
 import { quotesToModelText } from '@/features/conversations/conversation-tree';
 import { resolveAttachmentToBase64 } from '../attachment-utils';
 import { RenderArtifactStreamParser } from '../../artifact/render-artifact-stream';
@@ -9,10 +9,10 @@ import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
   ToolInvocationResult,
-} from '@/features/chat/session';
-import type { ChatTool } from '@/features/chat/agent-runtime';
+} from '@/features/chat/chat-api';
+import type { ChatTool } from '../tool-types';
 import type { SerializedMessage } from '@/features/chat/message-thread';
-import type { ChatProvider, ChatProviderConfig } from '../provider-types';
+import type { ChatProvider, ChatProviderConfig } from './provider-types';
 
 type AnthropicImageSource = {
   type: 'base64';

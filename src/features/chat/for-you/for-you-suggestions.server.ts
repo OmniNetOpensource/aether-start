@@ -76,7 +76,7 @@ async function callLlmForSuggestions(titles: string[]): Promise<string[]> {
 
     log('FOR_YOU', 'Sending for-you suggestion request', requestLog);
 
-    const { getOpenAIClient } = await import('@/features/chat/agent-runtime/backends/openai');
+    const { getOpenAIClient } = await import('@/features/chat/agent-runtime/providers/openai');
     const client = getOpenAIClient(backendConfig);
     const openrouterExtra =
       modelConfig.backend === 'openrouter' ? { reasoning: { effort: 'none' } } : {};

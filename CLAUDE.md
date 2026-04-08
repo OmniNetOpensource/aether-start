@@ -88,10 +88,10 @@ Auth-related scripts still exist in `package.json`, but they currently point at 
 
 The request lifecycle now spans these files:
 
-- `src/features/chat/session/useChatRequestStore.ts`
-- `src/features/chat/session/chat-orchestrator.ts`
-- `src/features/chat/session/event-handlers.ts`
-- `src/features/chat/agent-runtime/chat-agent.ts`
+- `src/features/chat/composer/useChatRequestStore.ts`
+- `src/features/chat/agent-runtime/chat-orchestrator.ts`
+- `src/features/chat/agent-runtime/event-handlers.ts`
+- `src/features/chat/agent-runtime/conversation-runner.ts`
 
 If chat streaming, reconnection, abort, or resume behavior changes, inspect all four together.
 
@@ -123,7 +123,7 @@ Important files:
 - `src/features/conversations/session/conversations-db.ts`
 - `migrations/0015_conversation_artifacts.sql`
 
-Artifact stream events are defined in `src/features/chat/session/chat-event-types.ts` and applied in `src/features/chat/session/event-handlers.ts`.
+Artifact stream events are defined in `src/features/chat/chat-event-types.ts` and applied in `src/features/chat/agent-runtime/event-handlers.ts`.
 
 ### Models, Providers, And Backends
 
@@ -134,11 +134,11 @@ Model catalog files:
 
 Provider runtime files:
 
-- `src/features/chat/agent-runtime/provider-factory.ts`
-- `src/features/chat/agent-runtime/backends/anthropic.ts`
-- `src/features/chat/agent-runtime/backends/openai.ts`
-- `src/features/chat/agent-runtime/backends/openai-responses.ts`
-- `src/features/chat/agent-runtime/backends/gemini.ts`
+- `src/features/chat/agent-runtime/providers/provider-factory.ts`
+- `src/features/chat/agent-runtime/providers/anthropic.ts`
+- `src/features/chat/agent-runtime/providers/openai.ts`
+- `src/features/chat/agent-runtime/providers/openai-responses.ts`
+- `src/features/chat/agent-runtime/providers/gemini.ts`
 
 Supported formats currently include:
 
