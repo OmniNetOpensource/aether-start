@@ -187,8 +187,7 @@ export const applyChatEventToTree = (
   }
 
   if (event.type === 'thinking') {
-    const text =
-      typeof event.content === 'string' ? event.content : String(event.content ?? '');
+    const text = typeof event.content === 'string' ? event.content : String(event.content ?? '');
     if (bypass) {
       useChatSessionStore.getState().appendToAssistant({
         kind: 'thinking',

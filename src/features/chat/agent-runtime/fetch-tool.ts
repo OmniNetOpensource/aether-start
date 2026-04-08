@@ -206,6 +206,8 @@ export const fetchMarkdownWithJina = async (url: string, signal?: AbortSignal): 
   }
 };
 
+// Firecrawl: uncomment `fetchMarkdownWithFirecrawl` and the branch in `fetchUrl` when enabling.
+/*
 const fetchMarkdownWithFirecrawl = async (url: string, signal?: AbortSignal): Promise<string> => {
   const { FIRECRAWL_API_KEY } = getServerEnv();
   if (!FIRECRAWL_API_KEY) {
@@ -288,6 +290,7 @@ const fetchMarkdownWithFirecrawl = async (url: string, signal?: AbortSignal): Pr
     clearTimeout(timeoutId);
   }
 };
+*/
 
 const YOUTUBE_POLL_INTERVAL_MS = 3_000;
 const YOUTUBE_MAX_POLLS = 60;
@@ -368,6 +371,13 @@ const fetchUrl: ToolHandler = async (args, signal) => {
     return enqueueFetchUrlCall(() => fetchDirectImage(url, signal));
   }
 
+  // return enqueueFetchUrlCall(() => {
+  //   const { FIRECRAWL_API_KEY } = getServerEnv();
+  //   if (FIRECRAWL_API_KEY) {
+  //     return fetchMarkdownWithFirecrawl(url, signal);
+  //   }
+  //   return fetchMarkdownWithJina(url, signal);
+  // });
   return enqueueFetchUrlCall(() => fetchMarkdownWithJina(url, signal));
 };
 

@@ -1,6 +1,9 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect } from 'react';
-import { resetLastEventId, resumeRunningConversation } from '@/features/chat/agent-runtime/chat-orchestrator';
+import {
+  resetLastEventId,
+  resumeRunningConversation,
+} from '@/features/chat/agent-runtime/chat-orchestrator';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import type { Message } from '@/features/chat/message-thread/message';
 import { useChatSessionStore } from '@/features/conversations/session';
