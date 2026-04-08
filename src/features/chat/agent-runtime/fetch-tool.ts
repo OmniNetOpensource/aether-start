@@ -368,7 +368,7 @@ const fetchUrl: ToolHandler = async (args, signal) => {
     return enqueueFetchUrlCall(() => fetchDirectImage(url, signal));
   }
 
-  return enqueueFetchUrlCall(() => fetchMarkdownWithFirecrawl(url, signal));
+  return enqueueFetchUrlCall(() => fetchMarkdownWithJina(url, signal));
 };
 
 const fetchUrlSpec: ChatTool = {

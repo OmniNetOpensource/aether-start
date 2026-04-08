@@ -505,11 +505,9 @@ export const resumeRunningConversation = async (conversationId: string) => {
     return;
   }
 
-  if (agentStatus.status !== 'running' && lastEventId === 0) {
+  if (agentStatus.status !== 'running') {
     clearReconnectState();
-    if (useChatRequestStore.getState().status !== 'idle') {
-      useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/agentDone');
-    }
+    useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/agentDone');
     return;
   }
 
