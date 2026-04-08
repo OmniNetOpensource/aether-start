@@ -15,6 +15,7 @@
 import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import { applyChatEventToTree } from './event-handlers';
+import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
 import { useChatRequestStore } from './useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import type { SerializedMessage } from '@/features/chat/message-thread';
@@ -39,6 +40,7 @@ let lastEventId = 0;
 /** 重置 lastEventId，每次新请求前调用，避免沿用旧会话的 eventId */
 export const resetLastEventId = () => {
   lastEventId = 0;
+  resetStreamDisplayBuffer();
 };
 
 /**
@@ -183,6 +185,7 @@ const handleSSEMessage = (event: string, raw: string) => {
       return;
     case 'chat_finished':
       clearReconnectState();
+      flushAll();
       if (typeof payload.assistantCompletedAt === 'string') {
         useChatSessionStore.getState().stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
@@ -190,13 +193,16 @@ const handleSSEMessage = (event: string, raw: string) => {
       return;
     case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
+      flushAll();
       setStatus(payload.status === 'running' ? 'streaming' : 'idle', 'sync_response');
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
           const record = item as Record<string, unknown>;
           if (typeof record.eventId === 'number' && record.eventId > lastEventId) {
             lastEventId = record.eventId;
-            applyChatEventToTree(record.event as ChatServerToClientEvent);
+            applyChatEventToTree(record.event as ChatServerToClientEvent, {
+              bypassDisplayBuffer: true,
+            });
           }
         }
       }
@@ -263,6 +269,7 @@ const consumeStreamResponse = async (response: Response) => {
     buffer += decoder.decode().replace(/\r\n/g, '\n');
     flush();
   } finally {
+    flushAll();
     await Promise.allSettled([reader.cancel()]);
   }
 };
@@ -410,6 +417,7 @@ export const startChatRequest = async () => {
  */
 export const cancelStreamSubscription = (reason: string) => {
   clearReconnectState();
+  flushAll();
   activeController?.abort();
   activeController = null;
 
