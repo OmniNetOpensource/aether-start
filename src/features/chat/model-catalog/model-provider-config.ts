@@ -275,6 +275,27 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'dmx',
   },
+  claudeOpus47CcDmx: {
+    id: 'claudeOpus47CcDmx',
+    name: 'claude-opus-4-7-cc+dmx',
+    model: 'claude-opus-4-7-cc',
+    format: 'openai',
+    backend: 'dmx',
+  },
+  claudeOpus47Dmx: {
+    id: 'claudeOpus47Dmx',
+    name: 'claude-opus-4-7+dmx',
+    model: 'claude-opus-4-7',
+    format: 'openai',
+    backend: 'dmx',
+  },
+  kimiK26CodePreviewFree: {
+    id: 'kimiK26CodePreviewFree',
+    name: 'K2.6-code-preview-free+dmx',
+    model: 'K2.6-code-preview-free',
+    format: 'openai',
+    backend: 'dmx',
+  },
   gemini31ProRightcode: {
     id: 'gemini31ProRightcode',
     name: 'gemini-3.1-pro+rightcode',
