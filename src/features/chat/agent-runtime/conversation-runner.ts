@@ -820,26 +820,20 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     signal: AbortSignal,
     emitEvent: (event: ChatServerToClientEvent) => Promise<void>,
     getErrorCount: () => number,
-  ): Promise<{ assistantText: string; runResult: ProviderRunResult; hadErrors: boolean }> {
+  ): Promise<{ runResult: ProviderRunResult; hadErrors: boolean }> {
     const errorBefore = getErrorCount();
     const generator = provider.run(workingMessages, signal);
-    let pendingToolCalls: PendingToolInvocation[] = [];
-    let assistantText = '';
     let runResult: ProviderRunResult = {
-      pendingToolCalls,
+      pendingToolCalls: [],
       thinkingBlocks: [],
+      assistantText: '',
     };
 
     while (true) {
       const { done, value } = await generator.next();
       if (done) {
         runResult = value;
-        pendingToolCalls = value.pendingToolCalls;
         break;
-      }
-
-      if (value.type === 'content') {
-        assistantText += value.content;
       }
 
       await emitEvent(value);
@@ -847,7 +841,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     }
 
     return {
-      assistantText,
       runResult,
       hadErrors: getErrorCount() > errorBefore,
     };
@@ -1047,7 +1040,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       while (true) {
         throwIfAborted(signal);
 
-        const { assistantText, runResult, hadErrors } = await this.runOneTurn(
+        const { runResult, hadErrors } = await this.runOneTurn(
           provider,
           workingMessages,
           signal,
@@ -1098,12 +1091,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
 
         workingMessages = [
           ...workingMessages,
-          ...provider.formatToolContinuation(
-            assistantText,
-            runResult,
-            runResult.pendingToolCalls,
-            toolResults,
-          ),
+          ...provider.formatToolContinuation(runResult, toolResults),
         ];
       }
     } catch (error) {

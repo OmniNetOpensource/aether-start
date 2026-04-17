@@ -5,6 +5,12 @@ import type {
 } from '@/features/chat/chat-api';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { upsertConversationInCache } from '@/features/conversations/session';
+import {
+  enqueueStreamArtifactCode,
+  enqueueStreamContent,
+  enqueueStreamThinking,
+  flushAll,
+} from './stream-display-buffer';
 
 const ERROR_COPY: Record<ChatErrorCode, { title: string; cause: string; suggestion: string }> = {
   invalid_request: {
@@ -161,6 +167,26 @@ export const enhanceServerErrorMessage = (safeMessage: string, errorInfo?: ChatE
 };
 
 export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
+  if (event.type === 'content') {
+    const addition =
+      typeof event.content === 'string' ? event.content : String(event.content ?? '');
+    enqueueStreamContent(addition);
+    return;
+  }
+
+  if (event.type === 'thinking') {
+    const text = typeof event.content === 'string' ? event.content : String(event.content ?? '');
+    enqueueStreamThinking(text);
+    return;
+  }
+
+  if (event.type === 'artifact_code_delta') {
+    enqueueStreamArtifactCode(event.artifactId, event.delta);
+    return;
+  }
+
+  flushAll();
+
   if (event.type === 'artifact_started') {
     useChatSessionStore.getState().startArtifact(event.artifactId);
     return;
@@ -173,11 +199,6 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
 
   if (event.type === 'artifact_language') {
     useChatSessionStore.getState().updateArtifactLanguage(event.artifactId, event.language);
-    return;
-  }
-
-  if (event.type === 'artifact_code_delta') {
-    useChatSessionStore.getState().appendArtifactCode(event.artifactId, event.delta);
     return;
   }
 
@@ -212,14 +233,6 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
       ch.postMessage({ id: event.conversationId, title: event.title, updated_at: now });
       ch.close();
     }
-    return;
-  }
-
-  if (event.type === 'thinking') {
-    useChatSessionStore.getState().appendToAssistant({
-      kind: 'thinking',
-      text: typeof event.content === 'string' ? event.content : String(event.content ?? ''),
-    });
     return;
   }
 
@@ -289,14 +302,5 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
       message: enhancedMessage,
     });
     return;
-  }
-
-  if (event.type === 'content') {
-    const addition =
-      typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    useChatSessionStore.getState().appendToAssistant({
-      type: 'content',
-      content: addition,
-    });
   }
 };

@@ -21,6 +21,7 @@ export type OpenAIResponsesMessage = OpenAI.Responses.ResponseInputItem;
 type OpenAIResponsesProviderRunResult = {
   pendingToolCalls: PendingToolInvocation[];
   thinkingBlocks: unknown[];
+  assistantText: string;
 };
 
 type OpenAIResponsesChatProviderConfig = {
@@ -257,9 +258,11 @@ export class OpenAIResponsesChatProvider {
     const emptyResult: OpenAIResponsesProviderRunResult = {
       pendingToolCalls: [],
       thinkingBlocks: [],
+      assistantText: '',
     };
     const toolCallsByOutputIndex = new Map<number, AccumulatedToolCall>();
     const renderParsers = new Map<number, RenderArtifactStreamParser>();
+    let assistantText = '';
 
     try {
       const client = getOpenAIClient(this.backendConfig, 'openai-responses');
@@ -276,6 +279,7 @@ export class OpenAIResponsesChatProvider {
         });
 
         if (event.type === 'response.output_text.delta' && event.delta) {
+          assistantText += event.delta;
           yield { type: 'content', content: event.delta };
           continue;
         }
@@ -388,6 +392,10 @@ export class OpenAIResponsesChatProvider {
         };
       });
 
+    for (const tc of pendingToolCalls) {
+      yield { type: 'tool_call', tool: tc.name, args: tc.args, callId: tc.id };
+    }
+
     for (const [index, toolCall] of [...toolCallsByOutputIndex.entries()].sort(
       ([a], [b]) => a - b,
     )) {
@@ -406,7 +414,7 @@ export class OpenAIResponsesChatProvider {
       }
     }
 
-    return { pendingToolCalls, thinkingBlocks: [] };
+    return { pendingToolCalls, thinkingBlocks: [], assistantText };
   }
 }
 
@@ -417,7 +425,11 @@ export function createOpenAIResponsesAdapter(
   return {
     convertMessages: (history) => convertToOpenAIResponsesMessages(history),
     run: (messages, signal) => provider.run(messages, signal),
-    formatToolContinuation: (assistantText, _runResult, pendingToolCalls, toolResults) =>
-      formatOpenAIResponsesToolContinuation(assistantText, pendingToolCalls, toolResults),
+    formatToolContinuation: (runResult, toolResults) =>
+      formatOpenAIResponsesToolContinuation(
+        runResult.assistantText,
+        runResult.pendingToolCalls,
+        toolResults,
+      ),
   };
 }

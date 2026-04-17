@@ -26,6 +26,7 @@ export type GeminiMessage = genai.Content;
 type GeminiProviderRunResult = {
   pendingToolCalls: PendingToolInvocation[];
   thinkingBlocks: unknown[];
+  assistantText: string;
 };
 
 type GeminiChatProviderConfig = {
@@ -172,8 +173,10 @@ export class GeminiChatProvider {
     const emptyResult: GeminiProviderRunResult = {
       pendingToolCalls: [],
       thinkingBlocks: [],
+      assistantText: '',
     };
     const pendingToolCalls: PendingToolInvocation[] = [];
+    let assistantText = '';
 
     try {
       const client = getClient(this.backendConfig);
@@ -211,6 +214,7 @@ export class GeminiChatProvider {
           if (part.thought && part.text) {
             yield { type: 'thinking', content: part.text };
           } else if (part.text && !part.thought) {
+            assistantText += part.text;
             yield { type: 'content', content: part.text };
           } else if (part.functionCall) {
             const fc = part.functionCall;
@@ -220,6 +224,12 @@ export class GeminiChatProvider {
               args: (fc.args ?? {}) as Record<string, unknown>,
             };
             pendingToolCalls.push(toolCall);
+            yield {
+              type: 'tool_call',
+              tool: toolCall.name,
+              args: toolCall.args,
+              callId: toolCall.id,
+            };
             if (toolCall.name === 'render') {
               for (const event of buildRenderArtifactEvents(toolCall.id, toolCall.args)) {
                 yield event;
@@ -256,7 +266,7 @@ export class GeminiChatProvider {
       return emptyResult;
     }
 
-    return { pendingToolCalls, thinkingBlocks: [] };
+    return { pendingToolCalls, thinkingBlocks: [], assistantText };
   }
 }
 
@@ -265,7 +275,11 @@ export function createGeminiAdapter(config: ChatProviderConfig): ChatProvider<Ge
   return {
     convertMessages: (history) => convertToGeminiMessages(history),
     run: (messages, signal) => provider.run(messages, signal),
-    formatToolContinuation: (assistantText, _runResult, pendingToolCalls, toolResults) =>
-      formatGeminiToolContinuation(assistantText, pendingToolCalls, toolResults),
+    formatToolContinuation: (runResult, toolResults) =>
+      formatGeminiToolContinuation(
+        runResult.assistantText,
+        runResult.pendingToolCalls,
+        toolResults,
+      ),
   };
 }

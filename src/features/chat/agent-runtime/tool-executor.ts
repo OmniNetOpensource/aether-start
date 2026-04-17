@@ -42,14 +42,7 @@ export const executeToolCall = async (
   toolcall: PendingToolInvocation,
   signal?: AbortSignal,
 ): Promise<ExecutedToolCallResult> => {
-  const events: ChatServerToClientEvent[] = [
-    {
-      type: 'tool_call',
-      tool: toolcall.name,
-      args: toolcall.args,
-      callId: toolcall.id,
-    },
-  ];
+  const events: ChatServerToClientEvent[] = [];
 
   const env = getServerEnv();
   const handleTool: ToolHandler | null =

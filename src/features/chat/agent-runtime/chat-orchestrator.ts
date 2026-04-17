@@ -15,6 +15,7 @@
 import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import { applyChatEventToTree } from './event-handlers';
+import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import type { SerializedMessage } from '@/features/chat/message-thread';
@@ -42,6 +43,7 @@ let lastEventId = 0;
 /** 重置 lastEventId，每次新请求前调用，避免沿用旧会话的 eventId */
 export const resetLastEventId = () => {
   lastEventId = 0;
+  resetStreamDisplayBuffer();
 };
 
 /**
@@ -186,6 +188,7 @@ const handleSSEMessage = (event: string, raw: string) => {
       return;
     case 'chat_finished':
       clearReconnectState();
+      flushAll();
       if (typeof payload.assistantCompletedAt === 'string') {
         useChatSessionStore.getState().stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
@@ -193,6 +196,7 @@ const handleSSEMessage = (event: string, raw: string) => {
       return;
     case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
+      flushAll();
       setStatus(payload.status === 'running' ? 'streaming' : 'idle', 'sync_response');
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
@@ -266,6 +270,7 @@ const consumeStreamResponse = async (response: Response) => {
     buffer += decoder.decode().replace(/\r\n/g, '\n');
     flush();
   } finally {
+    flushAll();
     await Promise.allSettled([reader.cancel()]);
   }
 };
@@ -318,12 +323,11 @@ export const startChatRequest = async () => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
-  if (requestStore.status !== 'idle') return;
-
   resetLastEventId();
 
   if (!sessionStore.currentModelId) {
     toast.warning(SELECT_MODEL_WARNING);
+    requestStore.setStatus('idle', 'startChatRequest/noModel');
     return;
   }
 
@@ -413,6 +417,7 @@ export const startChatRequest = async () => {
  */
 export const cancelStreamSubscription = (reason: string) => {
   clearReconnectState();
+  flushAll();
   activeController?.abort();
   activeController = null;
 
@@ -473,7 +478,7 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
  * 恢复正在进行的对话流（如页面刷新后重新进入对话页）。
  *
  * 流程：
- * 1. 调用 checkAgentStatus；若非 running 且 lastEventId 为 0（新进入对话页）则直接 idle 返回
+ * 1. 将 status 设为 sending，再调用 checkAgentStatus；若非 running 则 idle 返回
  * 2. 创建 AbortController，通过 activeController 与 cancelStreamSubscription 联动
  * 3. POST /agents/conversation-runner/:conversationId/events，body 为 { lastEventId }
  * 4. 消费返回的 SSE 流（sync_response + 后续 chat_event）
@@ -482,6 +487,8 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
  * 取消方式：对话页卸载时调用 cancelStreamSubscription 即可 abort
  */
 export const resumeRunningConversation = async (conversationId: string) => {
+  useChatRequestStore.getState().setStatus('sending', 'resumeRunningConversation');
+
   let agentStatus: { status: ChatAgentStatus };
 
   try {
@@ -497,18 +504,14 @@ export const resumeRunningConversation = async (conversationId: string) => {
     return;
   }
 
-  if (agentStatus.status !== 'running' && lastEventId === 0) {
+  if (agentStatus.status !== 'running') {
     clearReconnectState();
-    if (useChatRequestStore.getState().status !== 'idle') {
-      useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/agentDone');
-    }
+    useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/agentDone');
     return;
   }
 
   const controller = new AbortController();
   activeController = controller;
-
-  useChatRequestStore.getState().setStatus('sending', 'resumeRunningConversation');
 
   try {
     const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/events`, {

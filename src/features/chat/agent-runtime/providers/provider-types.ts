@@ -10,6 +10,7 @@ import type { SerializedMessage } from '@/features/chat/message-thread';
 export type ProviderRunResult = {
   pendingToolCalls: PendingToolInvocation[];
   thinkingBlocks: unknown[];
+  assistantText: string;
 };
 
 export type ChatProviderConfig = {
@@ -27,10 +28,5 @@ export type ChatProvider<M = unknown> = {
     signal?: AbortSignal,
   ): AsyncGenerator<ChatServerToClientEvent, ProviderRunResult>;
 
-  formatToolContinuation(
-    assistantText: string,
-    runResult: ProviderRunResult,
-    pendingToolCalls: PendingToolInvocation[],
-    toolResults: ToolInvocationResult[],
-  ): M[];
+  formatToolContinuation(runResult: ProviderRunResult, toolResults: ToolInvocationResult[]): M[];
 };

@@ -127,18 +127,15 @@ function LinkSafetyModal({ isOpen, onClose, onConfirm, url }: LinkSafetyModalPro
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent
-        className='left-0 top-0 h-dvh max-w-none translate-x-0 translate-y-0 gap-0 rounded-none border-0 px-5 pb-5 pt-14 shadow-none sm:max-w-none'
-        showCloseButton={false}
-      >
-        <div className='mx-auto flex h-full w-full max-w-3xl flex-col gap-6'>
+      <DialogContent className='flex h-[50dvh] max-w-[calc(100%-2rem)] flex-col gap-6 overflow-hidden sm:max-w-3xl'>
+        <div className='flex min-h-0 flex-1 flex-col gap-6'>
           <DialogHeader className='gap-3 text-left'>
             <DialogTitle className='text-2xl sm:text-3xl'>Open external link</DialogTitle>
             <DialogDescription className='max-w-2xl text-sm sm:text-base'>
               This link points outside the app. Copy it or open it in a new tab.
             </DialogDescription>
           </DialogHeader>
-          <div className='flex min-h-0 flex-1 items-center'>
+          <div className='flex min-h-0 flex-1 items-stretch overflow-y-auto'>
             <div className='w-full rounded-lg border bg-muted p-4 font-mono text-sm break-all sm:p-5 sm:text-base'>
               {url}
             </div>

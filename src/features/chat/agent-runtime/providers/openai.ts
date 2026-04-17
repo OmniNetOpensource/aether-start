@@ -45,6 +45,7 @@ type OpenAITool = {
 type OpenAIProviderRunResult = {
   pendingToolCalls: PendingToolInvocation[];
   thinkingBlocks: unknown[];
+  assistantText: string;
 };
 
 type OpenAIChatProviderConfig = {
@@ -322,9 +323,11 @@ export class OpenAIChatProvider {
     const emptyResult: OpenAIProviderRunResult = {
       pendingToolCalls: [],
       thinkingBlocks: [],
+      assistantText: '',
     };
     const toolCallsByIndex = new Map<number, { id: string; name: string; argsJson: string }>();
     const renderParsers = new Map<number, RenderArtifactStreamParser>();
+    let assistantText = '';
 
     try {
       const client = getOpenAIClient(this.backendConfig, 'openai');
@@ -363,6 +366,7 @@ export class OpenAIChatProvider {
         const delta = (choice.delta ?? {}) as Record<string, unknown>;
         const deltaContent = delta.content;
         if (typeof deltaContent === 'string' && deltaContent.length > 0) {
+          assistantText += deltaContent;
           yield { type: 'content', content: deltaContent };
         }
 
@@ -460,6 +464,10 @@ export class OpenAIChatProvider {
         };
       });
 
+    for (const tc of pendingToolCalls) {
+      yield { type: 'tool_call', tool: tc.name, args: tc.args, callId: tc.id };
+    }
+
     for (const [index, toolCall] of [...toolCallsByIndex.entries()].sort(([a], [b]) => a - b)) {
       if (toolCall.name !== 'render') {
         continue;
@@ -476,7 +484,7 @@ export class OpenAIChatProvider {
       }
     }
 
-    return { pendingToolCalls, thinkingBlocks: [] };
+    return { pendingToolCalls, thinkingBlocks: [], assistantText };
   }
 }
 
@@ -485,7 +493,11 @@ export function createOpenAIAdapter(config: ChatProviderConfig): ChatProvider<Op
   return {
     convertMessages: (history) => convertToOpenAIMessages(history),
     run: (messages, signal) => provider.run(messages, signal),
-    formatToolContinuation: (assistantText, _runResult, pendingToolCalls, toolResults) =>
-      formatOpenAIToolContinuation(assistantText, pendingToolCalls, toolResults),
+    formatToolContinuation: (runResult, toolResults) =>
+      formatOpenAIToolContinuation(
+        runResult.assistantText,
+        runResult.pendingToolCalls,
+        toolResults,
+      ),
   };
 }
