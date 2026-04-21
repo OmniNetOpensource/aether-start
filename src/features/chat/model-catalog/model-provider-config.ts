@@ -444,6 +444,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'openrouter',
   },
+  openrouterQwen36Plus: {
+    id: 'openrouterQwen36Plus',
+    name: 'qwen3.6-plus+openrouter',
+    model: 'qwen/qwen3.6-plus',
+    format: 'openai',
+    backend: 'openrouter',
+  },
   openrouterGemma431bIt: {
     id: 'openrouterGemma431bIt',
     name: 'gemma-4-31b-it+openrouter',
