@@ -464,6 +464,20 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'openrouter',
   },
+  openrouterKimiK26: {
+    id: 'openrouterKimiK26',
+    name: 'kimi-k2.6+openrouter',
+    model: 'moonshotai/kimi-k2.6',
+    format: 'openai',
+    backend: 'openrouter',
+  },
+  openrouterGlm51: {
+    id: 'openrouterGlm51',
+    name: 'glm-5.1+openrouter',
+    model: 'z-ai/glm-5.1',
+    format: 'openai',
+    backend: 'openrouter',
+  },
 };
 
 export const getAvailableModels = (): { id: string; name: string }[] =>
