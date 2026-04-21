@@ -86,6 +86,16 @@ export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
     };
   }
 
+  if (backend === 'moonshot') {
+    const apiKey = env.MOONSHOT_API_KEY;
+    if (!apiKey) throw new Error('Missing MOONSHOT_API_KEY');
+    return {
+      apiKey,
+      baseURL: 'https://api.moonshot.cn/v1',
+      defaultHeaders: { 'User-Agent': 'aether' },
+    };
+  }
+
   if (backend === 'ikun') {
     const apiKey = env.ANTHROPIC_API_KEY_IKUNCODE;
     const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE;

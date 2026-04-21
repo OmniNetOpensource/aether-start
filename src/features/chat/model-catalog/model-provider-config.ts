@@ -4,6 +4,7 @@ export type ChatBackend =
   | 'rightcode-claude-sale'
   | 'rightcode-gemini'
   | 'rightcode-openai'
+  | 'moonshot'
   | 'dmx'
   | 'ikun'
   | 'ikun-openai'
@@ -295,6 +296,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     model: 'K2.6-code-preview-free',
     format: 'openai',
     backend: 'dmx',
+  },
+  kimiK26Moonshot: {
+    id: 'kimiK26Moonshot',
+    name: 'kimi-k2.6+moonshot',
+    model: 'kimi-k2.6',
+    format: 'openai',
+    backend: 'moonshot',
   },
   gemini31ProRightcode: {
     id: 'gemini31ProRightcode',

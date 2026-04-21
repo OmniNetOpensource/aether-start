@@ -22,6 +22,7 @@ type OpenAIContentPart =
 export type OpenAIMessage = {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content?: string | OpenAIContentPart[];
+  reasoning_content?: string;
   tool_call_id?: string;
   tool_calls?: Array<{
     id: string;
@@ -109,6 +110,8 @@ const createLoggingFetch = (provider: 'openai' | 'openai-responses'): typeof fet
     return response;
   };
 };
+
+const isMoonshotApiBaseUrl = (baseURL: string) => baseURL === 'https://api.moonshot.cn/v1';
 
 export const getOpenAIClient = (
   config: BackendConfig,
@@ -236,9 +239,14 @@ export async function convertToOpenAIMessages(
 
 export function formatOpenAIToolContinuation(
   assistantText: string,
+  thinkingBlocks: unknown[],
   pendingToolCalls: PendingToolInvocation[],
   toolResults: ToolInvocationResult[],
 ): OpenAIMessage[] {
+  const reasoningContent = thinkingBlocks
+    .filter((block): block is string => typeof block === 'string' && block.length > 0)
+    .join('');
+
   const assistantToolCalls = pendingToolCalls.map((toolCall, index) => ({
     id: toolCall.id || `tool_${index + 1}`,
     type: 'function' as const,
@@ -251,6 +259,7 @@ export function formatOpenAIToolContinuation(
   const assistantMessage: OpenAIMessage = {
     role: 'assistant',
     content: assistantText || '',
+    reasoning_content: reasoningContent || undefined,
     tool_calls: assistantToolCalls,
   };
 
@@ -328,6 +337,7 @@ export class OpenAIChatProvider {
     const toolCallsByIndex = new Map<number, { id: string; name: string; argsJson: string }>();
     const renderParsers = new Map<number, RenderArtifactStreamParser>();
     let assistantText = '';
+    let reasoningContent = '';
 
     try {
       const client = getOpenAIClient(this.backendConfig, 'openai');
@@ -339,6 +349,9 @@ export class OpenAIChatProvider {
         tools: this.openaiTools,
         stream: true,
       };
+      if (isMoonshotApiBaseUrl(this.backendConfig.baseURL)) {
+        streamParams.thinking = { type: 'enabled' };
+      }
 
       const streamResponse = await client.chat.completions.create(streamParams, {
         signal,
@@ -368,6 +381,11 @@ export class OpenAIChatProvider {
         if (typeof deltaContent === 'string' && deltaContent.length > 0) {
           assistantText += deltaContent;
           yield { type: 'content', content: deltaContent };
+        }
+
+        const deltaReasoningContent = delta.reasoning_content;
+        if (typeof deltaReasoningContent === 'string' && deltaReasoningContent.length > 0) {
+          reasoningContent += deltaReasoningContent;
         }
 
         const thinkingTexts = extractThinkingTexts(delta);
@@ -484,7 +502,11 @@ export class OpenAIChatProvider {
       }
     }
 
-    return { pendingToolCalls, thinkingBlocks: [], assistantText };
+    return {
+      pendingToolCalls,
+      thinkingBlocks: reasoningContent ? [reasoningContent] : [],
+      assistantText,
+    };
   }
 }
 
@@ -496,6 +518,7 @@ export function createOpenAIAdapter(config: ChatProviderConfig): ChatProvider<Op
     formatToolContinuation: (runResult, toolResults) =>
       formatOpenAIToolContinuation(
         runResult.assistantText,
+        runResult.thinkingBlocks,
         runResult.pendingToolCalls,
         toolResults,
       ),

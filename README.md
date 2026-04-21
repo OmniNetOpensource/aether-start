@@ -88,6 +88,7 @@ GEMINI_API_KEY_RIGHTCODE=可选 Gemini+rightcode 线路 key
 GEMINI_BASE_URL_RIGHTCODE=可选 Gemini+rightcode 线路 baseURL
 OPENAI_API_KEY_RIGHTCODE=可选 OpenAI Responses+rightcode 线路 key（如 gpt5.4）
 OPENAI_BASE_URL_RIGHTCODE=可选 OpenAI Responses+rightcode 线路 baseURL
+MOONSHOT_API_KEY=可选 Moonshot 官方 Kimi API key（如 kimi-k2.6）
 DMX_APIKEY=推荐 pro线路key（优先）
 DMX_BASEURL=推荐 pro线路baseURL（优先）
 SERP_API_KEY=可选 搜索功能要用
@@ -95,7 +96,7 @@ LLM_STREAM_LOGGING=可选，默认关闭；true/all 打开全部，或填 anthro
 LLM_STREAM_LOGGING_MAX_CHARS=可选，单条日志最大字符数，超过则不记录；默认 10000；设为 0 表示不限制
 ```
 
-说明：`backend=dmx` 的聊天请求使用 OpenAI `chat.completions` 协议，且仅读取 `DMX_APIKEY` / `DMX_BASEURL`。`backend=rightcode-claude` 使用 `ANTHROPIC_API_KEY_RIGHTCODE` / `ANTHROPIC_BASE_URL_RIGHTCODE`。`backend=rightcode-gemini` 使用 `GEMINI_API_KEY_RIGHTCODE` / `GEMINI_BASE_URL_RIGHTCODE`。`backend=rightcode-openai` 使用 `OPENAI_API_KEY_RIGHTCODE` / `OPENAI_BASE_URL_RIGHTCODE`。`backend=ikun` 时使用 `ANTHROPIC_API_KEY_IKUNCODE` / `ANTHROPIC_BASE_URL_IKUNCODE`。`backend=ikun-openai`（OpenAI Responses，如 gpt-5.4+ikun）使用 `OPENAI_API_KEY_IKUNCODE`，`baseURL` 与 ikun Anthropic 相同即 `ANTHROPIC_BASE_URL_IKUNCODE`。
+说明：`backend=dmx` 的聊天请求使用 OpenAI `chat.completions` 协议，且仅读取 `DMX_APIKEY` / `DMX_BASEURL`。`backend=rightcode-claude` 使用 `ANTHROPIC_API_KEY_RIGHTCODE` / `ANTHROPIC_BASE_URL_RIGHTCODE`。`backend=rightcode-gemini` 使用 `GEMINI_API_KEY_RIGHTCODE` / `GEMINI_BASE_URL_RIGHTCODE`。`backend=rightcode-openai` 使用 `OPENAI_API_KEY_RIGHTCODE` / `OPENAI_BASE_URL_RIGHTCODE`。`backend=moonshot` 使用 `MOONSHOT_API_KEY`，`baseURL` 固定为 `https://api.moonshot.cn/v1`。`backend=ikun` 时使用 `ANTHROPIC_API_KEY_IKUNCODE` / `ANTHROPIC_BASE_URL_IKUNCODE`。`backend=ikun-openai`（OpenAI Responses，如 gpt-5.4+ikun）使用 `OPENAI_API_KEY_IKUNCODE`，`baseURL` 与 ikun Anthropic 相同即 `ANTHROPIC_BASE_URL_IKUNCODE`。
 
 ---
 

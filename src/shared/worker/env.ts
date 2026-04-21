@@ -16,6 +16,7 @@ type ServerEnv = {
   GEMINI_BASE_URL_RIGHTCODE?: string;
   OPENAI_API_KEY_RIGHTCODE?: string;
   OPENAI_BASE_URL_RIGHTCODE?: string;
+  MOONSHOT_API_KEY?: string;
   ANTHROPIC_API_KEY_IKUNCODE?: string;
   ANTHROPIC_BASE_URL_IKUNCODE?: string;
   /** OpenAI-compatible key for ikun gateway; base URL reuses ANTHROPIC_BASE_URL_IKUNCODE */
@@ -108,6 +109,9 @@ export const getServerEnv = (): ServerEnv => {
     OPENAI_BASE_URL_RIGHTCODE:
       readString(bindings.OPENAI_BASE_URL_RIGHTCODE) ??
       readStringFromProcess('OPENAI_BASE_URL_RIGHTCODE'),
+    MOONSHOT_API_KEY:
+      readString((bindings as Record<string, unknown>).MOONSHOT_API_KEY) ??
+      readStringFromProcess('MOONSHOT_API_KEY'),
     ANTHROPIC_API_KEY_IKUNCODE:
       readString(bindings.ANTHROPIC_API_KEY_IKUNCODE) ??
       readStringFromProcess('ANTHROPIC_API_KEY_IKUNCODE'),

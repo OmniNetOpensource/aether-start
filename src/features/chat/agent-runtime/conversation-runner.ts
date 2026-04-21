@@ -55,6 +55,7 @@ type ConversationRunnerEnv = Cloudflare.Env & {
   ANTHROPIC_BASE_URL_RIGHTCODE?: string;
   ANTHROPIC_API_KEY_RIGHTCODE_SALE?: string;
   ANTHROPIC_BASE_URL_RIGHTCODE_SALE?: string;
+  MOONSHOT_API_KEY?: string;
   ANTHROPIC_API_KEY_IKUNCODE?: string;
   ANTHROPIC_BASE_URL_IKUNCODE?: string;
   GEMINI_API_KEY_IKUNCODE?: string;
