@@ -486,6 +486,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'openrouter',
   },
+  openrouterDeepseekV4Pro: {
+    id: 'openrouterDeepseekV4Pro',
+    name: 'deepseek-v4-pro+openrouter',
+    model: 'deepseek/deepseek-v4-pro',
+    format: 'openai',
+    backend: 'openrouter',
+  },
 };
 
 export const getAvailableModels = (): { id: string; name: string }[] =>

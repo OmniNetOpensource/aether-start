@@ -1,5 +1,10 @@
 import OpenAI from 'openai';
-import { buildSystemPrompt, type BackendConfig } from './backend-config';
+import {
+  buildCurrentDateSystemPrompt,
+  buildStableSystemPrompt,
+  buildSystemPrompt,
+  type BackendConfig,
+} from './backend-config';
 import { log, logProviderCommunication, shouldLogProviderCommunication } from '../logger';
 import { quotesToModelText } from '@/features/conversations/conversation-tree';
 import { buildProviderErrorEvent } from './provider-error';
@@ -112,6 +117,30 @@ const createLoggingFetch = (provider: 'openai' | 'openai-responses'): typeof fet
 };
 
 const isMoonshotApiBaseUrl = (baseURL: string) => baseURL === 'https://api.moonshot.cn/v1';
+
+const buildOpenAISystemMessages = (
+  systemPrompt: string,
+  backendConfig: BackendConfig,
+): OpenAIMessage[] => {
+  if (!isMoonshotApiBaseUrl(backendConfig.baseURL)) {
+    const systemParts = [buildSystemPrompt()];
+    if (systemPrompt.trim()) {
+      systemParts.push(systemPrompt.trim());
+    }
+
+    return [{ role: 'system', content: systemParts.join('\n\n') }];
+  }
+
+  const stableParts = [buildStableSystemPrompt()];
+  if (systemPrompt.trim()) {
+    stableParts.push(systemPrompt.trim());
+  }
+
+  return [
+    { role: 'system', content: stableParts.join('\n\n') },
+    { role: 'system', content: buildCurrentDateSystemPrompt() },
+  ];
+};
 
 export const getOpenAIClient = (
   config: BackendConfig,
@@ -319,13 +348,8 @@ export class OpenAIChatProvider {
     messages: OpenAIMessage[],
     signal?: AbortSignal,
   ): AsyncGenerator<ChatServerToClientEvent, OpenAIProviderRunResult> {
-    const systemParts = [buildSystemPrompt()];
-    if (this.systemPrompt.trim()) {
-      systemParts.push(this.systemPrompt.trim());
-    }
-
     const fullMessages: OpenAIMessage[] = [
-      { role: 'system', content: systemParts.join('\n\n') },
+      ...buildOpenAISystemMessages(this.systemPrompt, this.backendConfig),
       ...messages,
     ];
 
@@ -351,6 +375,7 @@ export class OpenAIChatProvider {
       };
       if (isMoonshotApiBaseUrl(this.backendConfig.baseURL)) {
         streamParams.thinking = { type: 'enabled' };
+        streamParams.stream_options = { include_usage: true };
       }
 
       const streamResponse = await client.chat.completions.create(streamParams, {
@@ -370,6 +395,14 @@ export class OpenAIChatProvider {
           model: this.model,
           chunk,
         });
+
+        const usage = 'usage' in chunk ? chunk.usage : undefined;
+        if (usage && typeof usage === 'object') {
+          log('OPENAI', 'Moonshot cache usage', {
+            model: this.model,
+            usage,
+          });
+        }
 
         const choice = chunk.choices?.[0];
         if (!choice) {

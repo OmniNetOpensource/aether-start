@@ -7,7 +7,7 @@ export type BackendConfig = {
   defaultHeaders: Record<string, string>;
 };
 
-export const buildSystemPrompt = () => {
+export const buildCurrentDateSystemPrompt = () => {
   const now = new Date();
   const localDate = now.toLocaleDateString('en-US', {
     year: 'numeric',
@@ -15,19 +15,22 @@ export const buildSystemPrompt = () => {
     day: '2-digit',
   });
 
-  const prompt = `
-Today's date is: ${localDate}
-No need to cite sources in your answers.
-`;
+  return `Today's date is: ${localDate}`;
+};
 
-  return `${prompt}
+export const buildStableSystemPrompt = () => `No need to cite sources in your answers.
+
 # When to search: Avoid searching in Chinese unless necessary; do not answer until you have enough context; if unsure, keep researching until you understand-do not just skim the surface, search deeply for information, and only answer after comprehensive research.
 
 # When not to search: Known knowledge
 
 - Learn to use Google search advanced techniques
 `;
-};
+
+export const buildSystemPrompt = () =>
+  `${buildCurrentDateSystemPrompt()}
+
+${buildStableSystemPrompt()}`;
 
 export const getBackendConfig = (backend: ChatBackend): BackendConfig => {
   const env = getServerEnv();
