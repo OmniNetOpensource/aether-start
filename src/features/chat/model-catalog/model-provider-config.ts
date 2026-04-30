@@ -353,6 +353,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai-responses',
     backend: 'ikun-openai',
   },
+  gpt55Ikun: {
+    id: 'gpt55Ikun',
+    name: 'gpt-5.5+ikun',
+    model: 'gpt-5.5',
+    format: 'openai-responses',
+    backend: 'ikun-openai',
+  },
   claudeOpus46Rightcode: {
     id: 'claudeOpus46Rightcode',
     name: 'opus-4-6+rightcode',
