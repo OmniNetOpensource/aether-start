@@ -609,11 +609,20 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       events,
     });
 
+    // 刷新后重连时，若 background task 仍卡在 askuserquestions 等用户提交，
+    // 之前广播的 chat_paused 已随旧连接断掉，这里必须再补一次，
+    // 否则前端会一直卡在 streaming 而不会启用 askuserquestions 卡片。
+    const isPausedForAskUser =
+      this.runtimeState.status === 'running' && this.pendingAskUserQuestions.size > 0;
+
     // 会话还在运行时，需要继续保持长连接；否则回放完缓存即可关闭。
-    if (this.runtimeState.status === 'running') {
+    if (this.runtimeState.status === 'running' && !isPausedForAskUser) {
       // Keep connection open to receive future events
       this.writers.add(writer);
     } else {
+      if (isPausedForAskUser) {
+        this.sendSSE(writer, 'chat_paused', {});
+      }
       // Not running — write sync data and close
       void writer.close().catch((error) => {
         log('AGENT', 'Failed to close sync response writer', {
@@ -873,6 +882,12 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         callId: toolCall.id,
         questions,
       });
+
+      // 暂停本轮 SSE：广播 chat_paused 后关闭所有连接，前端把状态视为 idle。
+      // background task 仍在阻塞等待 /tool-answer，模型继续生成的事件会进入 eventCache，
+      // 用户提交答案后由前端发起 resumeRunningConversation 重新订阅补拉。
+      this.broadcast('chat_paused', {});
+      await this.closeAllWriters();
 
       const modelResult = await this.waitForAskUserQuestionsAnswer(
         message.conversationId,

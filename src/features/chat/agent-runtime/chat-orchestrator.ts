@@ -194,6 +194,14 @@ const handleSSEMessage = (event: string, raw: string) => {
       }
       setStatus('idle', 'chat_finished');
       return;
+    case 'chat_paused':
+      // 服务端调用 askuserquestions 后会先发 chat_paused 再关闭 SSE，
+      // background task 仍在等 /tool-answer。前端把当前请求视为结束，
+      // 等用户提交答案后由 submitToolAnswer 触发 resumeRunningConversation。
+      clearReconnectState();
+      flushAll();
+      setStatus('idle', 'chat_paused');
+      return;
     case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
       flushAll();
@@ -462,6 +470,7 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
     });
 
     if (response.ok) {
+      void resumeRunningConversation(conversationId);
       return;
     }
 

@@ -103,6 +103,9 @@ export const MessageItem = memo(function MessageItem({
   isStreaming,
 }: MessageItemProps) {
   const messageFromStore = useChatSessionStore((state) => state.messages[messageId - 1]);
+  const isLastInPath = useChatSessionStore(
+    (state) => state.currentPath[state.currentPath.length - 1] === messageId,
+  );
   const status = useChatRequestStore((s) => s.status);
   const isEditing = useEditingStore((state) => state.editingState?.messageId === messageId);
   const startEditing = useEditingStore((state) => state.startEditing);
@@ -191,10 +194,13 @@ export const MessageItem = memo(function MessageItem({
                     }
 
                     if (block.type === 'ask_user_questions') {
+                      const isLastBlock = blockIndex === assistantBlocks.length - 1;
+                      const isUsable = isLastInPath && isLastBlock && status === 'idle';
                       return (
                         <AskUserQuestionsCard
                           key={blockKey}
                           block={block}
+                          readonly={!isUsable}
                           onSubmit={(answers) => submitToolAnswer(block.callId, answers)}
                         />
                       );
