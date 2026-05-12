@@ -330,7 +330,7 @@ const fetchMarkdownWithExa = async (url: string, signal?: AbortSignal): Promise<
         raw !== null &&
         'error' in raw &&
         typeof (raw as { error?: unknown }).error === 'string'
-          ? ((raw as { error: string }).error)
+          ? (raw as { error: string }).error
           : `${response.status} ${response.statusText}`;
       log('FETCH', `Exa HTTP error: ${errMsg}`);
       return `Error: ${errMsg}`;

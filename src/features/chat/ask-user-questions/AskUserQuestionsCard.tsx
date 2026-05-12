@@ -53,12 +53,13 @@ export function AskUserQuestionsCard({
 }: AskUserQuestionsCardProps) {
   const [draftAnswers, setDraftAnswers] = useState(() => toDraftAnswers(block.answers));
   const [currentPage, setCurrentPage] = useState(0);
-  const answerSource =
-    block.status === 'answered' ? toDraftAnswers(block.answers) : draftAnswers;
+  const answerSource = block.status === 'answered' ? toDraftAnswers(block.answers) : draftAnswers;
   const isLocked = readonly || block.status !== 'pending';
   const canSubmit =
     !isLocked &&
-    block.questions.every((_, questionIndex) => isDraftReady(getDraft(answerSource, questionIndex)));
+    block.questions.every((_, questionIndex) =>
+      isDraftReady(getDraft(answerSource, questionIndex)),
+    );
 
   const question = block.questions[currentPage];
   const draft = getDraft(answerSource, currentPage);

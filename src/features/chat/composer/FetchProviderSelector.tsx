@@ -50,8 +50,7 @@ export function FetchProviderSelector() {
     }
   });
 
-  const currentName =
-    PROVIDERS.find((p) => p.id === currentFetchProvider)?.name ?? 'Jina';
+  const currentName = PROVIDERS.find((p) => p.id === currentFetchProvider)?.name ?? 'Jina';
 
   return (
     <DropdownMenu>
