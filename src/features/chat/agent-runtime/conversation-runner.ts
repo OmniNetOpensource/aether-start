@@ -10,6 +10,7 @@ import { log } from '@/features/chat/agent-runtime';
 import { getBackendConfig } from './providers/backend-config';
 import { createChatProvider } from '@/features/chat/agent-runtime';
 import type { ChatProvider, ProviderRunResult } from '@/features/chat/agent-runtime';
+import type { FetchProvider } from './tool-types';
 import { generateTitleFromConversation } from './chat-title';
 import { generateAndPersistForYouSuggestions } from '@/features/chat/for-you/for-you-suggestions.server';
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/agent-runtime';
@@ -127,6 +128,7 @@ type ChatRequestBody = {
   conversationId: string;
   model: string;
   promptId?: string;
+  fetchProvider?: FetchProvider;
   conversationHistory: SerializedMessage[];
   treeSnapshot: MessageTreeSnapshot;
 };
@@ -261,6 +263,11 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   const conversationId = asString(body.conversationId);
   const model = asString(body.model);
   const promptId = asString(body.promptId) ?? undefined;
+  const rawFetchProvider = asString(body.fetchProvider);
+  const fetchProvider: FetchProvider | undefined =
+    rawFetchProvider === 'jina' || rawFetchProvider === 'firecrawl' || rawFetchProvider === 'exa'
+      ? rawFetchProvider
+      : undefined;
   const conversationHistory = Array.isArray(body.conversationHistory)
     ? (body.conversationHistory as SerializedMessage[])
     : null;
@@ -299,6 +306,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
     conversationId,
     model,
     promptId,
+    fetchProvider,
     conversationHistory,
     treeSnapshot: {
       messages: snapshotMessages,
@@ -925,7 +933,9 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         continue;
       }
 
-      const executedToolCall = await executeToolCall(toolCall, signal);
+      const executedToolCall = await executeToolCall(toolCall, signal, {
+        fetchProvider: message.fetchProvider,
+      });
       for (const event of executedToolCall.events) {
         await emitEvent(event);
         throwIfAborted(signal);

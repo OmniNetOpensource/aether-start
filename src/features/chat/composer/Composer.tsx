@@ -23,6 +23,7 @@ import { cn } from '@/shared/core/utils';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { ModelSelector } from './ModelSelector';
 import { PromptSelector } from './PromptSelector';
+import { FetchProviderSelector } from './FetchProviderSelector';
 import { useComposerStore } from './useComposerStore';
 
 /**
@@ -294,6 +295,7 @@ export function Composer() {
                 </Button>
               </span>
               <PromptSelector />
+              <FetchProviderSelector />
             </div>
 
             {/* 右侧工具：模型下拉 + 主操作按钮（发送 / 停止 / 禁用时晃动反馈） */}

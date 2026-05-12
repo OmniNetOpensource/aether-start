@@ -22,6 +22,7 @@ const AnswerSchema = z.object({
   selectedOptionIndexes: z
     .array(z.int().nonnegative())
     .transform((arr) => [...new Set(arr)].sort((a, b) => a - b)),
+  customText: z.string().trim().min(1).optional(),
 });
 
 const AnswerSubmissionSchema = z.object({
@@ -67,11 +68,16 @@ export const normalizeAskUserQuestionsAnswers = (
       throw new Error('Answers must cover every question exactly once');
     }
 
-    if (answer.selectedOptionIndexes.length === 0) {
+    const hasCustomText = typeof answer.customText === 'string' && answer.customText.length > 0;
+
+    if (answer.selectedOptionIndexes.length === 0 && !hasCustomText) {
       throw new Error(`Question ${index + 1} must have at least one selected option`);
     }
 
-    if (!question.multiSelect && answer.selectedOptionIndexes.length !== 1) {
+    if (
+      !question.multiSelect &&
+      answer.selectedOptionIndexes.length + (hasCustomText ? 1 : 0) !== 1
+    ) {
       throw new Error(`Question ${index + 1} allows exactly one selected option`);
     }
 
@@ -90,13 +96,19 @@ export const buildAskUserQuestionsModelResult = (
   answers: AskUserQuestionsAnswer[],
 ) =>
   JSON.stringify(
-    normalizeAskUserQuestionsAnswers(questions, answers).map((answer) => ({
-      header: questions[answer.questionIndex].header,
-      question: questions[answer.questionIndex].question,
-      selectedOptions: answer.selectedOptionIndexes.map(
+    normalizeAskUserQuestionsAnswers(questions, answers).map((answer) => {
+      const selectedOptions = answer.selectedOptionIndexes.map(
         (optionIndex) => questions[answer.questionIndex].options[optionIndex].label,
-      ),
-    })),
+      );
+      if (answer.customText) {
+        selectedOptions.push(answer.customText);
+      }
+      return {
+        header: questions[answer.questionIndex].header,
+        question: questions[answer.questionIndex].question,
+        selectedOptions,
+      };
+    }),
   );
 
 export const cloneAskUserQuestions = (questions: AskUserQuestionsQuestion[]) =>
@@ -114,6 +126,7 @@ export const cloneAskUserQuestionsAnswers = (answers: AskUserQuestionsAnswer[]) 
   answers.map((answer) => ({
     questionIndex: answer.questionIndex,
     selectedOptionIndexes: [...answer.selectedOptionIndexes],
+    customText: answer.customText,
   }));
 
 const askUserQuestionsToolSpec: ChatTool = {

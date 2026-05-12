@@ -9,7 +9,7 @@ import { searchTool } from '../research/search-tool';
 import { renderTool } from '../artifact/render-tool';
 import { getServerEnv } from '@/shared/worker/env';
 import { log } from '@/features/chat/agent-runtime';
-import type { ChatTool, ToolHandler } from './tool-types';
+import type { ChatTool, ToolContext, ToolHandler } from './tool-types';
 import type {
   PendingToolInvocation,
   ToolInvocationResult,
@@ -41,6 +41,7 @@ export type ExecutedToolCallResult = {
 export const executeToolCall = async (
   toolcall: PendingToolInvocation,
   signal?: AbortSignal,
+  context?: ToolContext,
 ): Promise<ExecutedToolCallResult> => {
   const events: ChatServerToClientEvent[] = [];
 
@@ -63,7 +64,7 @@ export const executeToolCall = async (
       if (signal?.aborted) {
         throw new DOMException('Aborted', 'AbortError');
       }
-      rawResult = await handleTool(toolcall.args, signal);
+      rawResult = await handleTool(toolcall.args, signal, context);
     } catch (error) {
       if (
         (error instanceof DOMException && error.name === 'AbortError') ||
@@ -171,6 +172,7 @@ export const executeToolCall = async (
 export async function* executeToolsGen(
   toolCalls: PendingToolInvocation[],
   signal?: AbortSignal,
+  context?: ToolContext,
 ): AsyncGenerator<ChatServerToClientEvent, ToolInvocationResult[]> {
   const results: ToolInvocationResult[] = [];
 
@@ -179,7 +181,7 @@ export async function* executeToolsGen(
       throw new DOMException('Aborted', 'AbortError');
     }
 
-    const executedToolCall = await executeToolCall(toolcall, signal);
+    const executedToolCall = await executeToolCall(toolcall, signal, context);
     for (const event of executedToolCall.events) {
       yield event;
     }

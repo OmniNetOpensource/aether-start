@@ -59,11 +59,13 @@ const initialArtifactState: ArtifactState = {
 export type ChatSessionSelectionState = {
   currentModelId: string;
   currentPromptId: string;
+  currentFetchProvider: 'jina' | 'firecrawl' | 'exa';
 };
 
 export const initialChatSessionSelectionState: ChatSessionSelectionState = {
   currentModelId: '',
   currentPromptId: '',
+  currentFetchProvider: 'jina',
 };
 
 const getActionName = (actionName: string) => {
@@ -99,6 +101,7 @@ type ChatSessionActions = {
   navigateBranch: (messageId: number, depth: number, direction: 'prev' | 'next') => void;
   setCurrentModel: (modelId: string) => void;
   setCurrentPrompt: (promptId: string) => void;
+  setCurrentFetchProvider: (provider: 'jina' | 'firecrawl' | 'exa') => void;
   setArtifacts: (artifacts: ConversationArtifact[]) => void;
   selectArtifact: (artifactId: string | null) => void;
   setArtifactPanelOpen: (open: boolean) => void;
@@ -501,6 +504,12 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
         set({ currentModelId: modelId }, false, getActionName('chatSession/setCurrentModel')),
       setCurrentPrompt: (promptId) =>
         set({ currentPromptId: promptId }, false, getActionName('chatSession/setCurrentPrompt')),
+      setCurrentFetchProvider: (provider) =>
+        set(
+          { currentFetchProvider: provider },
+          false,
+          getActionName('chatSession/setCurrentFetchProvider'),
+        ),
       setPageTitle: (title) =>
         set({ pageTitle: title }, false, getActionName('chatSession/setPageTitle')),
       clearSession: () => {
@@ -513,6 +522,7 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             ...initialArtifactState,
             currentModelId: state.currentModelId,
             currentPromptId: state.currentPromptId,
+            currentFetchProvider: state.currentFetchProvider,
           },
           false,
           getActionName('chatSession/clearSession'),

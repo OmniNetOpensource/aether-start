@@ -342,6 +342,7 @@ export const startChatRequest = async () => {
     idempotencyKey,
     model: sessionStore.currentModelId,
     promptId: sessionStore.currentPromptId || undefined,
+    fetchProvider: sessionStore.currentFetchProvider,
     conversationId,
     conversationHistory: messages.map(
       (message) =>

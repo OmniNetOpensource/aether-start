@@ -3,6 +3,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import type { AssistantMessage } from '@/features/chat/message-thread';
 import { Button } from '@/shared/design-system/button';
+import { Textarea } from '@/shared/design-system/textarea';
 
 type AskUserQuestionsBlock = Extract<
   AssistantMessage['blocks'][number],
@@ -15,32 +16,54 @@ type AskUserQuestionsCardProps = {
   onSubmit?: (answers: AskUserQuestionsAnswer[]) => Promise<void>;
 };
 
-const toAnswerMap = (answers: AskUserQuestionsAnswer[]) => {
-  const nextAnswers: Record<number, number[]> = {};
-
-  for (const answer of answers) {
-    nextAnswers[answer.questionIndex] = [...answer.selectedOptionIndexes];
-  }
-
-  return nextAnswers;
+type DraftAnswer = {
+  selectedOptionIndexes: number[];
+  customSelected: boolean;
+  customText: string;
 };
+
+const toDraftAnswers = (answers: AskUserQuestionsAnswer[]) => {
+  const draft: Record<number, DraftAnswer> = {};
+  for (const answer of answers) {
+    const customText = answer.customText ?? '';
+    draft[answer.questionIndex] = {
+      selectedOptionIndexes: [...answer.selectedOptionIndexes],
+      customSelected: customText.length > 0,
+      customText,
+    };
+  }
+  return draft;
+};
+
+const getDraft = (draftAnswers: Record<number, DraftAnswer>, questionIndex: number): DraftAnswer =>
+  draftAnswers[questionIndex] ?? {
+    selectedOptionIndexes: [],
+    customSelected: false,
+    customText: '',
+  };
+
+const isDraftReady = (draft: DraftAnswer) =>
+  draft.selectedOptionIndexes.length > 0 ||
+  (draft.customSelected && draft.customText.trim().length > 0);
 
 export function AskUserQuestionsCard({
   block,
   readonly = false,
   onSubmit,
 }: AskUserQuestionsCardProps) {
-  const [draftAnswers, setDraftAnswers] = useState(() => toAnswerMap(block.answers));
+  const [draftAnswers, setDraftAnswers] = useState(() => toDraftAnswers(block.answers));
   const [currentPage, setCurrentPage] = useState(0);
-  const answerMap = block.status === 'answered' ? toAnswerMap(block.answers) : draftAnswers;
+  const answerSource =
+    block.status === 'answered' ? toDraftAnswers(block.answers) : draftAnswers;
   const isLocked = readonly || block.status !== 'pending';
   const canSubmit =
     !isLocked &&
-    block.questions.every((_, questionIndex) => (answerMap[questionIndex] ?? []).length > 0);
+    block.questions.every((_, questionIndex) => isDraftReady(getDraft(answerSource, questionIndex)));
 
   const question = block.questions[currentPage];
-  const selectedOptionIndexes = answerMap[currentPage] ?? [];
+  const draft = getDraft(answerSource, currentPage);
   const totalPages = block.questions.length;
+  const customInputId = `${block.callId}-${currentPage}-custom`;
 
   const handleOptionChange = (questionIndex: number, optionIndex: number, multiSelect: boolean) => {
     if (isLocked) {
@@ -48,17 +71,72 @@ export function AskUserQuestionsCard({
     }
 
     setDraftAnswers((current) => {
-      const selected = current[questionIndex] ?? [];
+      const existing = getDraft(current, questionIndex);
 
       if (!multiSelect) {
-        return { ...current, [questionIndex]: [optionIndex] };
+        return {
+          ...current,
+          [questionIndex]: {
+            selectedOptionIndexes: [optionIndex],
+            customSelected: false,
+            customText: existing.customText,
+          },
+        };
       }
 
-      const nextSelection = selected.includes(optionIndex)
-        ? selected.filter((i) => i !== optionIndex)
-        : [...selected, optionIndex].sort((a, b) => a - b);
+      const nextSelection = existing.selectedOptionIndexes.includes(optionIndex)
+        ? existing.selectedOptionIndexes.filter((i) => i !== optionIndex)
+        : [...existing.selectedOptionIndexes, optionIndex].sort((a, b) => a - b);
 
-      return { ...current, [questionIndex]: nextSelection };
+      return {
+        ...current,
+        [questionIndex]: { ...existing, selectedOptionIndexes: nextSelection },
+      };
+    });
+  };
+
+  const handleCustomToggle = (questionIndex: number, multiSelect: boolean) => {
+    if (isLocked) {
+      return;
+    }
+
+    setDraftAnswers((current) => {
+      const existing = getDraft(current, questionIndex);
+      const nextCustomSelected = !existing.customSelected;
+
+      if (!multiSelect && nextCustomSelected) {
+        return {
+          ...current,
+          [questionIndex]: {
+            selectedOptionIndexes: [],
+            customSelected: true,
+            customText: existing.customText,
+          },
+        };
+      }
+
+      return {
+        ...current,
+        [questionIndex]: { ...existing, customSelected: nextCustomSelected },
+      };
+    });
+  };
+
+  const handleCustomTextChange = (questionIndex: number, text: string) => {
+    if (isLocked) {
+      return;
+    }
+
+    setDraftAnswers((current) => {
+      const existing = getDraft(current, questionIndex);
+      return {
+        ...current,
+        [questionIndex]: {
+          ...existing,
+          customText: text,
+          customSelected: existing.customSelected || text.length > 0,
+        },
+      };
     });
   };
 
@@ -68,10 +146,15 @@ export function AskUserQuestionsCard({
     }
 
     await onSubmit(
-      block.questions.map((_, questionIndex) => ({
-        questionIndex,
-        selectedOptionIndexes: answerMap[questionIndex] ?? [],
-      })),
+      block.questions.map((_, questionIndex) => {
+        const item = getDraft(answerSource, questionIndex);
+        const trimmed = item.customText.trim();
+        return {
+          questionIndex,
+          selectedOptionIndexes: item.selectedOptionIndexes,
+          customText: item.customSelected && trimmed.length > 0 ? trimmed : undefined,
+        };
+      }),
     );
   };
 
@@ -98,13 +181,13 @@ export function AskUserQuestionsCard({
               <label
                 key={inputId}
                 htmlFor={inputId}
-                className='flex cursor-pointer items-start gap-3 border-b border-border px-3 py-2.5 transition-[background-color,border-color] duration-150 ease-[var(--ease-out)] last:border-b-0 hover:bg-hover has-[:checked]:bg-hover has-[:checked]:shadow-[inset_2px_0_0_0_var(--color-primary)]'
+                className='flex cursor-pointer items-start gap-3 border-b border-border px-3 py-2.5 transition-[background-color,border-color] duration-150 ease-[var(--ease-out)] hover:bg-hover has-[:checked]:bg-hover has-[:checked]:shadow-[inset_2px_0_0_0_var(--color-primary)]'
               >
                 <input
                   id={inputId}
                   name={`${block.callId}-${currentPage}`}
                   type={question.multiSelect ? 'checkbox' : 'radio'}
-                  checked={selectedOptionIndexes.includes(optionIndex)}
+                  checked={draft.selectedOptionIndexes.includes(optionIndex)}
                   disabled={isLocked}
                   onChange={() =>
                     handleOptionChange(currentPage, optionIndex, question.multiSelect)
@@ -122,6 +205,37 @@ export function AskUserQuestionsCard({
               </label>
             );
           })}
+
+          <label
+            htmlFor={customInputId}
+            className='flex cursor-pointer items-start gap-3 px-3 py-2.5 transition-[background-color,border-color] duration-150 ease-[var(--ease-out)] hover:bg-hover has-[:checked]:bg-hover has-[:checked]:shadow-[inset_2px_0_0_0_var(--color-primary)]'
+          >
+            <input
+              id={customInputId}
+              name={`${block.callId}-${currentPage}`}
+              type={question.multiSelect ? 'checkbox' : 'radio'}
+              checked={draft.customSelected}
+              disabled={isLocked}
+              onChange={() => handleCustomToggle(currentPage, question.multiSelect)}
+              className='mt-0.5 h-3.5 w-3.5 shrink-0 accent-primary'
+            />
+            <span className='min-w-0 flex-1 pl-0.5'>
+              <span className='block text-[13px] font-medium leading-snug text-foreground'>
+                自己回答
+              </span>
+              <span className='mt-0.5 block text-xs leading-relaxed text-secondary'>
+                输入自定义答案
+              </span>
+              <Textarea
+                value={draft.customText}
+                disabled={isLocked}
+                placeholder='输入你的回答…'
+                rows={2}
+                onChange={(event) => handleCustomTextChange(currentPage, event.target.value)}
+                className='mt-2 resize-none rounded border border-border bg-background px-2 py-1.5 text-[13px] leading-snug text-foreground placeholder:text-muted-foreground focus:border-primary'
+              />
+            </span>
+          </label>
         </div>
 
         {block.status === 'answered' && (
@@ -129,9 +243,12 @@ export function AskUserQuestionsCard({
             <CheckCircle2 className='mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground' />
             <span>
               已选：
-              {selectedOptionIndexes
-                .map((optionIndex) => question.options[optionIndex].label)
-                .join('、')}
+              {[
+                ...draft.selectedOptionIndexes.map(
+                  (optionIndex) => question.options[optionIndex].label,
+                ),
+                ...(draft.customSelected && draft.customText ? [draft.customText] : []),
+              ].join('、')}
             </span>
           </div>
         )}

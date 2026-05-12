@@ -34,6 +34,7 @@ type ServerEnv = {
   SUPADATA_API_KEY?: string;
   JINA_API_KEY?: string;
   FIRECRAWL_API_KEY?: string;
+  EXA_API_KEY?: string;
   RESEND_API_KEY?: string;
   MINIMAX_API_KEY?: string;
   NETIFY_TOKEN?: string;
@@ -150,6 +151,9 @@ export const getServerEnv = (): ServerEnv => {
     FIRECRAWL_API_KEY:
       readString((bindings as Record<string, unknown>).FIRECRAWL_API_KEY) ??
       readStringFromProcess('FIRECRAWL_API_KEY'),
+    EXA_API_KEY:
+      readString((bindings as Record<string, unknown>).EXA_API_KEY) ??
+      readStringFromProcess('EXA_API_KEY'),
     RESEND_API_KEY: readString(bindings.RESEND_API_KEY) ?? readStringFromProcess('RESEND_API_KEY'),
     MINIMAX_API_KEY:
       readString(bindings.MINIMAX_API_KEY) ?? readStringFromProcess('MINIMAX_API_KEY'),
