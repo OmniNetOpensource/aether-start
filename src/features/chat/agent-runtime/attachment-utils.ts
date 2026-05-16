@@ -28,6 +28,11 @@ export const resolveAttachmentToBase64 = async (
   if (attachment.storageKey) {
     try {
       const { CHAT_ASSETS } = getServerBindings();
+      if (!CHAT_ASSETS) {
+        log(tag, 'Attachment storage is disabled');
+        return null;
+      }
+
       const object = await CHAT_ASSETS.get(attachment.storageKey);
       if (!object) {
         log(tag, `R2 object not found for ${attachment.storageKey}`);

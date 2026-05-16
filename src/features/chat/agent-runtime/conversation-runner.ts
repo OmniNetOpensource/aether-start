@@ -51,7 +51,7 @@ type ConversationRunnerState = {
 // 这样看这个文件时就能直接知道 ConversationRunner 依赖了哪些运行环境能力。
 type ConversationRunnerEnv = Cloudflare.Env & {
   DB: D1Database;
-  CHAT_ASSETS: R2Bucket;
+  CHAT_ASSETS?: R2Bucket;
   ANTHROPIC_API_KEY_RIGHTCODE?: string;
   ANTHROPIC_BASE_URL_RIGHTCODE?: string;
   ANTHROPIC_API_KEY_RIGHTCODE_SALE?: string;

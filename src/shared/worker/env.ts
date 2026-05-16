@@ -176,6 +176,6 @@ export const getServerBindings = () => {
 
   return {
     DB: requireBinding(env.DB, 'DB'),
-    CHAT_ASSETS: requireBinding(env.CHAT_ASSETS, 'CHAT_ASSETS'),
+    CHAT_ASSETS: env.CHAT_ASSETS,
   };
 };

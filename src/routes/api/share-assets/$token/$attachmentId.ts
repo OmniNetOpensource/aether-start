@@ -1,10 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import {
-  findAttachmentInSnapshot,
-  getPublicShareByToken,
-  isSafeShareToken,
-  resolveStorageKeyForSharedAttachment,
-} from '@/features/share/share-record';
+import { getPublicShareByToken, isSafeShareToken } from '@/features/share/share-record';
 import { getServerBindings } from '@/shared/worker/env';
 
 const safeDecodeURIComponent = (value: string): string | null => {
@@ -30,36 +25,13 @@ export const Route = createFileRoute('/api/share-assets/$token/$attachmentId')({
             return new Response('Not Found', { status: 404 });
           }
 
-          const { DB, CHAT_ASSETS } = getServerBindings();
+          const { DB } = getServerBindings();
           const shareResult = await getPublicShareByToken(DB, token);
           if (shareResult.status !== 'active') {
             return new Response('Not Found', { status: 404 });
           }
 
-          const attachment = findAttachmentInSnapshot(shareResult.snapshotRaw, attachmentId);
-          if (!attachment) {
-            return new Response('Not Found', { status: 404 });
-          }
-
-          const storageKey = resolveStorageKeyForSharedAttachment(attachment);
-          if (!storageKey) {
-            return new Response('Not Found', { status: 404 });
-          }
-
-          const object = await CHAT_ASSETS.get(storageKey);
-          if (!object) {
-            return new Response('Not Found', { status: 404 });
-          }
-
-          const headers = new Headers();
-          object.writeHttpMetadata(headers);
-          headers.set('etag', object.httpEtag);
-          headers.set('cache-control', 'public, max-age=300');
-
-          return new Response(object.body, {
-            status: 200,
-            headers,
-          });
+          return new Response('Not Found', { status: 404 });
         },
       }),
   },

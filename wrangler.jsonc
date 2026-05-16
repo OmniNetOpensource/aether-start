@@ -45,12 +45,6 @@
       "migrations_dir": "./migrations",
     },
   ],
-  "r2_buckets": [
-    {
-      "binding": "CHAT_ASSETS",
-      "bucket_name": "chat-assets",
-    },
-  ],
   "vars": {
     "ADMIN_EMAIL_ALLOWLIST": "sauciness_gratitude464@simplelogin.com",
   },
