@@ -55,6 +55,3 @@ export const stringifySearchClientPayload = (payload: SearchClientPayload): stri
       url: item.url,
     })),
   });
-
-export const stringifyFetchClientPayload = (payload: { type: 'fetch_result' }): string =>
-  JSON.stringify(payload);

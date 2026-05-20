@@ -1,7 +1,10 @@
 import { askUserQuestionsTool } from '@/features/chat/ask-user-questions/ask-user-questions';
 import { fetchUrlTool } from './fetch-tool';
 import {
+  buildFetchClientPayload,
   stringifyFetchClientPayload,
+} from '@/features/chat/research/fetch-result-payload';
+import {
   parseSearchClientPayload,
   stringifySearchClientPayload,
 } from '@/features/chat/research/search-result-payload';
@@ -113,26 +116,9 @@ export const executeToolCall = async (
   } else {
     let clientResult = rawResult;
     if (toolcall.name === 'fetch_url') {
-      const text = rawResult.trim();
-      const isFetchError = text && text.startsWith('Error');
-      if (isFetchError) {
-        clientResult = 'Error: Fetch failed';
-      } else {
-        try {
-          const parsed = JSON.parse(rawResult);
-          if (parsed.type === 'image' && parsed.data_url) {
-            clientResult = JSON.stringify(parsed);
-          } else {
-            clientResult = stringifyFetchClientPayload({
-              type: 'fetch_result',
-            });
-          }
-        } catch {
-          clientResult = stringifyFetchClientPayload({
-            type: 'fetch_result',
-          });
-        }
-      }
+      clientResult = stringifyFetchClientPayload(
+        buildFetchClientPayload(toolcall.args, rawResult),
+      );
     }
     toolResult = { client: clientResult, model: rawResult };
   }

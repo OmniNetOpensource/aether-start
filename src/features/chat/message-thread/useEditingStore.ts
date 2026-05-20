@@ -30,6 +30,7 @@ type EditingStoreActions = {
   startEditing: (messageId: number) => void;
   updateEditContent: (content: string) => void;
   updateEditQuotes: (quotes: { id: string; text: string }[]) => void;
+  addEditQuote: (text: string) => void;
   updateEditAttachments: (attachments: Attachment[]) => void;
   cancelEditing: () => void;
   submitEdit: (depth: number) => Promise<void>;
@@ -91,6 +92,29 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
             },
           };
         }),
+      addEditQuote: (text) => {
+        const trimmed = text.trim();
+        if (!trimmed) {
+          return;
+        }
+
+        const id =
+          typeof crypto !== 'undefined' && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `quote_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+        set((state) => {
+          if (!state.editingState) {
+            return state;
+          }
+          return {
+            editingState: {
+              ...state.editingState,
+              editedQuotes: [...state.editingState.editedQuotes, { id, text: trimmed }],
+            },
+          };
+        });
+      },
       updateEditAttachments: (attachments) =>
         set((state) => {
           if (!state.editingState) {

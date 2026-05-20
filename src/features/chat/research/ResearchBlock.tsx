@@ -1,5 +1,10 @@
+import { useState } from 'react';
 import { Search, Globe, Wrench } from 'lucide-react';
 import Markdown from '@/shared/design-system/Markdown';
+import {
+  parseFetchClientPayload,
+  type FetchClientPayload,
+} from '@/features/chat/research/fetch-result-payload';
 import {
   parseSearchClientPayload,
   SEARCH_TOOL_NAMES,
@@ -7,6 +12,14 @@ import {
 } from '@/features/chat/research/search-result-payload';
 import type { ResearchItem, Tool } from '@/features/chat/message-thread';
 import type { StepStatus } from '@/shared/design-system/chain-of-thought';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/shared/design-system/dialog';
 import {
   ChainOfThought,
   ChainOfThoughtHeader,
@@ -126,22 +139,43 @@ function SearchStep({
   );
 }
 
-// Parse image result from fetch tool
-function parseFetchImageResult(tool: Tool): string | null {
-  const { result } = getToolLifecycle(tool);
-  if (!result) return null;
-  try {
-    const parsed = JSON.parse(result.result);
-    if (parsed.type === 'image' && typeof parsed.data_url === 'string') {
-      return parsed.data_url;
-    }
-  } catch {
-    /* not JSON */
+const fetchDialogTitle = (url: string) => {
+  if (!url) {
+    return 'Fetch result';
   }
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url.length > 60 ? `${url.slice(0, 60)}…` : url;
+  }
+};
+
+function FetchResultDialogBody({ payload }: { payload: FetchClientPayload }) {
+  if (payload.type === 'image') {
+    return (
+      <img
+        src={payload.data_url}
+        alt={payload.url}
+        className='max-h-[70vh] w-full object-contain'
+      />
+    );
+  }
+
+  if (payload.type === 'markdown' || payload.type === 'youtube') {
+    return (
+      <div className='max-h-[70vh] overflow-y-auto text-sm text-secondary'>
+        <Markdown content={payload.content} />
+        {payload.truncated && (
+          <p className='mt-3 text-xs text-muted-foreground'>内容已截断</p>
+        )}
+      </div>
+    );
+  }
+
   return null;
 }
 
-// Render a fetch tool step
+
 function FetchStep({
   tool,
   isActive,
@@ -151,29 +185,67 @@ function FetchStep({
   isActive: boolean;
   hideConnector: boolean;
 }) {
+  const [dialogOpen, setDialogOpen] = useState(false);
   const args = tool.call.args as Record<string, unknown>;
   const url = typeof args.url === 'string' ? args.url : '';
   const stepStatus = getStepStatus(tool, isActive);
-  const imageDataUrl = parseFetchImageResult(tool);
-
   const { result } = getToolLifecycle(tool);
   const resultText = result ? (typeof result.result === 'string' ? result.result : '') : '';
-  const isError =
-    result &&
-    (resultText.startsWith('Error') ||
-      (resultText.startsWith('[系统提示:') &&
-        (resultText.includes('内容过长') || resultText.includes('已省略不返回'))));
+  const payload = resultText ? parseFetchClientPayload(resultText) : null;
+
+  const isLegacyError =
+    resultText.startsWith('Error') ||
+    (resultText.startsWith('[系统提示:') &&
+      (resultText.includes('内容过长') || resultText.includes('已省略不返回')));
+  const isError = payload?.type === 'error' || Boolean(result && isLegacyError);
+
+  const canOpen =
+    stepStatus === 'complete' &&
+    payload !== null &&
+    payload.type !== 'error';
+
+  const imageDataUrl = payload?.type === 'image' ? payload.data_url : null;
 
   const suffix = stepStatus === 'complete' ? (isError ? '...failed.' : '...done!') : '';
-  const description = `Take a closer look${suffix}`;
+  const descriptionText = `Take a closer look${suffix}`;
 
   return (
     <ChainOfThoughtStep
       icon={<Globe className='h-full w-full' />}
-      description={description}
+      description={canOpen ? undefined : descriptionText}
       status={stepStatus}
       hideConnector={hideConnector}
     >
+      {canOpen && payload && (
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogTrigger asChild>
+            <button
+              type='button'
+              className='text-xs text-secondary leading-relaxed hover:text-foreground cursor-pointer text-left'
+            >
+              {descriptionText} · 查看
+            </button>
+          </DialogTrigger>
+          <DialogContent className='w-[min(94vw,48rem)] gap-3 p-4 sm:max-w-3xl' showCloseButton>
+            <DialogHeader>
+              <DialogTitle>{fetchDialogTitle(url || payload.url)}</DialogTitle>
+              {(url || payload.url) && (
+                <DialogDescription asChild>
+                  <a
+                    href={url || payload.url}
+                    target='_blank'
+                    rel='noopener noreferrer'
+                    className='break-all text-left hover:text-primary-hover'
+                  >
+                    {url || payload.url}
+                  </a>
+                </DialogDescription>
+              )}
+            </DialogHeader>
+            <FetchResultDialogBody payload={payload} />
+          </DialogContent>
+        </Dialog>
+      )}
       {url && (
         <a
           href={url}

@@ -25,6 +25,7 @@ import { ModelSelector } from './ModelSelector';
 import { PromptSelector } from './PromptSelector';
 import { FetchProviderSelector } from './FetchProviderSelector';
 import { useComposerStore } from './useComposerStore';
+import { useActiveInputStore } from './useActiveInputStore';
 
 /**
  * 首屏：localStorage 草稿写入 window、DOMContentLoaded 注入 textarea、input 同步 window。
@@ -60,6 +61,7 @@ export function Composer() {
   const removeAttachment = useComposerStore((state) => state.removeAttachment);
   const removeQuote = useComposerStore((state) => state.removeQuote);
   const setInput = useComposerStore((state) => state.setInput);
+  const setLastFocused = useActiveInputStore((state) => state.setLastFocused);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
   // --- 请求状态（发送中/流式中决定主按钮图标与是否视为「忙」）---
@@ -188,6 +190,7 @@ export function Composer() {
               name='message'
               value={input}
               onChange={(event) => setInput(event.target.value)}
+              onFocus={() => setLastFocused({ type: 'composer' })}
               onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
                 if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
                   event.preventDefault();

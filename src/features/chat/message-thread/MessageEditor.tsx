@@ -9,6 +9,7 @@ import { cn } from '@/shared/core/utils';
 import { buildAttachmentsFromFiles } from '@/features/attachments/attachment-upload';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
+import { useActiveInputStore } from '@/features/chat/composer/useActiveInputStore';
 import { useEditingStore } from '@/features/chat/message-thread';
 import { useChatSessionStore } from '@/features/conversations/session';
 
@@ -24,6 +25,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const updateEditAttachments = useEditingStore((state) => state.updateEditAttachments);
   const cancelEditing = useEditingStore((state) => state.cancelEditing);
   const submitEdit = useEditingStore((state) => state.submitEdit);
+  const setLastFocused = useActiveInputStore((state) => state.setLastFocused);
   const deviceType = useResponsive();
   const isDesktop = deviceType === 'desktop';
   const uploading = useComposerStore((state) =>
@@ -168,6 +170,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
           ref={textareaRef}
           value={editedContent}
           onChange={(event) => updateEditContent(event.target.value)}
+          onFocus={() => setLastFocused({ type: 'edit', messageId })}
           onKeyDown={handleKeyDown}
           onPaste={handlePaste}
           rows={1}

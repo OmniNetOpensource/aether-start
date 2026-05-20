@@ -11,7 +11,7 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { Quote, Volume2, Loader2, Square } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
-import { useComposerStore } from '@/features/chat/composer/useComposerStore';
+import { addQuoteToActiveInput } from '@/features/chat/composer/useActiveInputStore';
 import { useSelectionToolbar } from './useSelectionToolbar';
 import { useTtsPlayback } from './useTtsPlayback';
 
@@ -45,7 +45,7 @@ export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
 
   const handleQuote = () => {
     if (text) {
-      useComposerStore.getState().addQuote(text);
+      addQuoteToActiveInput(text);
       clearSelection();
     }
   };
