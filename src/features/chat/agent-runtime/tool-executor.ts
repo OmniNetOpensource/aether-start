@@ -116,9 +116,7 @@ export const executeToolCall = async (
   } else {
     let clientResult = rawResult;
     if (toolcall.name === 'fetch_url') {
-      clientResult = stringifyFetchClientPayload(
-        buildFetchClientPayload(toolcall.args, rawResult),
-      );
+      clientResult = stringifyFetchClientPayload(buildFetchClientPayload(toolcall.args, rawResult));
     }
     toolResult = { client: clientResult, model: rawResult };
   }

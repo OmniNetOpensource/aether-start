@@ -2,9 +2,7 @@ import { create } from 'zustand';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 
-export type ActiveInputTarget =
-  | { type: 'composer' }
-  | { type: 'edit'; messageId: number };
+export type ActiveInputTarget = { type: 'composer' } | { type: 'edit'; messageId: number };
 
 type ActiveInputState = {
   lastFocused: ActiveInputTarget | null;

@@ -165,16 +165,13 @@ function FetchResultDialogBody({ payload }: { payload: FetchClientPayload }) {
     return (
       <div className='max-h-[70vh] overflow-y-auto text-sm text-secondary'>
         <Markdown content={payload.content} />
-        {payload.truncated && (
-          <p className='mt-3 text-xs text-muted-foreground'>内容已截断</p>
-        )}
+        {payload.truncated && <p className='mt-3 text-xs text-muted-foreground'>内容已截断</p>}
       </div>
     );
   }
 
   return null;
 }
-
 
 function FetchStep({
   tool,
@@ -199,10 +196,7 @@ function FetchStep({
       (resultText.includes('内容过长') || resultText.includes('已省略不返回')));
   const isError = payload?.type === 'error' || Boolean(result && isLegacyError);
 
-  const canOpen =
-    stepStatus === 'complete' &&
-    payload !== null &&
-    payload.type !== 'error';
+  const canOpen = stepStatus === 'complete' && payload !== null && payload.type !== 'error';
 
   const imageDataUrl = payload?.type === 'image' ? payload.data_url : null;
 
