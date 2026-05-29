@@ -73,7 +73,7 @@ type AnthropicStreamChunk =
 
 const THINKING_BUDGET_RATIO = 0.8;
 const THINKING_MIN_BUDGET_TOKENS = 1024;
-const ADAPTIVE_THINKING_MODELS = new Set(['claude-opus-4-6', 'claude-opus-4-8']);
+const ADAPTIVE_THINKING_MODELS = new Set(['claude-opus-4-6', 'claude-opus-4-7', 'claude-opus-4-8']);
 
 const getClient = (config: BackendConfig) => {
   return new Anthropic({
@@ -100,7 +100,7 @@ type AnthropicThinkingParams =
     };
 
 const getMaxOutputTokens = (model: string) => {
-  if (model === 'claude-opus-4-6' || model === 'claude-opus-4-8') {
+  if (ADAPTIVE_THINKING_MODELS.has(model)) {
     return 128000;
   }
 
