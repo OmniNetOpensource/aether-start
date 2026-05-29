@@ -171,6 +171,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'anthropic',
     backend: 'ikun',
   },
+  claudeOpus48Ikun: {
+    id: 'claudeOpus48Ikun',
+    name: 'opus-4-8+ikun',
+    model: 'claude-opus-4-8',
+    format: 'anthropic',
+    backend: 'ikun',
+  },
   claudeOpus45Ikun: {
     id: 'claudeOpus45Ikun',
     name: 'opus-4-5+ikun',
