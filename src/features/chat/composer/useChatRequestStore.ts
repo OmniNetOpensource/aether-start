@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { getZustandDevtoolsOptions } from '@/shared/browser/zustand-devtools';
 
-export type ChatStatus = 'idle' | 'sending' | 'streaming';
+export type ChatStatus = 'idle' | 'sending' | 'streaming' | 'stopping';
 
 export const initialChatRequestState = { status: 'idle' as ChatStatus };
 

@@ -121,13 +121,14 @@ export function Composer() {
   /**
    * 主按钮是否「视觉上禁用」。
    * - 请求进行中（sending/streaming）：按钮可点，用于停止，不设为 disabled。
+   * - stopping：已请求服务端停止，等待服务端结束事件。
    * - 其余情况：无内容且无附件、无模型、或正在上传附件时禁用。
    * 草稿在首帧 paint 前由 useLayoutEffect 写入 store，sendDisabled 与受控 input 一致。
    */
   const isBusy = status !== 'idle';
   const hasComposerContent =
     input.trim().length !== 0 || pendingAttachments.length > 0 || pendingQuotes.length > 0;
-  const sendDisabled = isBusy ? false : !hasComposerContent || uploading;
+  const sendDisabled = status === 'stopping' || (isBusy ? false : !hasComposerContent || uploading);
 
   const handleSubmit = () => {
     void submitMessage(async (conversationId) => {
@@ -309,6 +310,10 @@ export function Composer() {
                 aria-label='发送'
                 aria-disabled={sendDisabled}
                 onClick={(event: MouseEvent<HTMLButtonElement>) => {
+                  if (status === 'stopping') {
+                    return;
+                  }
+
                   if (sendDisabled) {
                     const button = event.currentTarget;
                     if (typeof button.animate !== 'function') {
@@ -336,7 +341,10 @@ export function Composer() {
 
                   if (isBusy) {
                     event.preventDefault();
-                    cancelAnswering('Composer/stopButton');
+                    void cancelAnswering('Composer/stopButton').catch((error) => {
+                      console.error('Failed to stop answering:', error);
+                      toast.error(error instanceof Error ? error.message : '停止失败');
+                    });
                     return;
                   }
 
@@ -351,7 +359,7 @@ export function Composer() {
                     : 'bg-primary text-background hover:bg-primary hover:scale-105 active:scale-95',
                 )}
               >
-                {status === 'sending' ? (
+                {status === 'sending' || status === 'stopping' ? (
                   <Loader2 className='h-4 w-4 animate-spin' />
                 ) : status === 'streaming' ? (
                   <Square className='h-4 w-4 fill-current' />

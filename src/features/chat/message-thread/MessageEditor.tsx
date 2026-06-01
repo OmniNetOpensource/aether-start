@@ -139,7 +139,10 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
     if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
       event.preventDefault();
       if (!sendDisabled) {
-        submitEdit(depth);
+        void submitEdit(depth).catch((error) => {
+          console.error('Failed to submit edit:', error);
+          toast.error(error instanceof Error ? error.message : '编辑失败');
+        });
       }
     }
   };
@@ -208,7 +211,12 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
           </div>
           <Button
             type='button'
-            onClick={() => submitEdit(depth)}
+            onClick={() => {
+              void submitEdit(depth).catch((error) => {
+                console.error('Failed to submit edit:', error);
+                toast.error(error instanceof Error ? error.message : '编辑失败');
+              });
+            }}
             disabled={sendDisabled}
             size='icon'
             aria-label='Submit edit'

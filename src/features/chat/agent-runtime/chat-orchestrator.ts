@@ -51,6 +51,7 @@ export const resetLastEventId = () => {
  * 同一时刻只允许一个请求在跑，新请求会 abort 掉旧的。
  */
 let activeController: AbortController | null = null;
+let stopWaiters: (() => void)[] = [];
 
 let reconnectAttempt = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -65,6 +66,30 @@ const clearReconnectState = () => {
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
+  }
+};
+
+const waitForStopFinished = () => {
+  let resolveStop = () => {};
+  const promise = new Promise<void>((resolve) => {
+    const finish = () => resolve();
+    resolveStop = finish;
+    stopWaiters.push(finish);
+  });
+
+  return {
+    promise,
+    cancel: () => {
+      stopWaiters = stopWaiters.filter((resolve) => resolve !== resolveStop);
+    },
+  };
+};
+
+const resolveStopWaiters = () => {
+  const waiters = stopWaiters;
+  stopWaiters = [];
+  for (const resolve of waiters) {
+    resolve();
   }
 };
 
@@ -193,6 +218,7 @@ const handleSSEMessage = (event: string, raw: string) => {
         useChatSessionStore.getState().stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
       setStatus('idle', 'chat_finished');
+      resolveStopWaiters();
       return;
     case 'chat_paused':
       // 服务端调用 askuserquestions 后会先发 chat_paused 再关闭 SSE，
@@ -429,26 +455,53 @@ export const cancelStreamSubscription = (reason: string) => {
   flushAll();
   activeController?.abort();
   activeController = null;
+  resolveStopWaiters();
 
   useChatRequestStore.getState().setStatus('idle', `cancelStreamSubscription/${reason}`);
 };
 
 /**
  * 取消正在进行的 AI 回复。
- * 集成 cancelStreamSubscription 与 POST /abort 通知服务端。
+ * 保持 SSE 连接，等服务端 abort 后通过 chat_finished 收口。
  */
-export const cancelAnswering = (reason: string) => {
-  cancelStreamSubscription(`cancelAnswering/${reason}`);
+export const cancelAnswering = async (reason: string) => {
   const conversationId = useChatSessionStore.getState().conversationId;
-  if (conversationId) {
-    void fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
+  const status = useChatRequestStore.getState().status;
+
+  if (status === 'idle') {
+    return;
+  }
+
+  if (status === 'stopping') {
+    await waitForStopFinished().promise;
+    return;
+  }
+
+  if (!conversationId) {
+    return;
+  }
+
+  useChatRequestStore.getState().setStatus('stopping', `cancelAnswering/${reason}`);
+
+  const stopFinished = waitForStopFinished();
+
+  try {
+    const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
-    }).catch((error) => {
-      console.error('Failed to notify abort:', error);
     });
+
+    if (!response.ok) {
+      throw new Error(`Abort request failed: ${response.status}`);
+    }
+
+    await stopFinished.promise;
+  } catch (error) {
+    stopFinished.cancel();
+    useChatRequestStore.getState().setStatus('streaming', `cancelAnswering/${reason}/error`);
+    throw error;
   }
 };
 

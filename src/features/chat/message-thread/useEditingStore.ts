@@ -141,7 +141,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         if (useChatRequestStore.getState().status !== 'idle') {
-          cancelAnswering('useEditingStore/submitEdit');
+          await cancelAnswering('useEditingStore/submitEdit');
         }
 
         const trimmed = editingState.editedContent.trim();
@@ -176,13 +176,6 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         await startChatRequest();
       },
       retryFromMessage: async (messageId, depth) => {
-        const treeStore = useChatSessionStore.getState();
-        const treeState = treeStore.getTreeState();
-        const targetNode = treeState.messages[messageId - 1];
-        if (!targetNode) {
-          return;
-        }
-
         const selectedModel = useChatSessionStore.getState().currentModelId;
         if (!selectedModel) {
           toast.warning('请先选择模型');
@@ -190,7 +183,14 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         if (useChatRequestStore.getState().status !== 'idle') {
-          cancelAnswering('useEditingStore/retryFromMessage');
+          await cancelAnswering('useEditingStore/retryFromMessage');
+        }
+
+        const treeStore = useChatSessionStore.getState();
+        const treeState = treeStore.getTreeState();
+        const targetNode = treeState.messages[messageId - 1];
+        if (!targetNode) {
+          return;
         }
 
         if (targetNode.role === 'user') {

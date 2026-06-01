@@ -6,6 +6,7 @@ import { getBranchInfo as getBranchInfoFn } from '@/features/conversations/conve
 import { ResearchBlock } from '../research/ResearchBlock';
 import { Copy, Check, AlertCircle, Pencil, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
+import { toast } from '@/shared/app-shell/useToast';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { submitToolAnswer } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
@@ -118,7 +119,12 @@ export const MessageItem = memo(function MessageItem({
 
   const handleStartEditing = () => startEditing(messageId);
 
-  const handleRetry = () => retryFromMessage(messageId, depth);
+  const handleRetry = () => {
+    void retryFromMessage(messageId, depth).catch((error) => {
+      console.error('Failed to retry message:', error);
+      toast.error(error instanceof Error ? error.message : '重新生成失败');
+    });
+  };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
     if (status === 'idle') {
