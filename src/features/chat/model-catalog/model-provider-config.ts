@@ -549,6 +549,27 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'openrouter',
   },
+  openrouterMinimaxM3: {
+    id: 'openrouterMinimaxM3',
+    name: 'minimax-m3+openrouter',
+    model: 'minimax/minimax-m3',
+    format: 'openai',
+    backend: 'openrouter',
+  },
+  openrouterStep37Flash: {
+    id: 'openrouterStep37Flash',
+    name: 'step-3.7-flash+openrouter',
+    model: 'stepfun/step-3.7-flash',
+    format: 'openai',
+    backend: 'openrouter',
+  },
+  openrouterQwen37Max: {
+    id: 'openrouterQwen37Max',
+    name: 'qwen3.7-max+openrouter',
+    model: 'qwen/qwen3.7-max',
+    format: 'openai',
+    backend: 'openrouter',
+  },
 };
 
 export const getAvailableModels = (): { id: string; name: string }[] =>
