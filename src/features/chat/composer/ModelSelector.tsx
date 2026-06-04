@@ -1,7 +1,6 @@
 'use client';
 
-import { useState } from 'react';
-import { useMountEffect } from '@/shared/app-shell/useMountEffect';
+import { useEffect, useState } from 'react';
 import { Bot, Check, ChevronDown } from 'lucide-react';
 import {
   Command,
@@ -17,16 +16,6 @@ import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
 import { useAppShellRouteData } from '@/features/conversations/route-data';
 import { useChatSessionStore } from '@/features/conversations/session';
 
-const MODEL_STORAGE_KEY = 'aether_current_model';
-
-function readStoredModelId(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  return localStorage.getItem(MODEL_STORAGE_KEY) ?? '';
-}
-
 export function ModelSelector() {
   const appShellData = useAppShellRouteData();
   const [open, setOpen] = useState(false);
@@ -34,28 +23,22 @@ export function ModelSelector() {
   const isMobile = useResponsive() === 'mobile';
   const setCurrentModel = useChatSessionStore((state) => state.setCurrentModel);
   const availableModels = appShellData?.availableModels ?? [];
-  const rawStoredModelId = readStoredModelId();
-  const storedModelId =
-    rawStoredModelId && availableModels.some((m) => m.id === rawStoredModelId)
-      ? rawStoredModelId
-      : '';
-  const selectedModelId =
-    currentModelId || appShellData?.initialModelId || storedModelId || availableModels[0]?.id || '';
-
-  const persistModelSelection = (modelId: string) => {
-    setCurrentModel(modelId);
-    if (typeof window === 'undefined' || !modelId) {
-      return;
-    }
-
-    localStorage.setItem(MODEL_STORAGE_KEY, modelId);
-  };
+  // 持久化优先：currentModelId 由 persist 中间件从 localStorage hydrate，已选过的模型胜出。
+  // loader 的 initialModelId 仅在该浏览器从未选过模型时兜底。
+  const storedIsValid = availableModels.some((m) => m.id === currentModelId);
+  const selectedModelId = storedIsValid
+    ? currentModelId
+    : appShellData?.initialModelId || availableModels[0]?.id || '';
 
   const currentModelName = availableModels.find((m) => m.id === selectedModelId)?.name ?? '';
 
-  useMountEffect(() => {
-    persistModelSelection(selectedModelId);
-  });
+  // selectedModelId 是渲染层算出来的；submit-chat / chat-orchestrator 直接读 store 里的 currentModelId，
+  // 所以兜底值要回灌一次，否则首次访问（localStorage 空）发送按钮会卡 hasModel 校验。
+  useEffect(() => {
+    if (selectedModelId && selectedModelId !== currentModelId) {
+      setCurrentModel(selectedModelId);
+    }
+  }, [selectedModelId, currentModelId, setCurrentModel]);
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground';
@@ -93,7 +76,7 @@ export function ModelSelector() {
                 key={m.id}
                 value={`${m.id} ${m.name}`}
                 onSelect={() => {
-                  persistModelSelection(m.id);
+                  setCurrentModel(m.id);
                   setOpen(false);
                 }}
               >

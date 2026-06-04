@@ -1,4 +1,5 @@
 'use client';
+import { useEffect } from 'react';
 import { Check, ChevronDown, MessageSquareText } from 'lucide-react';
 import {
   DropdownMenu,
@@ -10,17 +11,6 @@ import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
 import { useAppShellRouteData } from '@/features/conversations/route-data';
 import { useChatSessionStore } from '@/features/conversations/session';
-import { useMountEffect } from '@/shared/app-shell/useMountEffect';
-
-const PROMPT_STORAGE_KEY = 'aether_current_prompt';
-
-function readStoredPromptId(): string {
-  if (typeof window === 'undefined') {
-    return '';
-  }
-
-  return localStorage.getItem(PROMPT_STORAGE_KEY) ?? '';
-}
 
 export function PromptSelector() {
   const appShellData = useAppShellRouteData();
@@ -28,31 +18,21 @@ export function PromptSelector() {
   const setCurrentPrompt = useChatSessionStore((state) => state.setCurrentPrompt);
   const currentPromptId = useChatSessionStore((state) => state.currentPromptId);
   const prompts = appShellData?.availablePrompts ?? [];
-  const rawStoredPromptId = readStoredPromptId();
-  const storedPromptId =
-    rawStoredPromptId && prompts.some((p) => p.id === rawStoredPromptId) ? rawStoredPromptId : '';
-  const selectedPromptId =
-    currentPromptId ||
-    appShellData?.initialPromptId ||
-    storedPromptId ||
-    prompts[0]?.id ||
-    'aether';
+  // 持久化优先：currentPromptId 由 persist 中间件 hydrate；loader 仅在首次访问兜底。
+  const storedIsValid = prompts.some((p) => p.id === currentPromptId);
+  const selectedPromptId = storedIsValid
+    ? currentPromptId
+    : appShellData?.initialPromptId || prompts[0]?.id || 'aether';
 
-  const persistPromptSelection = (promptId: string) => {
-    setCurrentPrompt(promptId);
-    if (typeof window === 'undefined' || !promptId) {
-      return;
+  // 回灌兜底值，使下游读 store 的代码拿到稳定 id。
+  useEffect(() => {
+    if (selectedPromptId && selectedPromptId !== currentPromptId) {
+      setCurrentPrompt(selectedPromptId);
     }
-
-    localStorage.setItem(PROMPT_STORAGE_KEY, promptId);
-  };
+  }, [selectedPromptId, currentPromptId, setCurrentPrompt]);
 
   const currentPromptName =
     prompts.find((prompt) => prompt.id === selectedPromptId)?.name ?? 'aether';
-
-  useMountEffect(() => {
-    persistPromptSelection(selectedPromptId);
-  });
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground';
@@ -80,7 +60,7 @@ export function PromptSelector() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' sideOffset={4}>
         {prompts.map((prompt) => (
-          <DropdownMenuItem key={prompt.id} onSelect={() => persistPromptSelection(prompt.id)}>
+          <DropdownMenuItem key={prompt.id} onSelect={() => setCurrentPrompt(prompt.id)}>
             <span className='flex-1 truncate'>{prompt.name}</span>
             {selectedPromptId === prompt.id && <Check className='h-4 w-4 shrink-0' />}
           </DropdownMenuItem>

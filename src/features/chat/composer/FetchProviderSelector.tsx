@@ -9,9 +9,6 @@ import {
 import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
 import { useChatSessionStore } from '@/features/conversations/session';
-import { useMountEffect } from '@/shared/app-shell/useMountEffect';
-
-const FETCH_PROVIDER_STORAGE_KEY = 'aether_current_fetch_provider';
 
 type FetchProvider = 'jina' | 'firecrawl' | 'exa';
 
@@ -21,34 +18,10 @@ const PROVIDERS: { id: FetchProvider; name: string }[] = [
   { id: 'exa', name: 'Exa' },
 ];
 
-const isFetchProvider = (value: string): value is FetchProvider =>
-  value === 'jina' || value === 'firecrawl' || value === 'exa';
-
-function readStoredProvider(): FetchProvider | null {
-  if (typeof window === 'undefined') {
-    return null;
-  }
-  const raw = localStorage.getItem(FETCH_PROVIDER_STORAGE_KEY) ?? '';
-  return isFetchProvider(raw) ? raw : null;
-}
-
 export function FetchProviderSelector() {
+  // currentFetchProvider 由 useChatSessionStore 的 persist 中间件 hydrate。
   const currentFetchProvider = useChatSessionStore((state) => state.currentFetchProvider);
   const setCurrentFetchProvider = useChatSessionStore((state) => state.setCurrentFetchProvider);
-
-  const persist = (provider: FetchProvider) => {
-    setCurrentFetchProvider(provider);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem(FETCH_PROVIDER_STORAGE_KEY, provider);
-    }
-  };
-
-  useMountEffect(() => {
-    const stored = readStoredProvider();
-    if (stored && stored !== currentFetchProvider) {
-      setCurrentFetchProvider(stored);
-    }
-  });
 
   const currentName = PROVIDERS.find((p) => p.id === currentFetchProvider)?.name ?? 'Jina';
 
@@ -75,7 +48,7 @@ export function FetchProviderSelector() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' sideOffset={4}>
         {PROVIDERS.map((provider) => (
-          <DropdownMenuItem key={provider.id} onSelect={() => persist(provider.id)}>
+          <DropdownMenuItem key={provider.id} onSelect={() => setCurrentFetchProvider(provider.id)}>
             <span className='flex-1 truncate'>{provider.name}</span>
             {currentFetchProvider === provider.id && <Check className='h-4 w-4 shrink-0' />}
           </DropdownMenuItem>
