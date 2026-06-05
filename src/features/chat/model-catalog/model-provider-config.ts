@@ -444,6 +444,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'openrouter',
   },
+  openrouterNemotronUltra: {
+    id: 'openrouterNemotronUltra',
+    name: 'nemotron-3-ultra+openrouter',
+    model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
+    format: 'openai',
+    backend: 'openrouter',
+  },
   gpt5NanoOpenrouter: {
     id: 'gpt5NanoOpenrouter',
     name: 'gpt-5-nano+openrouter',
