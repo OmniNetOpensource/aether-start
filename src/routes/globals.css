@@ -4,6 +4,7 @@
 
 /* Ensure Tailwind picks up Streamdown utility classes */
 @source "../../node_modules/streamdown/dist/*.js";
+@source "../../node_modules/@heroui/styles/dist/**/*.js";
 
 /* Custom styles */
 @import '../styles/theme.css';
