@@ -1,6 +1,5 @@
 import { createServerFn } from '@tanstack/react-start';
 import { z } from 'zod';
-import { requireSession } from '@/features/auth/session';
 import { getServerBindings } from '@/shared/worker/env';
 import {
   deleteNoteById,
@@ -44,6 +43,7 @@ export const listNotesPageFn = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
+    const { requireSession } = await import('@/features/auth/session/request.server');
     const { DB } = getServerBindings();
     const session = await requireSession();
 
@@ -57,6 +57,7 @@ export const listNotesPageFn = createServerFn({ method: 'POST' })
 export const upsertNoteFn = createServerFn({ method: 'POST' })
   .inputValidator(notePayloadSchema)
   .handler(async ({ data }) => {
+    const { requireSession } = await import('@/features/auth/session/request.server');
     const { DB } = getServerBindings();
     const session = await requireSession();
 
@@ -73,6 +74,7 @@ export const deleteNoteFn = createServerFn({ method: 'POST' })
     }),
   )
   .handler(async ({ data }) => {
+    const { requireSession } = await import('@/features/auth/session/request.server');
     const { DB } = getServerBindings();
     const session = await requireSession();
 

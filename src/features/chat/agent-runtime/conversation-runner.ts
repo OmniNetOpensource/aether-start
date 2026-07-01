@@ -554,12 +554,12 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         })
         .finally(() => {
           this.abortController = null;
-          void writer.close().catch((error) => {
-            log('AGENT', 'Failed to close chat response writer', {
-              error: getErrorMessage(error),
+          for (const [writerIndex, remainingWriter] of [...this.writers].entries()) {
+            log('AGENT', 'Chat response writer was not cleaned up by finalize', {
+              writerIndex,
+              isChatResponseWriter: remainingWriter === writer,
             });
-          });
-          this.writers.delete(writer);
+          }
         }),
     );
 

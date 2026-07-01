@@ -14,10 +14,16 @@
  */
 import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
+import {
+  extractAttachmentsFromBlocks,
+  extractContentFromBlocks,
+  extractQuotesFromBlocks,
+} from '@/features/conversations/conversation-tree';
 import { applyChatEventToTree } from './event-handlers';
 import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
+import { useComposerStore } from '@/features/chat/composer/useComposerStore';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
-import { useChatSessionStore } from '@/features/conversations/session';
+import { removeConversationFromCache, useChatSessionStore } from '@/features/conversations/session';
 import type { SerializedMessage } from '@/features/chat/message-thread';
 import type {
   ChatAgentStatus,
@@ -52,6 +58,7 @@ export const resetLastEventId = () => {
  */
 let activeController: AbortController | null = null;
 let stopWaiters: (() => void)[] = [];
+let activeRequestAccepted = false;
 
 let reconnectAttempt = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -164,6 +171,58 @@ const getResponseErrorMessage = async (response: Response) => {
   return null;
 };
 
+type StartChatRequestOptions = {
+  onEmptyConversationRollback?: () => Promise<void> | void;
+};
+
+const restoreLastUserMessageToComposer = async (options?: StartChatRequestOptions) => {
+  const sessionStore = useChatSessionStore.getState();
+  const conversationId = sessionStore.conversationId;
+  const removedMessage = sessionStore.popLastUserMessage();
+
+  if (!removedMessage || removedMessage.role !== 'user') {
+    return false;
+  }
+
+  useComposerStore.getState().restoreMessageDraft({
+    input: extractContentFromBlocks(removedMessage.blocks),
+    pendingAttachments: extractAttachmentsFromBlocks(removedMessage.blocks).map((attachment) => ({
+      id: attachment.id,
+      kind: attachment.kind,
+      name: attachment.name,
+      size: attachment.size,
+      mimeType: attachment.mimeType,
+      url: attachment.url,
+      storageKey: attachment.storageKey,
+    })),
+    pendingQuotes: extractQuotesFromBlocks(removedMessage.blocks).map((quote) => ({
+      id: quote.id,
+      text: quote.text,
+    })),
+  });
+
+  const nextSessionStore = useChatSessionStore.getState();
+  if (nextSessionStore.messages.length === 0) {
+    nextSessionStore.clearSession();
+    if (conversationId) {
+      removeConversationFromCache(conversationId);
+    }
+    await options?.onEmptyConversationRollback?.();
+  }
+
+  return true;
+};
+
+const rollbackUnacceptedSend = async (options?: StartChatRequestOptions) => {
+  if (activeRequestAccepted) {
+    return false;
+  }
+
+  const restored = await restoreLastUserMessageToComposer(options);
+  useChatRequestStore.getState().setStatus('idle', 'rollbackUnacceptedSend');
+  return restored;
+};
+
 /**
  * 流结束后的收尾逻辑。
  * 异常结束时尝试自动重连；正常 idle 或无法重连时清理重连状态。
@@ -206,6 +265,7 @@ const handleSSEMessage = (event: string, raw: string) => {
       return;
     }
     case 'chat_started':
+      activeRequestAccepted = true;
       setStatus('streaming', 'chat_started');
       if (typeof payload.userMessageCreatedAt === 'string') {
         useChatSessionStore.getState().stampUserMessageTime(payload.userMessageCreatedAt);
@@ -353,11 +413,12 @@ export const checkAgentStatus = async (
  *
  * 异常：AbortError 静默忽略；TypeError（如网络错误）调用 finalizeStream；其他恢复 idle。
  */
-export const startChatRequest = async () => {
+export const startChatRequest = async (options?: StartChatRequestOptions) => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
   resetLastEventId();
+  activeRequestAccepted = false;
 
   if (!sessionStore.currentModelId) {
     toast.warning(SELECT_MODEL_WARNING);
@@ -405,37 +466,44 @@ export const startChatRequest = async () => {
     if (response.status === 409) {
       /* 服务端已有该对话的活跃流，视为 busy */
       toast.warning(BUSY_WARNING);
-      if (conversationId) {
-        void resumeRunningConversation(conversationId);
-      }
+      await rollbackUnacceptedSend(options);
       return;
     }
 
     if (response.status === 402) {
       /* 配额超限，写入 error 事件并恢复 idle */
-      const data = (await response.json()) as Record<string, unknown>;
-      applyChatEventToTree({
-        type: 'error',
-        message: typeof data.message === 'string' ? data.message : QUOTA_EXCEEDED_MESSAGE,
-      });
-      useChatRequestStore.getState().setStatus('idle', 'startChatRequest/402_quota');
+      const data = await response.json();
+      const message =
+        data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
+          ? data.message
+          : QUOTA_EXCEEDED_MESSAGE;
+      toast.error(message);
+      await rollbackUnacceptedSend(options);
       return;
     }
 
     await consumeStreamResponse(response);
     finalizeStream();
   } catch (error) {
-    if (isAbortError(error)) return;
+    if (isAbortError(error)) {
+      await rollbackUnacceptedSend(options);
+      return;
+    }
 
     const currentStatus = useChatRequestStore.getState().status;
     const convId = useChatSessionStore.getState().conversationId;
 
-    if (error instanceof TypeError && currentStatus !== 'idle' && convId) {
+    if (error instanceof TypeError && currentStatus !== 'idle' && convId && activeRequestAccepted) {
       scheduleAutoReconnect(convId);
       return;
     }
 
-    useChatRequestStore.getState().setStatus('idle', 'startChatRequest/error');
+    if (!activeRequestAccepted) {
+      await rollbackUnacceptedSend(options);
+    } else {
+      useChatRequestStore.getState().setStatus('idle', 'startChatRequest/error');
+    }
+
     toast.error(
       error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败',
     );
@@ -444,6 +512,19 @@ export const startChatRequest = async () => {
       activeController = null;
     }
   }
+};
+
+export const cancelSending = async (reason: string, options?: StartChatRequestOptions) => {
+  if (useChatRequestStore.getState().status !== 'sending') {
+    return;
+  }
+
+  clearReconnectState();
+  flushAll();
+  activeController?.abort();
+  activeController = null;
+  await rollbackUnacceptedSend(options);
+  useChatRequestStore.getState().setStatus('idle', `cancelSending/${reason}`);
 };
 
 /**

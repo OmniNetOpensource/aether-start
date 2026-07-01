@@ -251,3 +251,22 @@ export function upsertConversationInCache(conversation: ConversationMeta) {
     },
   );
 }
+
+export function removeConversationFromCache(conversationId: string) {
+  queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
+    conversationListQueryKey,
+    (old) => {
+      if (!old) {
+        return old;
+      }
+
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          items: page.items.filter((item) => item.id !== conversationId),
+        })),
+      };
+    },
+  );
+}

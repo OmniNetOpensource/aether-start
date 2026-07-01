@@ -17,7 +17,7 @@ import { AttachmentStack } from '@/features/attachments/attachment-preview';
 import { Textarea } from '@/shared/design-system/textarea';
 import { Button } from '@/shared/design-system/button';
 import { toast } from '@/shared/app-shell/useToast';
-import { cancelAnswering } from '@/features/chat/agent-runtime/chat-orchestrator';
+import { cancelAnswering, cancelSending } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { submitMessage } from './submit-chat';
 import { cn } from '@/shared/core/utils';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
@@ -126,17 +126,23 @@ export function Composer() {
    * 草稿在首帧 paint 前由 useLayoutEffect 写入 store，sendDisabled 与受控 input 一致。
    */
   const isBusy = status !== 'idle';
+  const inputDisabled = status === 'sending';
   const hasComposerContent =
     input.trim().length !== 0 || pendingAttachments.length > 0 || pendingQuotes.length > 0;
   const sendDisabled = status === 'stopping' || (isBusy ? false : !hasComposerContent || uploading);
 
   const handleSubmit = () => {
-    void submitMessage(async (conversationId) => {
-      await navigate({
-        to: '/app/c/$conversationId',
-        params: { conversationId },
-      });
-    }).catch((error) => {
+    void submitMessage(
+      async (conversationId) => {
+        await navigate({
+          to: '/app/c/$conversationId',
+          params: { conversationId },
+        });
+      },
+      async () => {
+        await navigate({ to: '/app' });
+      },
+    ).catch((error) => {
       console.error('Failed to submit message:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send message');
     });
@@ -161,10 +167,13 @@ export function Composer() {
         className='relative bottom-2 mx-auto flex w-[90%] max-w-full flex-col gap-2 @[921px]:w-[50%] @[921px]:max-w-2xl pointer-events-auto'
         onDragOver={(event: DragEvent) => {
           event.preventDefault();
-          event.dataTransfer.dropEffect = 'copy';
+          event.dataTransfer.dropEffect = inputDisabled ? 'none' : 'copy';
         }}
         onDrop={(event: DragEvent) => {
           event.preventDefault();
+          if (inputDisabled) {
+            return;
+          }
           const files = Array.from(event.dataTransfer.files ?? []);
           if (!files.length) return;
           if (uploading) {
@@ -192,6 +201,7 @@ export function Composer() {
               value={input}
               onChange={(event) => setInput(event.target.value)}
               onFocus={() => setLastFocused({ type: 'composer' })}
+              disabled={inputDisabled}
               onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
                 if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
                   event.preventDefault();
@@ -227,6 +237,10 @@ export function Composer() {
 
                 event.preventDefault();
 
+                if (inputDisabled) {
+                  return;
+                }
+
                 if (uploading) {
                   toast.info('Attachments are still uploading. Please wait.');
                   return;
@@ -237,7 +251,7 @@ export function Composer() {
               rows={1}
               placeholder='Type your message...'
               enterKeyHint={useResponsive() === 'desktop' ? undefined : 'enter'}
-              className='min-h-9 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 sm:text-base'
+              className='min-h-9 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-100 sm:text-base'
             />
           </div>
           {/* 工具栏：左右分区 — 左为「附件 + 预设提示词」，右为「模型 + 发送」 */}
@@ -254,7 +268,7 @@ export function Composer() {
                   type='file'
                   multiple
                   onChange={async (event: ChangeEvent<HTMLInputElement>) => {
-                    if (uploading) {
+                    if (inputDisabled || uploading) {
                       return;
                     }
 
@@ -267,6 +281,7 @@ export function Composer() {
                     event.target.value = '';
                   }}
                   accept='image/jpeg,image/png,image/webp,image/gif'
+                  disabled={inputDisabled}
                   className='sr-only'
                   data-testid='composer-file-input'
                 />
@@ -282,12 +297,12 @@ export function Composer() {
                   <label
                     htmlFor={fileInputId}
                     aria-label={uploading ? '正在上传附件...' : '添加附件'}
-                    aria-disabled={uploading}
+                    aria-disabled={inputDisabled || uploading}
                     title={uploading ? '正在上传附件...' : '添加附件'}
                     data-testid='composer-attachment-trigger'
                     className={cn(
                       'cursor-pointer',
-                      uploading && 'pointer-events-none cursor-not-allowed',
+                      (inputDisabled || uploading) && 'pointer-events-none cursor-not-allowed',
                     )}
                   >
                     {uploading ? (
@@ -341,6 +356,18 @@ export function Composer() {
 
                   if (isBusy) {
                     event.preventDefault();
+                    if (status === 'sending') {
+                      void cancelSending('Composer/sendButton', {
+                        onEmptyConversationRollback: async () => {
+                          await navigate({ to: '/app' });
+                        },
+                      }).catch((error) => {
+                        console.error('Failed to cancel sending:', error);
+                        toast.error(error instanceof Error ? error.message : '取消发送失败');
+                      });
+                      return;
+                    }
+
                     void cancelAnswering('Composer/stopButton').catch((error) => {
                       console.error('Failed to stop answering:', error);
                       toast.error(error instanceof Error ? error.message : '停止失败');

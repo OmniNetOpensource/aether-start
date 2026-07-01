@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { getSessionFromRequest } from '@/features/auth/session';
+import { getSessionFromRequest } from '@/features/auth/session/request.server';
 import { getServerBindings } from '@/shared/worker/env';
 
 const KINDS = new Set(['react-boundary', 'window-error', 'unhandledrejection']);

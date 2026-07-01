@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { requireSessionFromRequest } from '@/features/auth/session';
+import { requireSessionFromRequest } from '@/features/auth/session/request.server';
 
 export const Route = createFileRoute('/api/assets/$key')({
   server: {

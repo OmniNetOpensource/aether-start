@@ -3,7 +3,7 @@ import { env } from 'cloudflare:workers';
 import { createServerEntry } from '@tanstack/react-start/server-entry';
 import type { RequestHandler } from '@tanstack/react-start/server';
 import type { Register } from '@tanstack/react-router';
-import { getSessionFromRequest } from '@/features/auth/session';
+import { getSessionFromRequest } from '@/features/auth/session/request.server';
 
 // 所有发往聊天 Durable Object 的请求都约定挂在这个前缀下：
 // /agents/conversation-runner/<conversation-or-instance-name>/...
