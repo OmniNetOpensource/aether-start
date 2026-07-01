@@ -458,6 +458,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'openrouter',
   },
+  openrouterNexN2ProFree: {
+    id: 'openrouterNexN2ProFree',
+    name: 'nex-n2-pro-free+openrouter',
+    model: 'nex-agi/nex-n2-pro:free',
+    format: 'openai',
+    backend: 'openrouter',
+  },
   gpt5NanoOpenrouter: {
     id: 'gpt5NanoOpenrouter',
     name: 'gpt-5-nano+openrouter',
@@ -549,10 +556,24 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'openrouter',
   },
+  openrouterKimiK27Code: {
+    id: 'openrouterKimiK27Code',
+    name: 'kimi-k2.7-code+openrouter',
+    model: 'moonshotai/kimi-k2.7-code',
+    format: 'openai',
+    backend: 'openrouter',
+  },
   openrouterGlm51: {
     id: 'openrouterGlm51',
     name: 'glm-5.1+openrouter',
     model: 'z-ai/glm-5.1',
+    format: 'openai',
+    backend: 'openrouter',
+  },
+  openrouterGlm52: {
+    id: 'openrouterGlm52',
+    name: 'glm-5.2+openrouter',
+    model: 'z-ai/glm-5.2',
     format: 'openai',
     backend: 'openrouter',
   },
