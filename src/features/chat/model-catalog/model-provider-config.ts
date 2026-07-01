@@ -388,6 +388,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'anthropic',
     backend: 'ikun',
   },
+  claudeSonnet5Ikun: {
+    id: 'claudeSonnet5Ikun',
+    name: 'sonnet-5+ikun',
+    model: 'claude-sonnet-5',
+    format: 'anthropic',
+    backend: 'ikun',
+  },
   claudeHaiku45Ikun: {
     id: 'claudeHaiku45Ikun',
     name: 'haiku-4-5-20251001+ikun',

@@ -107,6 +107,7 @@ const getMaxOutputTokens = (model: string) => {
   if (
     model === 'claude-opus-4-5-20251101' ||
     model === 'claude-sonnet-4-6' ||
+    model === 'claude-sonnet-5' ||
     model === 'claude-haiku-4-5-20251001'
   ) {
     return 64000;
