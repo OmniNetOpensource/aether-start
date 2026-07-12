@@ -1,7 +1,4 @@
-import { useEffect, useState } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
-import { useComposerStore } from '@/features/chat/composer/useComposerStore';
-import { getForYouSuggestionsFn } from '@/features/chat/for-you/for-you-suggestions';
 import { cancelStreamSubscription } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
 import { useChatSessionStore, useIsNewChat } from '@/features/conversations/session';
@@ -19,13 +16,7 @@ export const Route = createFileRoute('/app/')({
   component: HomePage,
 });
 
-function Greeting({
-  suggestions,
-  onPick,
-}: {
-  suggestions: string[] | null;
-  onPick: (text: string) => void;
-}) {
+function Greeting() {
   return (
     <div
       className='absolute inset-0 flex flex-col items-center px-4 font-serif'
@@ -47,29 +38,6 @@ function Greeting({
         </div>
         <span>些什么？</span>
       </div>
-      {suggestions && suggestions.length > 0 && (
-        <div className='mt-6 flex w-full max-w-2xl flex-col items-center gap-3'>
-          <p
-            className='text-sm font-medium text-muted-foreground'
-            style={{ animation: 'suggestionIn 0.4s ease-out both' }}
-          >
-            For you
-          </p>
-          <div className='flex flex-wrap justify-center gap-2'>
-            {suggestions.map((text, index) => (
-              <button
-                key={`${index}-${text}`}
-                type='button'
-                onClick={() => onPick(text)}
-                className='max-w-[min(100%,22rem)] truncate rounded-full border border-border bg-background/60 px-3 py-1.5 text-sm text-foreground transition hover:bg-hover'
-                style={{ animation: `suggestionIn 0.4s ease-out ${index * 0.06}s both` }}
-              >
-                {text}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
       <style>{`
         @keyframes scrollUp {
           0%, 20% { transform: translateY(0); }
@@ -78,10 +46,6 @@ function Greeting({
           75%, 95% { transform: translateY(-3.6em); }
           100% { transform: translateY(-4.8em); }
         }
-        @keyframes suggestionIn {
-          from { opacity: 0; transform: translateY(6px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
       `}</style>
     </div>
   );
@@ -89,38 +53,10 @@ function Greeting({
 
 function HomePage() {
   const isNewChat = useIsNewChat();
-  const [suggestions, setSuggestions] = useState<string[] | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const list = await getForYouSuggestionsFn();
-        if (!cancelled) {
-          setSuggestions(list);
-        }
-      } catch (error) {
-        console.error('Failed to load for-you suggestions:', error);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   if (!isNewChat) {
     return null;
   }
 
-  return (
-    <Greeting
-      suggestions={suggestions}
-      onPick={(text) => {
-        useComposerStore.getState().setInput(text);
-        queueMicrotask(() => {
-          document.getElementById('message-input')?.focus();
-        });
-      }}
-    />
-  );
+  return <Greeting />;
 }
