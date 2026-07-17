@@ -228,6 +228,13 @@ const MODEL_CONFIGS: Record<string, ModelConfig> = {
     format: 'openai',
     backend: 'moonshot',
   },
+  kimiK3Moonshot: {
+    id: 'kimiK3Moonshot',
+    name: 'kimi-k3+moonshot',
+    model: 'kimi-k3',
+    format: 'openai',
+    backend: 'moonshot',
+  },
   gemini31ProRightcode: {
     id: 'gemini31ProRightcode',
     name: 'gemini-3.1-pro+rightcode',
