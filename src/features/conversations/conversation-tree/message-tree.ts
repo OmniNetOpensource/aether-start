@@ -268,6 +268,52 @@ export const addMessage = (
   };
 };
 
+export const popLastUserMessage = (
+  state: MessageState,
+): (MessageState & { removedMessage: Message }) | null => {
+  const lastId = state.currentPath[state.currentPath.length - 1] ?? null;
+  if (!lastId || lastId !== state.messages.length) {
+    return null;
+  }
+
+  const removedMessage = state.messages[lastId - 1];
+  if (!removedMessage || removedMessage.role !== 'user' || removedMessage.latestChild !== null) {
+    return null;
+  }
+
+  const nextMessages = state.messages.slice(0, -1);
+  const parentId = removedMessage.parentId;
+  const prevSibling = removedMessage.prevSibling;
+
+  if (parentId !== null) {
+    const parent = nextMessages[parentId - 1];
+    if (parent) {
+      updateMessage(nextMessages, parentId, (message) => ({
+        ...message,
+        latestChild: prevSibling,
+      }));
+    }
+  }
+
+  if (prevSibling !== null) {
+    const previous = nextMessages[prevSibling - 1];
+    if (previous) {
+      updateMessage(nextMessages, prevSibling, (message) => ({
+        ...message,
+        nextSibling: null,
+      }));
+    }
+  }
+
+  return {
+    messages: nextMessages,
+    currentPath: state.currentPath.slice(0, -1),
+    latestRootId: parentId === null ? prevSibling : state.latestRootId,
+    nextId: lastId,
+    removedMessage,
+  };
+};
+
 export const switchBranch = (
   state: MessageState,
   depth: number,

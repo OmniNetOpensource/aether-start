@@ -1,4 +1,4 @@
-import { requireSession } from '@/features/auth/session';
+import { requireSession } from '@/features/auth/session/request.server';
 import { getServerEnv } from '@/shared/worker/env';
 
 const parseAllowlist = (value: string | undefined): Set<string> => {

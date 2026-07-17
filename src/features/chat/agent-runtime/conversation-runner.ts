@@ -12,7 +12,6 @@ import { createChatProvider } from '@/features/chat/agent-runtime';
 import type { ChatProvider, ProviderRunResult } from '@/features/chat/agent-runtime';
 import type { FetchProvider } from './tool-types';
 import { generateTitleFromConversation } from './chat-title';
-import { generateAndPersistForYouSuggestions } from '@/features/chat/for-you/for-you-suggestions.server';
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/agent-runtime';
 import {
   buildAskUserQuestionsModelResult,
@@ -554,12 +553,12 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         })
         .finally(() => {
           this.abortController = null;
-          void writer.close().catch((error) => {
-            log('AGENT', 'Failed to close chat response writer', {
-              error: getErrorMessage(error),
+          for (const [writerIndex, remainingWriter] of [...this.writers].entries()) {
+            log('AGENT', 'Chat response writer was not cleaned up by finalize', {
+              writerIndex,
+              isChatResponseWriter: remainingWriter === writer,
             });
-          });
-          this.writers.delete(writer);
+          }
         }),
     );
 
@@ -965,7 +964,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
    * 单次后台运行的收尾：无论 try 成功、return 还是 catch，finally 都会执行。
    * - 断开 liveEventSink，拒绝仍在等待的 askuserquestions，避免 /tool-answer 误匹配旧会话。
    * - 非成功结束时为未完结 artifact 补发 failed（经 emitEvent，与正常事件同源）。
-   * - 给当前路径上最后一条 assistant 打 completedAt，落最终快照，必要时刷新 for-you，更新 DO 状态并 chat_finished。
+   * - 给当前路径上最后一条 assistant 打 completedAt，落最终快照，更新 DO 状态并 chat_finished。
    * runState 以对象传入，便于最终快照失败时把 finalStatus 纠正为 error。
    */
   private async finalize(
@@ -1012,14 +1011,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       runState.finalStatus = 'error';
       log('AGENT', 'Persist final conversation snapshot failed', {
         error: error instanceof Error ? error.message : String(error),
-      });
-    }
-
-    if (runState.finalStatus === 'completed') {
-      generateAndPersistForYouSuggestions(this.env.DB, userId).catch((error) => {
-        log('AGENT', 'For-you suggestion refresh failed', {
-          error: error instanceof Error ? error.message : String(error),
-        });
       });
     }
 

@@ -12,7 +12,7 @@ import { toast } from '@/shared/app-shell/useToast';
 const UPLOAD_CONCURRENCY = 4;
 const STORE_FILE_NAME = 'useComposerStore.ts';
 
-type PendingQuote = { id: string; text: string };
+export type PendingQuote = { id: string; text: string };
 
 export type PendingAttachment = Attachment & { localUrl?: string };
 
@@ -29,6 +29,11 @@ type ComposerActions = {
   removeAttachment: (id: string) => void;
   addQuote: (text: string) => void;
   removeQuote: (id: string) => void;
+  restoreMessageDraft: (draft: {
+    input: string;
+    pendingAttachments: PendingAttachment[];
+    pendingQuotes: PendingQuote[];
+  }) => void;
   clear: () => void;
 };
 
@@ -204,6 +209,16 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
           }),
           false,
           getActionName('composer/removeQuote'),
+        ),
+      restoreMessageDraft: (draft) =>
+        set(
+          {
+            input: draft.input,
+            pendingAttachments: draft.pendingAttachments,
+            pendingQuotes: draft.pendingQuotes,
+          },
+          false,
+          getActionName('composer/restoreMessageDraft'),
         ),
       clear: () =>
         set(

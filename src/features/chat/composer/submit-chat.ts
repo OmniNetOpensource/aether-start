@@ -10,6 +10,7 @@ import { useComposerStore } from './useComposerStore';
 // 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
 export async function submitMessage(
   navigateToNewChat: (conversationId: string) => Promise<void> | void,
+  navigateToNewChatHome: () => Promise<void> | void,
 ) {
   const composerStore = useComposerStore.getState();
   const requestStore = useChatRequestStore.getState();
@@ -69,5 +70,5 @@ export async function submitMessage(
     });
   }
 
-  await startChatRequest();
+  await startChatRequest({ onEmptyConversationRollback: navigateToNewChatHome });
 }
