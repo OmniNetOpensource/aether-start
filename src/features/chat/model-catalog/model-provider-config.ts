@@ -74,17 +74,17 @@ const PROMPT_CONFIGS: Record<string, PromptConfig> = {
 };
 
 const MODEL_CONFIGS: Record<string, ModelConfig> = {
-  claudeOpus5Ikun: {
-    id: 'claudeOpus5Ikun',
-    name: 'opus-5+ikun',
-    model: 'claude-opus-5',
-    format: 'anthropic',
-    backend: 'ikun',
-  },
   claudeOpus46Ikun: {
     id: 'claudeOpus46Ikun',
     name: 'opus-4-6+ikun',
     model: 'claude-opus-4-6',
+    format: 'anthropic',
+    backend: 'ikun',
+  },
+  claudeOpus5Ikun: {
+    id: 'claudeOpus5Ikun',
+    name: 'opus-5+ikun',
+    model: 'claude-opus-5',
     format: 'anthropic',
     backend: 'ikun',
   },
