@@ -25,10 +25,10 @@ const geminiModelListSchema = z.object({
     z.object({
       name: z.string(),
       displayName: z.string(),
-      supportedGenerationMethods: z.array(z.string()),
+      supportedGenerationMethods: z.array(z.string()).nullable(),
     }),
   ),
-  nextPageToken: z.string().optional(),
+  nextPageToken: z.string().nullish(),
 });
 
 const toModelInfo = (backend: ChatBackend, provider: string, model: string, name?: string) => {
@@ -67,7 +67,7 @@ const fetchGeminiModelList = async (
   apiKey: string,
 ) => {
   const models: { id: string; name: string }[] = [];
-  let pageToken: string | undefined;
+  let pageToken: string | null | undefined;
 
   do {
     const url = new URL(`${baseURL.replace(/\/$/, '')}/v1beta/models`);
@@ -85,7 +85,7 @@ const fetchGeminiModelList = async (
     const page = geminiModelListSchema.parse(await response.json());
     models.push(
       ...page.models
-        .filter((model) => model.supportedGenerationMethods.includes('generateContent'))
+        .filter((model) => model.supportedGenerationMethods?.includes('generateContent'))
         .map((model) =>
           toModelInfo(backend, provider, model.name.replace(/^models\//, ''), model.displayName),
         ),

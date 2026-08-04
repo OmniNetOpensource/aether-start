@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
+import { Component, useState, type ErrorInfo, type ReactNode } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Button, buttonVariants } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
@@ -10,6 +10,14 @@ type State = { status: 'ok' } | { status: 'error'; value: Error } | { status: 'u
 
 function AppErrorPage(props: { error: Error | null }) {
   const detail = props.error?.message ?? '发生了未知错误';
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+
+  const copyError = () => {
+    void navigator.clipboard.writeText(detail).then(
+      () => setCopyStatus('copied'),
+      () => setCopyStatus('failed'),
+    );
+  };
 
   return (
     <div
@@ -35,6 +43,13 @@ function AppErrorPage(props: { error: Error | null }) {
           <pre className='mt-6 max-h-40 overflow-auto rounded-md border border-border border-opacity-[0.1] bg-muted px-3 py-2.5 font-mono text-[12px] leading-snug text-secondary [scrollbar-width:thin]'>
             {detail}
           </pre>
+          <Button className='mt-2' variant='ghost' size='sm' type='button' onClick={copyError}>
+            {copyStatus === 'copied'
+              ? '已复制'
+              : copyStatus === 'failed'
+                ? '复制失败'
+                : '复制错误信息'}
+          </Button>
           <div className='mt-8 flex flex-col gap-3 sm:flex-row sm:items-center'>
             <Button
               className='w-full sm:w-auto'
