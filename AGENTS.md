@@ -281,7 +281,6 @@ Important env keys include:
 - `OPENAI_API_KEY_IKUNCODE`
 - `GEMINI_API_KEY_IKUNCODE`
 - `GEMINI_BASE_URL_IKUNCODE`
-- `MINIMAX_API_KEY`
 - `NETIFY_TOKEN`
 
 Never commit real secrets.
