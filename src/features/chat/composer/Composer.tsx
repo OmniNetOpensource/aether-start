@@ -124,9 +124,7 @@ export function Composer() {
           params: { conversationId },
         });
       },
-      async () => {
-        await navigate({ to: '/app' });
-      },
+      () => editorRef.current?.clear(),
     ).catch((error) => {
       console.error('Failed to submit message:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send message');
@@ -257,9 +255,9 @@ export function Composer() {
               <Button
                 type='button'
                 aria-label='发送'
-                aria-disabled={sendDisabled}
                 onClick={(event: MouseEvent<HTMLButtonElement>) => {
                   if (status === 'stopping') {
+                    toast.warning('正在停止当前回复，请稍候。');
                     return;
                   }
 
@@ -285,17 +283,14 @@ export function Composer() {
                         easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
                       },
                     );
+                    handleSubmit();
                     return;
                   }
 
                   if (isBusy) {
                     event.preventDefault();
                     if (status === 'sending') {
-                      void cancelSending('Composer/sendButton', {
-                        onEmptyConversationRollback: async () => {
-                          await navigate({ to: '/app' });
-                        },
-                      }).catch((error) => {
+                      void cancelSending('Composer/sendButton').catch((error) => {
                         console.error('Failed to cancel sending:', error);
                         toast.error(error instanceof Error ? error.message : '取消发送失败');
                       });

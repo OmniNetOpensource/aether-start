@@ -16,13 +16,12 @@ import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import { applyChatEventToTree } from './event-handlers';
 import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
-import { useComposerStore } from '@/features/chat/composer/useComposerStore';
-import { composerDocumentFromBlocks } from '@/features/chat/composer/composer-document';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
-import { removeConversationFromCache, useChatSessionStore } from '@/features/conversations/session';
+import { useChatSessionStore } from '@/features/conversations/session';
 import type { SerializedMessage } from '@/features/chat/message-thread';
 import type {
   ChatAgentStatus,
+  ChatErrorCode,
   ChatServerToClientEvent,
   MessageTreeSnapshot,
 } from '@/features/chat/chat-api';
@@ -33,8 +32,6 @@ const AGENT_NAME = 'conversation-runner';
 const BUSY_WARNING = 'This conversation is already generating a response.';
 /** 未选择角色时的提示文案 */
 const SELECT_MODEL_WARNING = 'Select a model before sending a message.';
-/** 配额超限时的默认提示文案 */
-const QUOTA_EXCEEDED_MESSAGE = 'Quota exceeded.';
 
 /**
  * 已处理的最大 eventId，用于去重和断点续传。
@@ -149,61 +146,21 @@ const isAbortError = (error: unknown) =>
 
 const getResponseErrorMessage = async (response: Response) => {
   const contentType = response.headers.get('content-type') ?? '';
-  if (!contentType.includes('application/json')) {
+  if (contentType.includes('application/json')) {
+    const data = await response.json();
+    if (typeof data === 'object' && data !== null) {
+      if ('error' in data && typeof data.error === 'string' && data.error.trim()) {
+        return data.error;
+      }
+      if ('message' in data && typeof data.message === 'string' && data.message.trim()) {
+        return data.message;
+      }
+    }
     return null;
   }
 
-  const data = await response.json();
-  if (
-    typeof data === 'object' &&
-    data !== null &&
-    'error' in data &&
-    typeof data.error === 'string' &&
-    data.error.trim()
-  ) {
-    return data.error;
-  }
-
-  return null;
-};
-
-type StartChatRequestOptions = {
-  onEmptyConversationRollback?: () => Promise<void> | void;
-};
-
-const restoreLastUserMessageToComposer = async (options?: StartChatRequestOptions) => {
-  const sessionStore = useChatSessionStore.getState();
-  const conversationId = sessionStore.conversationId;
-  const removedMessage = sessionStore.popLastUserMessage();
-
-  if (!removedMessage || removedMessage.role !== 'user') {
-    return false;
-  }
-
-  useComposerStore
-    .getState()
-    .restoreMessageDraft(composerDocumentFromBlocks(removedMessage.blocks));
-
-  const nextSessionStore = useChatSessionStore.getState();
-  if (nextSessionStore.messages.length === 0) {
-    nextSessionStore.clearSession();
-    if (conversationId) {
-      removeConversationFromCache(conversationId);
-    }
-    await options?.onEmptyConversationRollback?.();
-  }
-
-  return true;
-};
-
-const rollbackUnacceptedSend = async (options?: StartChatRequestOptions) => {
-  if (activeRequestAccepted) {
-    return false;
-  }
-
-  const restored = await restoreLastUserMessageToComposer(options);
-  useChatRequestStore.getState().setStatus('idle', 'rollbackUnacceptedSend');
-  return restored;
+  const message = (await response.text()).trim();
+  return message || null;
 };
 
 /**
@@ -396,7 +353,7 @@ export const checkAgentStatus = async (
  *
  * 异常：AbortError 静默忽略；TypeError（如网络错误）调用 finalizeStream；其他恢复 idle。
  */
-export const startChatRequest = async (options?: StartChatRequestOptions) => {
+export const startChatRequest = async () => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
@@ -446,22 +403,39 @@ export const startChatRequest = async (options?: StartChatRequestOptions) => {
       signal: controller.signal,
     });
 
-    if (response.status === 409) {
-      /* 服务端已有该对话的活跃流，视为 busy */
-      toast.warning(BUSY_WARNING);
-      await rollbackUnacceptedSend(options);
-      return;
-    }
-
-    if (response.status === 402) {
-      /* 配额超限，写入 error 事件并恢复 idle */
-      const data = await response.json();
+    if (!response.ok) {
       const message =
-        data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
-          ? data.message
-          : QUOTA_EXCEEDED_MESSAGE;
-      toast.error(message);
-      await rollbackUnacceptedSend(options);
+        (await getResponseErrorMessage(response)) ?? `Chat request failed: ${response.status}`;
+      const code: ChatErrorCode =
+        response.status === 400
+          ? 'invalid_request'
+          : response.status === 401
+            ? 'authentication_failed'
+            : response.status === 402
+              ? 'quota_exceeded'
+              : response.status === 403
+                ? 'permission_denied'
+                : response.status === 404
+                  ? 'not_found'
+                  : response.status === 409
+                    ? 'conflict'
+                    : response.status === 429
+                      ? 'rate_limit'
+                      : response.status >= 500
+                        ? 'server_error'
+                        : 'unknown';
+
+      applyChatEventToTree({
+        type: 'error',
+        message,
+        error: {
+          code,
+          status: response.status,
+          retryable: response.status === 409 || response.status === 429 || response.status >= 500,
+          details: message,
+        },
+      });
+      requestStore.setStatus('idle', 'startChatRequest/rejected');
       return;
     }
 
@@ -469,7 +443,7 @@ export const startChatRequest = async (options?: StartChatRequestOptions) => {
     finalizeStream();
   } catch (error) {
     if (isAbortError(error)) {
-      await rollbackUnacceptedSend(options);
+      requestStore.setStatus('idle', 'startChatRequest/aborted');
       return;
     }
 
@@ -481,15 +455,18 @@ export const startChatRequest = async (options?: StartChatRequestOptions) => {
       return;
     }
 
-    if (!activeRequestAccepted) {
-      await rollbackUnacceptedSend(options);
-    } else {
-      useChatRequestStore.getState().setStatus('idle', 'startChatRequest/error');
-    }
-
-    toast.error(
-      error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败',
-    );
+    useChatRequestStore.getState().setStatus('idle', 'startChatRequest/error');
+    const message =
+      error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败';
+    applyChatEventToTree({
+      type: 'error',
+      message,
+      error: {
+        code: error instanceof TypeError ? 'network_error' : 'unknown',
+        retryable: error instanceof TypeError,
+        details: message,
+      },
+    });
   } finally {
     if (activeController === controller) {
       activeController = null;
@@ -497,7 +474,7 @@ export const startChatRequest = async (options?: StartChatRequestOptions) => {
   }
 };
 
-export const cancelSending = async (reason: string, options?: StartChatRequestOptions) => {
+export const cancelSending = async (reason: string) => {
   if (useChatRequestStore.getState().status !== 'sending') {
     return;
   }
@@ -506,7 +483,6 @@ export const cancelSending = async (reason: string, options?: StartChatRequestOp
   flushAll();
   activeController?.abort();
   activeController = null;
-  await rollbackUnacceptedSend(options);
   useChatRequestStore.getState().setStatus('idle', `cancelSending/${reason}`);
 };
 

@@ -11,7 +11,6 @@ type ComposerState = {
 
 type ComposerActions = {
   setDocument: (document: ComposerDocument) => void;
-  restoreMessageDraft: (document: ComposerDocument) => void;
   clear: () => void;
 };
 
@@ -35,8 +34,6 @@ export const useComposerStore = create<ComposerState & ComposerActions>()(
     (set) => ({
       document: [],
       setDocument: (document) => set({ document }, false, getActionName('composer/setDocument')),
-      restoreMessageDraft: (document) =>
-        set({ document }, false, getActionName('composer/restoreMessageDraft')),
       clear: () => set({ document: [] }, false, getActionName('composer/clear')),
     }),
     getZustandDevtoolsOptions('ComposerStore'),

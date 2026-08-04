@@ -28,6 +28,11 @@ const ERROR_COPY: Record<ChatErrorCode, { title: string; cause: string; suggesti
     cause: 'The current provider key or account cannot access this resource.',
     suggestion: 'Check account permissions or switch to another backend.',
   },
+  quota_exceeded: {
+    title: 'Quota exceeded',
+    cause: 'The account does not have enough prompt quota for this request.',
+    suggestion: 'Redeem more quota before trying again.',
+  },
   not_found: {
     title: 'Model or endpoint not found',
     cause: 'The configured model or upstream endpoint does not exist.',

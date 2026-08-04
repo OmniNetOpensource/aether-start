@@ -256,6 +256,7 @@ const extensions = [
 
 export type RichComposerEditorHandle = {
   focus: () => void;
+  clear: () => void;
   insertQuote: (text: string) => void;
   insertFiles: (files: File[]) => Promise<void>;
 };
@@ -492,6 +493,9 @@ export const RichComposerEditor = forwardRef<RichComposerEditorHandle, RichCompo
 
     useImperativeHandle(ref, () => ({
       focus: () => editor?.commands.focus(),
+      clear: () => {
+        editor?.commands.setContent(editorJSONFromComposerDocument([]), { emitUpdate: false });
+      },
       insertQuote,
       insertFiles,
     }));

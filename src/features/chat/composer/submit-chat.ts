@@ -13,7 +13,7 @@ import {
 // 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
 export async function submitMessage(
   navigateToNewChat: (conversationId: string) => Promise<void> | void,
-  navigateToNewChatHome: () => Promise<void> | void,
+  clearEditor: () => void,
 ) {
   const composerStore = useComposerStore.getState();
   const requestStore = useChatRequestStore.getState();
@@ -26,16 +26,27 @@ export async function submitMessage(
   const hasModel = !!currentModelId;
   const hasPendingUpload = isComposerDocumentUploading(document);
 
-  if (isBusy || isComposerDocumentEmpty(document) || !hasModel || hasPendingUpload) {
-    if (!hasModel) {
-      toast.warning('Select a model before sending a message.');
-    }
+  if (isBusy) {
+    toast.warning('Wait for the current request to finish before sending another message.');
+    return;
+  }
+  if (isComposerDocumentEmpty(document)) {
+    toast.warning('Type a message before sending.');
+    return;
+  }
+  if (!hasModel) {
+    toast.warning('Select a model before sending a message.');
+    return;
+  }
+  if (hasPendingUpload) {
+    toast.warning('Attachments are still uploading. Please wait.');
     return;
   }
 
   sessionStore.addMessage('user', composerDocumentToBlocks(document));
   requestStore.setStatus('sending', 'submitMessage');
   composerStore.clear();
+  clearEditor();
 
   if (!sessionStore.conversationId) {
     const conversationId =
@@ -57,5 +68,5 @@ export async function submitMessage(
     });
   }
 
-  await startChatRequest({ onEmptyConversationRollback: navigateToNewChatHome });
+  await startChatRequest();
 }

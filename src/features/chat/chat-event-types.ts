@@ -2,6 +2,7 @@ export type ChatErrorCode =
   | 'invalid_request'
   | 'authentication_failed'
   | 'permission_denied'
+  | 'quota_exceeded'
   | 'not_found'
   | 'conflict'
   | 'rate_limit'

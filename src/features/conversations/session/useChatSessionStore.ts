@@ -9,7 +9,6 @@ import {
   editMessage,
   getBranchInfo,
   normalizeMessageParentIds,
-  popLastUserMessage,
   switchBranch,
 } from '../conversation-tree/message-tree';
 import {
@@ -153,7 +152,6 @@ type ChatSessionActions = {
   setTreeState: (partial: Partial<TreeSnapshot>) => void;
   stampUserMessageTime: (createdAt: string) => void;
   stampAssistantCompletedAt: (completedAt: string) => void;
-  popLastUserMessage: () => Message | null;
   addMessage: (
     role: Message['role'],
     blocks: ContentBlock[],
@@ -623,25 +621,6 @@ export const useChatSessionStore = create<ChatSessionState & ChatSessionActions>
             false,
             getActionName('chatSession/stampAssistantCompletedAt'),
           ),
-        popLastUserMessage: () => {
-          const result = popLastUserMessage(get().getTreeState());
-          if (!result) {
-            return null;
-          }
-
-          set(
-            {
-              messages: result.messages,
-              currentPath: result.currentPath,
-              latestRootId: result.latestRootId,
-              nextId: result.nextId,
-            },
-            false,
-            getActionName('chatSession/popLastUserMessage'),
-          );
-
-          return result.removedMessage;
-        },
         addMessage: (role, blocks, createdAt) => {
           const result = addMessage(get().getTreeState(), role, blocks, createdAt);
           set(
