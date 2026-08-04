@@ -9,7 +9,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/design-system/dialog';
 import { authClient } from '@/features/auth/auth-client';
 import { useTheme } from '@/shared/app-shell/useTheme';
-import { THEMES, THEME_LABELS } from '@/shared/app-shell/theme';
+import { themes } from '@/themes/registry';
 import { loadWithRetry } from '@/shared/browser/load-with-retry';
 
 let settingsModalModulePromise: Promise<typeof import('../settings-dialog/SettingsModal')> | null =
@@ -124,24 +124,24 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
                 }}
               >
                 <Palette className='h-4 w-4' />
-                主题: {THEME_LABELS[theme]}
+                主题: {theme.label}
               </DropdownMenuItem>
 
               {themeMenuOpen &&
-                THEMES.map((t) => (
+                themes.map((item) => (
                   <DropdownMenuItem
-                    key={t}
+                    key={item.id}
                     onSelect={(e) => {
                       e.preventDefault();
-                      setTheme(t);
+                      setTheme(item);
                     }}
                   >
-                    {theme === t ? (
+                    {theme.id === item.id ? (
                       <Check className='h-3.5 w-3.5' />
                     ) : (
                       <span className='h-3.5 w-3.5' />
                     )}
-                    <span className='text-xs'>{THEME_LABELS[t]}</span>
+                    <span className='text-xs'>{item.label}</span>
                   </DropdownMenuItem>
                 ))}
 

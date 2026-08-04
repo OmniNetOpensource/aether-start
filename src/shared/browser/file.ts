@@ -1,5 +1,3 @@
-export const MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
-
 export function collectClipboardFiles(clipboardData: DataTransfer | null): File[] {
   if (!clipboardData) return [];
   if (clipboardData.files?.length) {

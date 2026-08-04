@@ -6,12 +6,10 @@ import {
 } from '@/features/chat/ask-user-questions/ask-user-questions';
 import type {
   AssistantContentBlock,
-  Attachment,
   ContentBlock,
   Message,
   QuoteItem,
   ResearchItem,
-  UserContentBlock,
 } from '@/features/chat/message-thread';
 import { cloneBlocks, cloneResearchItem } from './message-tree';
 
@@ -85,25 +83,6 @@ export const collectAttachmentIds = (blocks: ContentBlock[]) =>
       block.type === 'attachments' ? block.attachments.map((attachment) => attachment.id) : [],
     ),
   );
-
-export const buildUserBlocks = (
-  content: string,
-  quotes: QuoteItem[],
-  attachments: Attachment[],
-): UserContentBlock[] => {
-  const blocks: UserContentBlock[] = [];
-  if (quotes.length > 0) {
-    blocks.push({ type: 'quotes', quotes });
-  }
-  if (attachments.length > 0) {
-    blocks.push({ type: 'attachments', attachments });
-  }
-  const trimmed = content.trim();
-  if (trimmed) {
-    blocks.push({ type: 'content', content: trimmed });
-  }
-  return blocks;
-};
 
 export const applyAssistantAddition = (
   blocks: AssistantContentBlock[],

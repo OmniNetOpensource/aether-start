@@ -1,8 +1,6 @@
 import {
   ChangeEvent,
-  ClipboardEvent,
   DragEvent,
-  KeyboardEvent,
   MouseEvent,
   useEffect,
   useId,
@@ -12,9 +10,6 @@ import {
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 import { useNavigate } from '@tanstack/react-router';
 import { ArrowUp, Loader2, Paperclip, Square } from 'lucide-react';
-import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
-import { AttachmentStack } from '@/features/attachments/attachment-preview';
-import { Textarea } from '@/shared/design-system/textarea';
 import { Button } from '@/shared/design-system/button';
 import { toast } from '@/shared/app-shell/useToast';
 import { cancelAnswering, cancelSending } from '@/features/chat/agent-runtime/chat-orchestrator';
@@ -25,16 +20,21 @@ import { ModelSelector } from './ModelSelector';
 import { PromptSelector } from './PromptSelector';
 import { FetchProviderSelector } from './FetchProviderSelector';
 import { useComposerStore } from './useComposerStore';
-import { useActiveInputStore } from './useActiveInputStore';
+import { registerActiveInput, useActiveInputStore } from './useActiveInputStore';
+import {
+  createComposerDocument,
+  getComposerText,
+  isComposerDocumentEmpty,
+  isComposerDocumentUploading,
+} from './composer-document';
+import { RichComposerEditor, type RichComposerEditorHandle } from './RichComposerEditor';
 
 /**
- * 首屏：localStorage 草稿写入 window、DOMContentLoaded 注入 textarea、input 同步 window。
- * hydrate 前 Composer 用 useLayoutEffect 读入 store 并拆掉监听，避免闪白与丢字。
+ * 首屏脚本把 localStorage 文本草稿写入 window，hydrate 时再恢复到富文本 store。
  */
 declare global {
   interface Window {
     __preHydrationInput?: string;
-    __preHydrationInputHandler?: (e: Event) => void;
   }
 }
 
@@ -42,53 +42,39 @@ declare global {
 const COMPOSER_DRAFT_STORAGE_KEY = 'aether_composer_draft';
 
 /**
- * 聊天输入区：附件与引用条、多行输入、提示词/模型选择与发送。
+ * 聊天输入区：文本、引用与图片组成的内联编辑器，以及提示词/模型选择与发送。
  *
- * 发送入口有两处：工具栏主按钮（见发送按钮 onClick），以及输入框 Ctrl+Enter（见 Textarea onKeyDown）。
+ * 发送入口有两处：工具栏主按钮，以及输入框 Ctrl+Enter。
  * 附件有三种入口：文件选择、粘贴图片/文件、拖放到外层容器。
  */
 export function Composer() {
   const navigate = useNavigate();
 
-  // --- 输入与附件（useComposerStore）---
-  const input = useComposerStore((state) => state.input);
-  const pendingAttachments = useComposerStore((state) => state.pendingAttachments);
-  const pendingQuotes = useComposerStore((state) => state.pendingQuotes);
-  const uploading = useComposerStore((state) =>
-    state.pendingAttachments.some((item) => item.localUrl),
-  );
-  const addAttachments = useComposerStore((state) => state.addAttachments);
-  const removeAttachment = useComposerStore((state) => state.removeAttachment);
-  const removeQuote = useComposerStore((state) => state.removeQuote);
-  const setInput = useComposerStore((state) => state.setInput);
+  const composerDocument = useComposerStore((state) => state.document);
+  const setDocument = useComposerStore((state) => state.setDocument);
   const setLastFocused = useActiveInputStore((state) => state.setLastFocused);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorRef = useRef<RichComposerEditorHandle | null>(null);
+  const uploading = isComposerDocumentUploading(composerDocument);
 
   // --- 请求状态（发送中/流式中决定主按钮图标与是否视为「忙」）---
   const status = useChatRequestStore((state) => state.status);
   // 隐藏 file input 与 label 关联，避免 id 冲突
   const fileInputId = useId();
 
-  // paint 前：把首屏 window / DOM 里的内容写入 store（store 初始为 ''，hydration 会校正 DOM，故用 layout）
+  // paint 前把首屏脚本读到的文本草稿写入富文本 store。
   useLayoutEffect(() => {
-    const pre = window.__preHydrationInput;
-    const currentDomValue = textareaRef.current?.value ?? '';
-    const restoredInput = currentDomValue || pre || '';
-
-    setInput(restoredInput);
-    localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, restoredInput);
+    const restoredInput = window.__preHydrationInput ?? '';
+    if (useComposerStore.getState().document.length === 0 && restoredInput) {
+      setDocument(createComposerDocument(restoredInput));
+    }
 
     delete window.__preHydrationInput;
-    if (window.__preHydrationInputHandler) {
-      document.removeEventListener('input', window.__preHydrationInputHandler);
-      delete window.__preHydrationInputHandler;
-    }
-  }, [setInput]);
+  }, [setDocument]);
 
   // 输入变化即持久化草稿，便于意外刷新后恢复
   useEffect(() => {
-    localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, input);
-  }, [input]);
+    localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, getComposerText(composerDocument));
+  }, [composerDocument]);
 
   // 在「其它区域」按下可打印字符时，把焦点抢回输入框（不抢已有输入框/快捷键）
   useMountEffect(() => {
@@ -101,17 +87,17 @@ export function Composer() {
         return;
       }
 
-      const tag = (event.target as HTMLElement)?.tagName;
+      const tag = event.target instanceof HTMLElement ? event.target.tagName : '';
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
         return;
       }
 
-      if ((event.target as HTMLElement)?.isContentEditable) {
+      if (event.target instanceof HTMLElement && event.target.isContentEditable) {
         return;
       }
 
       event.preventDefault();
-      textareaRef.current?.focus();
+      editorRef.current?.focus();
     };
 
     document.addEventListener('keydown', handleGlobalKeyDown);
@@ -127,8 +113,7 @@ export function Composer() {
    */
   const isBusy = status !== 'idle';
   const inputDisabled = status === 'sending';
-  const hasComposerContent =
-    input.trim().length !== 0 || pendingAttachments.length > 0 || pendingQuotes.length > 0;
+  const hasComposerContent = !isComposerDocumentEmpty(composerDocument);
   const sendDisabled = status === 'stopping' || (isBusy ? false : !hasComposerContent || uploading);
 
   const handleSubmit = () => {
@@ -153,8 +138,8 @@ export function Composer() {
       return;
     }
 
-    console.log('[Composer]', { input, sendDisabled });
-  }, [input, sendDisabled]);
+    console.log('[Composer]', { document: composerDocument, sendDisabled });
+  }, [composerDocument, sendDisabled]);
 
   return (
     <div
@@ -180,78 +165,27 @@ export function Composer() {
             toast.info('Attachments are still uploading. Please wait.');
             return;
           }
-          void addAttachments(files);
+          void editorRef.current?.insertFiles(files);
         }}
       >
-        {/* 内容区容器：窄屏约 90% 宽、宽屏半宽且不超过 max-w-2xl；整块为拖放目标。首块为待发送附件缩略图 + 引用条，与下方输入区纵向 gap-2 分隔 */}
-        <AttachmentStack
-          items={pendingAttachments}
-          quotes={pendingQuotes}
-          onRemove={removeAttachment}
-          onRemoveQuote={removeQuote}
-        />
-        {/* 输入卡片：圆角底衬 + 聚焦时加深阴影；z-10 保证在附件条之上叠放 */}
+        {/* 输入卡片：文本、引用与图片在同一编辑流内。 */}
         <div className='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md'>
-          {/* 主输入行：多行文本框占满宽，底部与工具栏对齐 */}
           <div className='flex w-full items-end gap-2'>
-            <Textarea
-              ref={textareaRef}
+            <RichComposerEditor
+              ref={(editor) => {
+                editorRef.current = editor;
+                registerActiveInput({ type: 'composer' }, editor);
+              }}
               id='message-input'
-              name='message'
-              value={input}
-              onChange={(event) => setInput(event.target.value)}
-              onFocus={() => setLastFocused({ type: 'composer' })}
+              document={composerDocument}
+              onChange={setDocument}
+              onFocus={() => {
+                setLastFocused({ type: 'composer' });
+              }}
+              onSubmit={handleSubmit}
               disabled={inputDisabled}
-              onKeyDown={(event: KeyboardEvent<HTMLTextAreaElement>) => {
-                if (event.key === 'Enter' && event.ctrlKey && !event.shiftKey) {
-                  event.preventDefault();
-                  handleSubmit();
-                }
-              }}
-              onPaste={(event: ClipboardEvent<HTMLTextAreaElement>) => {
-                const clipboardData = event.clipboardData;
-                if (!clipboardData) {
-                  return;
-                }
-
-                const pastedFiles: File[] = [];
-
-                if (clipboardData.files?.length) {
-                  pastedFiles.push(...Array.from(clipboardData.files));
-                } else if (clipboardData.items?.length) {
-                  for (const item of Array.from(clipboardData.items)) {
-                    if (item.kind !== 'file') {
-                      continue;
-                    }
-
-                    const file = item.getAsFile();
-                    if (file) {
-                      pastedFiles.push(file);
-                    }
-                  }
-                }
-
-                if (pastedFiles.length === 0) {
-                  return;
-                }
-
-                event.preventDefault();
-
-                if (inputDisabled) {
-                  return;
-                }
-
-                if (uploading) {
-                  toast.info('Attachments are still uploading. Please wait.');
-                  return;
-                }
-
-                void addAttachments(pastedFiles);
-              }}
-              rows={1}
               placeholder='Type your message...'
-              enterKeyHint={useResponsive() === 'desktop' ? undefined : 'enter'}
-              className='min-h-9 max-h-50 flex-1 resize-none overflow-y-auto border-0 bg-transparent px-2 py-3 text-sm leading-relaxed placeholder:text-muted-foreground focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-100 sm:text-base'
+              className={inputDisabled ? 'cursor-not-allowed' : undefined}
             />
           </div>
           {/* 工具栏：左右分区 — 左为「附件 + 预设提示词」，右为「模型 + 发送」 */}
@@ -260,7 +194,7 @@ export function Composer() {
             <div className='flex items-center gap-1'>
               <span
                 title={
-                  uploading ? '正在上传附件...' : '添加附件（支持 JPG、PNG、WebP、GIF，最大 20MB）'
+                  uploading ? '正在处理图片...' : '添加图片（支持 JPG、PNG、WebP、GIF，最大 4MB）'
                 }
               >
                 <input
@@ -277,7 +211,7 @@ export function Composer() {
                       return;
                     }
 
-                    await addAttachments(Array.from(files));
+                    await editorRef.current?.insertFiles(Array.from(files));
                     event.target.value = '';
                   }}
                   accept='image/jpeg,image/png,image/webp,image/gif'

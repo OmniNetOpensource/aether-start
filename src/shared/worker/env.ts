@@ -10,8 +10,7 @@ type ServerEnv = {
   LLM_STREAM_LOGGING_MAX_CHARS?: string;
   MOONSHOT_API_KEY?: string;
   ANTHROPIC_API_KEY_IKUNCODE?: string;
-  ANTHROPIC_BASE_URL_IKUNCODE?: string;
-  /** OpenAI-compatible key for ikun gateway; base URL reuses ANTHROPIC_BASE_URL_IKUNCODE */
+  /** OpenAI-compatible key for ikun gateway */
   OPENAI_API_KEY_IKUNCODE?: string;
   GEMINI_API_KEY_IKUNCODE?: string;
   GEMINI_BASE_URL_IKUNCODE?: string;
@@ -79,9 +78,6 @@ export const getServerEnv = (): ServerEnv => {
     ANTHROPIC_API_KEY_IKUNCODE:
       readString(bindings.ANTHROPIC_API_KEY_IKUNCODE) ??
       readStringFromProcess('ANTHROPIC_API_KEY_IKUNCODE'),
-    ANTHROPIC_BASE_URL_IKUNCODE:
-      readString(bindings.ANTHROPIC_BASE_URL_IKUNCODE) ??
-      readStringFromProcess('ANTHROPIC_BASE_URL_IKUNCODE'),
     OPENAI_API_KEY_IKUNCODE:
       readString((bindings as Record<string, unknown>).OPENAI_API_KEY_IKUNCODE) ??
       readStringFromProcess('OPENAI_API_KEY_IKUNCODE'),

@@ -6,7 +6,6 @@ import { getSessionStateFn } from '@/features/auth/session';
 import { resetLastEventId } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { useEditingStore } from '@/features/chat/message-thread';
-import { useNotesStore } from '@/features/notes/note-record';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { queryClient } from '@/features/conversations/session';
 import { conversationListQueryKey } from '@/features/conversations/session';
@@ -111,7 +110,6 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
       useEditingStore.getState().clear();
       useChatSessionStore.getState().clearSession();
       queryClient.removeQueries({ queryKey: conversationListQueryKey });
-      useNotesStore.getState().reset();
       resetLastEventId();
       await navigate({ href: '/auth/login', replace: true });
       setIsSigningOut(false);

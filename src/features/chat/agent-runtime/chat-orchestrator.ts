@@ -14,14 +14,10 @@
  */
 import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
-import {
-  extractAttachmentsFromBlocks,
-  extractContentFromBlocks,
-  extractQuotesFromBlocks,
-} from '@/features/conversations/conversation-tree';
 import { applyChatEventToTree } from './event-handlers';
 import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
 import { useComposerStore } from '@/features/chat/composer/useComposerStore';
+import { composerDocumentFromBlocks } from '@/features/chat/composer/composer-document';
 import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
 import { removeConversationFromCache, useChatSessionStore } from '@/features/conversations/session';
 import type { SerializedMessage } from '@/features/chat/message-thread';
@@ -128,12 +124,12 @@ const scheduleAutoReconnect = (conversationId: string) => {
 
 /**
  * 解析 Agent 的 base URL。
- * 根据当前页面的 protocol 与 host 拼接，SSR 时回退到 localhost:3000。
+ * 根据当前页面的 protocol 与 host 拼接，SSR 时回退到 localhost:3100。
  */
 const resolveAgentBaseUrl = () => {
   const protocol =
     typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'https' : 'http';
-  const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3000';
+  const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3100';
   return `${protocol}://${host}/agents/${AGENT_NAME}`;
 };
 
@@ -184,22 +180,9 @@ const restoreLastUserMessageToComposer = async (options?: StartChatRequestOption
     return false;
   }
 
-  useComposerStore.getState().restoreMessageDraft({
-    input: extractContentFromBlocks(removedMessage.blocks),
-    pendingAttachments: extractAttachmentsFromBlocks(removedMessage.blocks).map((attachment) => ({
-      id: attachment.id,
-      kind: attachment.kind,
-      name: attachment.name,
-      size: attachment.size,
-      mimeType: attachment.mimeType,
-      url: attachment.url,
-      storageKey: attachment.storageKey,
-    })),
-    pendingQuotes: extractQuotesFromBlocks(removedMessage.blocks).map((quote) => ({
-      id: quote.id,
-      text: quote.text,
-    })),
-  });
+  useComposerStore
+    .getState()
+    .restoreMessageDraft(composerDocumentFromBlocks(removedMessage.blocks));
 
   const nextSessionStore = useChatSessionStore.getState();
   if (nextSessionStore.messages.length === 0) {

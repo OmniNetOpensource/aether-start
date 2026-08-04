@@ -229,7 +229,7 @@ function MarkdownImpl({ content, isAnimating = false }: Props) {
   }, []);
 
   return (
-    <div className='space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
+    <div className='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
       {paragraphs.map((paragraph, i) => (
         <StreamdownBlock
           markdown={paragraph}

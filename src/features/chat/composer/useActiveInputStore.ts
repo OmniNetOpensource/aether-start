@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { useComposerStore } from '@/features/chat/composer/useComposerStore';
-import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
+import type { RichComposerEditorHandle } from './RichComposerEditor';
 
 export type ActiveInputTarget = { type: 'composer' } | { type: 'edit'; messageId: number };
 
@@ -14,6 +13,25 @@ export const useActiveInputStore = create<ActiveInputState>()((set) => ({
   setLastFocused: (target) => set({ lastFocused: target }),
 }));
 
+let composerEditor: RichComposerEditorHandle | null = null;
+const messageEditors = new Map<number, RichComposerEditorHandle>();
+
+export function registerActiveInput(
+  target: ActiveInputTarget,
+  editor: RichComposerEditorHandle | null,
+) {
+  if (target.type === 'composer') {
+    composerEditor = editor;
+    return;
+  }
+
+  if (editor) {
+    messageEditors.set(target.messageId, editor);
+  } else {
+    messageEditors.delete(target.messageId);
+  }
+}
+
 export function addQuoteToActiveInput(text: string) {
   const trimmed = text.trim();
   if (!trimmed) {
@@ -21,12 +39,6 @@ export function addQuoteToActiveInput(text: string) {
   }
 
   const target = useActiveInputStore.getState().lastFocused;
-  const editing = useEditingStore.getState().editingState;
-
-  if (target?.type === 'edit' && editing?.messageId === target.messageId) {
-    useEditingStore.getState().addEditQuote(trimmed);
-    return;
-  }
-
-  useComposerStore.getState().addQuote(trimmed);
+  const editor = target?.type === 'edit' ? messageEditors.get(target.messageId) : composerEditor;
+  (editor ?? composerEditor)?.insertQuote(trimmed);
 }

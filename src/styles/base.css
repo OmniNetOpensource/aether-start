@@ -79,12 +79,12 @@ body {
   pointer-events: none;
 }
 
-:is(.dark, .nord) .liquid-glass {
+[data-color-scheme='dark'] .liquid-glass {
   background: rgba(24, 24, 27, 0.5);
   border-color: rgba(255, 255, 255, 0.1);
 }
 
-:is(.dark, .nord) .liquid-glass::before {
+[data-color-scheme='dark'] .liquid-glass::before {
   background: linear-gradient(
     135deg,
     rgba(255, 255, 255, 0.08) 0%,

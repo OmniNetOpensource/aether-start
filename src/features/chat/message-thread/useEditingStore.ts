@@ -5,21 +5,17 @@ import { toast } from '@/shared/app-shell/useToast';
 import { cancelAnswering, startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { cloneBlocks, editMessage } from '@/features/conversations/conversation-tree';
 import {
-  buildUserBlocks,
-  extractAttachmentsFromBlocks,
-  extractContentFromBlocks,
-  extractQuotesFromBlocks,
-} from '@/features/conversations/conversation-tree';
+  composerDocumentFromBlocks,
+  composerDocumentToBlocks,
+  isComposerDocumentEmpty,
+  type ComposerDocument,
+} from '@/features/chat/composer/composer-document';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { getZustandDevtoolsOptions } from '@/shared/browser/zustand-devtools';
-import type { Attachment, UserContentBlock } from '@/features/chat/message-thread';
 
 type EditingState = {
   messageId: number;
-  originalBlocks: UserContentBlock[];
-  editedContent: string;
-  editedQuotes: { id: string; text: string }[];
-  editedAttachments: Attachment[];
+  editedDocument: ComposerDocument;
 };
 
 type EditingStoreState = {
@@ -28,10 +24,7 @@ type EditingStoreState = {
 
 type EditingStoreActions = {
   startEditing: (messageId: number) => void;
-  updateEditContent: (content: string) => void;
-  updateEditQuotes: (quotes: { id: string; text: string }[]) => void;
-  addEditQuote: (text: string) => void;
-  updateEditAttachments: (attachments: Attachment[]) => void;
+  updateEditDocument: (document: ComposerDocument) => void;
   cancelEditing: () => void;
   submitEdit: (depth: number) => Promise<void>;
   retryFromMessage: (messageId: number, depth: number) => Promise<void>;
@@ -49,26 +42,14 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return;
         }
 
-        const originalBlocks = cloneBlocks(target.blocks ?? []) as UserContentBlock[];
-        const editedContent = extractContentFromBlocks(originalBlocks);
-        const editedQuotes = extractQuotesFromBlocks(originalBlocks).map((q) => ({ ...q }));
-        const editedAttachments = extractAttachmentsFromBlocks(originalBlocks).map(
-          (attachment) => ({
-            ...attachment,
-          }),
-        );
-
         set({
           editingState: {
             messageId,
-            originalBlocks,
-            editedContent,
-            editedQuotes,
-            editedAttachments,
+            editedDocument: composerDocumentFromBlocks(target.blocks),
           },
         });
       },
-      updateEditContent: (content) =>
+      updateEditDocument: (document) =>
         set((state) => {
           if (!state.editingState) {
             return state;
@@ -76,54 +57,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           return {
             editingState: {
               ...state.editingState,
-              editedContent: content,
-            },
-          };
-        }),
-      updateEditQuotes: (quotes) =>
-        set((state) => {
-          if (!state.editingState) {
-            return state;
-          }
-          return {
-            editingState: {
-              ...state.editingState,
-              editedQuotes: quotes,
-            },
-          };
-        }),
-      addEditQuote: (text) => {
-        const trimmed = text.trim();
-        if (!trimmed) {
-          return;
-        }
-
-        const id =
-          typeof crypto !== 'undefined' && crypto.randomUUID
-            ? crypto.randomUUID()
-            : `quote_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-
-        set((state) => {
-          if (!state.editingState) {
-            return state;
-          }
-          return {
-            editingState: {
-              ...state.editingState,
-              editedQuotes: [...state.editingState.editedQuotes, { id, text: trimmed }],
-            },
-          };
-        });
-      },
-      updateEditAttachments: (attachments) =>
-        set((state) => {
-          if (!state.editingState) {
-            return state;
-          }
-          return {
-            editingState: {
-              ...state.editingState,
-              editedAttachments: attachments,
+              editedDocument: document,
             },
           };
         }),
@@ -144,10 +78,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           await cancelAnswering('useEditingStore/submitEdit');
         }
 
-        const trimmed = editingState.editedContent.trim();
-        const quotes = editingState.editedQuotes;
-        const attachments = editingState.editedAttachments;
-        if (!trimmed && quotes.length === 0 && attachments.length === 0) {
+        if (isComposerDocumentEmpty(editingState.editedDocument)) {
           toast.warning('请输入内容或添加附件');
           return;
         }
@@ -157,7 +88,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           treeStore.getTreeState(),
           depth,
           editingState.messageId,
-          buildUserBlocks(editingState.editedContent, quotes, attachments),
+          composerDocumentToBlocks(editingState.editedDocument),
         );
 
         if (!result) {

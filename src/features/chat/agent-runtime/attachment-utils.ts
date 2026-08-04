@@ -2,6 +2,10 @@ import { arrayBufferToBase64, parseDataUrl } from '@/shared/worker/base64';
 import { getServerBindings } from '@/shared/worker/env';
 import { log } from './logger';
 
+const INLINE_IMAGE_MAX_SIZE = 4 * 1024 * 1024;
+const INLINE_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
+const BASE64_PATTERN = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+
 export type AttachmentInput = {
   name: string;
   mimeType: string;
@@ -21,7 +25,27 @@ export const resolveAttachmentToBase64 = async (
   if (attachment.url) {
     const parsed = parseDataUrl(attachment.url);
     if (parsed) {
+      if (!INLINE_IMAGE_MIME_TYPES.has(parsed.mimeType)) {
+        throw new Error(`Unsupported inline image type for ${attachment.name}.`);
+      }
+
+      if (!BASE64_PATTERN.test(parsed.base64)) {
+        throw new Error(`Invalid inline image data for ${attachment.name}.`);
+      }
+
+      if (
+        (parsed.base64.length * 3) / 4 -
+          (parsed.base64.endsWith('==') ? 2 : parsed.base64.endsWith('=') ? 1 : 0) >
+        INLINE_IMAGE_MAX_SIZE
+      ) {
+        throw new Error(`Inline image ${attachment.name} exceeds the 4MB limit.`);
+      }
+
       return { media_type: parsed.mimeType, data: parsed.base64 };
+    }
+
+    if (attachment.url.startsWith('data:')) {
+      throw new Error(`Invalid inline image data for ${attachment.name}.`);
     }
   }
 

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/react-router';
 import { Loader2 } from 'lucide-react';
 import { authClient } from '@/features/auth/auth-client';
+import { LOCAL_DEV_EMAIL, LOCAL_DEV_NAME, LOCAL_DEV_OTP } from '@/features/auth/local-dev-auth';
 import { getSessionStateFn } from '@/features/auth/session';
 import { Button } from '@/shared/design-system/button';
 import { Input } from '@/shared/design-system/input';
@@ -96,6 +97,34 @@ function AuthPage() {
     await navigate({ href: target, replace: true });
   };
 
+  const signInLocalDev = async () => {
+    setIsSendingOtp(true);
+    setErrorMessage(null);
+
+    const sendResult = await authClient.emailOtp.sendVerificationOtp({
+      email: LOCAL_DEV_EMAIL,
+      type: 'sign-in',
+    });
+    if (sendResult.error) {
+      setErrorMessage(getAuthErrorMessage(sendResult.error));
+      setIsSendingOtp(false);
+      return;
+    }
+
+    const signInResult = await authClient.signIn.emailOtp({
+      email: LOCAL_DEV_EMAIL,
+      otp: LOCAL_DEV_OTP,
+      name: LOCAL_DEV_NAME,
+    });
+    if (signInResult.error) {
+      setErrorMessage(getAuthErrorMessage(signInResult.error));
+      setIsSendingOtp(false);
+      return;
+    }
+
+    await navigate({ href: target, replace: true });
+  };
+
   return (
     <div className='w-full max-w-sm rounded-2xl border bg-surface p-8 shadow-2xl backdrop-blur-xl animate-in fade-in zoom-in-95 slide-in-from-bottom-2 duration-300'>
       <div className='mb-8 space-y-2 text-center'>
@@ -177,6 +206,19 @@ function AuthPage() {
               : 'Continue'}
         </Button>
       </form>
+
+      {import.meta.env.DEV && step === 'email' ? (
+        <Button
+          className='mt-3 w-full'
+          type='button'
+          variant='outline'
+          disabled={isSendingOtp || isVerifyingOtp}
+          onClick={() => void signInLocalDev()}
+        >
+          {isSendingOtp ? <Loader2 className='h-4 w-4 animate-spin' /> : null}
+          本地开发登录
+        </Button>
+      ) : null}
 
       {step === 'otp' ? (
         <div className='mt-4 flex items-center justify-between text-sm'>

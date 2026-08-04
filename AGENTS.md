@@ -33,7 +33,6 @@ Top-level features now live here:
 - `src/features/auth/`
 - `src/features/chat/`
 - `src/features/conversations/`
-- `src/features/notes/`
 - `src/features/quota/`
 - `src/features/settings/`
 - `src/features/share/`
@@ -208,9 +207,8 @@ Important files:
 
 Public shares must stay read-only.
 
-### Notes, Quota, Settings, Attachments
+### Quota, Settings, Attachments
 
-- Notes: `src/features/notes/note-record/`, `src/features/notes/note-editor/`, `src/routes/note/index.tsx`
 - Quota: `src/features/quota/quota-balance/`, `src/features/quota/redeem-code/`
 - Settings: `src/features/settings/settings-dialog/`, `src/features/settings/profile-menu/`
 - Attachments: `src/features/attachments/attachment-upload/`, `src/features/attachments/attachment-preview/`

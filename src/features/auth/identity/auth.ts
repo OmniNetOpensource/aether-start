@@ -5,6 +5,7 @@ import { tanstackStartCookies } from 'better-auth/tanstack-start';
 import { eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/d1';
 import { Resend } from 'resend';
+import { LOCAL_DEV_OTP } from '@/features/auth/local-dev-auth';
 import { getServerEnv } from '@/shared/worker/env';
 import * as authSchema from './auth.schema';
 
@@ -122,7 +123,7 @@ const createAuth = () => {
   const baseURL = requireEnvValue(
     serverEnv.BETTER_AUTH_URL,
     'BETTER_AUTH_URL',
-    'http://localhost:3000',
+    'http://localhost:3100',
   );
   const secret = requireEnvValue(
     serverEnv.BETTER_AUTH_SECRET,
@@ -135,7 +136,10 @@ const createAuth = () => {
     baseURL,
     basePath: '/api/auth',
     secret,
-    trustedOrigins: mergeTrustedOrigins(baseURL, serverEnv.BETTER_AUTH_TRUSTED_ORIGINS),
+    trustedOrigins: [
+      ...mergeTrustedOrigins(baseURL, serverEnv.BETTER_AUTH_TRUSTED_ORIGINS),
+      ...(import.meta.env.DEV ? ['http://localhost:3100', 'http://127.0.0.1:3100'] : []),
+    ],
     user: {
       additionalFields: {
         registrationIp: {
@@ -222,7 +226,12 @@ const createAuth = () => {
         expiresIn: 300,
         sendVerificationOnSignUp: true,
         overrideDefaultEmailVerification: true,
+        ...(import.meta.env.DEV ? { generateOTP: () => LOCAL_DEV_OTP } : {}),
         async sendVerificationOTP({ email, otp, type }) {
+          if (import.meta.env.DEV) {
+            return;
+          }
+
           const resendApiKey = serverEnv.RESEND_API_KEY;
           if (!resendApiKey) {
             console.warn('RESEND_API_KEY not configured, skipping OTP email');

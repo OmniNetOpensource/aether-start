@@ -3,7 +3,6 @@ import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 import { AetherLogo } from '@/shared/app-shell/AetherLogo';
 import { NewChatButton } from '@/features/conversations/conversation-list/NewChatButton';
 import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
-import { NotesButton } from '@/features/notes/note-list';
 import { ConversationList } from '@/features/conversations/conversation-list';
 import { ConversationSearchTrigger } from '@/features/conversations/conversation-search';
 import { ProfileMenu } from '@/features/settings/profile-menu';
@@ -117,7 +116,6 @@ export default function Sidebar() {
         <div className='flex flex-col gap-2 px-6 pt-2'>
           <NewChatButton isCollapsed={false} />
           <ConversationSearchTrigger variant='sidebar' />
-          <NotesButton />
         </div>
 
         <div className='relative min-h-0 flex-1'>

@@ -53,7 +53,6 @@ type ConversationRunnerEnv = Cloudflare.Env & {
   CHAT_ASSETS?: R2Bucket;
   MOONSHOT_API_KEY?: string;
   ANTHROPIC_API_KEY_IKUNCODE?: string;
-  ANTHROPIC_BASE_URL_IKUNCODE?: string;
   OPENAI_API_KEY_IKUNCODE?: string;
   GEMINI_API_KEY_IKUNCODE?: string;
   GEMINI_BASE_URL_IKUNCODE?: string;
