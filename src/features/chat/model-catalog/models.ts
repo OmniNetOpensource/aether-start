@@ -87,12 +87,7 @@ const fetchGeminiModelList = async (
       ...page.models
         .filter((model) => model.supportedGenerationMethods.includes('generateContent'))
         .map((model) =>
-          toModelInfo(
-            backend,
-            provider,
-            model.name.replace(/^models\//, ''),
-            model.displayName,
-          ),
+          toModelInfo(backend, provider, model.name.replace(/^models\//, ''), model.displayName),
         ),
     );
     pageToken = page.nextPageToken;
@@ -107,16 +102,11 @@ export const getAvailableModelsFn = createServerFn({ method: 'GET' }).handler(as
 
   if (env.ANTHROPIC_API_KEY_IKUNCODE) {
     requests.push(
-      fetchModelList(
-        'ikun',
-        'ikun',
-        `${IKUN_BASE_URL}/v1/models`,
-        {
-          Authorization: `Bearer ${env.ANTHROPIC_API_KEY_IKUNCODE}`,
-          'x-api-key': env.ANTHROPIC_API_KEY_IKUNCODE,
-          'anthropic-version': '2023-06-01',
-        },
-      ),
+      fetchModelList('ikun', 'ikun', `${IKUN_BASE_URL}/v1/models`, {
+        Authorization: `Bearer ${env.ANTHROPIC_API_KEY_IKUNCODE}`,
+        'x-api-key': env.ANTHROPIC_API_KEY_IKUNCODE,
+        'anthropic-version': '2023-06-01',
+      }),
     );
   }
 
@@ -162,9 +152,7 @@ export const getAvailableModelsFn = createServerFn({ method: 'GET' }).handler(as
     );
   }
 
-  const models = new Map(
-    (await Promise.all(requests)).flat().map((model) => [model.id, model]),
-  );
+  const models = new Map((await Promise.all(requests)).flat().map((model) => [model.id, model]));
   models.delete(DEFAULT_MODEL_ID);
   return [DEFAULT_MODEL_INFO, ...models.values()];
 });

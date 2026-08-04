@@ -1,9 +1,5 @@
 export type ChatFormat = 'anthropic' | 'openai' | 'gemini' | 'openai-responses';
-export type ChatBackend =
-  | 'moonshot'
-  | 'ikun'
-  | 'openrouter'
-  | 'gemini-aistudio';
+export type ChatBackend = 'moonshot' | 'ikun' | 'openrouter' | 'gemini-aistudio';
 
 export const IKUN_BASE_URL = 'https://api.ikuncode.cc';
 
