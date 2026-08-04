@@ -13,7 +13,7 @@ import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStor
 import { useEditingStore } from '@/features/chat/message-thread';
 import { MessageEditor } from './MessageEditor';
 import { BranchNavigator } from './BranchNavigator';
-import { AttachmentStack } from '@/features/attachments/attachment-preview';
+import { ContentChip } from '@/features/chat/composer/ContentChip';
 
 type CopyButtonProps = {
   blocks: Message['blocks'];
@@ -134,24 +134,8 @@ export const MessageItem = memo(function MessageItem({
 
   if (!message) return null;
   const isUser = message.role === 'user';
-  const quoteBlocks = message.blocks.filter(
-    (block): block is Extract<Message['blocks'][number], { type: 'quotes' }> =>
-      block.type === 'quotes',
-  );
-  const attachmentBlocks = message.blocks.filter(
-    (block): block is Extract<Message['blocks'][number], { type: 'attachments' }> =>
-      block.type === 'attachments',
-  );
-  const contentBlocks = message.blocks.filter((block) => block.type === 'content');
   const assistantBlocks = !isUser ? message.blocks : [];
-  const quotes = quoteBlocks.flatMap((block) => block.quotes);
-  const attachments = attachmentBlocks.flatMap((block) => block.attachments);
-  const shouldRenderBody =
-    isEditing ||
-    !isUser ||
-    contentBlocks.length > 0 ||
-    quoteBlocks.length > 0 ||
-    attachmentBlocks.length > 0;
+  const shouldRenderBody = isEditing || !isUser || message.blocks.length > 0;
   const contentWidthClass = isUser ? 'w-full max-w-[90%]' : 'w-full';
 
   const shouldShowToolbar = !isEditing && (isUser || !isStreaming);
@@ -175,12 +159,41 @@ export const MessageItem = memo(function MessageItem({
               {isEditing ? (
                 <MessageEditor messageId={messageId} depth={depth} />
               ) : isUser ? (
-                <div>
-                  <AttachmentStack items={attachments} quotes={quotes} />
-                  <div className='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'>
-                    <div className='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
-                      {contentBlocks.map((block) => block.content).join('\n\n')}
-                    </div>
+                <div className='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'>
+                  <div className='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
+                    {message.blocks.map((block, blockIndex) => {
+                      if (block.type === 'content') {
+                        return (
+                          <span key={blockIndex}>
+                            {message.blocks[blockIndex - 1]?.type === 'content' ? '\n\n' : null}
+                            {block.content}
+                          </span>
+                        );
+                      }
+
+                      if (block.type === 'quotes') {
+                        return block.quotes.map((quote) => (
+                          <ContentChip
+                            key={quote.id}
+                            kind='quote'
+                            text={quote.text}
+                            className='mx-1'
+                          />
+                        ));
+                      }
+
+                      return block.attachments.map((attachment) => (
+                        <ContentChip
+                          key={attachment.id}
+                          kind='attachment'
+                          name={attachment.name}
+                          size={attachment.size}
+                          mimeType={attachment.mimeType}
+                          url={attachment.url}
+                          className='mx-1'
+                        />
+                      ));
+                    })}
                   </div>
                 </div>
               ) : (

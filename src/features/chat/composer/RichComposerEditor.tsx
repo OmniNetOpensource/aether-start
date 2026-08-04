@@ -8,7 +8,6 @@ import {
   type NodeViewProps,
 } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import { FileText, Image, Loader2, Quote, X } from 'lucide-react';
 import {
   BASE64_MESSAGE_MAX_SIZE,
   convertImageToBase64,
@@ -22,6 +21,7 @@ import {
   type ComposerDocument,
   type PendingAttachment,
 } from './composer-document';
+import { ContentChip } from './ContentChip';
 
 const CHIP_NODE = 'composerChip';
 
@@ -163,35 +163,19 @@ function ComposerChipView({ node, deleteNode }: NodeViewProps) {
       contentEditable={false}
       className='group mx-1 inline-flex max-w-64 align-middle'
     >
-      <span className='inline-flex h-8 min-w-0 items-center gap-1.5 rounded-lg border bg-background/80 py-1 pl-1.5 pr-1 text-xs shadow-sm'>
-        {isQuote ? (
-          <Quote className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-        ) : url ? (
-          <span className='relative h-6 w-6 shrink-0 overflow-hidden rounded'>
-            <img src={url} alt='' className='h-full w-full object-cover' />
-            {localUrl ? (
-              <span className='absolute inset-0 grid place-items-center bg-black/40'>
-                <Loader2 className='h-3.5 w-3.5 animate-spin text-white' />
-              </span>
-            ) : null}
-          </span>
-        ) : node.attrs.mimeType?.startsWith('image/') ? (
-          <Image className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-        ) : (
-          <FileText className='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
-        )}
-        <span className='truncate'>
-          {isQuote ? readString(node.attrs.text) : readString(node.attrs.name)}
-        </span>
-        <button
-          type='button'
-          aria-label={isQuote ? '删除引用' : '删除图片'}
-          onClick={deleteNode}
-          className='grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-hover hover:text-foreground'
-        >
-          <X className='h-3 w-3' />
-        </button>
-      </span>
+      {isQuote ? (
+        <ContentChip kind='quote' text={readString(node.attrs.text)} onRemove={deleteNode} />
+      ) : (
+        <ContentChip
+          kind='attachment'
+          name={readString(node.attrs.name)}
+          size={typeof node.attrs.size === 'number' ? node.attrs.size : 0}
+          mimeType={readString(node.attrs.mimeType)}
+          url={url}
+          uploading={!!localUrl}
+          onRemove={deleteNode}
+        />
+      )}
     </NodeViewWrapper>
   );
 }
