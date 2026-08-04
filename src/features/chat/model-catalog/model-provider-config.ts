@@ -5,6 +5,8 @@ export type ChatBackend =
   | 'openrouter'
   | 'gemini-aistudio';
 
+export const IKUN_BASE_URL = 'https://api.ikuncode.cc';
+
 export type ModelConfig = {
   id: string;
   name: string;
@@ -70,315 +72,44 @@ const PROMPT_CONFIGS: Record<string, PromptConfig> = {
   },
 };
 
-const MODEL_CONFIGS: Record<string, ModelDefinition> = {
-  claudeOpus46Ikun: {
-    id: 'claudeOpus46Ikun',
-    name: 'opus-4-6+ikun',
-    model: 'claude-opus-4-6',
-    backend: 'ikun',
-  },
-  claudeOpus5Ikun: {
-    id: 'claudeOpus5Ikun',
-    name: 'opus-5+ikun',
-    model: 'claude-opus-5',
-    backend: 'ikun',
-  },
-  claudeOpus47Ikun: {
-    id: 'claudeOpus47Ikun',
-    name: 'opus-4-7+ikun',
-    model: 'claude-opus-4-7',
-    backend: 'ikun',
-  },
-  claudeOpus48Ikun: {
-    id: 'claudeOpus48Ikun',
-    name: 'opus-4-8+ikun',
-    model: 'claude-opus-4-8',
-    backend: 'ikun',
-  },
-  claudeOpus45Ikun: {
-    id: 'claudeOpus45Ikun',
-    name: 'opus-4-5+ikun',
-    model: 'claude-opus-4-5-20251101',
-    backend: 'ikun',
-  },
-  kimiK26Moonshot: {
-    id: 'kimiK26Moonshot',
-    name: 'kimi-k2.6+moonshot',
-    model: 'kimi-k2.6',
-    backend: 'moonshot',
-  },
-  kimiK3Moonshot: {
-    id: 'kimiK3Moonshot',
-    name: 'kimi-k3+moonshot',
-    model: 'kimi-k3',
-    backend: 'moonshot',
-  },
-  gemini31ProIkun: {
-    id: 'gemini31ProIkun',
-    name: 'gemini-3.1-pro+ikun',
-    model: 'gemini-3.1-pro-preview',
-    backend: 'ikun',
-  },
-  gemini3FlashIkun: {
-    id: 'gemini3FlashIkun',
-    name: 'gemini-3-flash-preview+ikun',
-    model: 'gemini-3-flash-preview',
-    backend: 'ikun',
-  },
-  gpt54Ikun: {
-    id: 'gpt54Ikun',
-    name: 'gpt-5.4+ikun',
-    model: 'gpt-5.4-high',
-    backend: 'ikun',
-  },
-  gpt55Ikun: {
-    id: 'gpt55Ikun',
-    name: 'gpt-5.5+ikun',
-    model: 'gpt-5.5',
-    backend: 'ikun',
-  },
-  claudeSonnet46Ikun: {
-    id: 'claudeSonnet46Ikun',
-    name: 'sonnet-4-6+ikun',
-    model: 'claude-sonnet-4-6',
-    backend: 'ikun',
-  },
-  claudeSonnet5Ikun: {
-    id: 'claudeSonnet5Ikun',
-    name: 'sonnet-5+ikun',
-    model: 'claude-sonnet-5',
-    backend: 'ikun',
-  },
-  claudeHaiku45Ikun: {
-    id: 'claudeHaiku45Ikun',
-    name: 'haiku-4-5-20251001+ikun',
-    model: 'claude-haiku-4-5-20251001',
-    backend: 'ikun',
-  },
-  gemma431bItAistudio: {
-    id: 'gemma431bItAistudio',
-    name: 'gemma-4-31b-it+aistudio',
-    model: 'gemma-4-31b-it',
-    backend: 'gemini-aistudio',
-  },
-  openrouterHunterAlpha: {
-    id: 'openrouterHunterAlpha',
-    name: 'hunter-alpha+openrouter',
-    model: 'openrouter/hunter-alpha',
-    backend: 'openrouter',
-  },
-  openrouterHealerAlpha: {
-    id: 'openrouterHealerAlpha',
-    name: 'healer-alpha+openrouter',
-    model: 'openrouter/healer-alpha',
-    backend: 'openrouter',
-  },
-  openrouterOwlAlpha: {
-    id: 'openrouterOwlAlpha',
-    name: 'owl-alpha+openrouter',
-    model: 'openrouter/owl-alpha',
-    backend: 'openrouter',
-  },
-  openrouterNemotron: {
-    id: 'openrouterNemotron',
-    name: 'nemotron-3-super+openrouter',
-    model: 'nvidia/nemotron-3-super-120b-a12b:free',
-    backend: 'openrouter',
-  },
-  openrouterNemotronUltra: {
-    id: 'openrouterNemotronUltra',
-    name: 'nemotron-3-ultra+openrouter',
-    model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
-    backend: 'openrouter',
-  },
-  openrouterNexN2ProFree: {
-    id: 'openrouterNexN2ProFree',
-    name: 'nex-n2-pro-free+openrouter',
-    model: 'nex-agi/nex-n2-pro:free',
-    backend: 'openrouter',
-  },
-  gpt5NanoOpenrouter: {
-    id: 'gpt5NanoOpenrouter',
-    name: 'gpt-5-nano+openrouter',
-    model: 'openai/gpt-5-nano',
-    backend: 'openrouter',
-  },
-  gemini31FlashLiteOpenrouter: {
-    id: 'gemini31FlashLiteOpenrouter',
-    name: 'gemini-3.1-flash-lite+openrouter',
-    model: 'google/gemini-3.1-flash-lite-preview',
-    backend: 'openrouter',
-  },
-  gemini36FlashOpenrouter: {
-    id: 'gemini36FlashOpenrouter',
-    name: 'gemini-3.6-flash+openrouter',
-    model: 'google/gemini-3.6-flash',
-    backend: 'openrouter',
-  },
-  gemini35FlashLiteOpenrouter: {
-    id: 'gemini35FlashLiteOpenrouter',
-    name: 'gemini-3.5-flash-lite+openrouter',
-    model: 'google/gemini-3.5-flash-lite',
-    backend: 'openrouter',
-  },
-  openrouterLongcat20: {
-    id: 'openrouterLongcat20',
-    name: 'longcat-2.0+openrouter',
-    model: 'meituan/longcat-2.0',
-    backend: 'openrouter',
-  },
-  openrouterInkling: {
-    id: 'openrouterInkling',
-    name: 'inkling+openrouter',
-    model: 'thinkingmachines/inkling',
-    backend: 'openrouter',
-  },
-  openrouterQwen36PlusFree: {
-    id: 'openrouterQwen36PlusFree',
-    name: 'qwen3.6-plus-free+openrouter',
-    model: 'qwen/qwen3.6-plus:free',
-    backend: 'openrouter',
-  },
-  openrouterQwen36Plus: {
-    id: 'openrouterQwen36Plus',
-    name: 'qwen3.6-plus+openrouter',
-    model: 'qwen/qwen3.6-plus',
-    backend: 'openrouter',
-  },
-  openrouterQwen36MaxPreview: {
-    id: 'openrouterQwen36MaxPreview',
-    name: 'qwen3.6-max-preview+openrouter',
-    model: 'qwen/qwen3.6-max-preview',
-    backend: 'openrouter',
-  },
-  openrouterGemma431bIt: {
-    id: 'openrouterGemma431bIt',
-    name: 'gemma-4-31b-it+openrouter',
-    model: 'google/gemma-4-31b-it',
-    backend: 'openrouter',
-  },
-  openrouterLing26OneTFree: {
-    id: 'openrouterLing26OneTFree',
-    name: 'ling-2.6-1t-free+openrouter',
-    model: 'inclusionai/ling-2.6-1t:free',
-    backend: 'openrouter',
-  },
-  openrouterHy3PreviewFree: {
-    id: 'openrouterHy3PreviewFree',
-    name: 'hy3-preview-free+openrouter',
-    model: 'tencent/hy3-preview:free',
-    backend: 'openrouter',
-  },
-  openrouterHy3: {
-    id: 'openrouterHy3',
-    name: 'hy3+openrouter',
-    model: 'tencent/hy3',
-    backend: 'openrouter',
-  },
-  openrouterGrok420MultiAgent: {
-    id: 'openrouterGrok420MultiAgent',
-    name: 'grok-4.20-multi-agent+openrouter',
-    model: 'x-ai/grok-4.20-multi-agent',
-    backend: 'openrouter',
-  },
-  openrouterMimoV2Pro: {
-    id: 'openrouterMimoV2Pro',
-    name: 'mimo-v2-pro+openrouter',
-    model: 'xiaomi/mimo-v2-pro',
-    backend: 'openrouter',
-  },
-  openrouterMimoV25Pro: {
-    id: 'openrouterMimoV25Pro',
-    name: 'mimo-v2.5-pro+openrouter',
-    model: 'xiaomi/mimo-v2.5-pro',
-    backend: 'openrouter',
-  },
-  openrouterKimiK26: {
-    id: 'openrouterKimiK26',
-    name: 'kimi-k2.6+openrouter',
-    model: 'moonshotai/kimi-k2.6',
-    backend: 'openrouter',
-  },
-  openrouterKimiK27Code: {
-    id: 'openrouterKimiK27Code',
-    name: 'kimi-k2.7-code+openrouter',
-    model: 'moonshotai/kimi-k2.7-code',
-    backend: 'openrouter',
-  },
-  openrouterKimiK3: {
-    id: 'openrouterKimiK3',
-    name: 'kimi-k3+openrouter',
-    model: 'moonshotai/kimi-k3',
-    backend: 'openrouter',
-  },
-  openrouterMuseSpark11: {
-    id: 'openrouterMuseSpark11',
-    name: 'muse-spark-1.1+openrouter',
-    model: 'meta/muse-spark-1.1',
-    backend: 'openrouter',
-  },
-  openrouterAion30: {
-    id: 'openrouterAion30',
-    name: 'aion-3.0+openrouter',
-    model: 'aion-labs/aion-3.0',
-    backend: 'openrouter',
-  },
-  openrouterFuguUltra: {
-    id: 'openrouterFuguUltra',
-    name: 'fugu-ultra+openrouter',
-    model: 'sakana/fugu-ultra',
-    backend: 'openrouter',
-  },
-  openrouterGlm51: {
-    id: 'openrouterGlm51',
-    name: 'glm-5.1+openrouter',
-    model: 'z-ai/glm-5.1',
-    backend: 'openrouter',
-  },
-  openrouterGlm52: {
-    id: 'openrouterGlm52',
-    name: 'glm-5.2+openrouter',
-    model: 'z-ai/glm-5.2',
-    backend: 'openrouter',
-  },
-  openrouterDeepseekV4Pro: {
-    id: 'openrouterDeepseekV4Pro',
-    name: 'deepseek-v4-pro+openrouter',
-    model: 'deepseek/deepseek-v4-pro',
-    backend: 'openrouter',
-  },
-  openrouterMinimaxM3: {
-    id: 'openrouterMinimaxM3',
-    name: 'minimax-m3+openrouter',
-    model: 'minimax/minimax-m3',
-    backend: 'openrouter',
-  },
-  openrouterStep37Flash: {
-    id: 'openrouterStep37Flash',
-    name: 'step-3.7-flash+openrouter',
-    model: 'stepfun/step-3.7-flash',
-    backend: 'openrouter',
-  },
-  openrouterQwen37Max: {
-    id: 'openrouterQwen37Max',
-    name: 'qwen3.7-max+openrouter',
-    model: 'qwen/qwen3.7-max',
-    backend: 'openrouter',
-  },
+export const DEFAULT_MODEL_ID = 'claudeOpus46Ikun';
+export const DEFAULT_MODEL_INFO = {
+  id: DEFAULT_MODEL_ID,
+  name: 'opus-4-6+ikun',
 };
 
-export const getAvailableModels = (): { id: string; name: string }[] =>
-  Object.values(MODEL_CONFIGS).map(({ id, name }) => ({ id, name }));
+const DEFAULT_MODEL: ModelDefinition = {
+  ...DEFAULT_MODEL_INFO,
+  model: 'claude-opus-4-6',
+  backend: 'ikun',
+};
+
+export const createModelId = (backend: ChatBackend, model: string) => `${backend}:${model}`;
 
 export const getModelConfig = (modelId: string): ModelConfig | null => {
   const id = modelId.trim();
-  const modelConfig =
-    MODEL_CONFIGS[id] ??
-    Object.values(MODEL_CONFIGS).find((entry) => entry.id === id || entry.name === id) ??
-    null;
+  let modelConfig: ModelDefinition;
 
-  if (!modelConfig) {
-    return null;
+  if (id === DEFAULT_MODEL_ID) {
+    modelConfig = DEFAULT_MODEL;
+  } else {
+    const separatorIndex = id.indexOf(':');
+    if (separatorIndex <= 0 || separatorIndex === id.length - 1) {
+      return null;
+    }
+
+    const backend = id.slice(0, separatorIndex);
+    if (
+      backend !== 'ikun' &&
+      backend !== 'gemini-aistudio' &&
+      backend !== 'moonshot' &&
+      backend !== 'openrouter'
+    ) {
+      return null;
+    }
+
+    const model = id.slice(separatorIndex + 1);
+    modelConfig = { id, name: model, model, backend };
   }
 
   if (modelConfig.backend === 'ikun') {
@@ -400,12 +131,10 @@ export const getModelConfig = (modelId: string): ModelConfig | null => {
   };
 };
 
-export const getDefaultModelId = (): string | null => getAvailableModels()[0]?.id ?? null;
-
-export const getDefaultModelConfig = (): ModelConfig | null => {
-  const id = getDefaultModelId();
-  return id ? getModelConfig(id) : null;
-};
+export const getDefaultModelConfig = (): ModelConfig => ({
+  ...DEFAULT_MODEL,
+  format: 'anthropic',
+});
 
 export const getAvailablePrompts = (): { id: string; name: string }[] =>
   Object.values(PROMPT_CONFIGS).map(({ id, name }) => ({ id, name }));
@@ -422,4 +151,4 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
 export const getDefaultPromptId = (): string => 'aether';
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = 'claudeHaiku45Ikun';
+export const TITLE_GENERATION_MODEL_ID = createModelId('ikun', 'claude-haiku-4-5-20251001');

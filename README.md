@@ -80,8 +80,7 @@ src/
 
 ```env
 ANTHROPIC_API_KEY_IKUNCODE=可选 ikun 线路 key
-ANTHROPIC_BASE_URL_IKUNCODE=可选 ikun 线路 baseURL
-OPENAI_API_KEY_IKUNCODE=可选 OpenAI Responses+gpt-5.4+ikun 线路 key（base 与 ikun 共用 ANTHROPIC_BASE_URL_IKUNCODE）
+OPENAI_API_KEY_IKUNCODE=可选 OpenAI Responses+ikun 线路 key
 GEMINI_API_KEY_IKUNCODE=可选 Gemini+ikun 线路 key
 GEMINI_BASE_URL_IKUNCODE=可选 Gemini+ikun 线路 baseURL
 GEMINI_API_KEY_AISTUDIO=可选 Google AI Studio 线路 key
@@ -92,7 +91,7 @@ LLM_STREAM_LOGGING=可选，默认关闭；true/all 打开全部，或填 anthro
 LLM_STREAM_LOGGING_MAX_CHARS=可选，单条日志最大字符数，超过则不记录；默认 10000；设为 0 表示不限制
 ```
 
-说明：`backend=moonshot` 使用 `MOONSHOT_API_KEY`，`baseURL` 固定为 `https://api.moonshot.cn/v1`。`backend=ikun` 根据模型 ID 选择协议：`claude-*` 使用 Anthropic，`gemini-*` 使用 Gemini，`gpt-*` 使用 OpenAI Responses，并读取各协议对应的 ikun 密钥。`backend=gemini-aistudio` 使用 `GEMINI_API_KEY_AISTUDIO`。`backend=openrouter` 使用 `OPENROUTER_API_KEY`。
+说明：应用在 `/app` SSR 时并发读取已配置的 ikun、Google AI Studio、Moonshot、OpenRouter 模型资源，不再维护固定模型目录。`claudeOpus46Ikun` 始终排在第一位并保持为默认模型。`backend=ikun` 根据模型 ID 选择协议：`claude-*` 使用 Anthropic，`gemini-*` 使用 Gemini，`gpt-*` 使用 OpenAI Responses。
 
 ---
 

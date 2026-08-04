@@ -3,7 +3,11 @@ import { Outlet, createFileRoute } from '@tanstack/react-router';
 import { MessageList } from '@/features/chat/message-thread/MessageList';
 import Sidebar from '@/features/conversations/conversation-list';
 import { Composer } from '@/features/chat/composer/Composer';
-import { getAvailableModelsFn, getAvailablePromptsFn } from '@/features/chat/model-catalog';
+import {
+  DEFAULT_MODEL_ID,
+  getAvailableModelsFn,
+  getAvailablePromptsFn,
+} from '@/features/chat/model-catalog';
 import { NewChatButton } from '@/features/conversations/conversation-list/NewChatButton';
 import { ArtifactToggleButton } from '@/features/chat/artifact';
 import { ShareButton } from '@/features/share/share-dialog';
@@ -31,7 +35,7 @@ export const Route = createFileRoute('/app')({
     return {
       availableModels,
       availablePrompts,
-      initialModelId: availableModels[0]?.id ?? '',
+      initialModelId: DEFAULT_MODEL_ID,
       initialPromptId: availablePrompts[0]?.id ?? 'aether',
     };
   },

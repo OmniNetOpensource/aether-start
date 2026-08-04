@@ -132,6 +132,8 @@ Model catalog files:
 - `src/features/chat/model-catalog/model-provider-config.ts`
 - `src/features/chat/model-catalog/models.ts`
 
+`models.ts` fetches configured provider model resources during `/app` SSR. The fixed default remains `claudeOpus46Ikun`; dynamic model IDs encode backend and provider model ID so the Durable Object can resolve them without a static catalog.
+
 Provider runtime files:
 
 - `src/features/chat/agent-runtime/providers/provider-factory.ts`
@@ -259,7 +261,6 @@ Important env keys include:
 - `LLM_STREAM_LOGGING_MAX_CHARS`
 - `MOONSHOT_API_KEY`
 - `ANTHROPIC_API_KEY_IKUNCODE`
-- `ANTHROPIC_BASE_URL_IKUNCODE`
 - `OPENAI_API_KEY_IKUNCODE`
 - `GEMINI_API_KEY_IKUNCODE`
 - `GEMINI_BASE_URL_IKUNCODE`

@@ -1,4 +1,4 @@
-import type { ModelConfig } from '@/features/chat/model-catalog';
+import { IKUN_BASE_URL, type ModelConfig } from '@/features/chat/model-catalog';
 import { getServerEnv } from '@/shared/worker/env';
 
 export type BackendConfig = {
@@ -49,12 +49,10 @@ export const getBackendConfig = (modelConfig: ModelConfig): BackendConfig => {
   if (backend === 'ikun') {
     if (format === 'anthropic') {
       const apiKey = env.ANTHROPIC_API_KEY_IKUNCODE;
-      const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE;
       if (!apiKey) throw new Error('Missing ANTHROPIC_API_KEY_IKUNCODE');
-      if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_IKUNCODE');
       return {
         apiKey,
-        baseURL,
+        baseURL: IKUN_BASE_URL,
         defaultHeaders: {
           'User-Agent': 'aether',
           'anthropic-beta': 'interleaved-thinking-2025-05-14',
@@ -76,12 +74,10 @@ export const getBackendConfig = (modelConfig: ModelConfig): BackendConfig => {
 
     if (format === 'openai-responses') {
       const apiKey = env.OPENAI_API_KEY_IKUNCODE;
-      const baseURL = env.ANTHROPIC_BASE_URL_IKUNCODE;
       if (!apiKey) throw new Error('Missing OPENAI_API_KEY_IKUNCODE');
-      if (!baseURL) throw new Error('Missing ANTHROPIC_BASE_URL_IKUNCODE');
       return {
         apiKey,
-        baseURL,
+        baseURL: IKUN_BASE_URL,
         defaultHeaders: { 'User-Agent': 'aether' },
       };
     }
