@@ -170,27 +170,14 @@ const linkSafety = {
 type StreamdownBlockProps = {
   markdown: string;
   blockIsAnimating: boolean;
-  observer: ResizeObserver;
 };
 
 const StreamdownBlock = memo(function StreamdownBlock({
   markdown,
   blockIsAnimating,
-  observer,
 }: StreamdownBlockProps) {
-  const blockElRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const el = blockElRef.current;
-    if (!el) return;
-    observer.observe(el);
-    return () => {
-      observer.unobserve(el);
-    };
-  }, [blockIsAnimating, observer]);
-
   return (
-    <div ref={blockElRef}>
+    <div style={{ contentVisibility: 'auto', containIntrinsicBlockSize: 'auto 0px' }}>
       <Streamdown
         plugins={plugins}
         rehypePlugins={[defaultRehypePlugins.sanitize, defaultRehypePlugins.harden]}
@@ -205,28 +192,6 @@ const StreamdownBlock = memo(function StreamdownBlock({
 
 function MarkdownImpl({ content, isAnimating = false }: Props) {
   const paragraphs = splitMarkdownParagraphs(content);
-  const ro = useRef<ResizeObserver | null>(null);
-
-  function getObserver() {
-    if (!ro.current) {
-      ro.current = new ResizeObserver((entries) => {
-        for (const entry of entries) {
-          const node = entry.target;
-          if (!(node instanceof HTMLElement)) continue;
-
-          const h = Math.round(entry.borderBoxSize[0].blockSize);
-          if (!node.style.contentVisibility) {
-            node.style.contentVisibility = 'auto';
-          }
-          node.style.containIntrinsicBlockSize = `${h}px`;
-        }
-      });
-    }
-    return ro.current;
-  }
-  useEffect(() => {
-    return () => ro.current?.disconnect();
-  }, []);
 
   return (
     <div className='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
@@ -234,7 +199,6 @@ function MarkdownImpl({ content, isAnimating = false }: Props) {
         <StreamdownBlock
           markdown={paragraph}
           blockIsAnimating={isAnimating && i === paragraphs.length - 1}
-          observer={getObserver()}
           key={i}
         />
       ))}
