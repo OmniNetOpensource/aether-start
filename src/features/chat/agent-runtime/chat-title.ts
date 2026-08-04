@@ -45,7 +45,7 @@ export const generateTitleFromConversation = async (
 
   let backendConfig: ReturnType<typeof getBackendConfig>;
   try {
-    backendConfig = getBackendConfig(modelConfig.backend);
+    backendConfig = getBackendConfig(modelConfig);
   } catch {
     return completeTitleGeneration(FALLBACK_TITLE, {
       usedFallback: true,
@@ -124,9 +124,6 @@ export const generateTitleFromConversation = async (
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 64,
         temperature: 0.2,
-        ...(modelConfig.backend === 'openrouter' && {
-          reasoning: { effort: 'none' as const },
-        }),
       },
       { signal },
     );

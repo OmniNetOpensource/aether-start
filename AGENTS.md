@@ -147,18 +147,10 @@ Supported formats currently include:
 
 Configured backends currently include:
 
-- `rightcode-claude`
-- `rightcode-claude-sale`
-- `rightcode-gemini`
-- `rightcode-openai`
-- `dmx`
+- `moonshot`
 - `ikun`
-- `ikun-openai`
-- `ikun-gemini`
 - `openrouter`
-- `cubence-claude`
-- `cubence-gemini`
-- `cubence-openai`
+- `gemini-aistudio`
 
 ### Tools
 
@@ -263,24 +255,14 @@ Important env keys include:
 - `JINA_API_KEY`
 - `LLM_STREAM_LOGGING`
 - `LLM_STREAM_LOGGING_MAX_CHARS`
-- `DMX_APIKEY`
-- `DMX_BASEURL`
-- `OPENROUTER_API_KEY`
-- `CUBENCE_API_KEY`
-- `CUBENCE_BASE_URL`
-- `ANTHROPIC_API_KEY_RIGHTCODE`
-- `ANTHROPIC_BASE_URL_RIGHTCODE`
-- `ANTHROPIC_API_KEY_RIGHTCODE_SALE`
-- `ANTHROPIC_BASE_URL_RIGHTCODE_SALE`
-- `GEMINI_API_KEY_RIGHTCODE`
-- `GEMINI_BASE_URL_RIGHTCODE`
-- `OPENAI_API_KEY_RIGHTCODE`
-- `OPENAI_BASE_URL_RIGHTCODE`
+- `MOONSHOT_API_KEY`
 - `ANTHROPIC_API_KEY_IKUNCODE`
 - `ANTHROPIC_BASE_URL_IKUNCODE`
 - `OPENAI_API_KEY_IKUNCODE`
 - `GEMINI_API_KEY_IKUNCODE`
 - `GEMINI_BASE_URL_IKUNCODE`
+- `GEMINI_API_KEY_AISTUDIO`
+- `OPENROUTER_API_KEY`
 - `NETIFY_TOKEN`
 
 Never commit real secrets.

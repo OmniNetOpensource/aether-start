@@ -1,18 +1,8 @@
 export type ChatFormat = 'anthropic' | 'openai' | 'gemini' | 'openai-responses';
 export type ChatBackend =
-  | 'rightcode-claude'
-  | 'rightcode-claude-sale'
-  | 'rightcode-gemini'
-  | 'rightcode-openai'
   | 'moonshot'
-  | 'dmx'
   | 'ikun'
-  | 'ikun-openai'
-  | 'ikun-gemini'
   | 'openrouter'
-  | 'cubence-claude'
-  | 'cubence-gemini'
-  | 'cubence-openai'
   | 'gemini-aistudio';
 
 export type ModelConfig = {
@@ -20,6 +10,13 @@ export type ModelConfig = {
   name: string;
   model: string;
   format: ChatFormat;
+  backend: ChatBackend;
+};
+
+type ModelDefinition = {
+  id: string;
+  name: string;
+  model: string;
   backend: ChatBackend;
 };
 
@@ -73,530 +70,299 @@ const PROMPT_CONFIGS: Record<string, PromptConfig> = {
   },
 };
 
-const MODEL_CONFIGS: Record<string, ModelConfig> = {
+const MODEL_CONFIGS: Record<string, ModelDefinition> = {
   claudeOpus46Ikun: {
     id: 'claudeOpus46Ikun',
     name: 'opus-4-6+ikun',
     model: 'claude-opus-4-6',
-    format: 'anthropic',
     backend: 'ikun',
   },
   claudeOpus5Ikun: {
     id: 'claudeOpus5Ikun',
     name: 'opus-5+ikun',
     model: 'claude-opus-5',
-    format: 'anthropic',
     backend: 'ikun',
   },
   claudeOpus47Ikun: {
     id: 'claudeOpus47Ikun',
     name: 'opus-4-7+ikun',
     model: 'claude-opus-4-7',
-    format: 'anthropic',
     backend: 'ikun',
   },
   claudeOpus48Ikun: {
     id: 'claudeOpus48Ikun',
     name: 'opus-4-8+ikun',
     model: 'claude-opus-4-8',
-    format: 'anthropic',
     backend: 'ikun',
   },
   claudeOpus45Ikun: {
     id: 'claudeOpus45Ikun',
     name: 'opus-4-5+ikun',
     model: 'claude-opus-4-5-20251101',
-    format: 'anthropic',
     backend: 'ikun',
-  },
-  test3: {
-    id: 'test3',
-    name: 'qwen3.5-plus+dmx',
-    model: 'qwen3.5-plus',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  qwen35PlusFree: {
-    id: 'qwen35PlusFree',
-    name: 'qwen3.5-plus-free+dmx',
-    model: 'qwen3.5-plus-free',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  minimaxM25: {
-    id: 'minimaxM25',
-    name: 'MiniMax-M2.5+dmx',
-    model: 'MiniMax-M2.5',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  minimaxM27: {
-    id: 'minimaxM27',
-    name: 'MiniMax-M2.7+dmx',
-    model: 'MiniMax-M2.7',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  minimaxM27Free: {
-    id: 'minimaxM27Free',
-    name: 'MiniMax-M2.7-free+dmx',
-    model: 'MiniMax-M2.7-free',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  glm5: {
-    id: 'glm5',
-    name: 'glm-5+dmx',
-    model: 'glm-5',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  glm5Free: {
-    id: 'glm5Free',
-    name: 'glm-5-free+dmx',
-    model: 'glm-5-free',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  glm5TurboFree: {
-    id: 'glm5TurboFree',
-    name: 'glm-5-turbo-free+dmx',
-    model: 'glm-5-turbo-free',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  glm51Free: {
-    id: 'glm51Free',
-    name: 'glm-5.1-free+dmx',
-    model: 'glm-5.1-free',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  doubao: {
-    id: 'doubao',
-    name: 'doubao-seed-2-0-pro-260215+dmx',
-    model: 'doubao-seed-2-0-pro-260215',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  doubaoSeed20ProFree: {
-    id: 'doubaoSeed20ProFree',
-    name: 'doubao-seed-2.0-pro-free+dmx',
-    model: 'doubao-seed-2.0-pro-free',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  kimiK25: {
-    id: 'kimiK25',
-    name: 'kimi-k2.5+dmx',
-    model: 'kimi-k2.5',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  kimiK25Free: {
-    id: 'kimiK25Free',
-    name: 'kimi-k2.5-free+dmx',
-    model: 'kimi-k2.5-free',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  deepseekV32: {
-    id: 'deepseekV32',
-    name: 'DeepSeek-V3.2-Thinking+dmx',
-    model: 'DeepSeek-V3.2-Thinking',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  claudeOpus47CcDmx: {
-    id: 'claudeOpus47CcDmx',
-    name: 'claude-opus-4-7-cc+dmx',
-    model: 'claude-opus-4-7-cc',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  claudeOpus47Dmx: {
-    id: 'claudeOpus47Dmx',
-    name: 'claude-opus-4-7+dmx',
-    model: 'claude-opus-4-7',
-    format: 'openai',
-    backend: 'dmx',
-  },
-  kimiK26CodePreviewFree: {
-    id: 'kimiK26CodePreviewFree',
-    name: 'K2.6-code-preview-free+dmx',
-    model: 'K2.6-code-preview-free',
-    format: 'openai',
-    backend: 'dmx',
   },
   kimiK26Moonshot: {
     id: 'kimiK26Moonshot',
     name: 'kimi-k2.6+moonshot',
     model: 'kimi-k2.6',
-    format: 'openai',
     backend: 'moonshot',
   },
   kimiK3Moonshot: {
     id: 'kimiK3Moonshot',
     name: 'kimi-k3+moonshot',
     model: 'kimi-k3',
-    format: 'openai',
     backend: 'moonshot',
-  },
-  gemini31ProRightcode: {
-    id: 'gemini31ProRightcode',
-    name: 'gemini-3.1-pro+rightcode',
-    model: 'gemini-3.1-pro-preview',
-    format: 'gemini',
-    backend: 'rightcode-gemini',
-  },
-  gemini31ProCubence: {
-    id: 'gemini31ProCubence',
-    name: 'gemini-3.1-pro+cubence',
-    model: 'gemini-3.1-pro-preview',
-    format: 'gemini',
-    backend: 'cubence-gemini',
   },
   gemini31ProIkun: {
     id: 'gemini31ProIkun',
     name: 'gemini-3.1-pro+ikun',
     model: 'gemini-3.1-pro-preview',
-    format: 'gemini',
-    backend: 'ikun-gemini',
+    backend: 'ikun',
   },
   gemini3FlashIkun: {
     id: 'gemini3FlashIkun',
     name: 'gemini-3-flash-preview+ikun',
     model: 'gemini-3-flash-preview',
-    format: 'gemini',
-    backend: 'ikun-gemini',
-  },
-  gpt54Rightcode: {
-    id: 'gpt54Rightcode',
-    name: 'gpt-5.4+rightcode',
-    model: 'gpt-5.4-high',
-    format: 'openai-responses',
-    backend: 'rightcode-openai',
-  },
-  gpt54Cubence: {
-    id: 'gpt54Cubence',
-    name: 'gpt-5.4+cubence',
-    model: 'gpt-5.4-high',
-    format: 'openai-responses',
-    backend: 'cubence-openai',
+    backend: 'ikun',
   },
   gpt54Ikun: {
     id: 'gpt54Ikun',
     name: 'gpt-5.4+ikun',
     model: 'gpt-5.4-high',
-    format: 'openai-responses',
-    backend: 'ikun-openai',
+    backend: 'ikun',
   },
   gpt55Ikun: {
     id: 'gpt55Ikun',
     name: 'gpt-5.5+ikun',
     model: 'gpt-5.5',
-    format: 'openai-responses',
-    backend: 'ikun-openai',
-  },
-  claudeOpus46Rightcode: {
-    id: 'claudeOpus46Rightcode',
-    name: 'opus-4-6+rightcode',
-    model: 'claude-opus-4-6',
-    format: 'anthropic',
-    backend: 'rightcode-claude',
-  },
-  claudeOpus46Cubence: {
-    id: 'claudeOpus46Cubence',
-    name: 'opus-4-6+cubence',
-    model: 'claude-opus-4-6',
-    format: 'anthropic',
-    backend: 'cubence-claude',
+    backend: 'ikun',
   },
   claudeSonnet46Ikun: {
     id: 'claudeSonnet46Ikun',
     name: 'sonnet-4-6+ikun',
     model: 'claude-sonnet-4-6',
-    format: 'anthropic',
     backend: 'ikun',
   },
   claudeSonnet5Ikun: {
     id: 'claudeSonnet5Ikun',
     name: 'sonnet-5+ikun',
     model: 'claude-sonnet-5',
-    format: 'anthropic',
     backend: 'ikun',
   },
   claudeHaiku45Ikun: {
     id: 'claudeHaiku45Ikun',
     name: 'haiku-4-5-20251001+ikun',
     model: 'claude-haiku-4-5-20251001',
-    format: 'anthropic',
     backend: 'ikun',
   },
-  claudeHaiku45Rightcode: {
-    id: 'claudeHaiku45Rightcode',
-    name: 'haiku-4-5+rightcode',
-    model: 'claude-haiku-4-5-20251001',
-    format: 'anthropic',
-    backend: 'rightcode-claude',
-  },
-  claudeSonnet46Rightcode: {
-    id: 'claudeSonnet46Rightcode',
-    name: 'sonnet-4-6+rightcode',
-    model: 'claude-sonnet-4-6',
-    format: 'anthropic',
-    backend: 'rightcode-claude',
-  },
-  claudeOpus46RightcodeSale: {
-    id: 'claudeOpus46RightcodeSale',
-    name: 'opus-4-6+rightcode-sale',
-    model: 'claude-opus-4-6',
-    format: 'anthropic',
-    backend: 'rightcode-claude-sale',
+  gemma431bItAistudio: {
+    id: 'gemma431bItAistudio',
+    name: 'gemma-4-31b-it+aistudio',
+    model: 'gemma-4-31b-it',
+    backend: 'gemini-aistudio',
   },
   openrouterHunterAlpha: {
     id: 'openrouterHunterAlpha',
     name: 'hunter-alpha+openrouter',
     model: 'openrouter/hunter-alpha',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterHealerAlpha: {
     id: 'openrouterHealerAlpha',
     name: 'healer-alpha+openrouter',
     model: 'openrouter/healer-alpha',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterOwlAlpha: {
     id: 'openrouterOwlAlpha',
     name: 'owl-alpha+openrouter',
     model: 'openrouter/owl-alpha',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterNemotron: {
     id: 'openrouterNemotron',
     name: 'nemotron-3-super+openrouter',
     model: 'nvidia/nemotron-3-super-120b-a12b:free',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterNemotronUltra: {
     id: 'openrouterNemotronUltra',
     name: 'nemotron-3-ultra+openrouter',
     model: 'nvidia/nemotron-3-ultra-550b-a55b:free',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterNexN2ProFree: {
     id: 'openrouterNexN2ProFree',
     name: 'nex-n2-pro-free+openrouter',
     model: 'nex-agi/nex-n2-pro:free',
-    format: 'openai',
     backend: 'openrouter',
   },
   gpt5NanoOpenrouter: {
     id: 'gpt5NanoOpenrouter',
     name: 'gpt-5-nano+openrouter',
     model: 'openai/gpt-5-nano',
-    format: 'openai',
     backend: 'openrouter',
   },
   gemini31FlashLiteOpenrouter: {
     id: 'gemini31FlashLiteOpenrouter',
     name: 'gemini-3.1-flash-lite+openrouter',
     model: 'google/gemini-3.1-flash-lite-preview',
-    format: 'openai',
     backend: 'openrouter',
   },
   gemini36FlashOpenrouter: {
     id: 'gemini36FlashOpenrouter',
     name: 'gemini-3.6-flash+openrouter',
     model: 'google/gemini-3.6-flash',
-    format: 'openai',
     backend: 'openrouter',
   },
   gemini35FlashLiteOpenrouter: {
     id: 'gemini35FlashLiteOpenrouter',
     name: 'gemini-3.5-flash-lite+openrouter',
     model: 'google/gemini-3.5-flash-lite',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterLongcat20: {
     id: 'openrouterLongcat20',
     name: 'longcat-2.0+openrouter',
     model: 'meituan/longcat-2.0',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterInkling: {
     id: 'openrouterInkling',
     name: 'inkling+openrouter',
     model: 'thinkingmachines/inkling',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterQwen36PlusFree: {
     id: 'openrouterQwen36PlusFree',
     name: 'qwen3.6-plus-free+openrouter',
     model: 'qwen/qwen3.6-plus:free',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterQwen36Plus: {
     id: 'openrouterQwen36Plus',
     name: 'qwen3.6-plus+openrouter',
     model: 'qwen/qwen3.6-plus',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterQwen36MaxPreview: {
     id: 'openrouterQwen36MaxPreview',
     name: 'qwen3.6-max-preview+openrouter',
     model: 'qwen/qwen3.6-max-preview',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterGemma431bIt: {
     id: 'openrouterGemma431bIt',
     name: 'gemma-4-31b-it+openrouter',
     model: 'google/gemma-4-31b-it',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterLing26OneTFree: {
     id: 'openrouterLing26OneTFree',
     name: 'ling-2.6-1t-free+openrouter',
     model: 'inclusionai/ling-2.6-1t:free',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterHy3PreviewFree: {
     id: 'openrouterHy3PreviewFree',
     name: 'hy3-preview-free+openrouter',
     model: 'tencent/hy3-preview:free',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterHy3: {
     id: 'openrouterHy3',
     name: 'hy3+openrouter',
     model: 'tencent/hy3',
-    format: 'openai',
     backend: 'openrouter',
-  },
-  gemma431bItAistudio: {
-    id: 'gemma431bItAistudio',
-    name: 'gemma-4-31b-it+aistudio',
-    model: 'gemma-4-31b-it',
-    format: 'gemini',
-    backend: 'gemini-aistudio',
   },
   openrouterGrok420MultiAgent: {
     id: 'openrouterGrok420MultiAgent',
     name: 'grok-4.20-multi-agent+openrouter',
     model: 'x-ai/grok-4.20-multi-agent',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterMimoV2Pro: {
     id: 'openrouterMimoV2Pro',
     name: 'mimo-v2-pro+openrouter',
     model: 'xiaomi/mimo-v2-pro',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterMimoV25Pro: {
     id: 'openrouterMimoV25Pro',
     name: 'mimo-v2.5-pro+openrouter',
     model: 'xiaomi/mimo-v2.5-pro',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterKimiK26: {
     id: 'openrouterKimiK26',
     name: 'kimi-k2.6+openrouter',
     model: 'moonshotai/kimi-k2.6',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterKimiK27Code: {
     id: 'openrouterKimiK27Code',
     name: 'kimi-k2.7-code+openrouter',
     model: 'moonshotai/kimi-k2.7-code',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterKimiK3: {
     id: 'openrouterKimiK3',
     name: 'kimi-k3+openrouter',
     model: 'moonshotai/kimi-k3',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterMuseSpark11: {
     id: 'openrouterMuseSpark11',
     name: 'muse-spark-1.1+openrouter',
     model: 'meta/muse-spark-1.1',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterAion30: {
     id: 'openrouterAion30',
     name: 'aion-3.0+openrouter',
     model: 'aion-labs/aion-3.0',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterFuguUltra: {
     id: 'openrouterFuguUltra',
     name: 'fugu-ultra+openrouter',
     model: 'sakana/fugu-ultra',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterGlm51: {
     id: 'openrouterGlm51',
     name: 'glm-5.1+openrouter',
     model: 'z-ai/glm-5.1',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterGlm52: {
     id: 'openrouterGlm52',
     name: 'glm-5.2+openrouter',
     model: 'z-ai/glm-5.2',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterDeepseekV4Pro: {
     id: 'openrouterDeepseekV4Pro',
     name: 'deepseek-v4-pro+openrouter',
     model: 'deepseek/deepseek-v4-pro',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterMinimaxM3: {
     id: 'openrouterMinimaxM3',
     name: 'minimax-m3+openrouter',
     model: 'minimax/minimax-m3',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterStep37Flash: {
     id: 'openrouterStep37Flash',
     name: 'step-3.7-flash+openrouter',
     model: 'stepfun/step-3.7-flash',
-    format: 'openai',
     backend: 'openrouter',
   },
   openrouterQwen37Max: {
     id: 'openrouterQwen37Max',
     name: 'qwen3.7-max+openrouter',
     model: 'qwen/qwen3.7-max',
-    format: 'openai',
     backend: 'openrouter',
   },
 };
@@ -606,11 +372,32 @@ export const getAvailableModels = (): { id: string; name: string }[] =>
 
 export const getModelConfig = (modelId: string): ModelConfig | null => {
   const id = modelId.trim();
-  return (
+  const modelConfig =
     MODEL_CONFIGS[id] ??
     Object.values(MODEL_CONFIGS).find((entry) => entry.id === id || entry.name === id) ??
-    null
-  );
+    null;
+
+  if (!modelConfig) {
+    return null;
+  }
+
+  if (modelConfig.backend === 'ikun') {
+    if (modelConfig.model.startsWith('claude-')) {
+      return { ...modelConfig, format: 'anthropic' };
+    }
+    if (modelConfig.model.startsWith('gemini-')) {
+      return { ...modelConfig, format: 'gemini' };
+    }
+    if (modelConfig.model.startsWith('gpt-')) {
+      return { ...modelConfig, format: 'openai-responses' };
+    }
+    throw new Error(`Unknown ikun model protocol: ${modelConfig.model}`);
+  }
+
+  return {
+    ...modelConfig,
+    format: modelConfig.backend === 'gemini-aistudio' ? 'gemini' : 'openai',
+  };
 };
 
 export const getDefaultModelId = (): string | null => getAvailableModels()[0]?.id ?? null;
@@ -635,4 +422,4 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
 export const getDefaultPromptId = (): string => 'aether';
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = 'gemini31FlashLiteOpenrouter';
+export const TITLE_GENERATION_MODEL_ID = 'claudeHaiku45Ikun';

@@ -51,20 +51,14 @@ type ConversationRunnerState = {
 type ConversationRunnerEnv = Cloudflare.Env & {
   DB: D1Database;
   CHAT_ASSETS?: R2Bucket;
-  ANTHROPIC_API_KEY_RIGHTCODE?: string;
-  ANTHROPIC_BASE_URL_RIGHTCODE?: string;
-  ANTHROPIC_API_KEY_RIGHTCODE_SALE?: string;
-  ANTHROPIC_BASE_URL_RIGHTCODE_SALE?: string;
   MOONSHOT_API_KEY?: string;
   ANTHROPIC_API_KEY_IKUNCODE?: string;
   ANTHROPIC_BASE_URL_IKUNCODE?: string;
+  OPENAI_API_KEY_IKUNCODE?: string;
   GEMINI_API_KEY_IKUNCODE?: string;
   GEMINI_BASE_URL_IKUNCODE?: string;
-  DMX_APIKEY?: string;
-  DMX_BASEURL?: string;
+  GEMINI_API_KEY_AISTUDIO?: string;
   OPENROUTER_API_KEY?: string;
-  CUBENCE_API_KEY?: string;
-  CUBENCE_BASE_URL?: string;
   SERP_API_KEY?: string;
   SUPADATA_API_KEY?: string;
 };
@@ -811,7 +805,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     const promptConfig = promptId ? getPromptById(promptId) : getPromptById(getDefaultPromptId());
     const systemPrompt = promptConfig?.content ?? '';
 
-    const backendConfig = getBackendConfig(modelConfig.backend);
+    const backendConfig = getBackendConfig(modelConfig);
 
     const provider = await createChatProvider(modelConfig.format, {
       model: modelConfig.model,

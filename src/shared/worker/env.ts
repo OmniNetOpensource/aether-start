@@ -8,14 +8,6 @@ type ServerEnv = {
   ADMIN_EMAIL_ALLOWLIST?: string;
   LLM_STREAM_LOGGING?: string;
   LLM_STREAM_LOGGING_MAX_CHARS?: string;
-  ANTHROPIC_API_KEY_RIGHTCODE?: string;
-  ANTHROPIC_BASE_URL_RIGHTCODE?: string;
-  ANTHROPIC_API_KEY_RIGHTCODE_SALE?: string;
-  ANTHROPIC_BASE_URL_RIGHTCODE_SALE?: string;
-  GEMINI_API_KEY_RIGHTCODE?: string;
-  GEMINI_BASE_URL_RIGHTCODE?: string;
-  OPENAI_API_KEY_RIGHTCODE?: string;
-  OPENAI_BASE_URL_RIGHTCODE?: string;
   MOONSHOT_API_KEY?: string;
   ANTHROPIC_API_KEY_IKUNCODE?: string;
   ANTHROPIC_BASE_URL_IKUNCODE?: string;
@@ -25,11 +17,7 @@ type ServerEnv = {
   GEMINI_BASE_URL_IKUNCODE?: string;
   /** Google AI Studio / Gemini API (generativelanguage.googleapis.com) */
   GEMINI_API_KEY_AISTUDIO?: string;
-  DMX_APIKEY?: string;
-  DMX_BASEURL?: string;
   OPENROUTER_API_KEY?: string;
-  CUBENCE_API_KEY?: string;
-  CUBENCE_BASE_URL?: string;
   SERP_API_KEY?: string;
   SUPADATA_API_KEY?: string;
   JINA_API_KEY?: string;
@@ -85,30 +73,6 @@ export const getServerEnv = (): ServerEnv => {
     LLM_STREAM_LOGGING_MAX_CHARS:
       readString((bindings as Record<string, unknown>).LLM_STREAM_LOGGING_MAX_CHARS) ??
       readStringFromProcess('LLM_STREAM_LOGGING_MAX_CHARS'),
-    ANTHROPIC_API_KEY_RIGHTCODE:
-      readString(bindings.ANTHROPIC_API_KEY_RIGHTCODE) ??
-      readStringFromProcess('ANTHROPIC_API_KEY_RIGHTCODE'),
-    ANTHROPIC_BASE_URL_RIGHTCODE:
-      readString(bindings.ANTHROPIC_BASE_URL_RIGHTCODE) ??
-      readStringFromProcess('ANTHROPIC_BASE_URL_RIGHTCODE'),
-    ANTHROPIC_API_KEY_RIGHTCODE_SALE:
-      readString(bindings.ANTHROPIC_API_KEY_RIGHTCODE_SALE) ??
-      readStringFromProcess('ANTHROPIC_API_KEY_RIGHTCODE_SALE'),
-    ANTHROPIC_BASE_URL_RIGHTCODE_SALE:
-      readString(bindings.ANTHROPIC_BASE_URL_RIGHTCODE_SALE) ??
-      readStringFromProcess('ANTHROPIC_BASE_URL_RIGHTCODE_SALE'),
-    GEMINI_API_KEY_RIGHTCODE:
-      readString(bindings.GEMINI_API_KEY_RIGHTCODE) ??
-      readStringFromProcess('GEMINI_API_KEY_RIGHTCODE'),
-    GEMINI_BASE_URL_RIGHTCODE:
-      readString(bindings.GEMINI_BASE_URL_RIGHTCODE) ??
-      readStringFromProcess('GEMINI_BASE_URL_RIGHTCODE'),
-    OPENAI_API_KEY_RIGHTCODE:
-      readString(bindings.OPENAI_API_KEY_RIGHTCODE) ??
-      readStringFromProcess('OPENAI_API_KEY_RIGHTCODE'),
-    OPENAI_BASE_URL_RIGHTCODE:
-      readString(bindings.OPENAI_BASE_URL_RIGHTCODE) ??
-      readStringFromProcess('OPENAI_BASE_URL_RIGHTCODE'),
     MOONSHOT_API_KEY:
       readString((bindings as Record<string, unknown>).MOONSHOT_API_KEY) ??
       readStringFromProcess('MOONSHOT_API_KEY'),
@@ -130,17 +94,9 @@ export const getServerEnv = (): ServerEnv => {
     GEMINI_API_KEY_AISTUDIO:
       readString((bindings as Record<string, unknown>).GEMINI_API_KEY_AISTUDIO) ??
       readStringFromProcess('GEMINI_API_KEY_AISTUDIO'),
-    DMX_APIKEY: readString(bindings.DMX_APIKEY) ?? readStringFromProcess('DMX_APIKEY'),
-    DMX_BASEURL: readString(bindings.DMX_BASEURL) ?? readStringFromProcess('DMX_BASEURL'),
     OPENROUTER_API_KEY:
       readString((bindings as Record<string, unknown>).OPENROUTER_API_KEY) ??
       readStringFromProcess('OPENROUTER_API_KEY'),
-    CUBENCE_API_KEY:
-      readString((bindings as Record<string, unknown>).CUBENCE_API_KEY) ??
-      readStringFromProcess('CUBENCE_API_KEY'),
-    CUBENCE_BASE_URL:
-      readString((bindings as Record<string, unknown>).CUBENCE_BASE_URL) ??
-      readStringFromProcess('CUBENCE_BASE_URL'),
     SERP_API_KEY: readString(bindings.SERP_API_KEY) ?? readStringFromProcess('SERP_API_KEY'),
     SUPADATA_API_KEY:
       readString(bindings.SUPADATA_API_KEY) ?? readStringFromProcess('SUPADATA_API_KEY'),
