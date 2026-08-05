@@ -38,8 +38,10 @@ import {
   queryClient,
   createChatSessionActions,
   createInitialChatSessionState,
+  getChatSessionSelectionFn,
   persistChatSessionSelection,
   type ChatSessionActions,
+  type ChatSessionSelectionState,
   type ChatSessionState,
 } from '@/features/conversations/session';
 import { ShareButton } from '@/features/share/share-dialog';
@@ -74,7 +76,7 @@ export const Route = createFileRoute('/app/{-$conversationId}')({
     )
       ? Promise.resolve()
       : queryClient.prefetchInfiniteQuery(conversationInfiniteQueryOptions);
-    const [availableModels, availablePrompts, conversation] = await Promise.all([
+    const [availableModels, availablePrompts, conversation, initialSelection] = await Promise.all([
       queryClient.ensureQueryData({
         queryKey: ['chat-options', 'models'],
         queryFn: () => getAvailableModelsFn(),
@@ -88,6 +90,7 @@ export const Route = createFileRoute('/app/{-$conversationId}')({
         gcTime: Infinity,
       }),
       conversationPromise,
+      getChatSessionSelectionFn(),
       conversationListPromise,
     ]);
 
@@ -102,6 +105,7 @@ export const Route = createFileRoute('/app/{-$conversationId}')({
       conversationCached,
       initialModelId: DEFAULT_MODEL_ID,
       initialPromptId: availablePrompts[0]?.id ?? 'aether',
+      initialSelection,
     };
   },
   component: AppPage,
@@ -109,8 +113,14 @@ export const Route = createFileRoute('/app/{-$conversationId}')({
 
 function AppPage() {
   const { conversationId } = Route.useParams();
-  const { conversation, initialModelId, initialPromptId, availableModels, availablePrompts } =
-    Route.useLoaderData();
+  const {
+    conversation,
+    initialModelId,
+    initialPromptId,
+    initialSelection,
+    availableModels,
+    availablePrompts,
+  } = Route.useLoaderData();
   const messages = conversation?.messages.filter(isMessage) ?? [];
   if (conversation && messages.length !== conversation.messages.length) {
     throw new Error('Invalid persisted message tree');
@@ -124,6 +134,7 @@ function AppPage() {
       conversation={detail}
       initialModelId={initialModelId}
       initialPromptId={initialPromptId}
+      initialSelection={initialSelection}
       availableModelIds={availableModels.map((model) => model.id)}
       availablePromptIds={availablePrompts.map((prompt) => prompt.id)}
     />
@@ -135,6 +146,7 @@ function ChatPage({
   conversation,
   initialModelId,
   initialPromptId,
+  initialSelection,
   availableModelIds,
   availablePromptIds,
 }: {
@@ -142,13 +154,18 @@ function ChatPage({
   conversation: ConversationDetail | null;
   initialModelId: string;
   initialPromptId: string;
+  initialSelection: ChatSessionSelectionState;
   availableModelIds: string[];
   availablePromptIds: string[];
 }) {
   const toast = useToast();
   const cachedConversation = conversationId ? getConversationFromCache(conversationId) : undefined;
   const [session, setSessionState] = useState(() => {
-    let initialState = createInitialChatSessionState(initialModelId, initialPromptId);
+    let initialState = createInitialChatSessionState(
+      initialModelId,
+      initialPromptId,
+      initialSelection,
+    );
     const setInitialState: Dispatch<SetStateAction<ChatSessionState>> = (update) => {
       initialState = typeof update === 'function' ? update(initialState) : update;
     };

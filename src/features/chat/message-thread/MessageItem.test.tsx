@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   createChatSessionActions,
   createInitialChatSessionState,
+  initialChatSessionSelectionState,
   type ChatSessionState,
 } from '@/features/conversations/session';
 import type { ChatRuntimeState } from '@/features/chat/agent-runtime/chat-runtime-state';
@@ -41,7 +42,11 @@ describe('MessageItem', () => {
       createdAt: '2026-08-04T08:00:00.000Z',
       completedAt: '2026-08-04T08:00:00.000Z',
     };
-    let session: ChatSessionState = createInitialChatSessionState('', '');
+    let session: ChatSessionState = createInitialChatSessionState(
+      '',
+      '',
+      initialChatSessionSelectionState,
+    );
     const sessionActions = createChatSessionActions(
       () => session,
       (update) => {

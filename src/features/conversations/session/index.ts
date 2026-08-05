@@ -3,6 +3,7 @@ export * from './conversations';
 export * from './query-client';
 export * from './use-conversations';
 export * from './chat-session-state';
+export * from './chat-selection';
 export {
   clearConversations,
   createConversationArtifact,

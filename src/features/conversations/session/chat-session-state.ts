@@ -22,6 +22,7 @@ import type {
   ContentBlock,
   Message,
 } from '@/features/chat/message-thread';
+import type { ChatSessionSelectionState } from './chat-selection';
 
 type TreeSnapshot = ReturnType<typeof createEmptyMessageState>;
 
@@ -52,52 +53,6 @@ const initialArtifactState: ArtifactState = {
   activeStreamingArtifactId: null,
   artifactView: 'code',
 };
-
-export type ChatSessionSelectionState = {
-  currentModelId: string;
-  currentPromptId: string;
-  currentFetchProvider: 'jina' | 'firecrawl' | 'exa';
-};
-
-export const initialChatSessionSelectionState: ChatSessionSelectionState = {
-  currentModelId: '',
-  currentPromptId: '',
-  currentFetchProvider: 'jina',
-};
-
-const SELECTION_STORAGE_KEY = 'aether_chat_selection';
-
-const migrateLegacySelectionStorage = () => {
-  if (typeof window === 'undefined') return;
-  if (localStorage.getItem(SELECTION_STORAGE_KEY)) return;
-
-  const legacyModel = localStorage.getItem('aether_current_model');
-  const legacyPrompt = localStorage.getItem('aether_current_prompt');
-  const legacyProvider = localStorage.getItem('aether_current_fetch_provider');
-  if (!legacyModel && !legacyPrompt && !legacyProvider) return;
-
-  const fetchProvider =
-    legacyProvider === 'jina' || legacyProvider === 'firecrawl' || legacyProvider === 'exa'
-      ? legacyProvider
-      : 'jina';
-
-  localStorage.setItem(
-    SELECTION_STORAGE_KEY,
-    JSON.stringify({
-      state: {
-        currentModelId: legacyModel ?? '',
-        currentPromptId: legacyPrompt ?? '',
-        currentFetchProvider: fetchProvider,
-      },
-      version: 0,
-    }),
-  );
-  localStorage.removeItem('aether_current_model');
-  localStorage.removeItem('aether_current_prompt');
-  localStorage.removeItem('aether_current_fetch_provider');
-};
-
-migrateLegacySelectionStorage();
 
 export type ChatSessionState = TreeSnapshot &
   ChatSessionSelectionState & {
@@ -157,30 +112,8 @@ const getTreeState = (state: ChatSessionState): TreeSnapshot => ({
 export const createInitialChatSessionState = (
   initialModelId: string,
   initialPromptId: string,
+  selection: ChatSessionSelectionState,
 ): ChatSessionState => {
-  let selection = initialChatSessionSelectionState;
-  if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem(SELECTION_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      const state = parsed.state ?? parsed;
-      selection = {
-        currentModelId:
-          typeof state.currentModelId === 'string' && state.currentModelId
-            ? state.currentModelId
-            : initialModelId,
-        currentPromptId:
-          typeof state.currentPromptId === 'string' && state.currentPromptId
-            ? state.currentPromptId
-            : initialPromptId,
-        currentFetchProvider:
-          state.currentFetchProvider === 'firecrawl' || state.currentFetchProvider === 'exa'
-            ? state.currentFetchProvider
-            : 'jina',
-      };
-    }
-  }
-
   return {
     ...createEmptyMessageState(),
     conversationId: null,
@@ -190,21 +123,6 @@ export const createInitialChatSessionState = (
     currentPromptId: selection.currentPromptId || initialPromptId,
     ...initialArtifactState,
   };
-};
-
-export const persistChatSessionSelection = (
-  currentModelId: string,
-  currentPromptId: string,
-  currentFetchProvider: ChatSessionSelectionState['currentFetchProvider'],
-) => {
-  localStorage.setItem(
-    SELECTION_STORAGE_KEY,
-    JSON.stringify({
-      currentModelId,
-      currentPromptId,
-      currentFetchProvider,
-    }),
-  );
 };
 
 export const createChatSessionActions = (
