@@ -228,6 +228,15 @@ Required bindings:
 
 There is no automated test suite. `package.json` does not define a test script.
 
+## 强制真实验收
+
+在 Aether 完成任何代码修改后，lint、type-check、自动测试、构建和只读页面检查都不能替代真实端到端测试。必须在用户已经启动的本地服务上完成：
+
+- 发送一条新的测试消息，验证创建会话、请求状态、服务端接收、SSE 流式响应、消息落库和最终收口的完整链路。
+- 访问一个历史会话，验证路由切换、历史数据加载、消息树、模型等会话状态和页面交互链路。
+
+如果受认证、额度、服务不可用或其他外部条件阻塞，必须明确报告具体阻塞，不能把静态验证表述成完整验收。不得启动、重启或停止本地常驻服务；只验收用户已经启动的服务。
+
 ## Migrations
 
 Migrations live in `migrations/`.
