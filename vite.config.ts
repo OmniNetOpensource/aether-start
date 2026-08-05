@@ -16,10 +16,15 @@ const createManualChunk = (id: string) => {
     return 'vendor-react';
   }
 
+  if (id.includes('node_modules/streamdown') || id.includes('node_modules/@streamdown/')) {
+    return 'streamdown-benchmark';
+  }
+
   if (
-    id.includes('node_modules/streamdown') ||
-    id.includes('node_modules/@streamdown/cjk') ||
-    id.includes('node_modules/@streamdown/code')
+    id.includes('node_modules/unified') ||
+    id.includes('node_modules/remark-') ||
+    id.includes('node_modules/rehype-') ||
+    id.includes('node_modules/hast-util-')
   ) {
     return 'markdown';
   }

@@ -1,14 +1,29 @@
-import { memo, useEffect, useRef, useState } from 'react';
-import { Check, Copy, ExternalLink } from 'lucide-react';
-import { createCodePlugin } from '@streamdown/code';
 import {
-  Streamdown,
-  defaultRehypePlugins,
-  type LinkSafetyModalProps,
-  type PluginConfig,
-} from 'streamdown';
-import { cjk } from '@streamdown/cjk';
-import { createMathPlugin } from '@streamdown/math';
+  createContext,
+  isValidElement,
+  memo,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from 'react';
+import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
+import { Check, Copy, ExternalLink } from 'lucide-react';
+import { toJsxRuntime, type Components } from 'hast-util-to-jsx-runtime';
+import { harden as rehypeHarden } from 'rehype-harden';
+import rehypeKatex from 'rehype-katex';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
+import remarkCjkFriendly from 'remark-cjk-friendly';
+import remarkGfmStrikethroughCjkFriendly from 'remark-cjk-friendly-gfm-strikethrough';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
+import remarkParse from 'remark-parse';
+import remarkRehype from 'remark-rehype';
+import remend from 'remend';
+import { unified } from 'unified';
+import { toast } from '@/shared/app-shell/useToast';
 import { Button } from '@/shared/design-system/button';
 import {
   Dialog,
@@ -17,8 +32,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/design-system/dialog';
-import { toast } from '@/shared/app-shell/useToast';
-import 'streamdown/styles.css';
+import { HighlightedCode } from '@/shared/design-system/HighlightedCode';
 import 'katex/dist/katex.min.css';
 
 function splitMarkdownParagraphs(text: string): string[] {
@@ -64,25 +78,50 @@ type Props = {
   isAnimating?: boolean;
 };
 
-const plugins: PluginConfig = {
-  cjk,
-  code: createCodePlugin({
-    themes: ['github-light', 'github-dark'],
-  }),
-  math: createMathPlugin({ singleDollarTextMath: true }),
+const sanitizeSchema = {
+  ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    href: [...(defaultSchema.protocols?.href ?? []), 'tel'],
+  },
 };
 
-const copyResetDelayMs = 2000;
+const markdownProcessor = unified()
+  .use(remarkParse)
+  .use(remarkCjkFriendly)
+  .use(remarkGfm)
+  .use(remarkGfmStrikethroughCjkFriendly)
+  .use(remarkMath, { singleDollarTextMath: true })
+  .use(remarkRehype)
+  .use(rehypeSanitize, sanitizeSchema)
+  .use(rehypeHarden, {
+    allowedImagePrefixes: ['*'],
+    allowedLinkPrefixes: ['*'],
+    allowedProtocols: ['*'],
+    allowDataImages: true,
+  })
+  .use(rehypeKatex);
 
-function LinkSafetyModal({ isOpen, onClose, onConfirm, url }: LinkSafetyModalProps) {
+const copyResetDelayMs = 2000;
+const MarkdownAnimatingContext = createContext(false);
+
+function LinkSafetyModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  url,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  url: string;
+}) {
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     return () => {
-      if (copyTimerRef.current !== null) {
-        window.clearTimeout(copyTimerRef.current);
-      }
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
     };
   }, []);
 
@@ -91,15 +130,11 @@ function LinkSafetyModal({ isOpen, onClose, onConfirm, url }: LinkSafetyModalPro
       window.clearTimeout(copyTimerRef.current);
       copyTimerRef.current = null;
     }
-
     setCopied(false);
   };
 
   const handleOpenChange = (open: boolean) => {
-    if (open) {
-      return;
-    }
-
+    if (open) return;
     clearCopiedState();
     onClose();
   };
@@ -108,11 +143,7 @@ function LinkSafetyModal({ isOpen, onClose, onConfirm, url }: LinkSafetyModalPro
     void navigator.clipboard.writeText(url).then(
       () => {
         setCopied(true);
-
-        if (copyTimerRef.current !== null) {
-          window.clearTimeout(copyTimerRef.current);
-        }
-
+        if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
         copyTimerRef.current = window.setTimeout(() => {
           setCopied(false);
           copyTimerRef.current = null;
@@ -162,30 +193,124 @@ function LinkSafetyModal({ isOpen, onClose, onConfirm, url }: LinkSafetyModalPro
   );
 }
 
-const linkSafety = {
-  enabled: true,
-  renderModal: (props: LinkSafetyModalProps) => <LinkSafetyModal {...props} />,
+function MarkdownLink({ children, href, ...props }: ComponentProps<'a'>) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!href) return <a {...props}>{children}</a>;
+
+  return (
+    <>
+      <a
+        {...props}
+        data-markdown='link'
+        href={href}
+        onClick={(event) => {
+          event.preventDefault();
+          setIsOpen(true);
+        }}
+      >
+        {children}
+      </a>
+      <LinkSafetyModal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        onConfirm={() => {
+          window.open(href, '_blank', 'noopener,noreferrer');
+          setIsOpen(false);
+        }}
+        url={href}
+      />
+    </>
+  );
+}
+
+function MarkdownTable({ children, ...props }: ComponentProps<'table'>) {
+  return (
+    <div className='my-4 max-w-full overflow-x-auto' data-markdown='table-container'>
+      <table {...props}>{children}</table>
+    </div>
+  );
+}
+
+function MarkdownCodeBlock({ code, language }: { code: string; language: string }) {
+  const isAnimating = useContext(MarkdownAnimatingContext);
+  const [copied, setCopied] = useState(false);
+  const copyTimerRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+    };
+  }, []);
+
+  const handleCopy = () => {
+    void navigator.clipboard.writeText(code).then(
+      () => {
+        setCopied(true);
+        if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
+        copyTimerRef.current = window.setTimeout(() => {
+          setCopied(false);
+          copyTimerRef.current = null;
+        }, copyResetDelayMs);
+      },
+      (error) => {
+        console.error('Failed to copy code:', error);
+        toast.error('Failed to copy code');
+      },
+    );
+  };
+
+  return (
+    <section data-language={language} data-markdown='code-block'>
+      <header>
+        <span>{language || 'text'}</span>
+        <button disabled={isAnimating} onClick={handleCopy} title='Copy code' type='button'>
+          {copied ? <Check /> : <Copy />}
+        </button>
+      </header>
+      <HighlightedCode code={code} isCompleted={!isAnimating} language={language} />
+    </section>
+  );
+}
+
+function MarkdownPre({ children }: ComponentProps<'pre'>) {
+  if (!isValidElement<{ children?: ReactNode; className?: string }>(children)) {
+    return <pre>{children}</pre>;
+  }
+
+  const code = typeof children.props.children === 'string' ? children.props.children : '';
+  const language = children.props.className?.match(/language-([^\s]+)/)?.[1] ?? '';
+
+  return <MarkdownCodeBlock code={code.replace(/\n$/, '')} language={language} />;
+}
+
+const markdownComponents: Partial<Components> = {
+  a: MarkdownLink,
+  img: ({ alt, ...props }) => <img {...props} alt={alt ?? ''} data-markdown='image' />,
+  pre: MarkdownPre,
+  table: MarkdownTable,
 };
 
-type StreamdownBlockProps = {
-  markdown: string;
-  blockIsAnimating: boolean;
-};
-
-const StreamdownBlock = memo(function StreamdownBlock({
+const MarkdownBlock = memo(function MarkdownBlock({
+  isAnimating,
   markdown,
-  blockIsAnimating,
-}: StreamdownBlockProps) {
+}: {
+  isAnimating: boolean;
+  markdown: string;
+}) {
+  const source = isAnimating ? remend(markdown, { linkMode: 'text-only' }) : markdown;
+  const tree = markdownProcessor.runSync(markdownProcessor.parse(source));
+
   return (
     <div style={{ contentVisibility: 'auto', containIntrinsicBlockSize: 'auto 0px' }}>
-      <Streamdown
-        plugins={plugins}
-        rehypePlugins={[defaultRehypePlugins.sanitize, defaultRehypePlugins.harden]}
-        isAnimating={blockIsAnimating}
-        linkSafety={linkSafety}
-      >
-        {markdown}
-      </Streamdown>
+      <MarkdownAnimatingContext.Provider value={isAnimating}>
+        {toJsxRuntime(tree, {
+          Fragment,
+          components: markdownComponents,
+          jsx,
+          jsxs,
+        })}
+      </MarkdownAnimatingContext.Provider>
     </div>
   );
 });
@@ -195,11 +320,11 @@ function MarkdownImpl({ content, isAnimating = false }: Props) {
 
   return (
     <div className='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
-      {paragraphs.map((paragraph, i) => (
-        <StreamdownBlock
+      {paragraphs.map((paragraph, index) => (
+        <MarkdownBlock
+          isAnimating={isAnimating && index === paragraphs.length - 1}
+          key={index}
           markdown={paragraph}
-          blockIsAnimating={isAnimating && i === paragraphs.length - 1}
-          key={i}
         />
       ))}
     </div>

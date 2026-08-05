@@ -1,9 +1,9 @@
 /**
  * Replaces the `shiki` package entry (see vite.config alias) so we do not pull
  * the full language + theme catalog. Themes: github-light / github-dark only.
- * Languages are a minimal chat-oriented set; unknown fences fall back in @streamdown/code.
+ * Languages are a minimal chat-oriented set; unknown fences remain plain text.
  */
-import { createBundledHighlighter } from '@shikijs/core';
+import { createBundledHighlighter, createSingletonShorthands } from '@shikijs/core';
 import { createJavaScriptRegexEngine } from '@shikijs/engine-javascript';
 
 const bundledLanguagesInfo = [
@@ -70,4 +70,6 @@ const createHighlighter = createBundledHighlighter({
   engine: () => createJavaScriptRegexEngine({ forgiving: true }),
 });
 
-export { bundledLanguagesInfo, bundledLanguages, createHighlighter };
+const { codeToTokens } = createSingletonShorthands(createHighlighter);
+
+export { bundledLanguagesInfo, bundledLanguages, codeToTokens, createHighlighter };
