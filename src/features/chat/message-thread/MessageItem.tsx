@@ -9,11 +9,11 @@ import { Button } from '@/shared/design-system/button';
 import { toast } from '@/shared/app-shell/useToast';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { submitToolAnswer } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
+import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { useEditingStore } from '@/features/chat/message-thread';
 import { MessageEditor } from './MessageEditor';
 import { BranchNavigator } from './BranchNavigator';
-import { ContentChip } from '@/features/chat/composer/ContentChip';
+import { ContentChip } from '@/features/chat/composer/composer-editor/ContentChip';
 
 type CopyButtonProps = {
   blocks: Message['blocks'];

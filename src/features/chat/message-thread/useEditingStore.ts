@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
+import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { toast } from '@/shared/app-shell/useToast';
 import { cancelAnswering, startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { cloneBlocks, editMessage } from '@/features/conversations/conversation-tree';
@@ -9,7 +9,7 @@ import {
   composerDocumentToBlocks,
   isComposerDocumentEmpty,
   type ComposerDocument,
-} from '@/features/chat/composer/composer-document';
+} from '@/features/chat/composer/composer-editor/composer-document';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { getZustandDevtoolsOptions } from '@/shared/browser/zustand-devtools';
 

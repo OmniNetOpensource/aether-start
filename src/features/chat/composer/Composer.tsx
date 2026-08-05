@@ -13,21 +13,24 @@ import { ArrowUp, Loader2, Paperclip, Square } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
 import { toast } from '@/shared/app-shell/useToast';
 import { cancelAnswering, cancelSending } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { submitMessage } from './submit-chat';
+import { submitMessage } from './composer-request/submit-chat';
 import { cn } from '@/shared/core/utils';
-import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
-import { ModelSelector } from './ModelSelector';
-import { PromptSelector } from './PromptSelector';
-import { FetchProviderSelector } from './FetchProviderSelector';
-import { useComposerStore } from './useComposerStore';
-import { registerActiveInput, useActiveInputStore } from './useActiveInputStore';
+import { useChatRequestStore } from './composer-request/useChatRequestStore';
+import { ModelSelector } from './composer-controls/ModelSelector';
+import { PromptSelector } from './composer-controls/PromptSelector';
+import { FetchProviderSelector } from './composer-controls/FetchProviderSelector';
+import { useComposerStore } from './composer-editor/useComposerStore';
+import { registerActiveInput, useActiveInputStore } from './composer-editor/useActiveInputStore';
 import {
   createComposerDocument,
   getComposerText,
   isComposerDocumentEmpty,
   isComposerDocumentUploading,
-} from './composer-document';
-import { RichComposerEditor, type RichComposerEditorHandle } from './RichComposerEditor';
+} from './composer-editor/composer-document';
+import {
+  RichComposerEditor,
+  type RichComposerEditorHandle,
+} from './composer-editor/RichComposerEditor';
 
 /**
  * 首屏脚本把 localStorage 文本草稿写入 window，hydrate 时再恢复到富文本 store。

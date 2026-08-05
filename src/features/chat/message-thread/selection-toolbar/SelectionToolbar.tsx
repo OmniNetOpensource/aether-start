@@ -10,7 +10,7 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { Quote } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
-import { addQuoteToActiveInput } from '@/features/chat/composer/useActiveInputStore';
+import { addQuoteToActiveInput } from '@/features/chat/composer/composer-editor/useActiveInputStore';
 import { useSelectionToolbar } from './useSelectionToolbar';
 
 type SelectionToolbarProps = {

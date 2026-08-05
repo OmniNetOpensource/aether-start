@@ -16,7 +16,7 @@ import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import { applyChatEventToTree } from './event-handlers';
 import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
-import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
+import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import type { SerializedMessage } from '@/features/chat/message-thread';
 import type {

@@ -4,7 +4,7 @@ import { Ban, Gift, Loader2, LogOut, Plus } from 'lucide-react';
 import { authClient } from '@/features/auth/auth-client';
 import { getSessionStateFn } from '@/features/auth/session';
 import { resetLastEventId } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
+import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { useEditingStore } from '@/features/chat/message-thread';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { queryClient } from '@/features/conversations/session';

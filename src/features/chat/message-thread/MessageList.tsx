@@ -1,5 +1,5 @@
 import { useRef } from 'react';
-import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
+import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { MessageItem } from './MessageItem';
 import { SelectionToolbar } from './selection-toolbar';

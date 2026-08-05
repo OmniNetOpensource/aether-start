@@ -1,14 +1,14 @@
 import { startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrator';
 import { toast } from '@/shared/app-shell/useToast';
-import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
+import { useChatRequestStore } from './useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { upsertConversationInCache } from '@/features/conversations/session';
-import { useComposerStore } from './useComposerStore';
+import { useComposerStore } from '../composer-editor/useComposerStore';
 import {
   composerDocumentToBlocks,
   isComposerDocumentEmpty,
   isComposerDocumentUploading,
-} from './composer-document';
+} from '../composer-editor/composer-document';
 
 // 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
 export async function submitMessage(

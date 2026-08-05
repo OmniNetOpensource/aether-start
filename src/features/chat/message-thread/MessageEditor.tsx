@@ -3,19 +3,19 @@ import { ArrowUp, ImagePlus, X } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
 import { toast } from '@/shared/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
-import { useChatRequestStore } from '@/features/chat/composer/useChatRequestStore';
+import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import {
   registerActiveInput,
   useActiveInputStore,
-} from '@/features/chat/composer/useActiveInputStore';
+} from '@/features/chat/composer/composer-editor/useActiveInputStore';
 import {
   RichComposerEditor,
   type RichComposerEditorHandle,
-} from '@/features/chat/composer/RichComposerEditor';
+} from '@/features/chat/composer/composer-editor/RichComposerEditor';
 import {
   isComposerDocumentEmpty,
   isComposerDocumentUploading,
-} from '@/features/chat/composer/composer-document';
+} from '@/features/chat/composer/composer-editor/composer-document';
 import { useEditingStore } from '@/features/chat/message-thread';
 import { useChatSessionStore } from '@/features/conversations/session';
 
