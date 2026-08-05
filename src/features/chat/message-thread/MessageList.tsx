@@ -1,13 +1,15 @@
 import { useRef } from 'react';
-import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
-import { useChatSessionStore } from '@/features/conversations/session';
+import type { Message } from './message';
 import { MessageItem } from './MessageItem';
 import { SelectionToolbar } from './selection-toolbar';
 
-export function MessageList() {
-  const messages = useChatSessionStore((state) => state.messages);
-  const currentPath = useChatSessionStore((state) => state.currentPath);
-  const isStreaming = useChatRequestStore((state) => state.status === 'streaming');
+type MessageListProps = {
+  messages: Message[];
+  currentPath: number[];
+  isStreaming: boolean;
+};
+
+export function MessageList({ messages, currentPath, isStreaming }: MessageListProps) {
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const widthClass = 'w-[90%] @[921px]:w-[60%]';
@@ -25,13 +27,16 @@ export function MessageList() {
           className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-[80vh] font-serif ${widthClass}`}
         >
           {currentPath.map((messageId, index) => {
+            const message = messages[messageId - 1];
+            if (!message) return null;
+
             const isLastMessage = index === currentPath.length - 1;
             const depth = index + 1;
 
             return (
               <MessageItem
                 key={messageId}
-                messageId={messageId}
+                message={message}
                 index={index}
                 depth={depth}
                 isStreaming={isLastMessage && isStreaming}

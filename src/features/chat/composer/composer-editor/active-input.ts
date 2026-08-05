@@ -1,20 +1,14 @@
-import { create } from 'zustand';
 import type { RichComposerEditorHandle } from './RichComposerEditor';
 
 export type ActiveInputTarget = { type: 'composer' } | { type: 'edit'; messageId: number };
 
-type ActiveInputState = {
-  lastFocused: ActiveInputTarget | null;
-  setLastFocused: (target: ActiveInputTarget) => void;
-};
-
-export const useActiveInputStore = create<ActiveInputState>()((set) => ({
-  lastFocused: null,
-  setLastFocused: (target) => set({ lastFocused: target }),
-}));
-
+let lastFocusedInput: ActiveInputTarget | null = null;
 let composerEditor: RichComposerEditorHandle | null = null;
 const messageEditors = new Map<number, RichComposerEditorHandle>();
+
+export function setLastFocusedInput(target: ActiveInputTarget) {
+  lastFocusedInput = target;
+}
 
 export function registerActiveInput(
   target: ActiveInputTarget,
@@ -34,11 +28,11 @@ export function registerActiveInput(
 
 export function addQuoteToActiveInput(text: string) {
   const trimmed = text.trim();
-  if (!trimmed) {
-    return;
-  }
+  if (!trimmed) return;
 
-  const target = useActiveInputStore.getState().lastFocused;
-  const editor = target?.type === 'edit' ? messageEditors.get(target.messageId) : composerEditor;
+  const editor =
+    lastFocusedInput?.type === 'edit'
+      ? messageEditors.get(lastFocusedInput.messageId)
+      : composerEditor;
   (editor ?? composerEditor)?.insertQuote(trimmed);
 }

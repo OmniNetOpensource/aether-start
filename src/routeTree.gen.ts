@@ -11,18 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as R404RouteImport } from './routes/404'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
-import { Route as AppRouteRouteImport } from './routes/app/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as BenchmarkIndexRouteImport } from './routes/benchmark/index'
 import { Route as AuthIndexRouteImport } from './routes/auth/index'
-import { Route as AppIndexRouteImport } from './routes/app/index'
 import { Route as ShareTokenRouteImport } from './routes/share/$token'
 import { Route as BenchmarkMarkdownRouteImport } from './routes/benchmark/markdown'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
+import { Route as AppChar123ConversationIdChar125RouteImport } from './routes/app/{-$conversationId}'
 import { Route as ApiUploadAttachmentRouteImport } from './routes/api/upload-attachment'
 import { Route as ApiClientErrorsRouteImport } from './routes/api/client-errors'
-import { Route as AppCConversationIdRouteImport } from './routes/app/c/$conversationId'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
 import { Route as ApiShareAssetsTokenAttachmentIdRouteImport } from './routes/api/share-assets/$token/$attachmentId'
@@ -35,11 +33,6 @@ const R404Route = R404RouteImport.update({
 const AuthRouteRoute = AuthRouteRouteImport.update({
   id: '/auth',
   path: '/auth',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppRouteRoute = AppRouteRouteImport.update({
-  id: '/app',
-  path: '/app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -56,11 +49,6 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthRouteRoute,
-} as any)
-const AppIndexRoute = AppIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AppRouteRoute,
 } as any)
 const ShareTokenRoute = ShareTokenRouteImport.update({
   id: '/share/$token',
@@ -82,6 +70,12 @@ const AuthLoginRoute = AuthLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => AuthRouteRoute,
 } as any)
+const AppChar123ConversationIdChar125Route =
+  AppChar123ConversationIdChar125RouteImport.update({
+    id: '/app/{-$conversationId}',
+    path: '/app/{-$conversationId}',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiUploadAttachmentRoute = ApiUploadAttachmentRouteImport.update({
   id: '/api/upload-attachment',
   path: '/api/upload-attachment',
@@ -91,11 +85,6 @@ const ApiClientErrorsRoute = ApiClientErrorsRouteImport.update({
   id: '/api/client-errors',
   path: '/api/client-errors',
   getParentRoute: () => rootRouteImport,
-} as any)
-const AppCConversationIdRoute = AppCConversationIdRouteImport.update({
-  id: '/c/$conversationId',
-  path: '/c/$conversationId',
-  getParentRoute: () => AppRouteRoute,
 } as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
@@ -116,21 +105,19 @@ const ApiShareAssetsTokenAttachmentIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRouteRouteWithChildren
   '/404': typeof R404Route
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
+  '/app/{-$conversationId}': typeof AppChar123ConversationIdChar125Route
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
-  '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/benchmark/': typeof BenchmarkIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/app/c/$conversationId': typeof AppCConversationIdRoute
   '/api/share-assets/$token/$attachmentId': typeof ApiShareAssetsTokenAttachmentIdRoute
 }
 export interface FileRoutesByTo {
@@ -138,57 +125,52 @@ export interface FileRoutesByTo {
   '/404': typeof R404Route
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
+  '/app/{-$conversationId}': typeof AppChar123ConversationIdChar125Route
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
-  '/app': typeof AppIndexRoute
   '/auth': typeof AuthIndexRoute
   '/benchmark': typeof BenchmarkIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/app/c/$conversationId': typeof AppCConversationIdRoute
   '/api/share-assets/$token/$attachmentId': typeof ApiShareAssetsTokenAttachmentIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRouteRouteWithChildren
   '/404': typeof R404Route
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
+  '/app/{-$conversationId}': typeof AppChar123ConversationIdChar125Route
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/benchmark/markdown': typeof BenchmarkMarkdownRoute
   '/share/$token': typeof ShareTokenRoute
-  '/app/': typeof AppIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/benchmark/': typeof BenchmarkIndexRoute
   '/api/assets/$key': typeof ApiAssetsKeyRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
-  '/app/c/$conversationId': typeof AppCConversationIdRoute
   '/api/share-assets/$token/$attachmentId': typeof ApiShareAssetsTokenAttachmentIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/app'
     | '/auth'
     | '/404'
     | '/api/client-errors'
     | '/api/upload-attachment'
+    | '/app/{-$conversationId}'
     | '/auth/login'
     | '/auth/register'
     | '/benchmark/markdown'
     | '/share/$token'
-    | '/app/'
     | '/auth/'
     | '/benchmark/'
     | '/api/assets/$key'
     | '/api/auth/$'
-    | '/app/c/$conversationId'
     | '/api/share-assets/$token/$attachmentId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -196,45 +178,42 @@ export interface FileRouteTypes {
     | '/404'
     | '/api/client-errors'
     | '/api/upload-attachment'
+    | '/app/{-$conversationId}'
     | '/auth/login'
     | '/auth/register'
     | '/benchmark/markdown'
     | '/share/$token'
-    | '/app'
     | '/auth'
     | '/benchmark'
     | '/api/assets/$key'
     | '/api/auth/$'
-    | '/app/c/$conversationId'
     | '/api/share-assets/$token/$attachmentId'
   id:
     | '__root__'
     | '/'
-    | '/app'
     | '/auth'
     | '/404'
     | '/api/client-errors'
     | '/api/upload-attachment'
+    | '/app/{-$conversationId}'
     | '/auth/login'
     | '/auth/register'
     | '/benchmark/markdown'
     | '/share/$token'
-    | '/app/'
     | '/auth/'
     | '/benchmark/'
     | '/api/assets/$key'
     | '/api/auth/$'
-    | '/app/c/$conversationId'
     | '/api/share-assets/$token/$attachmentId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AppRouteRoute: typeof AppRouteRouteWithChildren
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   R404Route: typeof R404Route
   ApiClientErrorsRoute: typeof ApiClientErrorsRoute
   ApiUploadAttachmentRoute: typeof ApiUploadAttachmentRoute
+  AppChar123ConversationIdChar125Route: typeof AppChar123ConversationIdChar125Route
   BenchmarkMarkdownRoute: typeof BenchmarkMarkdownRoute
   ShareTokenRoute: typeof ShareTokenRoute
   BenchmarkIndexRoute: typeof BenchmarkIndexRoute
@@ -259,13 +238,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthRouteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/app': {
-      id: '/app'
-      path: '/app'
-      fullPath: '/app'
-      preLoaderRoute: typeof AppRouteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -286,13 +258,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/auth/'
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof AuthRouteRoute
-    }
-    '/app/': {
-      id: '/app/'
-      path: '/'
-      fullPath: '/app/'
-      preLoaderRoute: typeof AppIndexRouteImport
-      parentRoute: typeof AppRouteRoute
     }
     '/share/$token': {
       id: '/share/$token'
@@ -322,6 +287,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRouteRoute
     }
+    '/app/{-$conversationId}': {
+      id: '/app/{-$conversationId}'
+      path: '/app/{-$conversationId}'
+      fullPath: '/app/{-$conversationId}'
+      preLoaderRoute: typeof AppChar123ConversationIdChar125RouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/upload-attachment': {
       id: '/api/upload-attachment'
       path: '/api/upload-attachment'
@@ -335,13 +307,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/client-errors'
       preLoaderRoute: typeof ApiClientErrorsRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/app/c/$conversationId': {
-      id: '/app/c/$conversationId'
-      path: '/c/$conversationId'
-      fullPath: '/app/c/$conversationId'
-      preLoaderRoute: typeof AppCConversationIdRouteImport
-      parentRoute: typeof AppRouteRoute
     }
     '/api/auth/$': {
       id: '/api/auth/$'
@@ -367,20 +332,6 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AppRouteRouteChildren {
-  AppIndexRoute: typeof AppIndexRoute
-  AppCConversationIdRoute: typeof AppCConversationIdRoute
-}
-
-const AppRouteRouteChildren: AppRouteRouteChildren = {
-  AppIndexRoute: AppIndexRoute,
-  AppCConversationIdRoute: AppCConversationIdRoute,
-}
-
-const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
-  AppRouteRouteChildren,
-)
-
 interface AuthRouteRouteChildren {
   AuthLoginRoute: typeof AuthLoginRoute
   AuthRegisterRoute: typeof AuthRegisterRoute
@@ -399,11 +350,11 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AppRouteRoute: AppRouteRouteWithChildren,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   R404Route: R404Route,
   ApiClientErrorsRoute: ApiClientErrorsRoute,
   ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,
+  AppChar123ConversationIdChar125Route: AppChar123ConversationIdChar125Route,
   BenchmarkMarkdownRoute: BenchmarkMarkdownRoute,
   ShareTokenRoute: ShareTokenRoute,
   BenchmarkIndexRoute: BenchmarkIndexRoute,

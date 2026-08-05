@@ -59,7 +59,10 @@ export function ConversationItem({
     deleteMutation.mutate(conversation.id);
 
     if (isActive) {
-      void navigate({ to: '/app' }).catch((error) => {
+      void navigate({
+        to: '/app/{-$conversationId}',
+        params: { conversationId: undefined },
+      }).catch((error) => {
         console.error('Failed to navigate after deleting conversation:', error);
       });
     }
@@ -87,7 +90,7 @@ export function ConversationItem({
       }`}
     >
       <Link
-        to='/app/c/$conversationId'
+        to='/app/{-$conversationId}'
         params={{ conversationId: conversation.id }}
         onClick={handleClick}
         className='absolute inset-0 z-0'

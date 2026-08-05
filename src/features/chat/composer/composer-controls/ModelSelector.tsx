@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { getRouteApi } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Bot, Check, ChevronDown } from 'lucide-react';
 import {
@@ -14,11 +15,12 @@ import {
 import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
 import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
-import { useAppShellRouteData } from '@/features/conversations/route-data';
 import { useChatSessionStore } from '@/features/conversations/session';
 
+const appRoute = getRouteApi('/app/{-$conversationId}');
+
 export function ModelSelector() {
-  const appShellData = useAppShellRouteData();
+  const { availableModels, initialModelId } = appRoute.useLoaderData();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightedModelId, setHighlightedModelId] = useState('');
@@ -26,13 +28,10 @@ export function ModelSelector() {
   const currentModelId = useChatSessionStore((state) => state.currentModelId);
   const isMobile = useResponsive() === 'mobile';
   const setCurrentModel = useChatSessionStore((state) => state.setCurrentModel);
-  const availableModels = appShellData?.availableModels ?? [];
   // 持久化优先：currentModelId 由 persist 中间件从 localStorage hydrate，已选过的模型胜出。
   // loader 的 initialModelId 仅在该浏览器从未选过模型时兜底。
   const storedIsValid = availableModels.some((m) => m.id === currentModelId);
-  const selectedModelId = storedIsValid
-    ? currentModelId
-    : appShellData?.initialModelId || availableModels[0]?.id || '';
+  const selectedModelId = storedIsValid ? currentModelId : initialModelId;
 
   const currentModelName = availableModels.find((m) => m.id === selectedModelId)?.name ?? '';
   const getFilteredModels = (query: string) => {

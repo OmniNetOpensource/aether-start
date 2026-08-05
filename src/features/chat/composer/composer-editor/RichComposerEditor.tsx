@@ -288,7 +288,7 @@ export const RichComposerEditor = forwardRef<RichComposerEditorHandle, RichCompo
           role: 'textbox',
           'aria-label': placeholder,
           class: cn(
-            'min-h-12 max-h-50 overflow-y-auto whitespace-pre-wrap break-words px-2 py-3 text-sm leading-relaxed outline-none sm:text-base',
+            'max-h-50 overflow-y-auto whitespace-pre-wrap break-words px-2 py-3 text-sm leading-relaxed outline-none sm:text-base',
             className,
           ),
         },
@@ -507,7 +507,7 @@ export const RichComposerEditor = forwardRef<RichComposerEditorHandle, RichCompo
     }, [autoFocus, editor]);
 
     return (
-      <div className='relative min-w-0 flex-1' onFocusCapture={onFocus}>
+      <div className='relative min-h-12 min-w-0 flex-1' onFocusCapture={onFocus}>
         {isComposerDocumentEmpty(document) ? (
           <span className='pointer-events-none absolute left-2 top-3 text-sm text-muted-foreground sm:text-base'>
             {placeholder}

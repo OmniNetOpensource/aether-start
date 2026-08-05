@@ -18,8 +18,7 @@ The repo is feature-split. The only app alias in `tsconfig.json` is `@/* -> src/
 
 - `src/routes/` contains TanStack Start file routes.
 - `src/routes/__root.tsx` wires auth gating for `/app` and `/note`, theme loading, responsive context, tooltip provider, toast container, and client error reporting.
-- `src/routes/app/route.tsx` is the authenticated app shell.
-- `src/routes/app/c/$conversationId.tsx` loads a conversation into the client stores and resumes a running agent stream when needed.
+- `src/routes/app/{-$conversationId}.tsx` owns the authenticated app shell, renders a new chat at `/app`, and loads an existing conversation at `/app/:conversationId`.
 - `src/routes/share/$token.tsx` renders the public read-only share page.
 - `src/routes/api/assets/$key.ts` serves private R2 assets.
 - `src/routes/api/share-assets/$token/$attachmentId.ts` serves public shared assets.
@@ -77,7 +76,7 @@ Auth-related scripts still exist in `package.json`, but they currently point at 
 
 ### App Shell And Route Data
 
-- `src/routes/app/route.tsx` preloads available models and prompts, and prefetches the conversation list query.
+- `src/routes/app/{-$conversationId}.tsx` preloads available models and prompts, and prefetches the conversation list query.
 - `src/features/conversations/route-data/app-shell-route-data.tsx` holds the loader data context for the app shell.
 - `src/features/conversations/conversation-list/Sidebar.tsx` and related files own the left sidebar UI.
 
@@ -102,9 +101,9 @@ Important files:
 - `src/features/conversations/session/conversations.ts`
 - `src/features/conversations/session/conversations-db.ts`
 - `src/features/conversations/conversation-tree/`
-- `src/routes/app/c/$conversationId.tsx`
+- `src/routes/app/{-$conversationId}.tsx`
 
-`$conversationId.tsx` loads the conversation inline with `getConversationFn`. There is no `useConversationLoader.ts` anymore.
+`{-$conversationId}.tsx` loads the conversation inline with `getConversationFn`. There is no `useConversationLoader.ts` anymore.
 
 ### Artifacts
 

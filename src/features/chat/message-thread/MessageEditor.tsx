@@ -6,8 +6,8 @@ import { cn } from '@/shared/core/utils';
 import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import {
   registerActiveInput,
-  useActiveInputStore,
-} from '@/features/chat/composer/composer-editor/useActiveInputStore';
+  setLastFocusedInput,
+} from '@/features/chat/composer/composer-editor/active-input';
 import {
   RichComposerEditor,
   type RichComposerEditorHandle,
@@ -29,7 +29,6 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
   const updateEditDocument = useEditingStore((state) => state.updateEditDocument);
   const cancelEditing = useEditingStore((state) => state.cancelEditing);
   const submitEdit = useEditingStore((state) => state.submitEdit);
-  const setLastFocused = useActiveInputStore((state) => state.setLastFocused);
   const status = useChatRequestStore((state) => state.status);
   const currentModelId = useChatSessionStore((state) => state.currentModelId);
   const editorRef = useRef<RichComposerEditorHandle | null>(null);
@@ -80,7 +79,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
         id={`message-editor-${messageId}`}
         document={state.editedDocument}
         onChange={updateEditDocument}
-        onFocus={() => setLastFocused({ type: 'edit', messageId })}
+        onFocus={() => setLastFocusedInput({ type: 'edit', messageId })}
         onSubmit={handleSubmit}
         autoFocus
         placeholder='Edit your message...'

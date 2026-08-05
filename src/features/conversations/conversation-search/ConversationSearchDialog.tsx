@@ -193,7 +193,7 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
   const handleSelect = (item: ConversationSearchItem) => {
     onClose();
     navigate({
-      to: '/app/c/$conversationId',
+      to: '/app/{-$conversationId}',
       params: { conversationId: item.id },
     });
   };

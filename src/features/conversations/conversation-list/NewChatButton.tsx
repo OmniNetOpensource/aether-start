@@ -1,12 +1,10 @@
 import { Link } from '@tanstack/react-router';
-import type { ComponentProps, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { Pencil } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
 
-type LinkComponentProps = ComponentProps<typeof Link>;
-
-interface NewChatButtonProps extends Omit<LinkComponentProps, 'to'> {
+interface NewChatButtonProps {
   isCollapsed?: boolean;
   variant?: 'sidebar' | 'topbar';
   className?: string;
@@ -18,8 +16,6 @@ export function NewChatButton({
   variant = 'sidebar',
   className,
   children,
-  onClick,
-  ...props
 }: NewChatButtonProps) {
   const isTopbar = variant === 'topbar';
 
@@ -59,7 +55,7 @@ export function NewChatButton({
       style={isTopbar ? undefined : { width: isCollapsed ? 40 : '100%' }}
       aria-label='新对话'
     >
-      <Link to='/app' onClick={onClick} {...props}>
+      <Link to='/app/{-$conversationId}' params={{ conversationId: undefined }}>
         {children ?? defaultContent}
       </Link>
     </Button>

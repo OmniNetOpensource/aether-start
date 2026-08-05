@@ -83,14 +83,15 @@ const ActionButton = ({ onClick, disabled, title, icon }: ActionButtonProps) => 
 );
 
 type MessageItemProps = {
-  messageId: number;
+  message: Message;
   index: number;
   depth: number;
   isStreaming: boolean;
 };
 
 const formatMessageTime = (iso: string) =>
-  new Date(iso).toLocaleString(undefined, {
+  new Date(iso).toLocaleString('en-US', {
+    timeZone: 'Asia/Shanghai',
     month: 'numeric',
     day: 'numeric',
     hour: '2-digit',
@@ -98,12 +99,12 @@ const formatMessageTime = (iso: string) =>
   });
 
 export const MessageItem = memo(function MessageItem({
-  messageId,
+  message,
   index,
   depth,
   isStreaming,
 }: MessageItemProps) {
-  const messageFromStore = useChatSessionStore((state) => state.messages[messageId - 1]);
+  const messageId = message.id;
   const isLastInPath = useChatSessionStore(
     (state) => state.currentPath[state.currentPath.length - 1] === messageId,
   );
@@ -112,8 +113,6 @@ export const MessageItem = memo(function MessageItem({
   const startEditing = useEditingStore((state) => state.startEditing);
   const retryFromMessage = useEditingStore((state) => state.retryFromMessage);
   const navigateBranch = useChatSessionStore((state) => state.navigateBranch);
-  const message = messageFromStore;
-
   const branchInfo = getBranchInfoFn(useChatSessionStore.getState().messages, messageId);
   const isBusy = status !== 'idle';
 
@@ -132,7 +131,6 @@ export const MessageItem = memo(function MessageItem({
     }
   };
 
-  if (!message) return null;
   const isUser = message.role === 'user';
   const assistantBlocks = !isUser ? message.blocks : [];
   const shouldRenderBody = isEditing || !isUser || message.blocks.length > 0;

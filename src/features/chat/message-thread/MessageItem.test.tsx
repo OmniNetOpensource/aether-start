@@ -46,12 +46,16 @@ describe('MessageItem', () => {
       [1],
     );
 
+    const message = useChatSessionStore.getState().messages[0];
+    if (!message) throw new Error('Expected initialized message');
+
     const { container } = render(
-      <MessageItem messageId={1} index={0} depth={1} isStreaming={false} />,
+      <MessageItem message={message} index={0} depth={1} isStreaming={false} />,
     );
 
     expect(container.querySelector('.text-base')?.textContent).toBe(
       '开头引用内容图片.png结尾\n\n旧正文',
     );
+    expect(container.querySelector('.text-2xs')?.textContent).toBe('8/4, 04:00 PM');
   });
 });

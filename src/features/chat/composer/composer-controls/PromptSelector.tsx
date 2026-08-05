@@ -1,5 +1,6 @@
 'use client';
 import { useEffect } from 'react';
+import { getRouteApi } from '@tanstack/react-router';
 import { Check, ChevronDown, MessageSquareText } from 'lucide-react';
 import {
   DropdownMenu,
@@ -9,20 +10,18 @@ import {
 } from '@/shared/design-system/dropdown-menu';
 import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
-import { useAppShellRouteData } from '@/features/conversations/route-data';
 import { useChatSessionStore } from '@/features/conversations/session';
 
+const appRoute = getRouteApi('/app/{-$conversationId}');
+
 export function PromptSelector() {
-  const appShellData = useAppShellRouteData();
+  const { availablePrompts, initialPromptId } = appRoute.useLoaderData();
 
   const setCurrentPrompt = useChatSessionStore((state) => state.setCurrentPrompt);
   const currentPromptId = useChatSessionStore((state) => state.currentPromptId);
-  const prompts = appShellData?.availablePrompts ?? [];
   // 持久化优先：currentPromptId 由 persist 中间件 hydrate；loader 仅在首次访问兜底。
-  const storedIsValid = prompts.some((p) => p.id === currentPromptId);
-  const selectedPromptId = storedIsValid
-    ? currentPromptId
-    : appShellData?.initialPromptId || prompts[0]?.id || 'aether';
+  const storedIsValid = availablePrompts.some((prompt) => prompt.id === currentPromptId);
+  const selectedPromptId = storedIsValid ? currentPromptId : initialPromptId;
 
   // 回灌兜底值，使下游读 store 的代码拿到稳定 id。
   useEffect(() => {
@@ -32,7 +31,7 @@ export function PromptSelector() {
   }, [selectedPromptId, currentPromptId, setCurrentPrompt]);
 
   const currentPromptName =
-    prompts.find((prompt) => prompt.id === selectedPromptId)?.name ?? 'aether';
+    availablePrompts.find((prompt) => prompt.id === selectedPromptId)?.name ?? 'aether';
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground';
@@ -59,7 +58,7 @@ export function PromptSelector() {
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' sideOffset={4}>
-        {prompts.map((prompt) => (
+        {availablePrompts.map((prompt) => (
           <DropdownMenuItem key={prompt.id} onSelect={() => setCurrentPrompt(prompt.id)}>
             <span className='flex-1 truncate'>{prompt.name}</span>
             {selectedPromptId === prompt.id && <Check className='h-4 w-4 shrink-0' />}

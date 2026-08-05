@@ -60,7 +60,8 @@ function AppErrorPage(props: { error: Error | null }) {
               重新加载
             </Button>
             <Link
-              to='/app'
+              to='/app/{-$conversationId}'
+              params={{ conversationId: undefined }}
               className={cn(
                 buttonVariants({ variant: 'outline', size: 'lg' }),
                 'w-full justify-center sm:w-auto',

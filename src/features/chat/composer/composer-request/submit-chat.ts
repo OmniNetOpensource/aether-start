@@ -3,23 +3,22 @@ import { toast } from '@/shared/app-shell/useToast';
 import { useChatRequestStore } from './useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { upsertConversationInCache } from '@/features/conversations/session';
-import { useComposerStore } from '../composer-editor/useComposerStore';
 import {
   composerDocumentToBlocks,
   isComposerDocumentEmpty,
   isComposerDocumentUploading,
+  type ComposerDocument,
 } from '../composer-editor/composer-document';
 
 // 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
 export async function submitMessage(
+  document: ComposerDocument,
   navigateToNewChat: (conversationId: string) => Promise<void> | void,
-  clearEditor: () => void,
+  clearComposer: () => void,
 ) {
-  const composerStore = useComposerStore.getState();
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
-  const document = composerStore.document;
   const currentModelId = sessionStore.currentModelId;
   const isBusy = requestStore.status !== 'idle';
 
@@ -45,8 +44,7 @@ export async function submitMessage(
 
   sessionStore.addMessage('user', composerDocumentToBlocks(document));
   requestStore.setStatus('sending', 'submitMessage');
-  composerStore.clear();
-  clearEditor();
+  clearComposer();
 
   if (!sessionStore.conversationId) {
     const conversationId =

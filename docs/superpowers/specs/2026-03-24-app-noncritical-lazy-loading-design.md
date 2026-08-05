@@ -11,9 +11,9 @@ This change only targets two interaction-only surfaces:
 - `ShareDialog`
 - `SettingsModal`
 
-Everything needed to render `/app` and `/app/c/$conversationId` stays eager:
+Everything needed to render `/app` and `/app/{-$conversationId}` stays eager:
 
-- auth/session gate in `src/routes/app/route.tsx`
+- auth/session gate in `src/routes/__root.tsx`
 - sidebar shell
 - conversation list
 - chat page layout

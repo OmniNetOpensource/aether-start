@@ -1,14 +1,6 @@
-import {
-  ChangeEvent,
-  DragEvent,
-  MouseEvent,
-  useEffect,
-  useId,
-  useLayoutEffect,
-  useRef,
-} from 'react';
+import { ChangeEvent, DragEvent, MouseEvent, useEffect, useId, useRef, useState } from 'react';
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
-import { useNavigate } from '@tanstack/react-router';
+import { useHydrated, useNavigate } from '@tanstack/react-router';
 import { ArrowUp, Loader2, Paperclip, Square } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
 import { toast } from '@/shared/app-shell/useToast';
@@ -19,13 +11,13 @@ import { useChatRequestStore } from './composer-request/useChatRequestStore';
 import { ModelSelector } from './composer-controls/ModelSelector';
 import { PromptSelector } from './composer-controls/PromptSelector';
 import { FetchProviderSelector } from './composer-controls/FetchProviderSelector';
-import { useComposerStore } from './composer-editor/useComposerStore';
-import { registerActiveInput, useActiveInputStore } from './composer-editor/useActiveInputStore';
+import { registerActiveInput, setLastFocusedInput } from './composer-editor/active-input';
 import {
   createComposerDocument,
   getComposerText,
   isComposerDocumentEmpty,
   isComposerDocumentUploading,
+  type ComposerDocument,
 } from './composer-editor/composer-document';
 import {
   RichComposerEditor,
@@ -33,7 +25,7 @@ import {
 } from './composer-editor/RichComposerEditor';
 
 /**
- * 首屏脚本把 localStorage 文本草稿写入 window，hydrate 时再恢复到富文本 store。
+ * 首屏脚本把 localStorage 文本草稿写入 window，hydrate 后再恢复到输入框。
  */
 declare global {
   interface Window {
@@ -52,10 +44,11 @@ const COMPOSER_DRAFT_STORAGE_KEY = 'aether_composer_draft';
  */
 export function Composer() {
   const navigate = useNavigate();
-
-  const composerDocument = useComposerStore((state) => state.document);
-  const setDocument = useComposerStore((state) => state.setDocument);
-  const setLastFocused = useActiveInputStore((state) => state.setLastFocused);
+  const hydrated = useHydrated();
+  const [composerDocumentState, setComposerDocument] = useState<ComposerDocument | null>(null);
+  const composerDocument =
+    composerDocumentState ??
+    createComposerDocument(hydrated ? (window.__preHydrationInput ?? '') : '');
   const editorRef = useRef<RichComposerEditorHandle | null>(null);
   const uploading = isComposerDocumentUploading(composerDocument);
 
@@ -64,20 +57,11 @@ export function Composer() {
   // 隐藏 file input 与 label 关联，避免 id 冲突
   const fileInputId = useId();
 
-  // paint 前把首屏脚本读到的文本草稿写入富文本 store。
-  useLayoutEffect(() => {
-    const restoredInput = window.__preHydrationInput ?? '';
-    if (useComposerStore.getState().document.length === 0 && restoredInput) {
-      setDocument(createComposerDocument(restoredInput));
-    }
-
-    delete window.__preHydrationInput;
-  }, [setDocument]);
-
   // 输入变化即持久化草稿，便于意外刷新后恢复
   useEffect(() => {
+    if (!hydrated) return;
     localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, getComposerText(composerDocument));
-  }, [composerDocument]);
+  }, [composerDocument, hydrated]);
 
   // 在「其它区域」按下可打印字符时，把焦点抢回输入框（不抢已有输入框/快捷键）
   useMountEffect(() => {
@@ -121,13 +105,17 @@ export function Composer() {
 
   const handleSubmit = () => {
     void submitMessage(
+      composerDocument,
       async (conversationId) => {
         await navigate({
-          to: '/app/c/$conversationId',
+          to: '/app/{-$conversationId}',
           params: { conversationId },
         });
       },
-      () => editorRef.current?.clear(),
+      () => {
+        setComposerDocument([]);
+        editorRef.current?.clear();
+      },
     ).catch((error) => {
       console.error('Failed to submit message:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send message');
@@ -179,9 +167,9 @@ export function Composer() {
               }}
               id='message-input'
               document={composerDocument}
-              onChange={setDocument}
+              onChange={setComposerDocument}
               onFocus={() => {
-                setLastFocused({ type: 'composer' });
+                setLastFocusedInput({ type: 'composer' });
               }}
               onSubmit={handleSubmit}
               disabled={inputDisabled}

@@ -1,22 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
-import { cancelStreamSubscription } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
-import { useChatSessionStore, useIsNewChat } from '@/features/conversations/session';
-
-function initNewChatPage() {
-  if (typeof window === 'undefined') return;
-
-  cancelStreamSubscription('new_chat/enter');
-  useEditingStore.getState().clear();
-  useChatSessionStore.getState().clearSession();
-}
-
-export const Route = createFileRoute('/app/')({
-  beforeLoad: initNewChatPage,
-  component: HomePage,
-});
-
-function Greeting() {
+export function NewChatGreeting() {
   return (
     <div
       className='absolute inset-0 flex flex-col items-center px-4 font-serif'
@@ -49,14 +31,4 @@ function Greeting() {
       `}</style>
     </div>
   );
-}
-
-function HomePage() {
-  const isNewChat = useIsNewChat();
-
-  if (!isNewChat) {
-    return null;
-  }
-
-  return <Greeting />;
 }

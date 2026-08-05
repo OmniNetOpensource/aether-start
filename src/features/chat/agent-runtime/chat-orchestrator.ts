@@ -345,7 +345,7 @@ export const checkAgentStatus = async (
  *
  * 流程：
  * 1. 校验 status 为 idle、已选模型
- * 2. 若无 conversationId，创建新对话并导航到 /app/c/:id
+ * 2. 若无 conversationId，创建新对话并导航到 /app/:id
  * 3. 构建 body（idempotencyKey、model、promptId、conversationHistory、treeSnapshot）
  * 4. 取消之前的请求，发起 POST /agents/conversation-runner/:conversationId/chat
  * 5. 处理 409（busy）与 402（配额超限）
