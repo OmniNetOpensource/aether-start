@@ -1,12 +1,12 @@
-import { useChatSessionStore } from '@/features/conversations/session';
+import type { ChatRuntimeState } from './chat-runtime-state';
 
 /** 每帧最多展示多少个 Unicode 码位（展开字符串迭代），过大则调快，过小则更平滑 */
 const CHARS_PER_FRAME = 14;
 
 type Segment =
-  | { kind: 'content'; text: string }
-  | { kind: 'thinking'; text: string }
-  | { kind: 'artifact'; artifactId: string; text: string };
+  | { kind: 'content'; text: string; runtime: ChatRuntimeState }
+  | { kind: 'thinking'; text: string; runtime: ChatRuntimeState }
+  | { kind: 'artifact'; artifactId: string; text: string; runtime: ChatRuntimeState };
 
 let queue: Segment[] = [];
 let rafId: number | null = null;
@@ -33,13 +33,12 @@ const tick = () => {
   const chunk = units.slice(0, CHARS_PER_FRAME).join('');
   head.text = units.slice(CHARS_PER_FRAME).join('');
 
-  const store = useChatSessionStore.getState();
   if (head.kind === 'content') {
-    store.appendToAssistant({ type: 'content', content: chunk });
+    head.runtime.session.appendToAssistant({ type: 'content', content: chunk });
   } else if (head.kind === 'thinking') {
-    store.appendToAssistant({ kind: 'thinking', text: chunk });
+    head.runtime.session.appendToAssistant({ kind: 'thinking', text: chunk });
   } else {
-    store.appendArtifactCode(head.artifactId, chunk);
+    head.runtime.session.appendArtifactCode(head.artifactId, chunk);
   }
 
   if (!head.text) {
@@ -51,35 +50,39 @@ const tick = () => {
   }
 };
 
-export const enqueueStreamContent = (text: string) => {
+export const enqueueStreamContent = (runtime: ChatRuntimeState, text: string) => {
   if (!text) return;
   const last = queue[queue.length - 1];
-  if (last?.kind === 'content') {
+  if (last?.kind === 'content' && last.runtime === runtime) {
     last.text += text;
   } else {
-    queue.push({ kind: 'content', text });
+    queue.push({ kind: 'content', text, runtime });
   }
   schedulePump();
 };
 
-export const enqueueStreamThinking = (text: string) => {
+export const enqueueStreamThinking = (runtime: ChatRuntimeState, text: string) => {
   if (!text) return;
   const last = queue[queue.length - 1];
-  if (last?.kind === 'thinking') {
+  if (last?.kind === 'thinking' && last.runtime === runtime) {
     last.text += text;
   } else {
-    queue.push({ kind: 'thinking', text });
+    queue.push({ kind: 'thinking', text, runtime });
   }
   schedulePump();
 };
 
-export const enqueueStreamArtifactCode = (artifactId: string, delta: string) => {
+export const enqueueStreamArtifactCode = (
+  runtime: ChatRuntimeState,
+  artifactId: string,
+  delta: string,
+) => {
   if (!delta) return;
   const last = queue[queue.length - 1];
-  if (last?.kind === 'artifact' && last.artifactId === artifactId) {
+  if (last?.kind === 'artifact' && last.artifactId === artifactId && last.runtime === runtime) {
     last.text += delta;
   } else {
-    queue.push({ kind: 'artifact', artifactId, text: delta });
+    queue.push({ kind: 'artifact', artifactId, text: delta, runtime });
   }
   schedulePump();
 };
@@ -93,15 +96,14 @@ export const flushAll = () => {
     return;
   }
 
-  const store = useChatSessionStore.getState();
   for (const seg of queue) {
     if (!seg.text) continue;
     if (seg.kind === 'content') {
-      store.appendToAssistant({ type: 'content', content: seg.text });
+      seg.runtime.session.appendToAssistant({ type: 'content', content: seg.text });
     } else if (seg.kind === 'thinking') {
-      store.appendToAssistant({ kind: 'thinking', text: seg.text });
+      seg.runtime.session.appendToAssistant({ kind: 'thinking', text: seg.text });
     } else {
-      store.appendArtifactCode(seg.artifactId, seg.text);
+      seg.runtime.session.appendArtifactCode(seg.artifactId, seg.text);
     }
   }
   queue = [];

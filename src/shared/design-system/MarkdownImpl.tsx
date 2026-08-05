@@ -23,7 +23,7 @@ import remarkParse from 'remark-parse';
 import remarkRehype from 'remark-rehype';
 import remend from 'remend';
 import { unified } from 'unified';
-import { toast } from '@/shared/app-shell/useToast';
+import { useToast } from '@/shared/app-shell/useToast';
 import { Button } from '@/shared/design-system/button';
 import {
   Dialog,
@@ -116,6 +116,7 @@ function LinkSafetyModal({
   onConfirm: () => void;
   url: string;
 }) {
+  const toast = useToast();
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<number | null>(null);
 
@@ -233,6 +234,7 @@ function MarkdownTable({ children, ...props }: ComponentProps<'table'>) {
 }
 
 function MarkdownCodeBlock({ code, language }: { code: string; language: string }) {
+  const toast = useToast();
   const isAnimating = useContext(MarkdownAnimatingContext);
   const [copied, setCopied] = useState(false);
   const copyTimerRef = useRef<number | null>(null);

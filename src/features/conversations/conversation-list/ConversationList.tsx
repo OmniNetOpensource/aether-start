@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
-import { useChatSessionStore } from '@/features/conversations/session';
 import {
   useConversationsQuery,
   selectAllConversations,
@@ -10,12 +9,15 @@ import { ConversationItem } from './ConversationItem';
 
 type ConversationListProps = {
   onDropdownOpenChange: (open: boolean) => void;
+  activeConversationId: string | null;
 };
 
-export function ConversationList({ onDropdownOpenChange }: ConversationListProps) {
+export function ConversationList({
+  onDropdownOpenChange,
+  activeConversationId,
+}: ConversationListProps) {
   const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
     useConversationsQuery();
-  const activeConversationId = useChatSessionStore((state) => state.conversationId);
   const historyScrollRef = useRef<HTMLDivElement | null>(null);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 

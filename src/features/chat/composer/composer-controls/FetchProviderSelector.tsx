@@ -8,7 +8,6 @@ import {
 } from '@/shared/design-system/dropdown-menu';
 import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
-import { useChatSessionStore } from '@/features/conversations/session';
 
 type FetchProvider = 'jina' | 'firecrawl' | 'exa';
 
@@ -18,11 +17,13 @@ const PROVIDERS: { id: FetchProvider; name: string }[] = [
   { id: 'exa', name: 'Exa' },
 ];
 
-export function FetchProviderSelector() {
-  // currentFetchProvider 由 useChatSessionStore 的 persist 中间件 hydrate。
-  const currentFetchProvider = useChatSessionStore((state) => state.currentFetchProvider);
-  const setCurrentFetchProvider = useChatSessionStore((state) => state.setCurrentFetchProvider);
-
+export function FetchProviderSelector({
+  currentFetchProvider,
+  onProviderChange,
+}: {
+  currentFetchProvider: FetchProvider;
+  onProviderChange: (provider: FetchProvider) => void;
+}) {
   const currentName = PROVIDERS.find((p) => p.id === currentFetchProvider)?.name ?? 'Jina';
 
   return (
@@ -48,7 +49,7 @@ export function FetchProviderSelector() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align='start' sideOffset={4}>
         {PROVIDERS.map((provider) => (
-          <DropdownMenuItem key={provider.id} onSelect={() => setCurrentFetchProvider(provider.id)}>
+          <DropdownMenuItem key={provider.id} onSelect={() => onProviderChange(provider.id)}>
             <span className='flex-1 truncate'>{provider.name}</span>
             {currentFetchProvider === provider.id && <Check className='h-4 w-4 shrink-0' />}
           </DropdownMenuItem>

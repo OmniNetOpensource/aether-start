@@ -7,7 +7,13 @@ import { ConversationList } from '@/features/conversations/conversation-list';
 import { ConversationSearchTrigger } from '@/features/conversations/conversation-search';
 import { ProfileMenu } from '@/features/settings/profile-menu';
 
-export default function Sidebar() {
+export default function Sidebar({
+  activeConversationId,
+  onSignOut,
+}: {
+  activeConversationId: string | null;
+  onSignOut: () => void;
+}) {
   const RIGHT_LEAVE_TOLERANCE_PX = 1;
   const sidebarRef = useRef<HTMLElement>(null);
   const openDropdownRef = useRef(false);
@@ -122,13 +128,20 @@ export default function Sidebar() {
           <div className='pointer-events-none absolute left-0 right-0 top-0 z-10 h-6 bg-gradient-to-b from-surface to-transparent' />
           <div className='flex h-full min-h-0 flex-col px-6 py-6'>
             <div className='flex h-full min-h-0 flex-col gap-4 overflow-hidden'>
-              <ConversationList onDropdownOpenChange={handleDropdownOpenChange} />
+              <ConversationList
+                onDropdownOpenChange={handleDropdownOpenChange}
+                activeConversationId={activeConversationId}
+              />
             </div>
           </div>
           <div className='pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-6 bg-gradient-to-t from-surface to-transparent' />
         </div>
 
-        <ProfileMenu isCollapsed={false} onDropdownOpenChange={handleDropdownOpenChange} />
+        <ProfileMenu
+          isCollapsed={false}
+          onDropdownOpenChange={handleDropdownOpenChange}
+          onSignOut={onSignOut}
+        />
       </aside>
     </div>
   );

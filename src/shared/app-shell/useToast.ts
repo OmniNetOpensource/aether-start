@@ -1,24 +1,2 @@
-import { useToastStore, type ToastVariant } from './toast-store';
-
-const defaultDuration = 4000;
-
-function createToast(variant: ToastVariant) {
-  return (message: string, duration?: number) => {
-    const store = useToastStore.getState();
-    return store.addToast({
-      message,
-      variant,
-      duration: duration ?? defaultDuration,
-    });
-  };
-}
-
-export const toast = {
-  info: createToast('info'),
-  success: createToast('success'),
-  warning: createToast('warning'),
-  error: createToast('error'),
-};
-
-export { useToastStore } from './toast-store';
-export type { Toast, ToastVariant } from './toast-store';
+export { useToast } from './toast-context';
+export type { ToastApi, ToastMessage, ToastVariant } from './toast-context';

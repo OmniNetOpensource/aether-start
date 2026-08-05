@@ -12,12 +12,10 @@
  * 与 conversation-runner 服务端配合：/chat 返回服务端确认的用户消息，/events 通过 SSE
  * 接收 chat_event、chat_finished 等事件，并调用 event-handlers 更新 UI 状态。
  */
-import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
 import { applyChatEventToTree } from './event-handlers';
 import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
-import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
-import { useChatSessionStore } from '@/features/conversations/session';
+import type { ChatRuntimeState } from './chat-runtime-state';
 import { isMessage } from '@/features/chat/message-thread';
 import { appendConfirmedUserMessage } from '@/features/conversations/conversation-tree';
 import type {
@@ -95,11 +93,11 @@ const resolveStopWaiters = () => {
   }
 };
 
-const scheduleAutoReconnect = (conversationId: string) => {
+const scheduleAutoReconnect = (runtime: ChatRuntimeState, conversationId: string) => {
   if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
     clearReconnectState();
-    toast.error('连接已断开');
-    useChatRequestStore.getState().setStatus('idle', 'reconnect/maxAttempts');
+    runtime.toast.error('连接已断开');
+    runtime.setStatus('idle');
     return;
   }
 
@@ -110,14 +108,14 @@ const scheduleAutoReconnect = (conversationId: string) => {
   reconnectTimer = setTimeout(async () => {
     reconnectTimer = null;
 
-    const currentId = useChatSessionStore.getState().conversationId;
+    const currentId = runtime.getSession().conversationId;
     if (currentId !== conversationId || reconnectConversationId !== conversationId) {
       clearReconnectState();
       return;
     }
 
-    toast.info('重新连接中...');
-    await resumeRunningConversation(conversationId, true);
+    runtime.toast.info('重新连接中...');
+    await resumeRunningConversation(runtime, conversationId, true);
   }, delay);
 };
 
@@ -169,34 +167,39 @@ const getResponseErrorMessage = async (response: Response) => {
  * 流结束后的收尾逻辑。
  * 异常结束时尝试自动重连；正常 idle 或无法重连时清理重连状态。
  */
-const finalizeStream = () => {
-  if (useChatRequestStore.getState().status !== 'idle') {
-    const conversationId = useChatSessionStore.getState().conversationId;
+const finalizeStream = (runtime: ChatRuntimeState) => {
+  if (runtime.getStatus() !== 'idle') {
+    const conversationId = runtime.getSession().conversationId;
     if (conversationId) {
-      scheduleAutoReconnect(conversationId);
+      scheduleAutoReconnect(runtime, conversationId);
       return;
     }
-    useChatRequestStore.getState().setStatus('idle', 'finalizeStream');
+    runtime.setStatus('idle');
   }
   clearReconnectState();
 };
 
-const applyChatAcceptedPayload = (value: unknown) => {
+const applyChatAcceptedPayload = (runtime: ChatRuntimeState, value: unknown) => {
   const acceptedPayload = parseChatCommandResponse(value);
   if (!acceptedPayload) {
     throw new Error('Invalid chat response');
   }
-  const sessionStore = useChatSessionStore.getState();
+  const sessionState = runtime.getSession();
   if (
-    sessionStore.conversationId &&
-    sessionStore.conversationId !== acceptedPayload.conversationId
+    sessionState.conversationId &&
+    sessionState.conversationId !== acceptedPayload.conversationId
   ) {
     throw new Error('Conversation ID mismatch');
   }
 
   if (acceptedPayload.type === 'append') {
     const nextTree = appendConfirmedUserMessage(
-      sessionStore.getTreeState(),
+      {
+        messages: sessionState.messages,
+        currentPath: sessionState.currentPath,
+        latestRootId: sessionState.latestRootId,
+        nextId: sessionState.nextId,
+      },
       {
         type: 'append',
         message: { role: 'user', blocks: acceptedPayload.message.blocks },
@@ -208,10 +211,10 @@ const applyChatAcceptedPayload = (value: unknown) => {
     if (!nextTree) {
       throw new Error('Failed to append confirmed user message');
     }
-    sessionStore.setTreeState(nextTree);
+    runtime.session.setTreeState(nextTree);
   }
 
-  sessionStore.setConversationId(acceptedPayload.conversationId);
+  runtime.session.setConversationId(acceptedPayload.conversationId);
   activeRequestStarted = true;
   activeRequestAcceptedCallback?.(acceptedPayload);
   activeRequestAcceptedCallback = null;
@@ -254,15 +257,13 @@ const parseChatCommandResponse = (value: unknown): ChatCommandResponse | null =>
  * @param event - SSE 的 event 字段（如 chat_event、chat_finished 等）
  * @param raw - data 字段的原始 JSON 字符串
  */
-const handleSSEMessage = (event: string, raw: string) => {
+const handleSSEMessage = (runtime: ChatRuntimeState, event: string, raw: string) => {
   let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(raw);
   } catch {
     return;
   }
-
-  const { setStatus } = useChatRequestStore.getState();
 
   switch (event) {
     case 'chat_event': {
@@ -271,16 +272,16 @@ const handleSSEMessage = (event: string, raw: string) => {
       if (payload.eventId <= lastEventId) return;
       lastEventId = payload.eventId;
 
-      applyChatEventToTree(payload.event as ChatServerToClientEvent);
+      applyChatEventToTree(runtime, payload.event as ChatServerToClientEvent);
       return;
     }
     case 'chat_finished':
       clearReconnectState();
       flushAll();
       if (typeof payload.assistantCompletedAt === 'string') {
-        useChatSessionStore.getState().stampAssistantCompletedAt(payload.assistantCompletedAt);
+        runtime.session.stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
-      setStatus('idle', 'chat_finished');
+      runtime.setStatus('idle');
       resolveStopWaiters();
       return;
     case 'chat_paused':
@@ -289,29 +290,29 @@ const handleSSEMessage = (event: string, raw: string) => {
       // 等用户提交答案后由 submitToolAnswer 触发 resumeRunningConversation。
       clearReconnectState();
       flushAll();
-      setStatus('idle', 'chat_paused');
+      runtime.setStatus('idle');
       return;
     case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
       flushAll();
-      setStatus(payload.status === 'running' ? 'streaming' : 'idle', 'sync_response');
+      runtime.setStatus(payload.status === 'running' ? 'streaming' : 'idle');
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
           const record = item as Record<string, unknown>;
           if (typeof record.eventId === 'number' && record.eventId > lastEventId) {
             lastEventId = record.eventId;
-            applyChatEventToTree(record.event as ChatServerToClientEvent);
+            applyChatEventToTree(runtime, record.event as ChatServerToClientEvent);
           }
         }
       }
       if (typeof payload.assistantCompletedAt === 'string') {
-        useChatSessionStore.getState().stampAssistantCompletedAt(payload.assistantCompletedAt);
+        runtime.session.stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
       return;
     }
     case 'busy':
-      toast.warning(BUSY_WARNING);
-      setStatus('streaming', 'busy');
+      runtime.toast.warning(BUSY_WARNING);
+      runtime.setStatus('streaming');
       return;
   }
 };
@@ -321,7 +322,7 @@ const handleSSEMessage = (event: string, raw: string) => {
  * 以 \n\n 分割事件块，解析 event: 与 data: 行，调用 handleSSEMessage 处理。
  * 支持 signal 中断；结束时调用 reader.cancel 释放资源。
  */
-const consumeStreamResponse = async (response: Response) => {
+const consumeStreamResponse = async (runtime: ChatRuntimeState, response: Response) => {
   const signal = activeController!.signal;
   if (!response.ok || !response.body) {
     throw new Error(`Chat request failed: ${response.status}`);
@@ -355,7 +356,7 @@ const consumeStreamResponse = async (response: Response) => {
       }
 
       if (dataLines.length > 0) {
-        handleSSEMessage(event, dataLines.join('\n'));
+        handleSSEMessage(runtime, event, dataLines.join('\n'));
       }
     }
   };
@@ -417,21 +418,21 @@ export const checkAgentStatus = async (
  * 异常：AbortError 静默忽略；TypeError（如网络错误）调用 finalizeStream；其他恢复 idle。
  */
 export const startChatRequest = async (
+  runtime: ChatRuntimeState,
   operation: ChatOperation,
   onAccepted?: (response: ChatCommandResponse) => void,
 ) => {
-  const requestStore = useChatRequestStore.getState();
-  const sessionStore = useChatSessionStore.getState();
+  const sessionState = runtime.getSession();
 
   resetLastEventId();
   activeRequestStarted = false;
-  if (!sessionStore.currentModelId) {
-    toast.warning(SELECT_MODEL_WARNING);
-    requestStore.setStatus('idle', 'startChatRequest/noModel');
+  if (!sessionState.currentModelId) {
+    runtime.toast.warning(SELECT_MODEL_WARNING);
+    runtime.setStatus('idle');
     return;
   }
 
-  const conversationId = sessionStore.conversationId;
+  const conversationId = sessionState.conversationId;
   const idempotencyKey = generateId('msg'); /* 幂等键，防止重复提交 */
 
   if (
@@ -440,15 +441,15 @@ export const startChatRequest = async (
       operation.parentId !== null ||
       operation.previousSiblingId !== null)
   ) {
-    requestStore.setStatus('idle', 'startChatRequest/noConversation');
+    runtime.setStatus('idle');
     throw new Error('Conversation not found');
   }
 
   const body = {
     idempotencyKey,
-    model: sessionStore.currentModelId,
-    promptId: sessionStore.currentPromptId || undefined,
-    fetchProvider: sessionStore.currentFetchProvider,
+    model: sessionState.currentModelId,
+    promptId: sessionState.currentPromptId || undefined,
+    fetchProvider: sessionState.currentFetchProvider,
     conversationId,
     operation,
   };
@@ -457,7 +458,7 @@ export const startChatRequest = async (
   const controller = new AbortController();
   activeController = controller;
   activeRequestAcceptedCallback = onAccepted ?? null;
-  requestStore.setStatus('sending', 'startChatRequest');
+  runtime.setStatus('sending');
   let acceptedConversationId: string | null = conversationId;
 
   try {
@@ -477,8 +478,8 @@ export const startChatRequest = async (
     if (!response.ok) {
       const message =
         (await getResponseErrorMessage(response)) ?? `Chat request failed: ${response.status}`;
-      toast.error(message);
-      requestStore.setStatus('idle', 'startChatRequest/rejected');
+      runtime.toast.error(message);
+      runtime.setStatus('idle');
       activeRequestAcceptedCallback = null;
       return;
     }
@@ -488,8 +489,8 @@ export const startChatRequest = async (
       throw new Error('Invalid chat response');
     }
     acceptedConversationId = acceptedPayload.conversationId;
-    applyChatAcceptedPayload(acceptedPayload);
-    requestStore.setStatus('streaming', 'startChatRequest/accepted');
+    applyChatAcceptedPayload(runtime, acceptedPayload);
+    runtime.setStatus('streaming');
 
     const eventsResponse = await fetch(
       `${resolveAgentBaseUrl()}/${acceptedPayload.conversationId}/events`,
@@ -501,28 +502,28 @@ export const startChatRequest = async (
         signal: controller.signal,
       },
     );
-    await consumeStreamResponse(eventsResponse);
-    finalizeStream();
+    await consumeStreamResponse(runtime, eventsResponse);
+    finalizeStream(runtime);
   } catch (error) {
     if (isAbortError(error)) {
       activeRequestAcceptedCallback = null;
-      requestStore.setStatus('idle', 'startChatRequest/aborted');
+      runtime.setStatus('idle');
       return;
     }
 
-    const currentStatus = useChatRequestStore.getState().status;
+    const currentStatus = runtime.getStatus();
     if (error instanceof TypeError && currentStatus !== 'idle' && acceptedConversationId) {
-      useChatSessionStore.getState().setConversationId(acceptedConversationId);
-      scheduleAutoReconnect(acceptedConversationId);
+      runtime.session.setConversationId(acceptedConversationId);
+      scheduleAutoReconnect(runtime, acceptedConversationId);
       return;
     }
 
-    useChatRequestStore.getState().setStatus('idle', 'startChatRequest/error');
+    runtime.setStatus('idle');
     activeRequestAcceptedCallback = null;
     const message =
       error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败';
     if (activeRequestStarted) {
-      applyChatEventToTree({
+      applyChatEventToTree(runtime, {
         type: 'error',
         message,
         error: {
@@ -532,7 +533,7 @@ export const startChatRequest = async (
         },
       });
     } else {
-      toast.error(message);
+      runtime.toast.error(message);
     }
   } finally {
     if (activeController === controller) {
@@ -541,8 +542,8 @@ export const startChatRequest = async (
   }
 };
 
-export const cancelSending = async (reason: string) => {
-  if (useChatRequestStore.getState().status !== 'sending') {
+export const cancelSending = async (runtime: ChatRuntimeState, _reason: string) => {
+  if (runtime.getStatus() !== 'sending') {
     return;
   }
 
@@ -551,14 +552,14 @@ export const cancelSending = async (reason: string) => {
   activeController?.abort();
   activeController = null;
   activeRequestAcceptedCallback = null;
-  useChatRequestStore.getState().setStatus('idle', `cancelSending/${reason}`);
+  runtime.setStatus('idle');
 };
 
 /**
  * 取消订阅流式输出。
  * abort 本地 activeController，将 status 设为 idle。
  */
-export const cancelStreamSubscription = (reason: string) => {
+export const cancelStreamSubscription = (runtime: ChatRuntimeState, _reason: string) => {
   clearReconnectState();
   flushAll();
   activeController?.abort();
@@ -566,16 +567,16 @@ export const cancelStreamSubscription = (reason: string) => {
   activeRequestAcceptedCallback = null;
   resolveStopWaiters();
 
-  useChatRequestStore.getState().setStatus('idle', `cancelStreamSubscription/${reason}`);
+  runtime.setStatus('idle');
 };
 
 /**
  * 取消正在进行的 AI 回复。
  * 保持 SSE 连接，等服务端 abort 后通过 chat_finished 收口。
  */
-export const cancelAnswering = async (reason: string) => {
-  const conversationId = useChatSessionStore.getState().conversationId;
-  const status = useChatRequestStore.getState().status;
+export const cancelAnswering = async (runtime: ChatRuntimeState, _reason: string) => {
+  const conversationId = runtime.getSession().conversationId;
+  const status = runtime.getStatus();
 
   if (status === 'idle') {
     return;
@@ -590,7 +591,7 @@ export const cancelAnswering = async (reason: string) => {
     return;
   }
 
-  useChatRequestStore.getState().setStatus('stopping', `cancelAnswering/${reason}`);
+  runtime.setStatus('stopping');
 
   const stopFinished = waitForStopFinished();
 
@@ -609,19 +610,23 @@ export const cancelAnswering = async (reason: string) => {
     await stopFinished.promise;
   } catch (error) {
     stopFinished.cancel();
-    useChatRequestStore.getState().setStatus('streaming', `cancelAnswering/${reason}/error`);
+    runtime.setStatus('streaming');
     throw error;
   }
 };
 
-export const submitToolAnswer = async (callId: string, answers: AskUserQuestionsAnswer[]) => {
-  const conversationId = useChatSessionStore.getState().conversationId;
+export const submitToolAnswer = async (
+  runtime: ChatRuntimeState,
+  callId: string,
+  answers: AskUserQuestionsAnswer[],
+) => {
+  const conversationId = runtime.getSession().conversationId;
 
   if (!conversationId) {
     throw new Error('Conversation not found');
   }
 
-  useChatSessionStore.getState().setAskUserQuestionsBlockStatus(callId, 'submitting');
+  runtime.session.setAskUserQuestionsBlockStatus(callId, 'submitting');
 
   try {
     const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/tool-answer`, {
@@ -632,7 +637,7 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
     });
 
     if (response.ok) {
-      void resumeRunningConversation(conversationId);
+      void resumeRunningConversation(runtime, conversationId);
       return;
     }
 
@@ -640,8 +645,8 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
 
     throw new Error(message);
   } catch (error) {
-    useChatSessionStore.getState().setAskUserQuestionsBlockStatus(callId, 'pending');
-    toast.error(error instanceof Error ? error.message : '提交失败');
+    runtime.session.setAskUserQuestionsBlockStatus(callId, 'pending');
+    runtime.toast.error(error instanceof Error ? error.message : '提交失败');
     throw error;
   }
 };
@@ -659,14 +664,15 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
  * 取消方式：对话页卸载时调用 cancelStreamSubscription 即可 abort
  */
 export const resumeRunningConversation = async (
+  runtime: ChatRuntimeState,
   conversationId: string,
   replayCompletedEvents = false,
 ) => {
-  if (activeController && useChatRequestStore.getState().status === 'streaming') {
+  if (activeController && runtime.getStatus() === 'streaming') {
     return;
   }
 
-  useChatRequestStore.getState().setStatus('sending', 'resumeRunningConversation');
+  runtime.setStatus('sending');
 
   let agentStatus: { status: ChatAgentStatus };
 
@@ -675,10 +681,10 @@ export const resumeRunningConversation = async (
   } catch (error) {
     console.error('Failed to probe agent status:', error);
     if (reconnectConversationId === conversationId) {
-      scheduleAutoReconnect(conversationId);
+      scheduleAutoReconnect(runtime, conversationId);
     } else {
-      useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/statusProbe');
-      toast.error(error instanceof Error ? error.message : '请求失败');
+      runtime.setStatus('idle');
+      runtime.toast.error(error instanceof Error ? error.message : '请求失败');
     }
     return;
   }
@@ -689,7 +695,7 @@ export const resumeRunningConversation = async (
   ) {
     clearReconnectState();
     activeRequestAcceptedCallback = null;
-    useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/agentDone');
+    runtime.setStatus('idle');
     return;
   }
 
@@ -705,24 +711,24 @@ export const resumeRunningConversation = async (
       signal: controller.signal,
     });
 
-    await consumeStreamResponse(response);
+    await consumeStreamResponse(runtime, response);
 
-    if (useChatRequestStore.getState().status === 'idle') {
+    if (runtime.getStatus() === 'idle') {
       clearReconnectState();
       return;
     }
 
-    finalizeStream();
+    finalizeStream(runtime);
   } catch (error) {
     if (isAbortError(error)) return;
 
     if (error instanceof TypeError && reconnectConversationId === conversationId) {
-      scheduleAutoReconnect(conversationId);
+      scheduleAutoReconnect(runtime, conversationId);
       return;
     }
 
-    useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/error');
-    toast.error(
+    runtime.setStatus('idle');
+    runtime.toast.error(
       error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败',
     );
   } finally {

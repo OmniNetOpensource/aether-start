@@ -1,9 +1,9 @@
 import { useRef } from 'react';
 import { ArrowUp, ImagePlus, X } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
-import { toast } from '@/shared/app-shell/useToast';
+import { useToast } from '@/shared/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
-import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
+import type { ChatStatus } from '@/features/chat/agent-runtime/chat-runtime-state';
 import {
   registerActiveInput,
   setLastFocusedInput,
@@ -15,44 +15,42 @@ import {
 import {
   isComposerDocumentEmpty,
   isComposerDocumentUploading,
+  type ComposerDocument,
 } from '@/features/chat/composer/composer-editor/composer-document';
-import { useEditingStore } from '@/features/chat/message-thread';
-import { useChatSessionStore } from '@/features/conversations/session';
 
 type MessageEditorProps = {
   messageId: number;
-  depth: number;
+  document: ComposerDocument;
+  status: ChatStatus;
+  currentModelId: string;
+  onDocumentChange: (document: ComposerDocument) => void;
+  onCancel: () => void;
+  onSubmit: () => Promise<void>;
 };
 
-export function MessageEditor({ messageId, depth }: MessageEditorProps) {
-  const editingState = useEditingStore((state) => state.editingState);
-  const updateEditDocument = useEditingStore((state) => state.updateEditDocument);
-  const cancelEditing = useEditingStore((state) => state.cancelEditing);
-  const submitEdit = useEditingStore((state) => state.submitEdit);
-  const status = useChatRequestStore((state) => state.status);
-  const currentModelId = useChatSessionStore((state) => state.currentModelId);
+export function MessageEditor({
+  messageId,
+  document,
+  status,
+  currentModelId,
+  onDocumentChange,
+  onCancel,
+  onSubmit,
+}: MessageEditorProps) {
+  const toast = useToast();
   const editorRef = useRef<RichComposerEditorHandle | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const state = editingState?.messageId === messageId ? editingState : null;
-
-  if (!state) {
-    return null;
-  }
-
-  const uploading = isComposerDocumentUploading(state.editedDocument);
+  const uploading = isComposerDocumentUploading(document);
   const sendDisabled =
-    status !== 'idle' ||
-    uploading ||
-    isComposerDocumentEmpty(state.editedDocument) ||
-    !currentModelId;
+    status !== 'idle' || uploading || isComposerDocumentEmpty(document) || !currentModelId;
 
   const handleSubmit = () => {
     if (sendDisabled) {
       return;
     }
 
-    void submitEdit(depth).catch((error) => {
+    void onSubmit().catch((error) => {
       console.error('Failed to submit edit:', error);
       toast.error(error instanceof Error ? error.message : '编辑失败');
     });
@@ -65,7 +63,7 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
         variant='ghost'
         size='icon'
         aria-label='Cancel editing'
-        onClick={cancelEditing}
+        onClick={onCancel}
         className='absolute right-2 top-2 z-10 h-7 w-7 text-secondary transition-colors hover:text-foreground'
       >
         <X className='h-4 w-4' />
@@ -77,8 +75,8 @@ export function MessageEditor({ messageId, depth }: MessageEditorProps) {
           registerActiveInput({ type: 'edit', messageId }, editor);
         }}
         id={`message-editor-${messageId}`}
-        document={state.editedDocument}
-        onChange={updateEditDocument}
+        document={document}
+        onChange={onDocumentChange}
         onFocus={() => setLastFocusedInput({ type: 'edit', messageId })}
         onSubmit={handleSubmit}
         autoFocus

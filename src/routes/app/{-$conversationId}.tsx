@@ -1,16 +1,25 @@
 import { createFileRoute, redirect } from '@tanstack/react-router';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
 import { ArtifactPanel, ArtifactToggleButton } from '@/features/chat/artifact';
 import {
+  cancelAnswering,
   cancelStreamSubscription,
   resetLastEventId,
   resumeRunningConversation,
 } from '@/features/chat/agent-runtime/chat-orchestrator';
+import type {
+  ChatRuntimeState,
+  ChatStatus,
+} from '@/features/chat/agent-runtime/chat-runtime-state';
 import { Composer, useComposerProps } from '@/features/chat/composer/Composer';
-import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { MessageList } from '@/features/chat/message-thread/MessageList';
 import { NewChatGreeting } from '@/features/chat/message-thread/NewChatGreeting';
-import { useEditingStore } from '@/features/chat/message-thread/useEditingStore';
+import type { EditingState } from '@/features/chat/message-thread/editing-state';
+import {
+  composerDocumentFromBlocks,
+  composerDocumentToBlocks,
+  isComposerDocumentEmpty,
+} from '@/features/chat/composer/composer-editor/composer-document';
 import { isMessage } from '@/features/chat/message-thread/message';
 import {
   DEFAULT_MODEL_ID,
@@ -27,47 +36,30 @@ import {
   getConversationFromCache,
   getConversationFn,
   queryClient,
-  useChatSessionStore,
-  useIsNewChat,
+  createChatSessionActions,
+  createInitialChatSessionState,
+  persistChatSessionSelection,
+  type ChatSessionActions,
+  type ChatSessionState,
 } from '@/features/conversations/session';
 import { ShareButton } from '@/features/share/share-dialog';
+import { startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrator';
+import { useToast } from '@/shared/app-shell/useToast';
 
-const initializeSession = (conversation: ConversationDetail) => {
+const initializeSession = (actions: ChatSessionActions, conversation: ConversationDetail) => {
   let currentPath = conversation.currentPath;
   if (currentPath.length === 0 && conversation.messages.length > 0) {
     currentPath = buildCurrentPath(conversation.messages, conversation.messages[0].id);
   }
 
-  const store = useChatSessionStore.getState();
-  store.initializeTree(conversation.messages, currentPath);
-  store.setArtifacts(conversation.artifacts);
-  store.setPageTitle(conversation.title ?? 'Aether');
-  store.setCurrentModel(conversation.model ?? '');
-  store.setConversationId(conversation.id);
+  actions.initializeTree(conversation.messages, currentPath);
+  actions.setArtifacts(conversation.artifacts);
+  actions.setPageTitle(conversation.title ?? 'Aether');
+  actions.setCurrentModel(conversation.model ?? '');
+  actions.setConversationId(conversation.id);
 };
 
 export const Route = createFileRoute('/app/{-$conversationId}')({
-  beforeLoad: ({ params }) => {
-    if (typeof window === 'undefined') return;
-
-    if (params.conversationId) {
-      const cachedConversation = getConversationFromCache(params.conversationId);
-      if (useChatSessionStore.getState().conversationId !== params.conversationId) {
-        cancelStreamSubscription('conversation/cache');
-        useEditingStore.getState().clear();
-        if (cachedConversation) {
-          initializeSession(cachedConversation);
-        } else {
-          useChatSessionStore.getState().clearSession();
-        }
-      }
-      return;
-    }
-
-    cancelStreamSubscription('new_chat/enter');
-    useEditingStore.getState().clear();
-    useChatSessionStore.getState().clearSession();
-  },
   loader: async ({ params }) => {
     const conversationCached =
       typeof window !== 'undefined' && params.conversationId
@@ -116,25 +108,98 @@ export const Route = createFileRoute('/app/{-$conversationId}')({
 });
 
 function AppPage() {
-  const composerProps = useComposerProps();
   const { conversationId } = Route.useParams();
-  const { conversation } = Route.useLoaderData();
+  const { conversation, initialModelId, initialPromptId, availableModels, availablePrompts } =
+    Route.useLoaderData();
+  const messages = conversation?.messages.filter(isMessage) ?? [];
+  if (conversation && messages.length !== conversation.messages.length) {
+    throw new Error('Invalid persisted message tree');
+  }
+  const detail: ConversationDetail | null = conversation ? { ...conversation, messages } : null;
+
+  return (
+    <ChatPage
+      key={conversationId ?? 'new'}
+      conversationId={conversationId}
+      conversation={detail}
+      initialModelId={initialModelId}
+      initialPromptId={initialPromptId}
+      availableModelIds={availableModels.map((model) => model.id)}
+      availablePromptIds={availablePrompts.map((prompt) => prompt.id)}
+    />
+  );
+}
+
+function ChatPage({
+  conversationId,
+  conversation,
+  initialModelId,
+  initialPromptId,
+  availableModelIds,
+  availablePromptIds,
+}: {
+  conversationId?: string;
+  conversation: ConversationDetail | null;
+  initialModelId: string;
+  initialPromptId: string;
+  availableModelIds: string[];
+  availablePromptIds: string[];
+}) {
+  const toast = useToast();
   const cachedConversation = conversationId ? getConversationFromCache(conversationId) : undefined;
-  const pageTitle = useChatSessionStore((state) => state.pageTitle);
-  const sessionConversationId = useChatSessionStore((state) => state.conversationId);
-  const sessionMessages = useChatSessionStore((state) => state.messages);
-  const sessionCurrentPath = useChatSessionStore((state) => state.currentPath);
-  const sessionArtifacts = useChatSessionStore((state) => state.artifacts);
-  const sessionCurrentModelId = useChatSessionStore((state) => state.currentModelId);
-  const isStreaming = useChatRequestStore((state) => state.status === 'streaming');
-  const isNewChat = useIsNewChat();
+  const [session, setSessionState] = useState(() => {
+    let initialState = createInitialChatSessionState(initialModelId, initialPromptId);
+    const setInitialState: Dispatch<SetStateAction<ChatSessionState>> = (update) => {
+      initialState = typeof update === 'function' ? update(initialState) : update;
+    };
+    const initialActions = createChatSessionActions(() => initialState, setInitialState);
+    const initialConversation = conversation ?? cachedConversation;
+    if (initialConversation) {
+      initializeSession(initialActions, initialConversation);
+    }
+    if (!availableModelIds.includes(initialState.currentModelId)) {
+      initialActions.setCurrentModel(initialModelId);
+    }
+    if (!availablePromptIds.includes(initialState.currentPromptId)) {
+      initialActions.setCurrentPrompt(initialPromptId);
+    }
+    return initialState;
+  });
+  const sessionRef = useRef(session);
+  sessionRef.current = session;
+  const setSession: Dispatch<SetStateAction<ChatSessionState>> = (update) => {
+    const next = typeof update === 'function' ? update(sessionRef.current) : update;
+    sessionRef.current = next;
+    setSessionState(next);
+  };
+  const [sessionActions] = useState(() =>
+    createChatSessionActions(() => sessionRef.current, setSession),
+  );
+  const [status, setStatusState] = useState<ChatStatus>('idle');
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  const setStatus = (nextStatus: ChatStatus) => {
+    statusRef.current = nextStatus;
+    setStatusState(nextStatus);
+  };
+  const [runtime] = useState<ChatRuntimeState>(() => ({
+    getSession: () => sessionRef.current,
+    session: sessionActions,
+    getStatus: () => statusRef.current,
+    setStatus,
+    toast,
+  }));
+  const [editingState, setEditingState] = useState<EditingState | null>(null);
+  const composerProps = useComposerProps(runtime, status);
+  const isStreaming = status === 'streaming';
+  const isNewChat = session.conversationId === null && session.messages.length === 0;
   const visibleConversationId =
     typeof window === 'undefined'
       ? (conversationId ?? null)
       : window.location.pathname.startsWith('/app/')
         ? decodeURIComponent(window.location.pathname.slice('/app/'.length)) || null
         : null;
-  const sessionReady = sessionConversationId === visibleConversationId;
+  const sessionReady = session.conversationId === visibleConversationId;
   const routeDataReady = (conversationId ?? null) === visibleConversationId;
   const initialMessages = (conversation?.messages ?? []).filter(isMessage);
   let initialCurrentPath = conversation?.currentPath ?? [];
@@ -143,8 +208,8 @@ function AppPage() {
   }
 
   useEffect(() => {
-    document.title = pageTitle;
-  }, [pageTitle]);
+    document.title = session.pageTitle;
+  }, [session.pageTitle]);
 
   useEffect(() => {
     if (!conversationId) return;
@@ -157,68 +222,170 @@ function AppPage() {
 
       const detail: ConversationDetail = { ...conversation, messages };
       cacheConversation(detail);
-      if (useChatSessionStore.getState().conversationId !== conversationId) {
-        initializeSession(detail);
-      }
     }
 
-    if (useChatRequestStore.getState().status === 'idle') {
-      void resumeRunningConversation(conversationId);
+    if (runtime.getStatus() === 'idle') {
+      void resumeRunningConversation(runtime, conversationId);
     }
 
     return () => {
+      cancelStreamSubscription(runtime, 'conversation/unmount');
       resetLastEventId();
-      useEditingStore.getState().clear();
     };
-  }, [conversation, conversationId]);
+  }, [conversation, conversationId, runtime]);
+
+  useEffect(() => {
+    persistChatSessionSelection(
+      session.currentModelId,
+      session.currentPromptId,
+      session.currentFetchProvider,
+    );
+  }, [session.currentFetchProvider, session.currentModelId, session.currentPromptId]);
 
   useEffect(() => {
     if (!conversationId || !cachedConversation || !sessionReady) return;
 
     cacheConversation({
       ...cachedConversation,
-      title: pageTitle,
-      model: sessionCurrentModelId,
-      currentPath: sessionCurrentPath,
-      messages: sessionMessages,
-      artifacts: sessionArtifacts,
+      title: session.pageTitle,
+      model: session.currentModelId,
+      currentPath: session.currentPath,
+      messages: session.messages,
+      artifacts: session.artifacts,
     });
   }, [
     cachedConversation,
     conversationId,
-    pageTitle,
-    sessionArtifacts,
-    sessionConversationId,
-    sessionCurrentModelId,
-    sessionCurrentPath,
-    sessionMessages,
+    session.artifacts,
+    session.conversationId,
+    session.currentModelId,
+    session.currentPath,
+    session.messages,
+    session.pageTitle,
     sessionReady,
   ]);
 
+  const startEditing = (messageId: number) => {
+    const target = sessionRef.current.messages[messageId - 1];
+    if (!target || target.role !== 'user') return;
+    setEditingState({
+      messageId,
+      editedDocument: composerDocumentFromBlocks(target.blocks),
+    });
+  };
+
+  const submitEdit = async (_depth: number) => {
+    if (!editingState) return;
+    if (!runtime.getSession().currentModelId) {
+      toast.warning('请先选择模型');
+      return;
+    }
+    if (runtime.getStatus() !== 'idle') {
+      await cancelAnswering(runtime, 'message/submitEdit');
+    }
+    if (isComposerDocumentEmpty(editingState.editedDocument)) {
+      toast.warning('请输入内容或添加附件');
+      return;
+    }
+
+    const target = runtime.getSession().messages[editingState.messageId - 1];
+    if (!target || target.role !== 'user') {
+      setEditingState(null);
+      return;
+    }
+
+    await startChatRequest(
+      runtime,
+      {
+        type: 'append',
+        message: {
+          role: 'user',
+          blocks: composerDocumentToBlocks(editingState.editedDocument),
+        },
+        parentId: target.parentId,
+        previousSiblingId: target.id,
+      },
+      () => setEditingState(null),
+    );
+  };
+
+  const retryFromMessage = async (messageId: number, _depth: number) => {
+    if (!runtime.getSession().currentModelId) {
+      toast.warning('请先选择模型');
+      return;
+    }
+    if (runtime.getStatus() !== 'idle') {
+      await cancelAnswering(runtime, 'message/retry');
+    }
+
+    const target = runtime.getSession().messages[messageId - 1];
+    if (!target) return;
+    if (target.role === 'user') {
+      await startChatRequest(
+        runtime,
+        {
+          type: 'append',
+          message: { role: 'user', blocks: target.blocks },
+          parentId: target.parentId,
+          previousSiblingId: target.id,
+        },
+        () => setEditingState(null),
+      );
+      return;
+    }
+    if (target.parentId === null) return;
+    await startChatRequest(runtime, { type: 'regenerate', currentMessageId: target.parentId }, () =>
+      setEditingState(null),
+    );
+  };
+
   return (
     <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>
-      <Sidebar />
+      <Sidebar
+        activeConversationId={session.conversationId}
+        onSignOut={() => {
+          setStatus('idle');
+          setEditingState(null);
+          sessionActions.clearSession();
+        }}
+      />
       <div className='relative flex-1 z-0 min-w-0 flex flex-col gap-2 min-h-0'>
         <div className='flex shrink-0 h-16 items-center gap-3 px-4 bg-transparent'>
           <div className='flex-1' />
-          <ArtifactToggleButton />
-          <ShareButton />
+          <ArtifactToggleButton
+            session={session}
+            onOpenChange={sessionActions.setArtifactPanelOpen}
+          />
+          <ShareButton session={session} status={status} />
           <NewChatButton variant='topbar' className='rounded-lg' />
         </div>
         <main className='relative flex flex-row flex-1 min-h-0 min-w-0'>
           <div className='@container relative h-full flex-1 min-w-0'>
             <MessageList
               key={visibleConversationId ?? 'new'}
-              messages={sessionReady ? sessionMessages : routeDataReady ? initialMessages : []}
+              messages={sessionReady ? session.messages : routeDataReady ? initialMessages : []}
               currentPath={
-                sessionReady ? sessionCurrentPath : routeDataReady ? initialCurrentPath : []
+                sessionReady ? session.currentPath : routeDataReady ? initialCurrentPath : []
               }
               isStreaming={isStreaming}
+              status={status}
+              editingState={editingState}
+              runtime={runtime}
+              onStartEditing={startEditing}
+              onEditDocumentChange={(document) =>
+                setEditingState((current) =>
+                  current ? { ...current, editedDocument: document } : current,
+                )
+              }
+              onCancelEditing={() => setEditingState(null)}
+              onSubmitEdit={submitEdit}
+              onRetry={retryFromMessage}
+              onNavigateBranch={sessionActions.navigateBranch}
             />
             {isNewChat ? <NewChatGreeting /> : null}
             <Composer {...composerProps} />
           </div>
-          <ArtifactPanel />
+          <ArtifactPanel session={session} actions={sessionActions} />
         </main>
       </div>
     </div>

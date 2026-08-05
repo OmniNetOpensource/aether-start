@@ -3,8 +3,8 @@ import type {
   ChatErrorInfo,
   ChatServerToClientEvent,
 } from '@/features/chat/chat-api';
-import { useChatSessionStore } from '@/features/conversations/session';
 import { upsertConversationInCache } from '@/features/conversations/session';
+import type { ChatRuntimeState } from './chat-runtime-state';
 import {
   enqueueStreamArtifactCode,
   enqueueStreamContent,
@@ -171,57 +171,57 @@ export const enhanceServerErrorMessage = (safeMessage: string, errorInfo?: ChatE
   );
 };
 
-export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
+export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServerToClientEvent) => {
   if (event.type === 'content') {
     const addition =
       typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    enqueueStreamContent(addition);
+    enqueueStreamContent(runtime, addition);
     return;
   }
 
   if (event.type === 'thinking') {
     const text = typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    enqueueStreamThinking(text);
+    enqueueStreamThinking(runtime, text);
     return;
   }
 
   if (event.type === 'artifact_code_delta') {
-    enqueueStreamArtifactCode(event.artifactId, event.delta);
+    enqueueStreamArtifactCode(runtime, event.artifactId, event.delta);
     return;
   }
 
   flushAll();
 
   if (event.type === 'artifact_started') {
-    useChatSessionStore.getState().startArtifact(event.artifactId);
+    runtime.session.startArtifact(event.artifactId);
     return;
   }
 
   if (event.type === 'artifact_title') {
-    useChatSessionStore.getState().updateArtifactTitle(event.artifactId, event.title);
+    runtime.session.updateArtifactTitle(event.artifactId, event.title);
     return;
   }
 
   if (event.type === 'artifact_language') {
-    useChatSessionStore.getState().updateArtifactLanguage(event.artifactId, event.language);
+    runtime.session.updateArtifactLanguage(event.artifactId, event.language);
     return;
   }
 
   if (event.type === 'artifact_completed') {
-    useChatSessionStore.getState().completeArtifact(event.artifactId);
+    runtime.session.completeArtifact(event.artifactId);
     return;
   }
 
   if (event.type === 'artifact_failed') {
-    useChatSessionStore.getState().failArtifact(event.artifactId, event.message);
+    runtime.session.failArtifact(event.artifactId, event.message);
     return;
   }
 
   if (event.type === 'conversation_updated') {
-    const store = useChatSessionStore.getState();
+    const store = runtime.getSession();
 
     if (store.conversationId === event.conversationId && typeof event.title === 'string') {
-      store.setPageTitle(event.title);
+      runtime.session.setPageTitle(event.title);
     }
 
     if (event.title) {
@@ -246,7 +246,7 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
     const args =
       event.args && typeof event.args === 'object' ? (event.args as Record<string, unknown>) : {};
 
-    useChatSessionStore.getState().appendToAssistant({
+    runtime.session.appendToAssistant({
       kind: 'tool',
       data: {
         call: {
@@ -270,7 +270,7 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
       }
     }
 
-    useChatSessionStore.getState().appendToAssistant({
+    runtime.session.appendToAssistant({
       kind: 'tool_result',
       tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
       result: resultText,
@@ -279,7 +279,7 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
   }
 
   if (event.type === 'ask_user_questions_requested') {
-    useChatSessionStore.getState().appendToAssistant({
+    runtime.session.appendToAssistant({
       kind: 'ask_user_questions_requested',
       callId: event.callId,
       questions: event.questions,
@@ -288,7 +288,7 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
   }
 
   if (event.type === 'ask_user_questions_answered') {
-    useChatSessionStore.getState().appendToAssistant({
+    runtime.session.appendToAssistant({
       kind: 'ask_user_questions_answered',
       callId: event.callId,
       answers: event.answers,
@@ -302,7 +302,7 @@ export const applyChatEventToTree = (event: ChatServerToClientEvent) => {
     const safeMessage = rawMessage || 'unknown error';
     const enhancedMessage = enhanceServerErrorMessage(safeMessage, event.error);
 
-    useChatSessionStore.getState().appendToAssistant({
+    runtime.session.appendToAssistant({
       type: 'error',
       message: enhancedMessage,
     });

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { getRouteApi } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Bot, Check, ChevronDown } from 'lucide-react';
@@ -15,19 +15,22 @@ import {
 import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
 import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
-import { useChatSessionStore } from '@/features/conversations/session';
 
 const appRoute = getRouteApi('/app/{-$conversationId}');
 
-export function ModelSelector() {
+export function ModelSelector({
+  currentModelId,
+  onModelChange,
+}: {
+  currentModelId: string;
+  onModelChange: (modelId: string) => void;
+}) {
   const { availableModels, initialModelId } = appRoute.useLoaderData();
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightedModelId, setHighlightedModelId] = useState('');
   const modelListRef = useRef<HTMLDivElement>(null);
-  const currentModelId = useChatSessionStore((state) => state.currentModelId);
   const isMobile = useResponsive() === 'mobile';
-  const setCurrentModel = useChatSessionStore((state) => state.setCurrentModel);
   // 持久化优先：currentModelId 由 persist 中间件从 localStorage hydrate，已选过的模型胜出。
   // loader 的 initialModelId 仅在该浏览器从未选过模型时兜底。
   const storedIsValid = availableModels.some((m) => m.id === currentModelId);
@@ -52,14 +55,6 @@ export function ModelSelector() {
     initialRect: { width: 0, height: 288 },
     overscan: 8,
   });
-
-  // selectedModelId 是渲染层算出来的；submit-chat / chat-orchestrator 直接读 store 里的 currentModelId，
-  // 所以兜底值要回灌一次，否则首次访问（localStorage 空）发送按钮会卡 hasModel 校验。
-  useEffect(() => {
-    if (selectedModelId && selectedModelId !== currentModelId) {
-      setCurrentModel(selectedModelId);
-    }
-  }, [selectedModelId, currentModelId, setCurrentModel]);
 
   const toolButtonBaseClass =
     'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground';
@@ -132,7 +127,7 @@ export function ModelSelector() {
                 nextIndex = filteredModels.length - 1;
               } else if (event.key === 'Enter' && currentIndex >= 0) {
                 event.preventDefault();
-                setCurrentModel(filteredModels[currentIndex].id);
+                onModelChange(filteredModels[currentIndex].id);
                 setOpen(false);
                 setSearch('');
                 return;
@@ -162,7 +157,7 @@ export function ModelSelector() {
                     key={model.id}
                     value={model.id}
                     onSelect={() => {
-                      setCurrentModel(model.id);
+                      onModelChange(model.id);
                       setOpen(false);
                       setSearch('');
                     }}

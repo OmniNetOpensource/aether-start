@@ -4,15 +4,12 @@ import { Ban, Gift, Loader2, LogOut, Plus } from 'lucide-react';
 import { authClient } from '@/features/auth/auth-client';
 import { getSessionStateFn } from '@/features/auth/session';
 import { resetLastEventId } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
-import { useEditingStore } from '@/features/chat/message-thread';
-import { useChatSessionStore } from '@/features/conversations/session';
 import { queryClient } from '@/features/conversations/session';
 import { conversationListQueryKey } from '@/features/conversations/session';
 import { Button } from '@/shared/design-system/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/design-system/dialog';
 import { Input } from '@/shared/design-system/input';
-import { toast } from '@/shared/app-shell/useToast';
+import { useToast } from '@/shared/app-shell/useToast';
 import {
   adminCreateRedeemCodeFn,
   adminDeactivateRedeemCodeFn,
@@ -23,6 +20,7 @@ import { getQuotaFn, redeemCodeFn } from '@/features/quota/quota-balance';
 type SettingsModalProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onSignOut: () => void;
 };
 
 type AdminCode = {
@@ -34,7 +32,8 @@ type AdminCode = {
   created_at: string;
 };
 
-export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
+export function SettingsModal({ open, onOpenChange, onSignOut }: SettingsModalProps) {
+  const toast = useToast();
   const navigate = useNavigate();
   const [balance, setBalance] = useState<number | null>(null);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -106,9 +105,7 @@ export function SettingsModal({ open, onOpenChange }: SettingsModalProps) {
     try {
       await authClient.signOut();
     } finally {
-      useChatRequestStore.getState().setStatus('idle', 'signOut');
-      useEditingStore.getState().clear();
-      useChatSessionStore.getState().clearSession();
+      onSignOut();
       queryClient.removeQueries({ queryKey: conversationListQueryKey });
       resetLastEventId();
       await navigate({ href: '/auth/login', replace: true });

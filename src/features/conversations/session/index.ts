@@ -2,7 +2,7 @@ export * from './conversation';
 export * from './conversations';
 export * from './query-client';
 export * from './use-conversations';
-export * from './useChatSessionStore';
+export * from './chat-session-state';
 export {
   clearConversations,
   createConversationArtifact,

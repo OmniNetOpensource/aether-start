@@ -2,20 +2,22 @@ import { Check, Copy, Link2, Loader2, XCircle } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Button } from '@/shared/design-system/button';
 import { Dialog, DialogContent, DialogFooter } from '@/shared/design-system/dialog';
-import { toast } from '@/shared/app-shell/useToast';
+import { useToast } from '@/shared/app-shell/useToast';
 import {
   createConversationShareFn,
   getConversationShareFn,
   revokeConversationShareFn,
 } from '@/features/share/share-record';
-import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
-import { useChatSessionStore } from '@/features/conversations/session';
 import { useConversationsQuery, selectAllConversations } from '@/features/conversations/session';
+import type { ChatSessionState } from '@/features/conversations/session';
+import type { ChatStatus } from '@/features/chat/agent-runtime/chat-runtime-state';
 import type { ConversationShareStatus } from '@/features/share/share-record';
 
 export type ShareDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  session: ChatSessionState;
+  status: ChatStatus;
 };
 
 const buildShareUrl = (token: string) =>
@@ -23,12 +25,10 @@ const buildShareUrl = (token: string) =>
     ? `/share/${encodeURIComponent(token)}`
     : `${window.location.origin}/share/${encodeURIComponent(token)}`;
 
-export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
-  const messages = useChatSessionStore((state) => state.messages);
-  const currentPath = useChatSessionStore((state) => state.currentPath);
-  const conversationId = useChatSessionStore((state) => state.conversationId);
+export function ShareDialog({ open, onOpenChange, session, status }: ShareDialogProps) {
+  const toast = useToast();
+  const { messages, currentPath, conversationId } = session;
   const { data: conversationsData } = useConversationsQuery();
-  const status = useChatRequestStore((state) => state.status);
   const isBusy = status !== 'idle';
 
   const [shareStatus, setShareStatus] = useState<ConversationShareStatus>('not_shared');
@@ -96,7 +96,7 @@ export function ShareDialog({ open, onOpenChange }: ShareDialogProps) {
     return () => {
       cancelled = true;
     };
-  }, [open, conversationId]);
+  }, [open, conversationId, toast]);
 
   const handleCreateShare = async () => {
     if (!conversationId) {

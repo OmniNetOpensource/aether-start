@@ -1,16 +1,18 @@
 import { AskUserQuestionsCard } from '@/features/chat/ask-user-questions';
-import { memo, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import Markdown from '@/shared/design-system/Markdown';
 import { Message } from '@/features/chat/message-thread';
-import { getBranchInfo as getBranchInfoFn } from '@/features/conversations/conversation-tree';
 import { ResearchBlock } from '../research/ResearchBlock';
 import { Copy, Check, AlertCircle, Pencil, RotateCcw } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
-import { toast } from '@/shared/app-shell/useToast';
-import { useChatSessionStore } from '@/features/conversations/session';
+import { useToast } from '@/shared/app-shell/useToast';
 import { submitToolAnswer } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
-import { useEditingStore } from '@/features/chat/message-thread';
+import type {
+  ChatRuntimeState,
+  ChatStatus,
+} from '@/features/chat/agent-runtime/chat-runtime-state';
+import type { BranchInfo } from '@/features/chat/message-thread';
+import type { EditingState } from './editing-state';
 import { MessageEditor } from './MessageEditor';
 import { BranchNavigator } from './BranchNavigator';
 import { ContentChip } from '@/features/chat/composer/composer-editor/ContentChip';
@@ -87,6 +89,17 @@ type MessageItemProps = {
   index: number;
   depth: number;
   isStreaming: boolean;
+  isLastInPath: boolean;
+  status: ChatStatus;
+  branchInfo: BranchInfo | null;
+  editingState: EditingState | null;
+  runtime: ChatRuntimeState;
+  onStartEditing: (messageId: number) => void;
+  onEditDocumentChange: (document: EditingState['editedDocument']) => void;
+  onCancelEditing: () => void;
+  onSubmitEdit: (depth: number) => Promise<void>;
+  onRetry: (messageId: number, depth: number) => Promise<void>;
+  onNavigateBranch: (messageId: number, depth: number, direction: 'prev' | 'next') => void;
 };
 
 const formatMessageTime = (iso: string) =>
@@ -98,28 +111,32 @@ const formatMessageTime = (iso: string) =>
     minute: '2-digit',
   });
 
-export const MessageItem = memo(function MessageItem({
+export function MessageItem({
   message,
   index,
   depth,
   isStreaming,
+  isLastInPath,
+  status,
+  branchInfo,
+  editingState,
+  runtime,
+  onStartEditing,
+  onEditDocumentChange,
+  onCancelEditing,
+  onSubmitEdit,
+  onRetry,
+  onNavigateBranch,
 }: MessageItemProps) {
+  const toast = useToast();
   const messageId = message.id;
-  const isLastInPath = useChatSessionStore(
-    (state) => state.currentPath[state.currentPath.length - 1] === messageId,
-  );
-  const status = useChatRequestStore((s) => s.status);
-  const isEditing = useEditingStore((state) => state.editingState?.messageId === messageId);
-  const startEditing = useEditingStore((state) => state.startEditing);
-  const retryFromMessage = useEditingStore((state) => state.retryFromMessage);
-  const navigateBranch = useChatSessionStore((state) => state.navigateBranch);
-  const branchInfo = getBranchInfoFn(useChatSessionStore.getState().messages, messageId);
+  const isEditing = editingState?.messageId === messageId;
   const isBusy = status !== 'idle';
 
-  const handleStartEditing = () => startEditing(messageId);
+  const handleStartEditing = () => onStartEditing(messageId);
 
   const handleRetry = () => {
-    void retryFromMessage(messageId, depth).catch((error) => {
+    void onRetry(messageId, depth).catch((error) => {
       console.error('Failed to retry message:', error);
       toast.error(error instanceof Error ? error.message : '重新生成失败');
     });
@@ -127,7 +144,7 @@ export const MessageItem = memo(function MessageItem({
 
   const handleNavigate = (direction: 'prev' | 'next') => {
     if (status === 'idle') {
-      navigateBranch(messageId, depth, direction);
+      onNavigateBranch(messageId, depth, direction);
     }
   };
 
@@ -155,7 +172,15 @@ export const MessageItem = memo(function MessageItem({
           {shouldRenderBody && (
             <>
               {isEditing ? (
-                <MessageEditor messageId={messageId} depth={depth} />
+                <MessageEditor
+                  messageId={messageId}
+                  document={editingState.editedDocument}
+                  status={status}
+                  currentModelId={runtime.getSession().currentModelId}
+                  onDocumentChange={onEditDocumentChange}
+                  onCancel={onCancelEditing}
+                  onSubmit={() => onSubmitEdit(depth)}
+                />
               ) : isUser ? (
                 <div className='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'>
                   <div className='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
@@ -218,7 +243,7 @@ export const MessageItem = memo(function MessageItem({
                           key={blockKey}
                           block={block}
                           readonly={!isUsable}
-                          onSubmit={(answers) => submitToolAnswer(block.callId, answers)}
+                          onSubmit={(answers) => submitToolAnswer(runtime, block.callId, answers)}
                         />
                       );
                     }
@@ -291,4 +316,4 @@ export const MessageItem = memo(function MessageItem({
       </div>
     </div>
   );
-});
+}

@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { useToastStore } from '@/shared/app-shell/toast-store';
 import { Toast } from '@/shared/app-shell/toast';
+import type { ToastMessage } from '@/shared/app-shell/toast-context';
 
-export function ToastContainer() {
-  const toasts = useToastStore((state) => state.toasts);
-  const removeToast = useToastStore((state) => state.removeToast);
+export function ToastContainer({
+  toasts,
+  onRemove,
+}: {
+  toasts: ToastMessage[];
+  onRemove: (id: string) => void;
+}) {
   const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
 
   const handleClose = (id: string) => {
@@ -17,7 +21,7 @@ export function ToastContainer() {
       next.delete(id);
       return next;
     });
-    removeToast(id);
+    onRemove(id);
   };
 
   return (

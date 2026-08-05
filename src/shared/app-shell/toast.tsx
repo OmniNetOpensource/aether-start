@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 
 import { cn } from '@/shared/core/utils';
-import { Toast as ToastType } from '@/shared/app-shell/toast-store';
+import type { ToastMessage } from '@/shared/app-shell/toast-context';
 
 const toastVariants = cva(
   'relative flex items-start gap-3 rounded-md border p-4 shadow-lg transition-all',
@@ -50,7 +50,7 @@ const iconMap = {
 };
 
 interface ToastProps extends VariantProps<typeof toastVariants> {
-  toast: ToastType;
+  toast: ToastMessage;
   isExiting?: boolean;
   onClose: () => void;
   onExited: () => void;

@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { Share2 } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
-import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
-import { useChatSessionStore } from '@/features/conversations/session';
+import type { ChatSessionState } from '@/features/conversations/session';
+import type { ChatStatus } from '@/features/chat/agent-runtime/chat-runtime-state';
 import { ShareDialog } from './ShareDialog';
 
-export function ShareButton() {
+export function ShareButton({
+  session,
+  status,
+}: {
+  session: ChatSessionState;
+  status: ChatStatus;
+}) {
   const [open, setOpen] = useState(false);
-  const currentPath = useChatSessionStore((state) => state.currentPath);
-  const status = useChatRequestStore((state) => state.status);
+  const { currentPath } = session;
   const isBusy = status !== 'idle';
 
   if (currentPath.length === 0) {
@@ -34,7 +39,9 @@ export function ShareButton() {
         <Share2 className='h-5 w-5' />
       </Button>
 
-      {open ? <ShareDialog open={open} onOpenChange={setOpen} /> : null}
+      {open ? (
+        <ShareDialog open={open} onOpenChange={setOpen} session={session} status={status} />
+      ) : null}
     </>
   );
 }

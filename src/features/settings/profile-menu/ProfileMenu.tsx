@@ -14,9 +14,14 @@ import { SettingsModal } from '../settings-dialog/SettingsModal';
 type ProfileMenuProps = {
   isCollapsed?: boolean;
   onDropdownOpenChange: (open: boolean) => void;
+  onSignOut: () => void;
 };
 
-export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: ProfileMenuProps) {
+export function ProfileMenu({
+  isCollapsed = false,
+  onDropdownOpenChange,
+  onSignOut,
+}: ProfileMenuProps) {
   const { data: session } = authClient.useSession();
   const { theme, setTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -135,7 +140,11 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
           </DropdownMenu>
 
           {settingsOpen ? (
-            <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
+            <SettingsModal
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              onSignOut={onSignOut}
+            />
           ) : null}
         </div>
       </div>

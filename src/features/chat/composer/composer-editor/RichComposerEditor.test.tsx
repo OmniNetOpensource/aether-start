@@ -2,6 +2,7 @@ import { createRef } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import { RichComposerEditor, type RichComposerEditorHandle } from './RichComposerEditor';
+import { ToastProvider } from '@/shared/app-shell/toast-context';
 
 describe('RichComposerEditor', () => {
   it('keeps an empty document stable', async () => {
@@ -13,6 +14,7 @@ describe('RichComposerEditor', () => {
         onSubmit={() => {}}
         placeholder='Type here'
       />,
+      { wrapper: ToastProvider },
     );
 
     expect(await screen.findByRole('textbox')).toBeTruthy();
@@ -32,6 +34,7 @@ describe('RichComposerEditor', () => {
         onSubmit={() => {}}
         placeholder='Type here'
       />,
+      { wrapper: ToastProvider },
     );
 
     expect((await screen.findByRole('textbox')).textContent).toContain('hello');

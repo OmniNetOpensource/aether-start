@@ -1,12 +1,16 @@
 import { Folder, FolderOpen } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
-import { useChatSessionStore } from '@/features/conversations/session';
+import type { ChatSessionState } from '@/features/conversations/session';
 
-export function ArtifactToggleButton() {
-  const artifacts = useChatSessionStore((state) => state.artifacts);
-  const artifactPanelOpen = useChatSessionStore((state) => state.artifactPanelOpen);
-  const setArtifactPanelOpen = useChatSessionStore((state) => state.setArtifactPanelOpen);
+export function ArtifactToggleButton({
+  session,
+  onOpenChange,
+}: {
+  session: ChatSessionState;
+  onOpenChange: (open: boolean) => void;
+}) {
+  const { artifacts, artifactPanelOpen } = session;
 
   if (artifacts.length === 0) {
     return null;
@@ -20,7 +24,7 @@ export function ArtifactToggleButton() {
       className={cn('rounded-lg', artifactPanelOpen && 'bg-hover text-foreground')}
       aria-label={artifactPanelOpen ? 'Close artifacts' : 'Open artifacts'}
       title={artifactPanelOpen ? 'Close artifacts' : 'Open artifacts'}
-      onClick={() => setArtifactPanelOpen(!artifactPanelOpen)}
+      onClick={() => onOpenChange(!artifactPanelOpen)}
     >
       {artifactPanelOpen ? <FolderOpen className='h-5 w-5' /> : <Folder className='h-5 w-5' />}
     </Button>

@@ -1,7 +1,5 @@
 import { startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { toast } from '@/shared/app-shell/useToast';
-import { useChatRequestStore } from './useChatRequestStore';
-import { useChatSessionStore } from '@/features/conversations/session';
+import type { ChatRuntimeState } from '@/features/chat/agent-runtime/chat-runtime-state';
 import { cacheConversation, upsertConversationInCache } from '@/features/conversations/session';
 import {
   composerDocumentToBlocks,
@@ -12,47 +10,48 @@ import {
 
 // 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
 export async function submitMessage(
+  runtime: ChatRuntimeState,
   document: ComposerDocument,
   navigateToNewChat: (conversationId: string) => Promise<void> | void,
   clearComposer: () => void,
 ) {
-  const requestStore = useChatRequestStore.getState();
-  const sessionStore = useChatSessionStore.getState();
+  const sessionState = runtime.getSession();
 
-  const currentModelId = sessionStore.currentModelId;
-  const isBusy = requestStore.status !== 'idle';
+  const currentModelId = sessionState.currentModelId;
+  const isBusy = runtime.getStatus() !== 'idle';
 
   const hasModel = !!currentModelId;
   const hasPendingUpload = isComposerDocumentUploading(document);
 
   if (isBusy) {
-    toast.warning('Wait for the current request to finish before sending another message.');
+    runtime.toast.warning('Wait for the current request to finish before sending another message.');
     return;
   }
   if (isComposerDocumentEmpty(document)) {
-    toast.warning('Type a message before sending.');
+    runtime.toast.warning('Type a message before sending.');
     return;
   }
   if (!hasModel) {
-    toast.warning('Select a model before sending a message.');
+    runtime.toast.warning('Select a model before sending a message.');
     return;
   }
   if (hasPendingUpload) {
-    toast.warning('Attachments are still uploading. Please wait.');
+    runtime.toast.warning('Attachments are still uploading. Please wait.');
     return;
   }
 
   const blocks = composerDocumentToBlocks(document);
-  const parentId = sessionStore.currentPath.at(-1) ?? null;
+  const parentId = sessionState.currentPath.at(-1) ?? null;
   const previousSiblingId =
     parentId === null
-      ? sessionStore.latestRootId
-      : (sessionStore.messages[parentId - 1]?.latestChild ?? null);
-  requestStore.setStatus('sending', 'submitMessage');
+      ? sessionState.latestRootId
+      : (sessionState.messages[parentId - 1]?.latestChild ?? null);
+  runtime.setStatus('sending');
 
-  const isNewConversation = !sessionStore.conversationId;
+  const isNewConversation = !sessionState.conversationId;
 
   await startChatRequest(
+    runtime,
     {
       type: 'append',
       message: { role: 'user', blocks },
@@ -69,16 +68,16 @@ export async function submitMessage(
         throw new Error('New conversation did not return a user message');
       }
 
-      const store = useChatSessionStore.getState();
+      const state = runtime.getSession();
       const now = response.message.createdAt;
       cacheConversation({
         id: response.conversationId,
         title: 'New Chat',
-        model: store.currentModelId,
+        model: state.currentModelId,
         is_pinned: false,
         pinned_at: null,
-        currentPath: store.currentPath,
-        messages: store.messages,
+        currentPath: state.currentPath,
+        messages: state.messages,
         artifacts: [],
         created_at: now,
         updated_at: now,
@@ -86,7 +85,7 @@ export async function submitMessage(
       upsertConversationInCache({
         id: response.conversationId,
         title: 'New Chat',
-        model: store.currentModelId,
+        model: state.currentModelId,
         is_pinned: false,
         pinned_at: null,
         created_at: now,

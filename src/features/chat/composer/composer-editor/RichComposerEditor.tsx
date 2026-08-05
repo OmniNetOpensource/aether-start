@@ -13,7 +13,7 @@ import {
   convertImageToBase64,
   getBase64ImageValidationMessage,
 } from '@/features/attachments/attachment-upload';
-import { toast } from '@/shared/app-shell/useToast';
+import { useToast } from '@/shared/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
 import { collectClipboardFiles } from '@/shared/browser/file';
 import {
@@ -272,6 +272,7 @@ export const RichComposerEditor = forwardRef<RichComposerEditorHandle, RichCompo
     },
     ref,
   ) {
+    const toast = useToast();
     const onChangeRef = useRef(onChange);
     const onSubmitRef = useRef(onSubmit);
     onChangeRef.current = onChange;

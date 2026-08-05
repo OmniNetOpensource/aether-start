@@ -4,20 +4,23 @@ import { useResponsive } from '@/shared/app-shell/ResponsiveContext';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/design-system/popover';
 import { cn } from '@/shared/core/utils';
 import { truncateMiddle } from '@/shared/core/truncate-middle';
-import { toast } from '@/shared/app-shell/useToast';
-import { useChatSessionStore } from '@/features/conversations/session';
+import { useToast } from '@/shared/app-shell/useToast';
+import type { ChatSessionActions, ChatSessionState } from '@/features/conversations/session';
 import { buildPreviewDocument } from './preview-document';
 import { deployToNetlifyFn } from './netlify-deploy';
 import { ArtifactCodeBlock } from './ArtifactCodeBlock';
 
-function ArtifactPanelBody() {
+function ArtifactPanelBody({
+  session,
+  actions,
+}: {
+  session: ChatSessionState;
+  actions: ChatSessionActions;
+}) {
+  const toast = useToast();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [deployingArtifactId, setDeployingArtifactId] = useState<string | null>(null);
-  const artifacts = useChatSessionStore((state) => state.artifacts);
-  const selectedArtifactId = useChatSessionStore((state) => state.selectedArtifactId);
-  const artifactView = useChatSessionStore((state) => state.artifactView);
-  const setArtifactView = useChatSessionStore((state) => state.setArtifactView);
-  const selectArtifact = useChatSessionStore((state) => state.selectArtifact);
+  const { artifacts, selectedArtifactId, artifactView } = session;
 
   const selectedArtifact = artifacts.find((a) => a.id === selectedArtifactId) ?? null;
 
@@ -53,18 +56,7 @@ function ArtifactPanelBody() {
       },
     })
       .then((result) => {
-        useChatSessionStore.setState((state) => ({
-          artifacts: state.artifacts.map((artifact) =>
-            artifact.id === artifactId
-              ? {
-                  ...artifact,
-                  deploy_url: result.url,
-                  deployed_at: result.deployed_at,
-                  updated_at: result.deployed_at,
-                }
-              : artifact,
-          ),
-        }));
+        actions.updateArtifactDeployment(artifactId, result.url, result.deployed_at);
       })
       .catch((error: unknown) => {
         console.error('[artifact deploy]', error);
@@ -107,7 +99,7 @@ function ArtifactPanelBody() {
                       : 'text-secondary hover:bg-hover hover:text-foreground',
                   )}
                   onClick={() => {
-                    selectArtifact(artifact.id);
+                    actions.selectArtifact(artifact.id);
                     setHistoryOpen(false);
                   }}
                 >
@@ -163,7 +155,7 @@ function ArtifactPanelBody() {
                   ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground',
               )}
-              onClick={() => setArtifactView('code')}
+              onClick={() => actions.setArtifactView('code')}
             >
               <Braces className='mr-1 inline h-3 w-3' />
               Code
@@ -176,7 +168,7 @@ function ArtifactPanelBody() {
                   ? 'bg-background text-foreground shadow-xs'
                   : 'text-muted-foreground hover:text-foreground',
               )}
-              onClick={() => setArtifactView('preview')}
+              onClick={() => actions.setArtifactView('preview')}
             >
               <Eye className='mr-1 inline h-3 w-3' />
               Preview
@@ -218,12 +210,16 @@ function ArtifactPanelBody() {
   );
 }
 
-export default function ArtifactPanel() {
+export default function ArtifactPanel({
+  session,
+  actions,
+}: {
+  session: ChatSessionState;
+  actions: ChatSessionActions;
+}) {
   const deviceType = useResponsive();
   const isMobile = deviceType === 'mobile';
-  const artifacts = useChatSessionStore((state) => state.artifacts);
-  const artifactPanelOpen = useChatSessionStore((state) => state.artifactPanelOpen);
-  const setArtifactPanelOpen = useChatSessionStore((state) => state.setArtifactPanelOpen);
+  const { artifacts, artifactPanelOpen } = session;
   const [isResizing, setIsResizing] = useState(false);
   const asideRef = useRef<HTMLElement>(null);
 
@@ -243,14 +239,14 @@ export default function ArtifactPanel() {
       <div className='fixed inset-0 z-(--z-modal-content) flex h-dvh flex-col bg-background px-5 pb-5 pt-14'>
         <button
           type='button'
-          onClick={() => setArtifactPanelOpen(false)}
+          onClick={() => actions.setArtifactPanelOpen(false)}
           className='absolute right-4 top-4 rounded-sm p-2 text-secondary transition-colors hover:text-foreground'
           aria-label='Close'
         >
           <X className='size-4' />
         </button>
         <div className='flex min-h-0 flex-1 flex-col'>
-          <ArtifactPanelBody />
+          <ArtifactPanelBody session={session} actions={actions} />
         </div>
       </div>
     );
@@ -322,7 +318,7 @@ export default function ArtifactPanel() {
       >
         <div className='h-full w-px bg-border/40 transition-colors group-hover:bg-border' />
       </div>
-      <ArtifactPanelBody />
+      <ArtifactPanelBody session={session} actions={actions} />
     </aside>
   );
 }

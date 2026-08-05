@@ -10,8 +10,12 @@ import {
 import { useHydrated, useNavigate } from '@tanstack/react-router';
 import { ArrowUp, Loader2, Paperclip, Square } from 'lucide-react';
 import { cancelAnswering, cancelSending } from '@/features/chat/agent-runtime/chat-orchestrator';
+import type {
+  ChatRuntimeState,
+  ChatStatus,
+} from '@/features/chat/agent-runtime/chat-runtime-state';
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
-import { toast } from '@/shared/app-shell/useToast';
+import { useToast } from '@/shared/app-shell/useToast';
 import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
 import { FetchProviderSelector } from './composer-controls/FetchProviderSelector';
@@ -30,7 +34,6 @@ import {
   type RichComposerEditorHandle,
 } from './composer-editor/RichComposerEditor';
 import { submitMessage } from './composer-request/submit-chat';
-import { useChatRequestStore } from './composer-request/useChatRequestStore';
 
 declare global {
   interface Window {
@@ -56,7 +59,8 @@ type ComposerProps = {
   onAction: () => void;
 };
 
-export function useComposerProps(): ComposerProps {
+export function useComposerProps(runtime: ChatRuntimeState, status: ChatStatus): ComposerProps {
+  const toast = useToast();
   const navigate = useNavigate();
   const hydrated = useHydrated();
   const [composerDocumentState, setComposerDocument] = useState<ComposerDocument | null>(null);
@@ -64,7 +68,6 @@ export function useComposerProps(): ComposerProps {
     composerDocumentState ??
     createComposerDocument(hydrated ? (window.__preHydrationInput ?? '') : '');
   const editorRef = useRef<RichComposerEditorHandle | null>(null);
-  const status = useChatRequestStore((state) => state.status);
   const fileInputId = useId();
   const uploading = isComposerDocumentUploading(composerDocument);
   const action =
@@ -97,6 +100,7 @@ export function useComposerProps(): ComposerProps {
 
   const submit = () => {
     void submitMessage(
+      runtime,
       composerDocument,
       async (conversationId) => {
         await navigate({
@@ -125,9 +129,24 @@ export function useComposerProps(): ComposerProps {
     action,
     uploading,
     fileInputId,
-    promptSelector: <PromptSelector />,
-    fetchProviderSelector: <FetchProviderSelector />,
-    modelSelector: <ModelSelector />,
+    promptSelector: (
+      <PromptSelector
+        currentPromptId={runtime.getSession().currentPromptId}
+        onPromptChange={runtime.session.setCurrentPrompt}
+      />
+    ),
+    fetchProviderSelector: (
+      <FetchProviderSelector
+        currentFetchProvider={runtime.getSession().currentFetchProvider}
+        onProviderChange={runtime.session.setCurrentFetchProvider}
+      />
+    ),
+    modelSelector: (
+      <ModelSelector
+        currentModelId={runtime.getSession().currentModelId}
+        onModelChange={runtime.session.setCurrentModel}
+      />
+    ),
     onDocumentChange: setComposerDocument,
     onEditorReady: (editor) => {
       editorRef.current = editor;
@@ -152,14 +171,14 @@ export function useComposerProps(): ComposerProps {
         return;
       }
       if (action === 'sending') {
-        void cancelSending('Composer/sendButton').catch((error) => {
+        void cancelSending(runtime, 'Composer/sendButton').catch((error) => {
           console.error('Failed to cancel sending:', error);
           toast.error(error instanceof Error ? error.message : '取消发送失败');
         });
         return;
       }
       if (action === 'streaming') {
-        void cancelAnswering('Composer/stopButton').catch((error) => {
+        void cancelAnswering(runtime, 'Composer/stopButton').catch((error) => {
           console.error('Failed to stop answering:', error);
           toast.error(error instanceof Error ? error.message : '停止失败');
         });

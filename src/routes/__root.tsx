@@ -3,7 +3,7 @@ import { AppErrorBoundary } from '@/shared/app-shell/AppErrorBoundary';
 
 import { useViewportHeight } from '@/shared/app-shell/useViewportHeight';
 import { TooltipProvider } from '@/shared/design-system/tooltip';
-import { ToastContainer } from '@/shared/app-shell/toast-container';
+import { ToastProvider } from '@/shared/app-shell/toast-context';
 import { ResponsiveProvider } from '@/shared/app-shell/ResponsiveContext';
 import { NotFound } from '@/routes/-not-found';
 import { getSessionStateFn } from '@/features/auth/session';
@@ -98,8 +98,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <ResponsiveProvider>
           <TooltipProvider>
-            {children}
-            <ToastContainer />
+            <ToastProvider>{children}</ToastProvider>
           </TooltipProvider>
         </ResponsiveProvider>
         <Scripts />
