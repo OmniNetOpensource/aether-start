@@ -18,12 +18,14 @@ import { applyChatEventToTree } from './event-handlers';
 import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
 import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
-import type { SerializedMessage } from '@/features/chat/message-thread';
+import { isMessage } from '@/features/chat/message-thread';
+import { mergeChatStartedPayload } from '@/features/conversations/conversation-tree';
 import type {
   ChatAgentStatus,
   ChatErrorCode,
+  ChatOperation,
   ChatServerToClientEvent,
-  MessageTreeSnapshot,
+  ChatStartedPayload,
 } from '@/features/chat/chat-api';
 
 /** Agent 路由名，对应 /agents/conversation-runner */
@@ -50,8 +52,8 @@ export const resetLastEventId = () => {
  * 同一时刻只允许一个请求在跑，新请求会 abort 掉旧的。
  */
 let activeController: AbortController | null = null;
+let activeRequestAcceptedCallback: (() => void) | null = null;
 let stopWaiters: (() => void)[] = [];
-let activeRequestAccepted = false;
 
 let reconnectAttempt = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -179,6 +181,41 @@ const finalizeStream = () => {
   clearReconnectState();
 };
 
+const applyChatStartedPayload = (value: unknown) => {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    !('currentPath' in value) ||
+    !Array.isArray(value.currentPath) ||
+    !('changedMessages' in value) ||
+    !Array.isArray(value.changedMessages)
+  ) {
+    throw new Error('Invalid chat_started payload');
+  }
+
+  const startedPayload: ChatStartedPayload = {
+    currentPath: value.currentPath.filter(
+      (id): id is number => typeof id === 'number' && Number.isInteger(id) && id > 0,
+    ),
+    changedMessages: value.changedMessages.filter(isMessage),
+  };
+  if (
+    startedPayload.currentPath.length !== value.currentPath.length ||
+    startedPayload.changedMessages.length !== value.changedMessages.length
+  ) {
+    throw new Error('Invalid chat_started payload');
+  }
+
+  const sessionStore = useChatSessionStore.getState();
+  const nextTree = mergeChatStartedPayload(sessionStore.getTreeState(), startedPayload);
+  if (!nextTree) {
+    throw new Error('Failed to merge chat_started payload');
+  }
+  sessionStore.setTreeState(nextTree);
+  activeRequestAcceptedCallback?.();
+  activeRequestAcceptedCallback = null;
+};
+
 /**
  * 处理单条 SSE 消息。
  * @param event - SSE 的 event 字段（如 chat_event、chat_started、chat_finished 等）
@@ -204,13 +241,11 @@ const handleSSEMessage = (event: string, raw: string) => {
       applyChatEventToTree(payload.event as ChatServerToClientEvent);
       return;
     }
-    case 'chat_started':
-      activeRequestAccepted = true;
+    case 'chat_started': {
+      applyChatStartedPayload(payload);
       setStatus('streaming', 'chat_started');
-      if (typeof payload.userMessageCreatedAt === 'string') {
-        useChatSessionStore.getState().stampUserMessageTime(payload.userMessageCreatedAt);
-      }
       return;
+    }
     case 'chat_finished':
       clearReconnectState();
       flushAll();
@@ -231,6 +266,9 @@ const handleSSEMessage = (event: string, raw: string) => {
     case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
       flushAll();
+      if (payload.startedPayload) {
+        applyChatStartedPayload(payload.startedPayload);
+      }
       setStatus(payload.status === 'running' ? 'streaming' : 'idle', 'sync_response');
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
@@ -353,25 +391,24 @@ export const checkAgentStatus = async (
  *
  * 异常：AbortError 静默忽略；TypeError（如网络错误）调用 finalizeStream；其他恢复 idle。
  */
-export const startChatRequest = async () => {
+export const startChatRequest = async (operation: ChatOperation, onAccepted?: () => void) => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
   resetLastEventId();
-  activeRequestAccepted = false;
-
   if (!sessionStore.currentModelId) {
     toast.warning(SELECT_MODEL_WARNING);
     requestStore.setStatus('idle', 'startChatRequest/noModel');
     return;
   }
 
-  const messages = sessionStore.getMessagesFromPath();
   const conversationId = sessionStore.conversationId;
   const idempotencyKey = generateId('msg'); /* 幂等键，防止重复提交 */
 
-  /* 消息树快照，供服务端做分段与上下文对齐 */
-  const treeSnapshot: MessageTreeSnapshot = useChatSessionStore.getState().getTreeState();
+  if (!conversationId) {
+    requestStore.setStatus('idle', 'startChatRequest/noConversation');
+    throw new Error('Conversation not found');
+  }
 
   const body = {
     idempotencyKey,
@@ -379,19 +416,13 @@ export const startChatRequest = async () => {
     promptId: sessionStore.currentPromptId || undefined,
     fetchProvider: sessionStore.currentFetchProvider,
     conversationId,
-    conversationHistory: messages.map(
-      (message) =>
-        ({
-          role: message.role,
-          blocks: message.blocks,
-        }) as SerializedMessage,
-    ),
-    treeSnapshot,
+    operation,
   };
 
   activeController?.abort(); /* 取消之前的请求，保证同一时刻只有一个在跑 */
   const controller = new AbortController();
   activeController = controller;
+  activeRequestAcceptedCallback = onAccepted ?? null;
   requestStore.setStatus('sending', 'startChatRequest');
 
   try {
@@ -436,6 +467,7 @@ export const startChatRequest = async () => {
         },
       });
       requestStore.setStatus('idle', 'startChatRequest/rejected');
+      activeRequestAcceptedCallback = null;
       return;
     }
 
@@ -443,6 +475,7 @@ export const startChatRequest = async () => {
     finalizeStream();
   } catch (error) {
     if (isAbortError(error)) {
+      activeRequestAcceptedCallback = null;
       requestStore.setStatus('idle', 'startChatRequest/aborted');
       return;
     }
@@ -450,12 +483,13 @@ export const startChatRequest = async () => {
     const currentStatus = useChatRequestStore.getState().status;
     const convId = useChatSessionStore.getState().conversationId;
 
-    if (error instanceof TypeError && currentStatus !== 'idle' && convId && activeRequestAccepted) {
+    if (error instanceof TypeError && currentStatus !== 'idle' && convId) {
       scheduleAutoReconnect(convId);
       return;
     }
 
     useChatRequestStore.getState().setStatus('idle', 'startChatRequest/error');
+    activeRequestAcceptedCallback = null;
     const message =
       error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败';
     applyChatEventToTree({
@@ -483,6 +517,7 @@ export const cancelSending = async (reason: string) => {
   flushAll();
   activeController?.abort();
   activeController = null;
+  activeRequestAcceptedCallback = null;
   useChatRequestStore.getState().setStatus('idle', `cancelSending/${reason}`);
 };
 
@@ -495,6 +530,7 @@ export const cancelStreamSubscription = (reason: string) => {
   flushAll();
   activeController?.abort();
   activeController = null;
+  activeRequestAcceptedCallback = null;
   resolveStopWaiters();
 
   useChatRequestStore.getState().setStatus('idle', `cancelStreamSubscription/${reason}`);

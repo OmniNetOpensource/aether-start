@@ -3,7 +3,6 @@ import { devtools } from 'zustand/middleware';
 import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { toast } from '@/shared/app-shell/useToast';
 import { cancelAnswering, startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { cloneBlocks, editMessage } from '@/features/conversations/conversation-tree';
 import {
   composerDocumentFromBlocks,
   composerDocumentToBlocks,
@@ -62,7 +61,7 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
           };
         }),
       cancelEditing: () => set({ editingState: null }),
-      submitEdit: async (depth) => {
+      submitEdit: async () => {
         const editingState = get().editingState;
         if (!editingState) {
           return;
@@ -84,29 +83,26 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         const treeStore = useChatSessionStore.getState();
-        const result = editMessage(
-          treeStore.getTreeState(),
-          depth,
-          editingState.messageId,
-          composerDocumentToBlocks(editingState.editedDocument),
-        );
-
-        if (!result) {
+        const targetMessage = treeStore.messages[editingState.messageId - 1];
+        if (!targetMessage || targetMessage.role !== 'user') {
           set({ editingState: null });
           return;
         }
 
-        treeStore.setTreeState({
-          messages: result.messages,
-          currentPath: result.currentPath,
-          latestRootId: result.latestRootId,
-          nextId: result.nextId,
-        });
-        set({ editingState: null });
-
-        await startChatRequest();
+        await startChatRequest(
+          {
+            type: 'append',
+            message: {
+              role: 'user',
+              blocks: composerDocumentToBlocks(editingState.editedDocument),
+            },
+            parentId: targetMessage.parentId,
+            previousSiblingId: targetMessage.id,
+          },
+          () => set({ editingState: null }),
+        );
       },
-      retryFromMessage: async (messageId, depth) => {
+      retryFromMessage: async (messageId) => {
         const selectedModel = useChatSessionStore.getState().currentModelId;
         if (!selectedModel) {
           toast.warning('请先选择模型');
@@ -125,39 +121,25 @@ export const useEditingStore = create<EditingStoreState & EditingStoreActions>()
         }
 
         if (targetNode.role === 'user') {
-          const result = editMessage(
-            treeState,
-            depth,
-            messageId,
-            cloneBlocks(targetNode.blocks ?? []),
+          await startChatRequest(
+            {
+              type: 'append',
+              message: { role: 'user', blocks: targetNode.blocks },
+              parentId: targetNode.parentId,
+              previousSiblingId: targetNode.id,
+            },
+            () => set({ editingState: null }),
           );
-
-          if (!result) {
-            return;
-          }
-
-          treeStore.setTreeState({
-            messages: result.messages,
-            currentPath: result.currentPath,
-            latestRootId: result.latestRootId,
-            nextId: result.nextId,
-          });
-          set({ editingState: null });
-
-          await startChatRequest();
           return;
         }
 
-        // For assistant nodes, rewind to the parent user message and regenerate.
-        const nextPath = treeState.currentPath.slice(0, Math.max(depth - 1, 0));
-        if (nextPath.length === 0) {
+        if (targetNode.parentId === null) {
           return;
         }
 
-        treeStore.setTreeState({ currentPath: nextPath });
-        set({ editingState: null });
-
-        await startChatRequest();
+        await startChatRequest({ type: 'regenerate', currentMessageId: targetNode.parentId }, () =>
+          set({ editingState: null }),
+        );
       },
       clear: () => set({ editingState: null }),
     }),

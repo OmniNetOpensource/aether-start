@@ -14,6 +14,10 @@ import type { FetchProvider } from './tool-types';
 import { generateTitleFromConversation } from './chat-title';
 import { processEventToTree, cloneTreeSnapshot } from '@/features/chat/agent-runtime';
 import {
+  applyChatOperation,
+  computeMessagesFromPath,
+} from '@/features/conversations/conversation-tree';
+import {
   buildAskUserQuestionsModelResult,
   normalizeAskUserQuestionsAnswers,
   parseAskUserQuestions,
@@ -29,13 +33,20 @@ import { consumePromptQuotaOnAccept } from '@/features/quota/quota-balance';
 import type {
   ArtifactLanguage,
   ChatAgentStatus,
+  ChatOperation,
   ChatServerToClientEvent,
+  ChatStartedPayload,
   MessageTreeSnapshot,
   PendingToolInvocation,
   PersistedChatEvent,
   ToolInvocationResult,
 } from '@/features/chat/chat-api';
-import type { Message, SerializedMessage } from '@/features/chat/message-thread';
+import {
+  isMessage,
+  isUserContentBlock,
+  type Message,
+  type SerializedMessage,
+} from '@/features/chat/message-thread';
 
 // Durable Object 只服务一个会话实例，所以这里记录的是“这一个会话”当前的运行态。
 // 前端恢复连接、轮询状态、发起中断时，都会依赖这里的信息判断该怎么继续。
@@ -68,6 +79,13 @@ const isObject = (value: unknown): value is Record<string, unknown> =>
 
 const asString = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 ? value : null;
+
+const asMessageId = (value: unknown): number | null | undefined => {
+  if (value === null) {
+    return null;
+  }
+  return typeof value === 'number' && Number.isInteger(value) && value > 0 ? value : undefined;
+};
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -112,17 +130,19 @@ const toEventError = (message: string): ChatServerToClientEvent => ({
   message,
 });
 
-// 前端发起一次聊天请求时会同时上传：
-// 1. conversationHistory：给模型推理用的线性消息历史
-// 2. treeSnapshot：给服务端维护消息树和最终落库用的完整快照
 type ChatRequestBody = {
   idempotencyKey: string;
   conversationId: string;
   model: string;
   promptId?: string;
   fetchProvider?: FetchProvider;
+  operation: ChatOperation;
+};
+
+type PreparedChatRequest = ChatRequestBody & {
   conversationHistory: SerializedMessage[];
   treeSnapshot: MessageTreeSnapshot;
+  startedPayload: ChatStartedPayload;
 };
 
 // 流式 artifact 事件在内存里拼出的「进行中」状态；completed 或 failed 后从 Map 移除。
@@ -260,36 +280,40 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
     rawFetchProvider === 'jina' || rawFetchProvider === 'firecrawl' || rawFetchProvider === 'exa'
       ? rawFetchProvider
       : undefined;
-  const conversationHistory = Array.isArray(body.conversationHistory)
-    ? (body.conversationHistory as SerializedMessage[])
-    : null;
-  const treeSnapshot = isObject(body.treeSnapshot) ? body.treeSnapshot : null;
+  const rawOperation = body.operation;
 
-  const snapshotMessages =
-    treeSnapshot && Array.isArray(treeSnapshot.messages)
-      ? (treeSnapshot.messages as Message[])
-      : null;
-  const snapshotPath =
-    treeSnapshot && Array.isArray(treeSnapshot.currentPath)
-      ? treeSnapshot.currentPath.filter((id): id is number => typeof id === 'number')
-      : null;
-  const snapshotLatestRootId =
-    treeSnapshot &&
-    (typeof treeSnapshot.latestRootId === 'number' || treeSnapshot.latestRootId === null)
-      ? treeSnapshot.latestRootId
-      : null;
-  const snapshotNextId =
-    treeSnapshot && typeof treeSnapshot.nextId === 'number' ? treeSnapshot.nextId : null;
+  let operation: ChatOperation | null = null;
+  if (isObject(rawOperation) && rawOperation.type === 'append' && isObject(rawOperation.message)) {
+    const parentId = asMessageId(rawOperation.parentId);
+    const previousSiblingId = asMessageId(rawOperation.previousSiblingId);
+    if (
+      rawOperation.message.role === 'user' &&
+      Array.isArray(rawOperation.message.blocks) &&
+      rawOperation.message.blocks.length > 0 &&
+      rawOperation.message.blocks.every(isUserContentBlock) &&
+      parentId !== undefined &&
+      previousSiblingId !== undefined
+    ) {
+      operation = {
+        type: 'append',
+        message: {
+          role: 'user',
+          blocks: rawOperation.message.blocks,
+        },
+        parentId,
+        previousSiblingId,
+      };
+    }
+  }
 
-  if (
-    !idempotencyKey ||
-    !conversationId ||
-    !model ||
-    !conversationHistory ||
-    !snapshotMessages ||
-    !snapshotPath ||
-    snapshotNextId === null
-  ) {
+  if (isObject(rawOperation) && rawOperation.type === 'regenerate') {
+    const currentMessageId = asMessageId(rawOperation.currentMessageId);
+    if (currentMessageId) {
+      operation = { type: 'regenerate', currentMessageId };
+    }
+  }
+
+  if (!idempotencyKey || !conversationId || !model || !operation) {
     return null;
   }
 
@@ -299,13 +323,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
     model,
     promptId,
     fetchProvider,
-    conversationHistory,
-    treeSnapshot: {
-      messages: snapshotMessages,
-      currentPath: snapshotPath,
-      latestRootId: snapshotLatestRootId,
-      nextId: snapshotNextId,
-    },
+    operation,
   };
 };
 
@@ -321,6 +339,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   // eventCache 用来支持断线重连。前端带上 lastEventId 后，可以从这里补拉遗漏事件。
   private eventCache: PersistedChatEvent[] = [];
   private nextEventId = 1;
+  private startedPayload: ChatStartedPayload | null = null;
   private runtimeState: ConversationRunnerState = {
     status: 'idle',
     conversationId: null,
@@ -435,9 +454,9 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       return Response.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
-    const message = parseChatRequestBody(rawBody);
+    const requestMessage = parseChatRequestBody(rawBody);
 
-    if (!message) {
+    if (!requestMessage) {
       return Response.json({ error: 'Invalid request body' }, { status: 400 });
     }
 
@@ -448,7 +467,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
 
     // URL 定位到的 Durable Object 实例和 body 里声明的 conversationId 必须一致。
     // 不一致说明请求落到了错误实例，直接拒绝。
-    if (message.conversationId !== this.instanceName) {
+    if (requestMessage.conversationId !== this.instanceName) {
       return Response.json({ error: 'Conversation ID mismatch' }, { status: 400 });
     }
 
@@ -459,6 +478,31 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     if (!this.runtimeState.ownerUserId) {
       this.runtimeState = { ...this.runtimeState, ownerUserId: userId };
     }
+
+    const existing = await getConversationById(this.env.DB, requestMessage.conversationId, userId);
+    const operationResult = applyChatOperation(
+      existing?.messages.filter(isMessage) ?? [],
+      requestMessage.operation,
+      new Date().toISOString(),
+    );
+    if (!operationResult) {
+      return Response.json({ error: 'Invalid chat operation' }, { status: 400 });
+    }
+
+    const message: PreparedChatRequest = {
+      ...requestMessage,
+      treeSnapshot: operationResult.treeSnapshot,
+      startedPayload: operationResult.startedPayload,
+      conversationHistory: computeMessagesFromPath(
+        operationResult.treeSnapshot.messages,
+        operationResult.treeSnapshot.currentPath,
+      ).map(
+        (item): SerializedMessage =>
+          item.role === 'user'
+            ? { role: 'user', blocks: item.blocks }
+            : { role: 'assistant', blocks: item.blocks },
+      ),
+    };
 
     // 新请求开始后，旧请求的事件缓存已经没有意义，先清掉避免重连时串事件。
     this.eventCache = [];
@@ -479,36 +523,9 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       return Response.json({ type: 'quota_error', message: errorMessage }, { status: 402 });
     }
 
-    // 进入 running 状态后，状态探测和 /events 补连都会把这个会话视为仍在生成中。
-    this.runtimeState = {
-      status: 'running',
-      conversationId: message.conversationId,
-      ownerUserId: this.runtimeState.ownerUserId ?? userId,
-      updatedAt: Date.now(),
-    };
-
-    // /chat 自己也返回一个 SSE 流，这样首个请求无需额外再发起一次 /events 订阅。
-    const { readable, writable } = new TransformStream<Uint8Array>();
-    const writer = writable.getWriter();
-    this.writers.add(writer);
-
-    const userMessageCreatedAt = new Date().toISOString();
-    const lastPathId = message.treeSnapshot.currentPath.at(-1);
-    if (lastPathId) {
-      const lastMsg = message.treeSnapshot.messages[lastPathId - 1];
-      if (lastMsg && lastMsg.role === 'user') {
-        lastMsg.createdAt = userMessageCreatedAt;
-      }
-    }
-    this.broadcast('chat_started', { userMessageCreatedAt });
-
-    // 在模型真正开始跑之前先把用户刚发出的消息落库。
-    // 这样哪怕后续 provider 初始化失败，用户输入也不会丢。
+    const now = new Date().toISOString();
+    const title = existing?.title ?? 'New Chat';
     try {
-      const existing = await getConversationById(this.env.DB, message.conversationId, userId);
-      const now = new Date().toISOString();
-      const title = existing?.title ?? 'New Chat';
-
       await upsertConversation(this.env.DB, {
         user_id: userId,
         id: message.conversationId,
@@ -519,18 +536,34 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         created_at: existing?.created_at ?? now,
         updated_at: now,
       });
-
-      this.persistAndBroadcastEvent({
-        type: 'conversation_updated',
-        conversationId: message.conversationId,
-        title,
-        updated_at: now,
-      });
     } catch (error) {
-      log('AGENT', 'User message persist failed', {
-        error: error instanceof Error ? error.message : String(error),
+      log('AGENT', 'Chat operation persist failed', {
+        error: getErrorMessage(error),
       });
+      return Response.json({ error: 'Failed to persist chat operation' }, { status: 500 });
     }
+
+    // 只有树操作落库后才接受请求；从这一刻开始，状态探测会把会话视为正在生成。
+    this.runtimeState = {
+      status: 'running',
+      conversationId: message.conversationId,
+      ownerUserId: this.runtimeState.ownerUserId ?? userId,
+      updatedAt: Date.now(),
+    };
+    this.startedPayload = message.startedPayload;
+
+    // /chat 自己也返回一个 SSE 流，这样首个请求无需额外再发起一次 /events 订阅。
+    const { readable, writable } = new TransformStream<Uint8Array>();
+    const writer = writable.getWriter();
+    this.writers.add(writer);
+
+    this.broadcast('chat_started', message.startedPayload);
+    this.persistAndBroadcastEvent({
+      type: 'conversation_updated',
+      conversationId: message.conversationId,
+      title,
+      updated_at: now,
+    });
 
     this.abortController = new AbortController();
     const signal = this.abortController.signal;
@@ -598,6 +631,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     const events = this.listEvents(lastEventId);
     this.sendSSE(writer, 'sync_response', {
       status: this.runtimeState.status,
+      startedPayload: this.startedPayload,
       events,
     });
 
@@ -760,7 +794,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   // 心智模型（与 runChatInBackground 主循环对齐）：
   //   准备上下文 → while：跑一轮 provider（流式 emit）→ 中间快照 → 若出错或自然结束则退出
   //   → 否则执行本轮 pending 工具 → 把工具结果拼进消息 → 再进下一轮 while。
-  // conversationHistory 的结构合法性由 parseChatRequestBody 保证，这里只做业务级校验（非空、有有效用户消息）。
+  // conversationHistory 由服务端从当前分支生成，这里只做业务级校验（非空、有有效用户消息）。
 
   /**
    * 从 HTTP 已解析的 body 构造「可跑模型」所需的一切：校验、选模型与 prompt、创建统一 ChatProvider、
@@ -768,7 +802,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
    * 任一步失败都会 emit error 事件并返回 null，调用方将 finalStatus 置为 error，不再进入主循环。
    */
   private async prepareContext(
-    message: ChatRequestBody,
+    message: PreparedChatRequest,
     emitEvent: (event: ChatServerToClientEvent) => Promise<void>,
   ): Promise<{
     provider: ChatProvider;
@@ -862,7 +896,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
    */
   private async executeAskUserQuestions(
     toolCall: PendingToolInvocation,
-    message: ChatRequestBody,
+    message: PreparedChatRequest,
     userId: string,
     signal: AbortSignal,
     emitEvent: (event: ChatServerToClientEvent) => Promise<void>,
@@ -923,7 +957,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
    */
   private async executeAllToolCalls(
     pendingToolCalls: PendingToolInvocation[],
-    message: ChatRequestBody,
+    message: PreparedChatRequest,
     userId: string,
     signal: AbortSignal,
     emitEvent: (event: ChatServerToClientEvent) => Promise<void>,
@@ -962,7 +996,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
    */
   private async finalize(
     runState: { finalStatus: Exclude<ChatAgentStatus, 'idle' | 'running'> },
-    message: ChatRequestBody,
+    message: PreparedChatRequest,
     userId: string,
     workingTree: MessageTreeSnapshot,
     artifactAccumulator: ArtifactAccumulator,
@@ -1021,7 +1055,11 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
    * /chat 返回 SSE 后，真正跑模型与工具的逻辑；与 HTTP handler 解耦，便于 waitUntil 后台执行。
    * emitEvent 是单一路由：先推进 workingTree（与前端一致的事实来源）、累计 error 条数、artifact 副作用、再入缓存并 SSE。
    */
-  private async runChatInBackground(message: ChatRequestBody, userId: string, signal: AbortSignal) {
+  private async runChatInBackground(
+    message: PreparedChatRequest,
+    userId: string,
+    signal: AbortSignal,
+  ) {
     const runState = { finalStatus: 'completed' as Exclude<ChatAgentStatus, 'idle' | 'running'> };
     let workingTree = cloneTreeSnapshot(message.treeSnapshot);
     let errorEventCount = 0;

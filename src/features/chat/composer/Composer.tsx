@@ -1,16 +1,22 @@
-import { ChangeEvent, DragEvent, MouseEvent, useEffect, useId, useRef, useState } from 'react';
-import { useMountEffect } from '@/shared/app-shell/useMountEffect';
+import {
+  type ChangeEvent,
+  type DragEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import { useHydrated, useNavigate } from '@tanstack/react-router';
 import { ArrowUp, Loader2, Paperclip, Square } from 'lucide-react';
-import { Button } from '@/shared/design-system/button';
-import { toast } from '@/shared/app-shell/useToast';
 import { cancelAnswering, cancelSending } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { submitMessage } from './composer-request/submit-chat';
+import { useMountEffect } from '@/shared/app-shell/useMountEffect';
+import { toast } from '@/shared/app-shell/useToast';
+import { Button } from '@/shared/design-system/button';
 import { cn } from '@/shared/core/utils';
-import { useChatRequestStore } from './composer-request/useChatRequestStore';
+import { FetchProviderSelector } from './composer-controls/FetchProviderSelector';
 import { ModelSelector } from './composer-controls/ModelSelector';
 import { PromptSelector } from './composer-controls/PromptSelector';
-import { FetchProviderSelector } from './composer-controls/FetchProviderSelector';
 import { registerActiveInput, setLastFocusedInput } from './composer-editor/active-input';
 import {
   createComposerDocument,
@@ -23,26 +29,34 @@ import {
   RichComposerEditor,
   type RichComposerEditorHandle,
 } from './composer-editor/RichComposerEditor';
+import { submitMessage } from './composer-request/submit-chat';
+import { useChatRequestStore } from './composer-request/useChatRequestStore';
 
-/**
- * 首屏脚本把 localStorage 文本草稿写入 window，hydrate 后再恢复到输入框。
- */
 declare global {
   interface Window {
     __preHydrationInput?: string;
   }
 }
 
-/** localStorage 草稿键：与首屏注入配合，刷新/重进可恢复未发送内容。 */
 const COMPOSER_DRAFT_STORAGE_KEY = 'aether_composer_draft';
 
-/**
- * 聊天输入区：文本、引用与图片组成的内联编辑器，以及提示词/模型选择与发送。
- *
- * 发送入口有两处：工具栏主按钮，以及输入框 Ctrl+Enter。
- * 附件有三种入口：文件选择、粘贴图片/文件、拖放到外层容器。
- */
-export function Composer() {
+type ComposerProps = {
+  document: ComposerDocument;
+  action: 'disabled' | 'send' | 'sending' | 'streaming' | 'stopping';
+  uploading: boolean;
+  fileInputId: string;
+  promptSelector: ReactNode;
+  fetchProviderSelector: ReactNode;
+  modelSelector: ReactNode;
+  onDocumentChange: (document: ComposerDocument) => void;
+  onEditorReady: (editor: RichComposerEditorHandle | null) => void;
+  onEditorFocus: () => void;
+  onSubmit: () => void;
+  onFilesSelected: (files: File[]) => Promise<void>;
+  onAction: () => void;
+};
+
+export function useComposerProps(): ComposerProps {
   const navigate = useNavigate();
   const hydrated = useHydrated();
   const [composerDocumentState, setComposerDocument] = useState<ComposerDocument | null>(null);
@@ -50,38 +64,28 @@ export function Composer() {
     composerDocumentState ??
     createComposerDocument(hydrated ? (window.__preHydrationInput ?? '') : '');
   const editorRef = useRef<RichComposerEditorHandle | null>(null);
-  const uploading = isComposerDocumentUploading(composerDocument);
-
-  // --- 请求状态（发送中/流式中决定主按钮图标与是否视为「忙」）---
   const status = useChatRequestStore((state) => state.status);
-  // 隐藏 file input 与 label 关联，避免 id 冲突
   const fileInputId = useId();
+  const uploading = isComposerDocumentUploading(composerDocument);
+  const action =
+    status === 'idle'
+      ? isComposerDocumentEmpty(composerDocument) || uploading
+        ? 'disabled'
+        : 'send'
+      : status;
 
-  // 输入变化即持久化草稿，便于意外刷新后恢复
   useEffect(() => {
     if (!hydrated) return;
     localStorage.setItem(COMPOSER_DRAFT_STORAGE_KEY, getComposerText(composerDocument));
   }, [composerDocument, hydrated]);
 
-  // 在「其它区域」按下可打印字符时，把焦点抢回输入框（不抢已有输入框/快捷键）
   useMountEffect(() => {
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.metaKey || event.ctrlKey || event.altKey) {
-        return;
-      }
-
-      if (event.key.length !== 1) {
-        return;
-      }
+      if (event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1) return;
 
       const tag = event.target instanceof HTMLElement ? event.target.tagName : '';
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
-        return;
-      }
-
-      if (event.target instanceof HTMLElement && event.target.isContentEditable) {
-        return;
-      }
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (event.target instanceof HTMLElement && event.target.isContentEditable) return;
 
       event.preventDefault();
       editorRef.current?.focus();
@@ -91,19 +95,7 @@ export function Composer() {
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
   });
 
-  /**
-   * 主按钮是否「视觉上禁用」。
-   * - 请求进行中（sending/streaming）：按钮可点，用于停止，不设为 disabled。
-   * - stopping：已请求服务端停止，等待服务端结束事件。
-   * - 其余情况：无内容且无附件、无模型、或正在上传附件时禁用。
-   * 草稿在首帧 paint 前由 useLayoutEffect 写入 store，sendDisabled 与受控 input 一致。
-   */
-  const isBusy = status !== 'idle';
-  const inputDisabled = status === 'sending';
-  const hasComposerContent = !isComposerDocumentEmpty(composerDocument);
-  const sendDisabled = status === 'stopping' || (isBusy ? false : !hasComposerContent || uploading);
-
-  const handleSubmit = () => {
+  const submit = () => {
     void submitMessage(
       composerDocument,
       async (conversationId) => {
@@ -123,19 +115,84 @@ export function Composer() {
   };
 
   useEffect(() => {
-    if (!import.meta.env.DEV) {
-      return;
+    if (import.meta.env.DEV) {
+      console.log('[Composer]', { document: composerDocument, action });
     }
+  }, [composerDocument, action]);
 
-    console.log('[Composer]', { document: composerDocument, sendDisabled });
-  }, [composerDocument, sendDisabled]);
+  return {
+    document: composerDocument,
+    action,
+    uploading,
+    fileInputId,
+    promptSelector: <PromptSelector />,
+    fetchProviderSelector: <FetchProviderSelector />,
+    modelSelector: <ModelSelector />,
+    onDocumentChange: setComposerDocument,
+    onEditorReady: (editor) => {
+      editorRef.current = editor;
+      registerActiveInput({ type: 'composer' }, editor);
+    },
+    onEditorFocus: () => setLastFocusedInput({ type: 'composer' }),
+    onSubmit: submit,
+    onFilesSelected: async (files) => {
+      if (uploading) {
+        toast.info('Attachments are still uploading. Please wait.');
+        return;
+      }
+      await editorRef.current?.insertFiles(files);
+    },
+    onAction: () => {
+      if (action === 'stopping') {
+        toast.warning('正在停止当前回复，请稍候。');
+        return;
+      }
+      if (action === 'disabled') {
+        submit();
+        return;
+      }
+      if (action === 'sending') {
+        void cancelSending('Composer/sendButton').catch((error) => {
+          console.error('Failed to cancel sending:', error);
+          toast.error(error instanceof Error ? error.message : '取消发送失败');
+        });
+        return;
+      }
+      if (action === 'streaming') {
+        void cancelAnswering('Composer/stopButton').catch((error) => {
+          console.error('Failed to stop answering:', error);
+          toast.error(error instanceof Error ? error.message : '停止失败');
+        });
+        return;
+      }
+      submit();
+    },
+  };
+}
+
+export function Composer({
+  document,
+  action,
+  uploading,
+  fileInputId,
+  promptSelector,
+  fetchProviderSelector,
+  modelSelector,
+  onDocumentChange,
+  onEditorReady,
+  onEditorFocus,
+  onSubmit,
+  onFilesSelected,
+  onAction,
+}: ComposerProps) {
+  const inputDisabled = action === 'sending';
+  const sendDisabled = action === 'disabled' || action === 'stopping';
 
   return (
     <div
       key='composer-wrapper'
       className='absolute bottom-[2vh] z-(--z-composer) w-full shrink-0 pb-3 md:pb-4 pointer-events-none'
     >
-      {/* 最外层：占满主栏宽度、不参与侧栏 flex 收缩，垫高底部留白；z 保证浮在对话内容之上 */}
       <div
         key='composer-bottom'
         className='relative bottom-2 mx-auto flex w-[90%] max-w-full flex-col gap-2 @[921px]:w-[50%] @[921px]:max-w-2xl pointer-events-auto'
@@ -145,41 +202,27 @@ export function Composer() {
         }}
         onDrop={(event: DragEvent) => {
           event.preventDefault();
-          if (inputDisabled) {
-            return;
-          }
-          const files = Array.from(event.dataTransfer.files ?? []);
-          if (!files.length) return;
-          if (uploading) {
-            toast.info('Attachments are still uploading. Please wait.');
-            return;
-          }
-          void editorRef.current?.insertFiles(files);
+          if (inputDisabled) return;
+
+          const files = Array.from(event.dataTransfer.files);
+          if (files.length) void onFilesSelected(files);
         }}
       >
-        {/* 输入卡片：文本、引用与图片在同一编辑流内。 */}
         <div className='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md'>
           <div className='flex w-full items-end gap-2'>
             <RichComposerEditor
-              ref={(editor) => {
-                editorRef.current = editor;
-                registerActiveInput({ type: 'composer' }, editor);
-              }}
+              ref={onEditorReady}
               id='message-input'
-              document={composerDocument}
-              onChange={setComposerDocument}
-              onFocus={() => {
-                setLastFocusedInput({ type: 'composer' });
-              }}
-              onSubmit={handleSubmit}
+              document={document}
+              onChange={onDocumentChange}
+              onFocus={onEditorFocus}
+              onSubmit={onSubmit}
               disabled={inputDisabled}
               placeholder='Type your message...'
               className={inputDisabled ? 'cursor-not-allowed' : undefined}
             />
           </div>
-          {/* 工具栏：左右分区 — 左为「附件 + 预设提示词」，右为「模型 + 发送」 */}
           <div className='flex items-center justify-between px-0.5'>
-            {/* 左侧工具：隐藏 file input + 回形针触发、PromptSelector */}
             <div className='flex items-center gap-1'>
               <span
                 title={
@@ -191,16 +234,9 @@ export function Composer() {
                   type='file'
                   multiple
                   onChange={async (event: ChangeEvent<HTMLInputElement>) => {
-                    if (inputDisabled || uploading) {
-                      return;
-                    }
+                    if (inputDisabled || uploading || !event.target.files?.length) return;
 
-                    const files = event.target.files;
-                    if (!files || files.length === 0) {
-                      return;
-                    }
-
-                    await editorRef.current?.insertFiles(Array.from(files));
+                    await onFilesSelected(Array.from(event.target.files));
                     event.target.value = '';
                   }}
                   accept='image/jpeg,image/png,image/webp,image/gif'
@@ -236,29 +272,18 @@ export function Composer() {
                   </label>
                 </Button>
               </span>
-              <PromptSelector />
-              <FetchProviderSelector />
+              {promptSelector}
+              {fetchProviderSelector}
             </div>
 
-            {/* 右侧工具：模型下拉 + 主操作按钮（发送 / 停止 / 禁用时晃动反馈） */}
             <div className='flex items-center gap-1'>
-              <ModelSelector />
+              {modelSelector}
               <Button
                 type='button'
                 aria-label='发送'
-                onClick={(event: MouseEvent<HTMLButtonElement>) => {
-                  if (status === 'stopping') {
-                    toast.warning('正在停止当前回复，请稍候。');
-                    return;
-                  }
-
-                  if (sendDisabled) {
-                    const button = event.currentTarget;
-                    if (typeof button.animate !== 'function') {
-                      return;
-                    }
-
-                    button.animate(
+                onClick={(event) => {
+                  if (action === 'disabled') {
+                    event.currentTarget.animate(
                       [
                         { transform: 'translateX(0) scale(1)' },
                         { transform: 'translateX(-5px) scale(0.98)' },
@@ -274,28 +299,8 @@ export function Composer() {
                         easing: 'cubic-bezier(0.22, 0.61, 0.36, 1)',
                       },
                     );
-                    handleSubmit();
-                    return;
                   }
-
-                  if (isBusy) {
-                    event.preventDefault();
-                    if (status === 'sending') {
-                      void cancelSending('Composer/sendButton').catch((error) => {
-                        console.error('Failed to cancel sending:', error);
-                        toast.error(error instanceof Error ? error.message : '取消发送失败');
-                      });
-                      return;
-                    }
-
-                    void cancelAnswering('Composer/stopButton').catch((error) => {
-                      console.error('Failed to stop answering:', error);
-                      toast.error(error instanceof Error ? error.message : '停止失败');
-                    });
-                    return;
-                  }
-
-                  handleSubmit();
+                  onAction();
                 }}
                 size='icon'
                 data-testid='composer-send-button'
@@ -306,9 +311,9 @@ export function Composer() {
                     : 'bg-primary text-background hover:bg-primary hover:scale-105 active:scale-95',
                 )}
               >
-                {status === 'sending' || status === 'stopping' ? (
+                {action === 'sending' || action === 'stopping' ? (
                   <Loader2 className='h-4 w-4 animate-spin' />
-                ) : status === 'streaming' ? (
+                ) : action === 'streaming' ? (
                   <Square className='h-4 w-4 fill-current' />
                 ) : (
                   <ArrowUp

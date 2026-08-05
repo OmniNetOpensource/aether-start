@@ -265,6 +265,19 @@ Important env keys include:
 
 Never commit real secrets.
 
+## 强制工作流程
+
+任何代码修改前，必须先和用户讨论方案，并明确：
+
+- 会修改哪些文件、组件或模块
+- 各部分的职责边界
+- 采用什么技术选择
+- 明确不修改什么
+
+讨论完成后，必须等待用户给出清晰的实施授权，例如“go”或“开始改”，才能编辑项目文件。
+
+“把 X 换成 Y”“做一下 X”“继续”等祈使句不能推定为代码修改授权。即使需求明确、改动很小或容易回退，也不得跳过讨论和授权。
+
 ## Coding Style And Expectations
 
 - TypeScript + React

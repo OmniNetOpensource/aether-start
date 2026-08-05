@@ -89,6 +89,65 @@ export type AssistantMessage = MessageFields & {
 
 export type Message = UserMessage | AssistantMessage;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+const isMessageId = (value: unknown): value is number | null =>
+  value === null || (typeof value === 'number' && Number.isInteger(value) && value > 0);
+
+export const isUserContentBlock = (value: unknown): value is UserContentBlock => {
+  if (!isRecord(value) || typeof value.type !== 'string') {
+    return false;
+  }
+
+  if (value.type === 'content') {
+    return typeof value.content === 'string';
+  }
+
+  if (value.type === 'quotes') {
+    return (
+      Array.isArray(value.quotes) &&
+      value.quotes.every(
+        (quote) =>
+          isRecord(quote) && typeof quote.id === 'string' && typeof quote.text === 'string',
+      )
+    );
+  }
+
+  if (value.type === 'attachments') {
+    return (
+      Array.isArray(value.attachments) &&
+      value.attachments.every(
+        (attachment) =>
+          isRecord(attachment) &&
+          typeof attachment.id === 'string' &&
+          attachment.kind === 'image' &&
+          typeof attachment.name === 'string' &&
+          typeof attachment.size === 'number' &&
+          typeof attachment.mimeType === 'string' &&
+          typeof attachment.url === 'string' &&
+          (attachment.storageKey === undefined || typeof attachment.storageKey === 'string'),
+      )
+    );
+  }
+
+  return false;
+};
+
+export const isMessage = (value: unknown): value is Message =>
+  isRecord(value) &&
+  typeof value.id === 'number' &&
+  Number.isInteger(value.id) &&
+  value.id > 0 &&
+  isMessageId(value.parentId) &&
+  isMessageId(value.prevSibling) &&
+  isMessageId(value.nextSibling) &&
+  isMessageId(value.latestChild) &&
+  (value.role === 'user' || value.role === 'assistant') &&
+  Array.isArray(value.blocks) &&
+  typeof value.createdAt === 'string' &&
+  (typeof value.completedAt === 'string' || value.completedAt === null);
+
 // --- Serialized message types ---
 
 export type SerializedUserMessage = {

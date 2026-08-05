@@ -6,7 +6,7 @@ import {
   resetLastEventId,
   resumeRunningConversation,
 } from '@/features/chat/agent-runtime/chat-orchestrator';
-import { Composer } from '@/features/chat/composer/Composer';
+import { Composer, useComposerProps } from '@/features/chat/composer/Composer';
 import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { MessageList } from '@/features/chat/message-thread/MessageList';
 import { NewChatGreeting } from '@/features/chat/message-thread/NewChatGreeting';
@@ -63,6 +63,7 @@ export const Route = createFileRoute('/app/{-$conversationId}')({
 });
 
 function AppPage() {
+  const composerProps = useComposerProps();
   const { conversationId } = Route.useParams();
   const { conversation } = Route.useLoaderData();
   const pageTitle = useChatSessionStore((state) => state.pageTitle);
@@ -123,7 +124,7 @@ function AppPage() {
               isStreaming={isStreaming}
             />
             {isNewChat ? <NewChatGreeting /> : null}
-            <Composer />
+            <Composer {...composerProps} />
           </div>
           <ArtifactPanel />
         </main>

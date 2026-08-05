@@ -42,9 +42,13 @@ export async function submitMessage(
     return;
   }
 
-  sessionStore.addMessage('user', composerDocumentToBlocks(document));
+  const blocks = composerDocumentToBlocks(document);
+  const parentId = sessionStore.currentPath.at(-1) ?? null;
+  const previousSiblingId =
+    parentId === null
+      ? sessionStore.latestRootId
+      : (sessionStore.messages[parentId - 1]?.latestChild ?? null);
   requestStore.setStatus('sending', 'submitMessage');
-  clearComposer();
 
   if (!sessionStore.conversationId) {
     const conversationId =
@@ -66,5 +70,13 @@ export async function submitMessage(
     });
   }
 
-  await startChatRequest();
+  await startChatRequest(
+    {
+      type: 'append',
+      message: { role: 'user', blocks },
+      parentId,
+      previousSiblingId,
+    },
+    clearComposer,
+  );
 }

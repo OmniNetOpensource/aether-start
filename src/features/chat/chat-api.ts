@@ -1,4 +1,4 @@
-import type { Message } from '@/features/chat/message-thread';
+import type { Message, UserContentBlock } from '@/features/chat/message-thread';
 import type { ChatServerToClientEvent } from './chat-event-types';
 import type {
   AskUserQuestionsAnswer,
@@ -50,6 +50,26 @@ export type MessageTreeSnapshot = {
   currentPath: number[];
   latestRootId: number | null;
   nextId: number;
+};
+
+export type ChatOperation =
+  | {
+      type: 'append';
+      message: {
+        role: 'user';
+        blocks: UserContentBlock[];
+      };
+      parentId: number | null;
+      previousSiblingId: number | null;
+    }
+  | {
+      type: 'regenerate';
+      currentMessageId: number;
+    };
+
+export type ChatStartedPayload = {
+  currentPath: number[];
+  changedMessages: Message[];
 };
 
 export type PersistedChatEvent = {
