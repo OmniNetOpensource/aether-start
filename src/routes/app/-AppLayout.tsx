@@ -1,6 +1,6 @@
-import { lazy, Suspense, useEffect } from 'react';
+import { useEffect } from 'react';
 import { Outlet } from '@tanstack/react-router';
-import { ArtifactToggleButton } from '@/features/chat/artifact';
+import { ArtifactPanel, ArtifactToggleButton } from '@/features/chat/artifact';
 import { Composer } from '@/features/chat/composer/Composer';
 import { MessageList } from '@/features/chat/message-thread/MessageList';
 import Sidebar from '@/features/conversations/conversation-list';
@@ -8,12 +8,7 @@ import { NewChatButton } from '@/features/conversations/conversation-list/NewCha
 import { AppShellRouteDataProvider } from '@/features/conversations/route-data';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { ShareButton } from '@/features/share/share-dialog';
-import { loadWithRetry } from '@/shared/browser/load-with-retry';
 import { Route } from '@/routes/app/route';
-
-const ArtifactPanel = lazy(() =>
-  loadWithRetry(() => import('@/features/chat/artifact/ArtifactPanel')),
-);
 
 export default function AppLayout() {
   const loaderData = Route.useLoaderData();
@@ -39,9 +34,7 @@ export default function AppLayout() {
               <Outlet />
               <Composer />
             </div>
-            <Suspense>
-              <ArtifactPanel />
-            </Suspense>
+            <ArtifactPanel />
           </main>
         </div>
       </div>

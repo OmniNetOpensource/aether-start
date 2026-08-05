@@ -1,30 +1,9 @@
-import { Suspense, lazy, useState } from 'react';
-import { Loader2, Share2 } from 'lucide-react';
+import { useState } from 'react';
+import { Share2 } from 'lucide-react';
 import { Button } from '@/shared/design-system/button';
-import { Dialog, DialogContent } from '@/shared/design-system/dialog';
 import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
-import { loadWithRetry } from '@/shared/browser/load-with-retry';
-
-let shareDialogModulePromise: Promise<typeof import('./ShareDialog')> | null = null;
-
-const loadShareDialog = () => {
-  if (!shareDialogModulePromise) {
-    shareDialogModulePromise = import('./ShareDialog');
-  }
-
-  return shareDialogModulePromise;
-};
-
-const ShareDialog = lazy(() =>
-  loadWithRetry(async () => {
-    const module = await loadShareDialog();
-
-    return {
-      default: module.ShareDialog,
-    };
-  }),
-);
+import { ShareDialog } from './ShareDialog';
 
 export function ShareButton() {
   const [open, setOpen] = useState(false);
@@ -47,20 +26,7 @@ export function ShareButton() {
         title={
           isBusy ? 'Sharing is unavailable while a response is streaming.' : 'Share conversation'
         }
-        onPointerEnter={() => {
-          void loadShareDialog().catch((error) => {
-            console.error('Failed to preload share dialog:', error);
-          });
-        }}
-        onFocus={() => {
-          void loadShareDialog().catch((error) => {
-            console.error('Failed to preload share dialog:', error);
-          });
-        }}
         onClick={() => {
-          void loadShareDialog().catch((error) => {
-            console.error('Failed to preload share dialog:', error);
-          });
           setOpen(true);
         }}
         disabled={isBusy}
@@ -68,22 +34,7 @@ export function ShareButton() {
         <Share2 className='h-5 w-5' />
       </Button>
 
-      {open ? (
-        <Suspense
-          fallback={
-            <Dialog open={open} onOpenChange={setOpen}>
-              <DialogContent className='sm:max-w-md'>
-                <div className='flex items-center gap-2 py-6 text-sm text-muted-foreground'>
-                  <Loader2 className='h-4 w-4 animate-spin' />
-                  <span>Loading share tools...</span>
-                </div>
-              </DialogContent>
-            </Dialog>
-          }
-        >
-          <ShareDialog open={open} onOpenChange={setOpen} />
-        </Suspense>
-      ) : null}
+      {open ? <ShareDialog open={open} onOpenChange={setOpen} /> : null}
     </>
   );
 }

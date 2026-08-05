@@ -1,37 +1,15 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
-import { Check, Loader2, Palette, Settings } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, Palette, Settings } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/design-system/dropdown-menu';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/design-system/dialog';
 import { authClient } from '@/features/auth/auth-client';
 import { useTheme } from '@/shared/app-shell/useTheme';
 import { themes } from '@/themes/registry';
-import { loadWithRetry } from '@/shared/browser/load-with-retry';
-
-let settingsModalModulePromise: Promise<typeof import('../settings-dialog/SettingsModal')> | null =
-  null;
-
-const loadSettingsModal = () => {
-  if (!settingsModalModulePromise) {
-    settingsModalModulePromise = import('../settings-dialog/SettingsModal');
-  }
-
-  return settingsModalModulePromise;
-};
-
-const SettingsModal = lazy(() =>
-  loadWithRetry(async () => {
-    const module = await loadSettingsModal();
-
-    return {
-      default: module.SettingsModal,
-    };
-  }),
-);
+import { SettingsModal } from '../settings-dialog/SettingsModal';
 
 type ProfileMenuProps = {
   isCollapsed?: boolean;
@@ -146,20 +124,7 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
                 ))}
 
               <DropdownMenuItem
-                onPointerMove={() => {
-                  void loadSettingsModal().catch((error) => {
-                    console.error('Failed to preload settings modal:', error);
-                  });
-                }}
-                onFocus={() => {
-                  void loadSettingsModal().catch((error) => {
-                    console.error('Failed to preload settings modal:', error);
-                  });
-                }}
                 onSelect={() => {
-                  void loadSettingsModal().catch((error) => {
-                    console.error('Failed to preload settings modal:', error);
-                  });
                   setSettingsOpen(true);
                 }}
               >
@@ -170,23 +135,7 @@ export function ProfileMenu({ isCollapsed = false, onDropdownOpenChange }: Profi
           </DropdownMenu>
 
           {settingsOpen ? (
-            <Suspense
-              fallback={
-                <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-                  <DialogContent className='max-h-[85vh] w-[50vw] min-w-[320px] max-w-4xl overflow-y-auto'>
-                    <DialogHeader>
-                      <DialogTitle>Settings</DialogTitle>
-                    </DialogHeader>
-                    <div className='flex items-center gap-2 py-6 text-sm text-muted-foreground'>
-                      <Loader2 className='h-4 w-4 animate-spin' />
-                      <span>Loading settings...</span>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              }
-            >
-              <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
-            </Suspense>
+            <SettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} />
           ) : null}
         </div>
       </div>

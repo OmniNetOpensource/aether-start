@@ -1,7 +1,4 @@
-import { lazy, Suspense } from 'react';
-import { loadWithRetry } from '@/shared/browser/load-with-retry';
-
-const MarkdownImpl = lazy(() => loadWithRetry(() => import('./MarkdownImpl')));
+import MarkdownImpl from './MarkdownImpl';
 
 type Props = {
   content: string;
@@ -11,9 +8,7 @@ type Props = {
 function Markdown({ content, isAnimating = false }: Props) {
   return (
     <div>
-      <Suspense fallback={<div className='whitespace-pre-wrap'>{content}</div>}>
-        <MarkdownImpl content={content} isAnimating={isAnimating} />
-      </Suspense>
+      <MarkdownImpl content={content} isAnimating={isAnimating} />
     </div>
   );
 }
