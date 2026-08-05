@@ -21,9 +21,13 @@ const AGENT_PATH_PREFIX = '/agents/conversation-runner/';
 // 这些和普通页面/接口请求的处理模型不是一回事。
 const fetch: RequestHandler<Register> = async (request, opts) => {
   const url = new URL(request.url);
-  const agentName = url.pathname.startsWith(AGENT_PATH_PREFIX)
-    ? url.pathname.slice(AGENT_PATH_PREFIX.length).split('/')[0] || null
-    : null;
+  const createsConversation =
+    request.method === 'POST' && url.pathname === `${AGENT_PATH_PREFIX}chat`;
+  const agentName = createsConversation
+    ? crypto.randomUUID()
+    : url.pathname.startsWith(AGENT_PATH_PREFIX)
+      ? url.pathname.slice(AGENT_PATH_PREFIX.length).split('/')[0] || null
+      : null;
 
   if (agentName) {
     // agent 请求必须先带上登录态。
@@ -35,7 +39,18 @@ const fetch: RequestHandler<Register> = async (request, opts) => {
 
     const headers = new Headers(request.headers);
     headers.set('x-aether-user-id', session.user.id);
-    const authedRequest = new Request(request, { headers });
+    headers.delete('x-aether-new-conversation');
+    if (createsConversation) {
+      headers.set('x-aether-new-conversation', '1');
+      url.pathname = `${AGENT_PATH_PREFIX}${agentName}/chat`;
+    }
+    const authedRequest = createsConversation
+      ? new Request(url, {
+          body: await request.arrayBuffer(),
+          headers,
+          method: request.method,
+        })
+      : new Request(request, { headers });
 
     // env 来自 cloudflare:workers 运行时，类型收窄后取 ConversationRunner 绑定。
     // 同一个 name 经过 idFromName(name) 后总会映射到同一实例。

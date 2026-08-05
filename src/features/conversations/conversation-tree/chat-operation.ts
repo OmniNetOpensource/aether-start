@@ -1,6 +1,6 @@
 import type {
   ChatOperation,
-  ChatStartedPayload,
+  MessageTreeUpdatePayload,
   MessageTreeSnapshot,
 } from '@/features/chat/chat-api';
 import type { Message, UserMessage } from '@/features/chat/message-thread';
@@ -33,7 +33,7 @@ const finishOperation = (
   messages: Message[],
   currentMessageId: number,
   changedMessageIds: Set<number>,
-): { treeSnapshot: MessageTreeSnapshot; startedPayload: ChatStartedPayload } | null => {
+): { treeSnapshot: MessageTreeSnapshot; startedPayload: MessageTreeUpdatePayload } | null => {
   const currentPath = buildPathToMessage(messages, currentMessageId);
   if (!currentPath) {
     return null;
@@ -89,7 +89,7 @@ export const applyChatOperation = (
   }
 
   const parent = operation.parentId === null ? null : messages[operation.parentId - 1];
-  if (operation.parentId !== null && !parent) {
+  if (operation.parentId !== null && (!parent || parent.role !== 'assistant')) {
     return null;
   }
 
@@ -97,7 +97,9 @@ export const applyChatOperation = (
     operation.previousSiblingId === null ? null : messages[operation.previousSiblingId - 1];
   if (
     operation.previousSiblingId !== null &&
-    (!previousSibling || previousSibling.parentId !== operation.parentId)
+    (!previousSibling ||
+      previousSibling.role !== 'user' ||
+      previousSibling.parentId !== operation.parentId)
   ) {
     return null;
   }
@@ -151,7 +153,7 @@ export const applyChatOperation = (
 
 export const mergeChatStartedPayload = (
   snapshot: MessageTreeSnapshot,
-  payload: ChatStartedPayload,
+  payload: MessageTreeUpdatePayload,
 ): MessageTreeSnapshot | null => {
   const messages = cloneMessages(snapshot.messages);
 
@@ -174,5 +176,58 @@ export const mergeChatStartedPayload = (
     currentPath: [...payload.currentPath],
     latestRootId: payload.currentPath[0] ?? null,
     nextId: messages.length + 1,
+  };
+};
+
+export const appendConfirmedUserMessage = (
+  snapshot: MessageTreeSnapshot,
+  operation: Extract<ChatOperation, { type: 'append' }>,
+  message: UserMessage,
+) => {
+  const existingMessage = snapshot.messages[message.id - 1];
+  if (existingMessage) {
+    if (
+      existingMessage.role !== 'user' ||
+      existingMessage.id !== message.id ||
+      existingMessage.parentId !== message.parentId ||
+      existingMessage.prevSibling !== message.prevSibling
+    ) {
+      return null;
+    }
+
+    const messages = cloneMessages(snapshot.messages);
+    messages[message.id - 1] = cloneMessages([message])[0];
+    return {
+      messages,
+      currentPath: snapshot.currentPath,
+      latestRootId: snapshot.latestRootId,
+      nextId: messages.length + 1,
+    };
+  }
+
+  const result = applyChatOperation(snapshot.messages, operation, message.createdAt);
+  if (!result) {
+    return null;
+  }
+
+  const messageId = result.treeSnapshot.currentPath.at(-1);
+  const expectedMessage = messageId ? result.treeSnapshot.messages[messageId - 1] : null;
+  if (
+    !expectedMessage ||
+    expectedMessage.role !== 'user' ||
+    expectedMessage.id !== message.id ||
+    expectedMessage.parentId !== message.parentId ||
+    expectedMessage.prevSibling !== message.prevSibling ||
+    expectedMessage.nextSibling !== message.nextSibling
+  ) {
+    return null;
+  }
+
+  const messages = cloneMessages(result.treeSnapshot.messages);
+  messages[message.id - 1] = cloneMessages([message])[0];
+
+  return {
+    ...result.treeSnapshot,
+    messages,
   };
 };

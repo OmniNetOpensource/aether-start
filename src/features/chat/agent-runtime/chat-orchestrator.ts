@@ -9,8 +9,8 @@
  * - 恢复正在进行的对话流（resumeRunningConversation）
  * - 消费 SSE 流并分发事件到消息树
  *
- * 与 conversation-runner 服务端配合，通过 SSE 接收 chat_event、chat_started、chat_finished 等事件，
- * 并调用 event-handlers 中的 applyChatEventToTree 更新 UI 状态。
+ * 与 conversation-runner 服务端配合：/chat 返回服务端确认的用户消息，/events 通过 SSE
+ * 接收 chat_event、chat_finished 等事件，并调用 event-handlers 更新 UI 状态。
  */
 import { toast } from '@/shared/app-shell/useToast';
 import type { AskUserQuestionsAnswer } from '@/features/chat/ask-user-questions/ask-user-questions';
@@ -19,13 +19,12 @@ import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-bu
 import { useChatRequestStore } from '@/features/chat/composer/composer-request/useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
 import { isMessage } from '@/features/chat/message-thread';
-import { mergeChatStartedPayload } from '@/features/conversations/conversation-tree';
+import { appendConfirmedUserMessage } from '@/features/conversations/conversation-tree';
 import type {
   ChatAgentStatus,
-  ChatErrorCode,
+  ChatCommandResponse,
   ChatOperation,
   ChatServerToClientEvent,
-  ChatStartedPayload,
 } from '@/features/chat/chat-api';
 
 /** Agent 路由名，对应 /agents/conversation-runner */
@@ -52,7 +51,8 @@ export const resetLastEventId = () => {
  * 同一时刻只允许一个请求在跑，新请求会 abort 掉旧的。
  */
 let activeController: AbortController | null = null;
-let activeRequestAcceptedCallback: (() => void) | null = null;
+let activeRequestAcceptedCallback: ((response: ChatCommandResponse) => void) | null = null;
+let activeRequestStarted = false;
 let stopWaiters: (() => void)[] = [];
 
 let reconnectAttempt = 0;
@@ -117,7 +117,7 @@ const scheduleAutoReconnect = (conversationId: string) => {
     }
 
     toast.info('重新连接中...');
-    await resumeRunningConversation(conversationId);
+    await resumeRunningConversation(conversationId, true);
   }, delay);
 };
 
@@ -181,44 +181,77 @@ const finalizeStream = () => {
   clearReconnectState();
 };
 
-const applyChatStartedPayload = (value: unknown) => {
+const applyChatAcceptedPayload = (value: unknown) => {
+  const acceptedPayload = parseChatCommandResponse(value);
+  if (!acceptedPayload) {
+    throw new Error('Invalid chat response');
+  }
+  const sessionStore = useChatSessionStore.getState();
+  if (
+    sessionStore.conversationId &&
+    sessionStore.conversationId !== acceptedPayload.conversationId
+  ) {
+    throw new Error('Conversation ID mismatch');
+  }
+
+  if (acceptedPayload.type === 'append') {
+    const nextTree = appendConfirmedUserMessage(
+      sessionStore.getTreeState(),
+      {
+        type: 'append',
+        message: { role: 'user', blocks: acceptedPayload.message.blocks },
+        parentId: acceptedPayload.message.parentId,
+        previousSiblingId: acceptedPayload.message.prevSibling,
+      },
+      acceptedPayload.message,
+    );
+    if (!nextTree) {
+      throw new Error('Failed to append confirmed user message');
+    }
+    sessionStore.setTreeState(nextTree);
+  }
+
+  sessionStore.setConversationId(acceptedPayload.conversationId);
+  activeRequestStarted = true;
+  activeRequestAcceptedCallback?.(acceptedPayload);
+  activeRequestAcceptedCallback = null;
+};
+
+const parseChatCommandResponse = (value: unknown): ChatCommandResponse | null => {
   if (
     typeof value !== 'object' ||
     value === null ||
-    !('currentPath' in value) ||
-    !Array.isArray(value.currentPath) ||
-    !('changedMessages' in value) ||
-    !Array.isArray(value.changedMessages)
+    !('type' in value) ||
+    !('conversationId' in value) ||
+    typeof value.conversationId !== 'string' ||
+    !value.conversationId
   ) {
-    throw new Error('Invalid chat_started payload');
+    return null;
   }
 
-  const startedPayload: ChatStartedPayload = {
-    currentPath: value.currentPath.filter(
-      (id): id is number => typeof id === 'number' && Number.isInteger(id) && id > 0,
-    ),
-    changedMessages: value.changedMessages.filter(isMessage),
-  };
+  if (value.type === 'regenerate') {
+    return { type: 'regenerate', conversationId: value.conversationId };
+  }
+
   if (
-    startedPayload.currentPath.length !== value.currentPath.length ||
-    startedPayload.changedMessages.length !== value.changedMessages.length
+    value.type === 'append' &&
+    'message' in value &&
+    isMessage(value.message) &&
+    value.message.role === 'user'
   ) {
-    throw new Error('Invalid chat_started payload');
+    return {
+      type: 'append',
+      conversationId: value.conversationId,
+      message: value.message,
+    };
   }
 
-  const sessionStore = useChatSessionStore.getState();
-  const nextTree = mergeChatStartedPayload(sessionStore.getTreeState(), startedPayload);
-  if (!nextTree) {
-    throw new Error('Failed to merge chat_started payload');
-  }
-  sessionStore.setTreeState(nextTree);
-  activeRequestAcceptedCallback?.();
-  activeRequestAcceptedCallback = null;
+  return null;
 };
 
 /**
  * 处理单条 SSE 消息。
- * @param event - SSE 的 event 字段（如 chat_event、chat_started、chat_finished 等）
+ * @param event - SSE 的 event 字段（如 chat_event、chat_finished 等）
  * @param raw - data 字段的原始 JSON 字符串
  */
 const handleSSEMessage = (event: string, raw: string) => {
@@ -241,11 +274,6 @@ const handleSSEMessage = (event: string, raw: string) => {
       applyChatEventToTree(payload.event as ChatServerToClientEvent);
       return;
     }
-    case 'chat_started': {
-      applyChatStartedPayload(payload);
-      setStatus('streaming', 'chat_started');
-      return;
-    }
     case 'chat_finished':
       clearReconnectState();
       flushAll();
@@ -266,9 +294,6 @@ const handleSSEMessage = (event: string, raw: string) => {
     case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
       flushAll();
-      if (payload.startedPayload) {
-        applyChatStartedPayload(payload.startedPayload);
-      }
       setStatus(payload.status === 'running' ? 'streaming' : 'idle', 'sync_response');
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
@@ -278,6 +303,9 @@ const handleSSEMessage = (event: string, raw: string) => {
             applyChatEventToTree(record.event as ChatServerToClientEvent);
           }
         }
+      }
+      if (typeof payload.assistantCompletedAt === 'string') {
+        useChatSessionStore.getState().stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
       return;
     }
@@ -383,19 +411,20 @@ export const checkAgentStatus = async (
  *
  * 流程：
  * 1. 校验 status 为 idle、已选模型
- * 2. 若无 conversationId，创建新对话并导航到 /app/:id
- * 3. 构建 body（idempotencyKey、model、promptId、conversationHistory、treeSnapshot）
- * 4. 取消之前的请求，发起 POST /agents/conversation-runner/:conversationId/chat
- * 5. 处理 409（busy）与 402（配额超限）
- * 6. 消费 SSE 流，结束时 finalizeStream
+ * 2. 发起 POST /chat，等待服务端落库并返回正式用户消息
+ * 3. append 服务端响应后，再连接 /events 消费 assistant SSE
  *
  * 异常：AbortError 静默忽略；TypeError（如网络错误）调用 finalizeStream；其他恢复 idle。
  */
-export const startChatRequest = async (operation: ChatOperation, onAccepted?: () => void) => {
+export const startChatRequest = async (
+  operation: ChatOperation,
+  onAccepted?: (response: ChatCommandResponse) => void,
+) => {
   const requestStore = useChatRequestStore.getState();
   const sessionStore = useChatSessionStore.getState();
 
   resetLastEventId();
+  activeRequestStarted = false;
   if (!sessionStore.currentModelId) {
     toast.warning(SELECT_MODEL_WARNING);
     requestStore.setStatus('idle', 'startChatRequest/noModel');
@@ -405,7 +434,12 @@ export const startChatRequest = async (operation: ChatOperation, onAccepted?: ()
   const conversationId = sessionStore.conversationId;
   const idempotencyKey = generateId('msg'); /* 幂等键，防止重复提交 */
 
-  if (!conversationId) {
+  if (
+    !conversationId &&
+    (operation.type !== 'append' ||
+      operation.parentId !== null ||
+      operation.previousSiblingId !== null)
+  ) {
     requestStore.setStatus('idle', 'startChatRequest/noConversation');
     throw new Error('Conversation not found');
   }
@@ -424,54 +458,50 @@ export const startChatRequest = async (operation: ChatOperation, onAccepted?: ()
   activeController = controller;
   activeRequestAcceptedCallback = onAccepted ?? null;
   requestStore.setStatus('sending', 'startChatRequest');
+  let acceptedConversationId: string | null = conversationId;
 
   try {
-    const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/chat`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify(body),
-      signal: controller.signal,
-    });
+    const response = await fetch(
+      conversationId
+        ? `${resolveAgentBaseUrl()}/${conversationId}/chat`
+        : `${resolveAgentBaseUrl()}/chat`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      },
+    );
 
     if (!response.ok) {
       const message =
         (await getResponseErrorMessage(response)) ?? `Chat request failed: ${response.status}`;
-      const code: ChatErrorCode =
-        response.status === 400
-          ? 'invalid_request'
-          : response.status === 401
-            ? 'authentication_failed'
-            : response.status === 402
-              ? 'quota_exceeded'
-              : response.status === 403
-                ? 'permission_denied'
-                : response.status === 404
-                  ? 'not_found'
-                  : response.status === 409
-                    ? 'conflict'
-                    : response.status === 429
-                      ? 'rate_limit'
-                      : response.status >= 500
-                        ? 'server_error'
-                        : 'unknown';
-
-      applyChatEventToTree({
-        type: 'error',
-        message,
-        error: {
-          code,
-          status: response.status,
-          retryable: response.status === 409 || response.status === 429 || response.status >= 500,
-          details: message,
-        },
-      });
+      toast.error(message);
       requestStore.setStatus('idle', 'startChatRequest/rejected');
       activeRequestAcceptedCallback = null;
       return;
     }
 
-    await consumeStreamResponse(response);
+    const acceptedPayload = parseChatCommandResponse(await response.json());
+    if (!acceptedPayload) {
+      throw new Error('Invalid chat response');
+    }
+    acceptedConversationId = acceptedPayload.conversationId;
+    applyChatAcceptedPayload(acceptedPayload);
+    requestStore.setStatus('streaming', 'startChatRequest/accepted');
+
+    const eventsResponse = await fetch(
+      `${resolveAgentBaseUrl()}/${acceptedPayload.conversationId}/events`,
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ lastEventId }),
+        signal: controller.signal,
+      },
+    );
+    await consumeStreamResponse(eventsResponse);
     finalizeStream();
   } catch (error) {
     if (isAbortError(error)) {
@@ -481,10 +511,9 @@ export const startChatRequest = async (operation: ChatOperation, onAccepted?: ()
     }
 
     const currentStatus = useChatRequestStore.getState().status;
-    const convId = useChatSessionStore.getState().conversationId;
-
-    if (error instanceof TypeError && currentStatus !== 'idle' && convId) {
-      scheduleAutoReconnect(convId);
+    if (error instanceof TypeError && currentStatus !== 'idle' && acceptedConversationId) {
+      useChatSessionStore.getState().setConversationId(acceptedConversationId);
+      scheduleAutoReconnect(acceptedConversationId);
       return;
     }
 
@@ -492,15 +521,19 @@ export const startChatRequest = async (operation: ChatOperation, onAccepted?: ()
     activeRequestAcceptedCallback = null;
     const message =
       error instanceof TypeError ? '连接中断' : error instanceof Error ? error.message : '请求失败';
-    applyChatEventToTree({
-      type: 'error',
-      message,
-      error: {
-        code: error instanceof TypeError ? 'network_error' : 'unknown',
-        retryable: error instanceof TypeError,
-        details: message,
-      },
-    });
+    if (activeRequestStarted) {
+      applyChatEventToTree({
+        type: 'error',
+        message,
+        error: {
+          code: error instanceof TypeError ? 'network_error' : 'unknown',
+          retryable: error instanceof TypeError,
+          details: message,
+        },
+      });
+    } else {
+      toast.error(message);
+    }
   } finally {
     if (activeController === controller) {
       activeController = null;
@@ -625,7 +658,14 @@ export const submitToolAnswer = async (callId: string, answers: AskUserQuestions
  *
  * 取消方式：对话页卸载时调用 cancelStreamSubscription 即可 abort
  */
-export const resumeRunningConversation = async (conversationId: string) => {
+export const resumeRunningConversation = async (
+  conversationId: string,
+  replayCompletedEvents = false,
+) => {
+  if (activeController && useChatRequestStore.getState().status === 'streaming') {
+    return;
+  }
+
   useChatRequestStore.getState().setStatus('sending', 'resumeRunningConversation');
 
   let agentStatus: { status: ChatAgentStatus };
@@ -643,8 +683,12 @@ export const resumeRunningConversation = async (conversationId: string) => {
     return;
   }
 
-  if (agentStatus.status !== 'running') {
+  if (
+    agentStatus.status !== 'running' &&
+    !(replayCompletedEvents && agentStatus.status !== 'idle')
+  ) {
     clearReconnectState();
+    activeRequestAcceptedCallback = null;
     useChatRequestStore.getState().setStatus('idle', 'resumeRunningConversation/agentDone');
     return;
   }

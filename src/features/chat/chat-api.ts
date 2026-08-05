@@ -1,4 +1,4 @@
-import type { Message, UserContentBlock } from '@/features/chat/message-thread';
+import type { Message, UserContentBlock, UserMessage } from '@/features/chat/message-thread';
 import type { ChatServerToClientEvent } from './chat-event-types';
 import type {
   AskUserQuestionsAnswer,
@@ -67,10 +67,21 @@ export type ChatOperation =
       currentMessageId: number;
     };
 
-export type ChatStartedPayload = {
+export type MessageTreeUpdatePayload = {
   currentPath: number[];
   changedMessages: Message[];
 };
+
+export type ChatCommandResponse =
+  | {
+      type: 'append';
+      conversationId: string;
+      message: UserMessage;
+    }
+  | {
+      type: 'regenerate';
+      conversationId: string;
+    };
 
 export type PersistedChatEvent = {
   eventId: number;

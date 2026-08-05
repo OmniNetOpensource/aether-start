@@ -2,7 +2,7 @@ import { startChatRequest } from '@/features/chat/agent-runtime/chat-orchestrato
 import { toast } from '@/shared/app-shell/useToast';
 import { useChatRequestStore } from './useChatRequestStore';
 import { useChatSessionStore } from '@/features/conversations/session';
-import { upsertConversationInCache } from '@/features/conversations/session';
+import { cacheConversation, upsertConversationInCache } from '@/features/conversations/session';
 import {
   composerDocumentToBlocks,
   isComposerDocumentEmpty,
@@ -50,25 +50,7 @@ export async function submitMessage(
       : (sessionStore.messages[parentId - 1]?.latestChild ?? null);
   requestStore.setStatus('sending', 'submitMessage');
 
-  if (!sessionStore.conversationId) {
-    const conversationId =
-      typeof crypto !== 'undefined' && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `conv_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-    const now = new Date().toISOString();
-
-    sessionStore.setConversationId(conversationId);
-    await navigateToNewChat(conversationId);
-    upsertConversationInCache({
-      id: conversationId,
-      title: 'New Chat',
-      model: sessionStore.currentModelId,
-      is_pinned: false,
-      pinned_at: null,
-      created_at: now,
-      updated_at: now,
-    });
-  }
+  const isNewConversation = !sessionStore.conversationId;
 
   await startChatRequest(
     {
@@ -77,6 +59,40 @@ export async function submitMessage(
       parentId,
       previousSiblingId,
     },
-    clearComposer,
+    (response) => {
+      clearComposer();
+      if (!isNewConversation) {
+        return;
+      }
+
+      if (response.type !== 'append') {
+        throw new Error('New conversation did not return a user message');
+      }
+
+      const store = useChatSessionStore.getState();
+      const now = response.message.createdAt;
+      cacheConversation({
+        id: response.conversationId,
+        title: 'New Chat',
+        model: store.currentModelId,
+        is_pinned: false,
+        pinned_at: null,
+        currentPath: store.currentPath,
+        messages: store.messages,
+        artifacts: [],
+        created_at: now,
+        updated_at: now,
+      });
+      upsertConversationInCache({
+        id: response.conversationId,
+        title: 'New Chat',
+        model: store.currentModelId,
+        is_pinned: false,
+        pinned_at: null,
+        created_at: now,
+        updated_at: now,
+      });
+      void navigateToNewChat(response.conversationId);
+    },
   );
 }
