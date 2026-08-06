@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/solid-router';
-import { getSessionStateFn } from '@/features/auth/session';
+import { getSessionStateFn } from '@/rpc/auth';
 
 export const Route = createFileRoute('/')({
   beforeLoad: async () => {

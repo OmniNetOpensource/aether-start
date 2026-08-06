@@ -1,16 +1,16 @@
 import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/solid-router';
 import type { JSX } from '@solidjs/web';
 import { QueryClientProvider } from '@tanstack/solid-query';
-import { AppErrorBoundary } from '@/shared/app-shell/AppErrorBoundary';
-import { queryClient } from '@/features/conversations/session';
+import { AppErrorBoundary } from '@/frontend/app-shell/AppErrorBoundary';
+import { queryClient } from '@/frontend/conversations/session';
 
-import { useViewportHeight } from '@/shared/app-shell/useViewportHeight';
-import { TooltipProvider } from '@/shared/design-system/tooltip';
-import { ToastProvider } from '@/shared/app-shell/toast-context';
-import { ResponsiveProvider } from '@/shared/app-shell/ResponsiveContext';
+import { useViewportHeight } from '@/frontend/app-shell/useViewportHeight';
+import { TooltipProvider } from '@/frontend/design-system/tooltip';
+import { ToastProvider } from '@/frontend/app-shell/toast-context';
+import { ResponsiveProvider } from '@/frontend/app-shell/ResponsiveContext';
 import { NotFound } from '@/routes/-not-found';
-import { getSessionStateFn } from '@/features/auth/session';
-import { defaultTheme, themeInitScript } from '@/themes/registry';
+import { getSessionStateFn } from '@/rpc/auth';
+import { defaultTheme, themeInitScript } from '@/frontend/themes/registry';
 
 import appCss from '@/routes/globals.css?url';
 

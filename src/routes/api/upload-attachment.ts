@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/solid-router';
-import { requireSessionFromRequest } from '@/features/auth/session/request.server';
+import { requireSessionFromRequest } from '@/backend/auth/request';
 
 export const Route = createFileRoute('/api/upload-attachment')({
   server: {

@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/solid-router';
-import { getSessionFromRequest } from '@/features/auth/session/request.server';
-import { getServerBindings } from '@/shared/worker/env';
+import { getSessionFromRequest } from '@/backend/auth/request';
+import { getServerBindings } from '@/backend/platform/cloudflare/env';
 
 const KINDS = new Set(['react-boundary', 'window-error', 'unhandledrejection']);
 

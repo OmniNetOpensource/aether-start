@@ -1,10 +1,10 @@
 import { Link, createFileRoute } from '@tanstack/solid-router';
 import { createEffect, createSignal } from 'solid-js';
-import { Loader2 } from '@/shared/design-system/icons';
-import { ReadonlyMessageList } from '@/features/share/public-thread';
+import { Loader2 } from '@/frontend/design-system/icons';
+import { ReadonlyMessageList } from '@/frontend/share/public-thread';
 import { truncateMiddle } from '@/shared/core/truncate-middle';
-import { getPublicConversationShareFn } from '@/features/share/share-record';
-import type { Message } from '@/features/chat/message-thread';
+import { getPublicConversationShareFn } from '@/rpc/share';
+import type { Message } from '@/shared/chat/message';
 
 type PublicShareData = Awaited<ReturnType<typeof getPublicConversationShareFn>>;
 type ActivePublicShare = Extract<PublicShareData, { status: 'active' }>;

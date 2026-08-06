@@ -59,7 +59,7 @@ export default defineConfig(({ command }) => {
       alias: [
         {
           find: /^shiki$/,
-          replacement: resolve(__dirname, 'src/shared/design-system/shiki-bundle.ts'),
+          replacement: resolve(__dirname, 'src/frontend/design-system/shiki-bundle.ts'),
         },
         { find: '@', replacement: resolve(__dirname, 'src') },
       ],

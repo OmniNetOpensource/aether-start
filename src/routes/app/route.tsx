@@ -1,20 +1,17 @@
 import { Outlet, createFileRoute } from '@tanstack/solid-router';
 import { createEffect, onSettled } from 'solid-js';
-import { ArtifactPanel, ArtifactToggleButton } from '@/features/chat/artifact';
+import { ArtifactPanel, ArtifactToggleButton } from '@/frontend/chat/artifact';
 import {
   cancelStreamSubscription,
   resetLastEventId,
-} from '@/features/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime, registerChatToast } from '@/features/chat/agent-runtime/chat-runtime';
-import { artifacts } from '@/features/chat/artifact/artifact-state';
-import { Composer } from '@/features/chat/composer/Composer';
-import {
-  DEFAULT_MODEL_ID,
-  getAvailableModelsFn,
-  getAvailablePromptsFn,
-} from '@/features/chat/model-catalog';
-import Sidebar from '@/features/conversations/conversation-list';
-import { NewChatButton } from '@/features/conversations/conversation-list/NewChatButton';
+} from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { chatRuntime, registerChatToast } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { artifacts } from '@/frontend/chat/artifact/artifact-state';
+import { Composer } from '@/frontend/chat/composer/Composer';
+import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
+import { getAvailableModelsFn, getAvailablePromptsFn } from '@/rpc/chat-options';
+import Sidebar from '@/frontend/conversations/conversation-list';
+import { NewChatButton } from '@/frontend/conversations/conversation-list/NewChatButton';
 import {
   conversationInfiniteQueryOptions,
   cacheConversation,
@@ -30,10 +27,10 @@ import {
   setCurrentFetchProvider,
   setCurrentModelId,
   setCurrentPromptId,
-} from '@/features/conversations/session';
-import { getMessageTreeState } from '@/features/conversations/conversation-tree/message-tree-state';
-import { ShareButton } from '@/features/share/share-dialog';
-import { useToast } from '@/shared/app-shell/useToast';
+} from '@/frontend/conversations/session';
+import { getMessageTreeState } from '@/frontend/conversations/conversation-tree/message-tree-state';
+import { ShareButton } from '@/frontend/share/share-dialog';
+import { useToast } from '@/frontend/app-shell/useToast';
 
 export const Route = createFileRoute('/app')({
   loader: async () => {

@@ -1,11 +1,11 @@
 import { createSignal } from 'solid-js';
 import { createFileRoute, redirect, useNavigate } from '@tanstack/solid-router';
-import { Loader2 } from '@/shared/design-system/icons';
-import { authClient } from '@/features/auth/auth-client';
-import { LOCAL_DEV_EMAIL, LOCAL_DEV_NAME, LOCAL_DEV_OTP } from '@/features/auth/local-dev-auth';
-import { getSessionStateFn } from '@/features/auth/session';
-import { Button } from '@/shared/design-system/button';
-import { Input } from '@/shared/design-system/input';
+import { Loader2 } from '@/frontend/design-system/icons';
+import { authClient } from '@/frontend/auth/client';
+import { LOCAL_DEV_EMAIL, LOCAL_DEV_NAME, LOCAL_DEV_OTP } from '@/shared/auth/local-dev-auth';
+import { getSessionStateFn } from '@/rpc/auth';
+import { Button } from '@/frontend/design-system/button';
+import { Input } from '@/frontend/design-system/input';
 
 export const Route = createFileRoute('/auth/')({
   validateSearch: (search: Record<string, unknown>) => {

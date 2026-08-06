@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/solid-router';
-import { getPublicShareByToken, isSafeShareToken } from '@/features/share/share-record';
-import { getServerBindings } from '@/shared/worker/env';
+import { getPublicShareByToken } from '@/backend/share/conversation-shares-db';
+import { isSafeShareToken } from '@/shared/share/share-assets';
+import { getServerBindings } from '@/backend/platform/cloudflare/env';
 
 const safeDecodeURIComponent = (value: string): string | null => {
   try {

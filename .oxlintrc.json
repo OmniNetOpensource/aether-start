@@ -31,6 +31,36 @@
         "innerHeight": "readonly",
         "devicePixelRatio": "readonly"
       }
+    },
+    {
+      "files": ["src/frontend/**/*.{ts,tsx}", "src/routes/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": ["@/backend/**"] }]
+      }
+    },
+    {
+      "files": ["src/backend/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          { "patterns": ["@/frontend/**", "@/rpc/**", "@/routes/**"] }
+        ]
+      }
+    },
+    {
+      "files": ["src/shared/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          { "patterns": ["@/frontend/**", "@/backend/**", "@/rpc/**", "@/routes/**"] }
+        ]
+      }
+    },
+    {
+      "files": ["src/rpc/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": ["error", { "patterns": ["@/frontend/**", "@/routes/**"] }]
+      }
     }
   ]
 }

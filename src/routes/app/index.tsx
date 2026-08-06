@@ -3,18 +3,18 @@ import { createEffect } from 'solid-js';
 import {
   cancelStreamSubscription,
   resetLastEventId,
-} from '@/features/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime } from '@/features/chat/agent-runtime/chat-runtime';
-import { artifacts, clearArtifacts } from '@/features/chat/artifact/artifact-state';
-import { NewChatGreeting } from '@/features/chat/message-thread/NewChatGreeting';
+} from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { chatRuntime } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { artifacts, clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
+import { NewChatGreeting } from '@/frontend/chat/message-thread/NewChatGreeting';
 import {
   clearConversationMeta,
   conversationId,
-} from '@/features/conversations/session/conversation-meta';
+} from '@/frontend/conversations/session/conversation-meta';
 import {
   clearMessageTree,
   messages,
-} from '@/features/conversations/conversation-tree/message-tree-state';
+} from '@/frontend/conversations/conversation-tree/message-tree-state';
 
 export const Route = createFileRoute('/app/')({
   component: NewChatPage,

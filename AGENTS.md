@@ -12,11 +12,11 @@
 - notes, sharing, settings, quota, and Better Auth flows
 - client error logging persisted to D1
 
-The repo is feature-split. The only app alias in `tsconfig.json` is `@/* -> src/*`. Older docs that mention `@/server/*`, `@/lib/*`, or `@/types/*` are stale.
+The repo is split by runtime. The only app alias in `tsconfig.json` is `@/* -> src/*`.
 
 ## Project Structure
 
-- `src/routes/` contains TanStack Start file routes.
+- `src/routes/` contains TanStack Start file routes. Page routes are frontend entrypoints; `src/routes/api/` contains backend HTTP entrypoints.
 - `src/routes/__root.tsx` wires auth gating for `/app` and `/note`, theme loading, responsive context, tooltip provider, toast container, and client error reporting.
 - `src/routes/app/{-$conversationId}.tsx` owns the authenticated app shell, renders a new chat at `/app`, and loads an existing conversation at `/app/:conversationId`.
 - `src/routes/share/$token.tsx` renders the public read-only share page.
@@ -26,28 +26,24 @@ The repo is feature-split. The only app alias in `tsconfig.json` is `@/* -> src/
 - `src/routes/api/client-errors.ts` stores browser-side error reports in D1.
 - `src/routes/api/auth/$.ts` is the Better Auth entrypoint.
 
-Top-level features now live here:
+Runtime boundaries:
 
-- `src/features/attachments/`
-- `src/features/auth/`
-- `src/features/chat/`
-- `src/features/conversations/`
-- `src/features/quota/`
-- `src/features/settings/`
-- `src/features/share/`
+- `src/frontend/` contains Solid components, signals, browser state, browser networking, the design system, and themes.
+- `src/rpc/` contains `createServerFn` boundaries. RPC files validate input, authenticate, and call backend code.
+- `src/backend/` contains Cloudflare Worker, D1, R2, Better Auth, Durable Object, model-provider, and tool execution code.
+- `src/shared/` contains only runtime-independent types, schemas, and pure functions.
 
-Shared code now lives here:
+Dependency direction is enforced in `.oxlintrc.json`:
 
-- `src/shared/app-shell/`
-- `src/shared/browser/`
-- `src/shared/core/`
-- `src/shared/design-system/`
-- `src/shared/worker/`
+- frontend may import rpc and shared, never backend
+- rpc may import backend and shared, never frontend
+- backend may import shared, never frontend or rpc
+- shared may only import shared
 
 Generated files:
 
 - `src/routeTree.gen.ts`
-- `src/features/auth/identity/auth.schema.ts`
+- `src/backend/auth/identity/auth.schema.ts`
 
 Do not edit generated files by hand unless the task is specifically about regenerating them.
 
@@ -70,26 +66,27 @@ Use `pnpm` for repo commands.
 - `pnpm cf:deploy`
 - `pnpm cf:sync-secrets`
 
-Auth-related scripts still exist in `package.json`, but they currently point at legacy `src/features/auth/server/*` paths while the real auth code lives under `src/features/auth/identity/*`. Do not trust those paths blindly.
+Auth generation scripts in `package.json` point to `src/backend/auth/identity/`.
 
 ## Current Architecture
 
 ### App Shell And Route Data
 
-- `src/routes/app/{-$conversationId}.tsx` preloads available models and prompts, and prefetches the conversation list query.
-- `src/features/conversations/route-data/app-shell-route-data.tsx` holds the loader data context for the app shell.
-- `src/features/conversations/conversation-list/Sidebar.tsx` and related files own the left sidebar UI.
+- `src/routes/app/route.tsx` preloads available models and prompts, prefetches the conversation list, and owns the app layout.
+- `src/routes/app/index.tsx` renders a new conversation.
+- `src/routes/app/$conversationId.tsx` loads a historical conversation.
+- `src/frontend/conversations/conversation-list/Sidebar.tsx` and related files own the left sidebar UI.
 
 ### Chat Request Lifecycle
 
-The request lifecycle now spans these files:
+The request lifecycle spans both runtimes:
 
-- `src/features/chat/composer/useChatRequestStore.ts`
-- `src/features/chat/agent-runtime/chat-orchestrator.ts`
-- `src/features/chat/agent-runtime/event-handlers.ts`
-- `src/features/chat/agent-runtime/conversation-runner.ts`
+- `src/frontend/chat/agent-runtime/chat-orchestrator.ts` owns browser requests, reconnection, abort, resume, and SSE consumption.
+- `src/frontend/chat/agent-runtime/event-handlers.ts` applies server events to frontend state.
+- `src/backend/chat/agent/conversation-runner.ts` owns the Durable Object run.
+- `src/backend/chat/agent/event-processor.ts` applies events to the persisted server snapshot.
 
-If chat streaming, reconnection, abort, or resume behavior changes, inspect all four together.
+If streaming, reconnection, abort, or resume behavior changes, inspect all four together.
 
 ### Conversation Session State
 
@@ -97,13 +94,11 @@ Conversation state no longer lives under `sidebar/`.
 
 Important files:
 
-- `src/features/conversations/session/useChatSessionStore.ts`
-- `src/features/conversations/session/conversations.ts`
-- `src/features/conversations/session/conversations-db.ts`
-- `src/features/conversations/conversation-tree/`
-- `src/routes/app/{-$conversationId}.tsx`
-
-`{-$conversationId}.tsx` loads the conversation inline with `getConversationFn`. There is no `useConversationLoader.ts` anymore.
+- `src/frontend/conversations/session/` contains signals and query-cache state.
+- `src/rpc/conversations.ts` exposes conversation RPC calls.
+- `src/backend/conversations/conversations-db.ts` owns D1 persistence.
+- `src/shared/conversations/` contains pure message-tree operations.
+- `src/routes/app/$conversationId.tsx` loads a historical conversation with `getConversationFn`.
 
 ### Artifacts
 
@@ -111,32 +106,33 @@ Artifact support is part of the main chat experience.
 
 Important files:
 
-- `src/features/chat/artifact/ArtifactPanel.tsx`
-- `src/features/chat/artifact/ArtifactToggleButton.tsx`
-- `src/features/chat/artifact/render-tool.ts`
-- `src/features/chat/artifact/render-artifact-stream.ts`
-- `src/features/chat/agent-runtime/tool-executor.ts`
-- `src/features/conversations/session/conversations-db.ts`
+- `src/frontend/chat/artifact/ArtifactPanel.tsx`
+- `src/frontend/chat/artifact/ArtifactToggleButton.tsx`
+- `src/backend/chat/tools/render-tool.ts`
+- `src/shared/chat/render-artifact-stream.ts`
+- `src/backend/chat/tools/tool-executor.ts`
+- `src/backend/conversations/conversations-db.ts`
 - `migrations/0015_conversation_artifacts.sql`
 
-Artifact stream events are defined in `src/features/chat/chat-event-types.ts` and applied in `src/features/chat/agent-runtime/event-handlers.ts`.
+Artifact stream events are defined in `src/shared/chat/chat-event-types.ts` and applied in `src/frontend/chat/agent-runtime/event-handlers.ts`.
 
 ### Models, Providers, And Backends
 
 Model catalog files:
 
-- `src/features/chat/model-catalog/model-provider-config.ts`
-- `src/features/chat/model-catalog/models.ts`
+- `src/shared/chat/model-catalog.ts` contains model IDs, prompt definitions, and model protocol parsing.
+- `src/backend/chat/model-catalog/available-models.ts` fetches configured provider model resources.
+- `src/rpc/chat-options.ts` exposes models and prompts to the SPA.
 
-`models.ts` fetches configured provider model resources during `/app` SSR. The fixed default remains `claudeOpus46Ikun`; dynamic model IDs encode backend and provider model ID so the Durable Object can resolve them without a static catalog.
+The fixed default remains `claudeOpus46Ikun`; dynamic model IDs encode backend and provider model ID so the Durable Object can resolve them without a static catalog.
 
 Provider runtime files:
 
-- `src/features/chat/agent-runtime/providers/provider-factory.ts`
-- `src/features/chat/agent-runtime/providers/anthropic.ts`
-- `src/features/chat/agent-runtime/providers/openai.ts`
-- `src/features/chat/agent-runtime/providers/openai-responses.ts`
-- `src/features/chat/agent-runtime/providers/gemini.ts`
+- `src/backend/chat/providers/provider-factory.ts`
+- `src/backend/chat/providers/anthropic.ts`
+- `src/backend/chat/providers/openai.ts`
+- `src/backend/chat/providers/openai-responses.ts`
+- `src/backend/chat/providers/gemini.ts`
 
 Supported formats currently include:
 
@@ -154,7 +150,7 @@ Configured backends currently include:
 
 ### Tools
 
-Tool execution lives in `src/features/chat/agent-runtime/tool-executor.ts`.
+Tool execution lives in `src/backend/chat/tools/tool-executor.ts`.
 
 Current tools:
 
@@ -164,22 +160,21 @@ Current tools:
 
 Tool implementations live in:
 
-- `src/features/chat/agent-runtime/fetch-tool.ts`
-- `src/features/chat/artifact/render-tool.ts`
-- `src/features/chat/research/search-tool.ts`
-- `src/features/chat/agent-runtime/tool-types.ts`
+- `src/backend/chat/tools/fetch-tool.ts`
+- `src/backend/chat/tools/render-tool.ts`
+- `src/backend/chat/tools/search-tool.ts`
+- `src/shared/chat/tool-types.ts`
 
 ### Auth
 
-Auth code now lives under `identity/` and `session/`, not `server/`.
-
 Important files:
 
-- `src/features/auth/identity/auth.ts`
-- `src/features/auth/identity/auth.schema.ts`
-- `src/features/auth/session/session.ts`
-- `src/features/auth/session/session-state.ts`
-- `src/features/auth/session/request.server.ts`
+- `src/frontend/auth/client.ts`
+- `src/rpc/auth.ts`
+- `src/backend/auth/identity/auth.ts`
+- `src/backend/auth/identity/auth.schema.ts`
+- `src/backend/auth/request.ts`
+- `src/backend/auth/admin-access.ts`
 - `src/routes/api/auth/$.ts`
 
 Current behavior includes:
@@ -199,25 +194,25 @@ Sharing is snapshot-based and read-only.
 
 Important files:
 
-- `src/features/share/share-record/shares.ts`
-- `src/features/share/share-record/conversation-shares-db.ts`
-- `src/features/share/share-dialog/ShareDialog.tsx`
+- `src/rpc/share.ts`
+- `src/backend/share/conversation-shares-db.ts`
+- `src/shared/share/`
+- `src/frontend/share/share-dialog/ShareDialog.tsx`
 - `src/routes/share/$token.tsx`
 
 Public shares must stay read-only.
 
 ### Quota, Settings, Attachments
 
-- Quota: `src/features/quota/quota-balance/`, `src/features/quota/redeem-code/`
-- Settings: `src/features/settings/settings-dialog/`, `src/features/settings/profile-menu/`
-- Attachments: `src/features/attachments/attachment-upload/`, `src/features/attachments/attachment-preview/`
+- Quota: `src/rpc/quota.ts`, `src/rpc/redeem-codes.ts`, `src/backend/quota/`
+- Settings: `src/frontend/settings/settings-dialog/`, `src/frontend/settings/profile-menu/`
+- Attachments: `src/frontend/attachments/` with R2 handlers under `src/routes/api/`
 
 ### Worker Env And Bindings
 
 Worker env loading is centralized in:
 
-- `src/shared/worker/env.ts`
-- `src/shared/worker/env.server.ts`
+- `src/backend/platform/cloudflare/env.ts`
 
 Required bindings:
 
@@ -226,7 +221,7 @@ Required bindings:
 
 ## Testing Guidance
 
-There is no automated test suite. `package.json` does not define a test script.
+Vitest tests are colocated with their owning frontend, backend, or shared modules. Run them with `pnpm test`.
 
 ## 强制真实验收
 
@@ -289,7 +284,7 @@ Never commit real secrets.
 
 ## Coding Style And Expectations
 
-- TypeScript + React
+- TypeScript + Solid
 - follow the existing local style in the file you are editing
 - keep code simple and readable
 - prefer existing feature boundaries over adding a new abstraction layer

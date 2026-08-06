@@ -4,12 +4,12 @@ import {
   cancelStreamSubscription,
   resetLastEventId,
   resumeRunningConversation,
-} from '@/features/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime } from '@/features/chat/agent-runtime/chat-runtime';
-import { setArtifacts } from '@/features/chat/artifact/artifact-state';
-import { isMessage } from '@/features/chat/message-thread/message';
-import { MessageList } from '@/features/chat/message-thread/MessageList';
-import { buildCurrentPath } from '@/features/conversations/conversation-tree';
+} from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { chatRuntime } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { setArtifacts } from '@/frontend/chat/artifact/artifact-state';
+import { isMessage } from '@/shared/chat/message';
+import { MessageList } from '@/frontend/chat/message-thread/MessageList';
+import { buildCurrentPath } from '@/shared/conversations';
 import {
   cacheConversation,
   type ConversationDetail,
@@ -19,8 +19,8 @@ import {
   setConversationId,
   setCurrentModelId,
   setPageTitle,
-} from '@/features/conversations/session';
-import { initializeMessageTree } from '@/features/conversations/conversation-tree/message-tree-state';
+} from '@/frontend/conversations/session';
+import { initializeMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
 
 export const Route = createFileRoute('/app/$conversationId')({
   loader: async ({ params }) => {
