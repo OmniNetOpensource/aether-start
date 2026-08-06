@@ -1,5 +1,5 @@
 import { Link, createFileRoute } from '@tanstack/solid-router';
-import { createEffect, createSignal } from 'solid-js';
+import { createMemo, Loading } from 'solid-js';
 import { Loader2 } from '@/frontend/design-system/icons';
 import { ReadonlyMessageList } from '@/frontend/share/public-thread';
 import { truncateMiddle } from '@/shared/core/truncate-middle';
@@ -67,48 +67,30 @@ export const Route = createFileRoute('/share/$token')({
 
 function SharedConversationPage() {
   const params = Route.useParams();
-  const [data, setData] = createSignal<PublicShareData>();
-  const [loading, setLoading] = createSignal(true);
+  const data = createMemo(async (): Promise<PublicShareData> => {
+    try {
+      return await getPublicConversationShareFn({ data: { token: params().token } });
+    } catch (error) {
+      console.error('Failed to load public share', error);
+      return { status: 'not_found' };
+    }
+  });
   const readonlyMessages = () => {
     const share = data();
-    return share?.status === 'active' ? share.snapshot.messages.map(toReadonlyMessage) : [];
+    return share.status === 'active' ? share.snapshot.messages.map(toReadonlyMessage) : [];
   };
-  let requestId = 0;
 
-  createEffect(
-    () => params().token,
-    (token) => {
-      const currentRequestId = ++requestId;
-      const run = async () => {
-        setLoading(true);
-        try {
-          const result = await getPublicConversationShareFn({
-            data: { token },
-          });
-          if (requestId === currentRequestId) setData(result);
-        } catch (error) {
-          console.error('Failed to load public share', error);
-          if (requestId === currentRequestId) setData({ status: 'not_found' });
-        } finally {
-          if (requestId === currentRequestId) setLoading(false);
-        }
-      };
-
-      void run();
-    },
+  const loadingPage = (
+    <main class='flex min-h-screen w-full items-center justify-center bg-background px-6'>
+      <div class='flex items-center gap-2 text-secondary'>
+        <Loader2 class='h-4 w-4 animate-spin' />
+        加载分享中...
+      </div>
+    </main>
   );
 
   const page = () => {
     const share = data();
-    if (loading() || !share)
-      return (
-        <main class='flex min-h-screen w-full items-center justify-center bg-background px-6'>
-          <div class='flex items-center gap-2 text-secondary'>
-            <Loader2 class='h-4 w-4 animate-spin' />
-            加载分享中...
-          </div>
-        </main>
-      );
 
     if (share.status === 'not_found')
       return (
@@ -159,5 +141,5 @@ function SharedConversationPage() {
       </main>
     );
   };
-  return <>{page()}</>;
+  return <Loading fallback={loadingPage}>{page()}</Loading>;
 }

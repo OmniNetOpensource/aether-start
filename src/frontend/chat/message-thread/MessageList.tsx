@@ -1,4 +1,4 @@
-import { createEffect, createSignal, For, Show } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import { cancelAnswering, startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import {
   composerDocumentFromBlocks,
@@ -18,13 +18,18 @@ import { SelectionToolbar } from './selection-toolbar';
 
 export function MessageList() {
   let scrollElement: HTMLDivElement | undefined;
-  const [editingState, setEditingState] = createSignal<EditingState | null>(null);
+  const [editing, setEditing] = createSignal<{
+    conversationId: string | null;
+    state: EditingState;
+  } | null>(null);
+  const editingState = () => {
+    const current = editing();
+    return current && current.conversationId === conversationId() ? current.state : null;
+  };
+  const setEditingState = (state: EditingState | null) =>
+    setEditing(state ? { conversationId: conversationId(), state } : null);
   const widthClass = 'w-[90%] @[921px]:w-[60%]';
   const isStreaming = () => status() === 'streaming';
-
-  createEffect(conversationId, () => {
-    queueMicrotask(() => setEditingState(null));
-  });
 
   const startEditing = (messageId: number) => {
     const target = messages()[messageId - 1];
@@ -134,11 +139,10 @@ export function MessageList() {
                           branchInfo={getBranchInfo(messages(), messageId)}
                           editingState={editingState()}
                           onStartEditing={startEditing}
-                          onEditDocumentChange={(document) =>
-                            setEditingState((current) =>
-                              current ? { ...current, editedDocument: document } : current,
-                            )
-                          }
+                          onEditDocumentChange={(document) => {
+                            const current = editingState();
+                            if (current) setEditingState({ ...current, editedDocument: document });
+                          }}
                           onCancelEditing={() => setEditingState(null)}
                           onSubmitEdit={submitEdit}
                           onRetry={retryFromMessage}

@@ -24,6 +24,9 @@ import { initializeMessageTree } from '@/frontend/conversations/conversation-tre
 
 export const Route = createFileRoute('/app/$conversationId')({
   loader: async ({ params }) => {
+    /* 发第一条消息后 navigate 过来：store 里已经是这个会话，无需加载 */
+    if (conversationId() === params.conversationId) return { conversation: null };
+
     const cachedConversation = getConversationFromCache(params.conversationId);
     const conversation =
       cachedConversation ?? (await getConversationFn({ data: { id: params.conversationId } }));
@@ -49,7 +52,7 @@ function ConversationPage() {
   createEffect(
     () => ({ conversation: loaderData().conversation, hydrated: hydrated() }),
     ({ conversation, hydrated: isHydrated }) => {
-      if (!isHydrated) return;
+      if (!isHydrated || !conversation) return;
       queueMicrotask(() => {
         cacheConversation(conversation);
         if (untrack(conversationId) === conversation.id) return;

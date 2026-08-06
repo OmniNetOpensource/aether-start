@@ -1,4 +1,4 @@
-import { createEffect, createSignal, onSettled } from 'solid-js';
+import { createSignal, onSettled } from 'solid-js';
 import { Portal } from '@solidjs/web';
 import { Loader2 } from '@/frontend/design-system/icons';
 import { cn } from '@/shared/core/utils';
@@ -17,19 +17,14 @@ const MAX_SCALE = 5;
 const SCALE_STEP = 0.1;
 
 export function ImagePreview(props: ImagePreviewProps) {
-  const [loaded, setLoaded] = createSignal(false);
+  const [loadedUrl, setLoadedUrl] = createSignal<string | null>(null);
+  const loaded = () => loadedUrl() === props.url;
   const [isOpen, setIsOpen] = createSignal(false);
   const [scale, setScale] = createSignal(1);
   const [position, setPosition] = createSignal({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = createSignal(false);
   let dragState: { startX: number; startY: number; originX: number; originY: number } | undefined;
 
-  createEffect(
-    () => props.url,
-    () => {
-      setLoaded(false);
-    },
-  );
   onSettled(() => {
     const handleMouseMove = (event: MouseEvent) => {
       if (!isOpen() || !isDragging() || !dragState) return;
@@ -85,7 +80,7 @@ export function ImagePreview(props: ImagePreviewProps) {
             loaded() ? 'opacity-100' : 'opacity-0',
           )}
           draggable={false}
-          onLoad={() => setLoaded(true)}
+          onLoad={() => setLoadedUrl(props.url)}
         />
         {props.uploading && (
           <span class='absolute inset-0 flex items-center justify-center bg-black/30'>

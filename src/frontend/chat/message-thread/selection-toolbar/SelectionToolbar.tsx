@@ -1,4 +1,4 @@
-import { createEffect, createSignal, type Accessor } from 'solid-js';
+import type { Accessor } from 'solid-js';
 import { Quote } from '@/frontend/design-system/icons';
 import { Button } from '@/frontend/design-system/button';
 import { addQuoteToActiveInput } from '@/frontend/chat/composer/composer-editor/active-input';
@@ -6,15 +6,6 @@ import { useSelectionToolbar } from './useSelectionToolbar';
 
 export function SelectionToolbar(props: { container: Accessor<HTMLElement | undefined> }) {
   const toolbar = useSelectionToolbar(props.container);
-  const [mounted, setMounted] = createSignal(false);
-
-  createEffect(toolbar.hasSelection, (hasSelection) => {
-    if (!hasSelection) {
-      setMounted(false);
-      return;
-    }
-    requestAnimationFrame(() => setMounted(true));
-  });
 
   return (
     <>
@@ -22,8 +13,7 @@ export function SelectionToolbar(props: { container: Accessor<HTMLElement | unde
         <div
           ref={toolbar.setFloating}
           style={toolbar.floatingStyles()}
-          data-mounted={mounted() ? 'true' : 'false'}
-          class='flex gap-1 rounded-lg bg-background p-1 shadow-lg backdrop-blur-md border border-border transition-[opacity,transform] duration-150 ease-[var(--ease-out)] data-[mounted=false]:opacity-0 data-[mounted=false]:translate-y-1 data-[mounted=false]:scale-[0.95]'
+          class='flex gap-1 rounded-lg bg-background p-1 shadow-lg backdrop-blur-md border border-border transition-[opacity,transform] duration-150 ease-[var(--ease-out)] starting:opacity-0 starting:translate-y-1 starting:scale-[0.95]'
           data-selection-toolbar
         >
           <Button

@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For } from 'solid-js';
+import { createMemo, For, Loading } from 'solid-js';
 import type { TokensResult } from '@shikijs/core';
 import { bundledLanguages, codeToTokens } from '@/frontend/design-system/shiki-bundle';
 
@@ -10,53 +10,28 @@ const tokenClass =
 
 const highlightCache = new Map<string, TokensResult>();
 
-type Highlight = {
-  key: string;
-  result: TokensResult;
-};
-
 export function HighlightedCode(props: { code: string; isCompleted: boolean; language: string }) {
   const highlightKey = () => `${props.language}\0${props.code}`;
   const canHighlight = () => !props.language || props.language in bundledLanguages;
-  const [highlight, setHighlight] = createSignal<Highlight | null>(null);
-  const result = createMemo(() => {
-    const current = highlight();
-    return current?.key === highlightKey() ? current.result : highlightCache.get(highlightKey());
-  });
-  let request = 0;
 
-  createEffect(
-    () => ({
-      code: props.code,
-      isCompleted: props.isCompleted,
-      language: props.language,
-      canHighlight: canHighlight(),
-      highlightKey: highlightKey(),
-    }),
-    ({
-      code: currentCode,
-      isCompleted: completed,
-      language: currentLanguage,
-      canHighlight: available,
-      highlightKey: key,
-    }) => {
-      if (!available || !completed || highlightCache.has(key)) return;
-      const currentRequest = ++request;
+  const result = createMemo(async (): Promise<TokensResult | undefined> => {
+    const key = highlightKey();
+    const cached = highlightCache.get(key);
+    if (cached) return cached;
+    if (!canHighlight() || !props.isCompleted) return undefined;
 
-      void codeToTokens(currentCode, {
-        lang: currentLanguage || 'text',
+    try {
+      const tokens = await codeToTokens(props.code, {
+        lang: props.language || 'text',
         themes: { light: 'github-light', dark: 'github-dark' },
-      }).then(
-        (nextResult) => {
-          highlightCache.set(key, nextResult);
-          if (currentRequest === request) setHighlight({ key, result: nextResult });
-        },
-        (error) => {
-          console.error(`Failed to highlight ${currentLanguage || 'plain text'} code:`, error);
-        },
-      );
-    },
-  );
+      });
+      highlightCache.set(key, tokens);
+      return tokens;
+    } catch (error) {
+      console.error(`Failed to highlight ${props.language || 'plain text'} code:`, error);
+      return undefined;
+    }
+  });
 
   const containerStyle = () => {
     const style: Record<string, string> = {};
@@ -65,8 +40,14 @@ export function HighlightedCode(props: { code: string; isCompleted: boolean; lan
     return style;
   };
 
+  const plainPre = () => (
+    <pre data-markdown='code-block-body'>
+      <code>{props.code}</code>
+    </pre>
+  );
+
   return (
-    <>
+    <Loading fallback={plainPre()}>
       {result() ? (
         <pre data-markdown='code-block-body' style={containerStyle()}>
           <code class='[counter-increment:line_0] [counter-reset:line]'>
@@ -98,10 +79,8 @@ export function HighlightedCode(props: { code: string; isCompleted: boolean; lan
           </code>
         </pre>
       ) : (
-        <pre data-markdown='code-block-body'>
-          <code>{props.code}</code>
-        </pre>
+        plainPre()
       )}
-    </>
+    </Loading>
   );
 }

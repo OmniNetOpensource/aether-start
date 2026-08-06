@@ -1,7 +1,6 @@
-import { snapshot } from 'solid-js';
 import { startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import type { ChatRuntimeState } from '@/frontend/chat/agent-runtime/chat-runtime-state';
-import { cacheConversation, upsertConversationInCache } from '@/frontend/conversations/session';
+import { upsertConversationInCache } from '@/frontend/conversations/session';
 import {
   composerDocumentToBlocks,
   isComposerDocumentEmpty,
@@ -66,20 +65,7 @@ export async function submitMessage(
         throw new Error('New conversation did not return a user message');
       }
 
-      const nextTree = snapshot(runtime.getMessageTree());
       const now = response.message.createdAt;
-      cacheConversation({
-        id: response.conversationId,
-        title: 'New Chat',
-        model: runtime.getCurrentModelId(),
-        is_pinned: false,
-        pinned_at: null,
-        currentPath: nextTree.currentPath,
-        messages: nextTree.messages,
-        artifacts: [],
-        created_at: now,
-        updated_at: now,
-      });
       upsertConversationInCache({
         id: response.conversationId,
         title: 'New Chat',
