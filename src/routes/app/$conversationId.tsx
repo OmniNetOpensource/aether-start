@@ -24,8 +24,7 @@ import { initializeMessageTree } from '@/features/conversations/conversation-tre
 
 export const Route = createFileRoute('/app/$conversationId')({
   loader: async ({ params }) => {
-    const cachedConversation =
-      typeof window !== 'undefined' ? getConversationFromCache(params.conversationId) : undefined;
+    const cachedConversation = getConversationFromCache(params.conversationId);
     const conversation =
       cachedConversation ?? (await getConversationFn({ data: { id: params.conversationId } }));
     if (!conversation) throw redirect({ href: '/404' });

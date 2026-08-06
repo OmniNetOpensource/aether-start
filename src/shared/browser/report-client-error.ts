@@ -30,10 +30,6 @@ const toSerializableDetail = (detail: unknown): unknown => {
 };
 
 export function reportClientError(payload: ClientErrorReportBody): void {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
   const body: Record<string, unknown> = {
     kind: payload.kind,
     message: payload.message,

@@ -23,9 +23,7 @@ export type ShareDialogProps = {
 };
 
 const buildShareUrl = (token: string) =>
-  typeof window === 'undefined'
-    ? `/share/${encodeURIComponent(token)}`
-    : `${window.location.origin}/share/${encodeURIComponent(token)}`;
+  `${window.location.origin}/share/${encodeURIComponent(token)}`;
 
 export function ShareDialog(props: ShareDialogProps) {
   const toast = useToast();

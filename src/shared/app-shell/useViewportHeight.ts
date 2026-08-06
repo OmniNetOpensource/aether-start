@@ -7,7 +7,6 @@ import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 export function useViewportHeight() {
   useMountEffect(() => {
     const setVh = () => {
-      if (typeof window === 'undefined') return;
       const vh = window.innerHeight * 0.01;
       document.documentElement.style.setProperty('--vh', `${vh}px`);
     };

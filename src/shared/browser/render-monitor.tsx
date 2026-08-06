@@ -45,7 +45,7 @@ export function RenderMonitorBoundary(props: RenderMonitorBoundaryProps) {
 
   onSettled(() => {
     if (!import.meta.env.DEV) return;
-    const cfg = typeof window !== 'undefined' ? window.__RENDER_MONITOR__ : undefined;
+    const cfg = window.__RENDER_MONITOR__;
     if (cfg && !cfg.enabled) return;
 
     if (!element) return;
@@ -83,7 +83,7 @@ export function RenderMonitorBoundary(props: RenderMonitorBoundaryProps) {
 
 export function RenderMonitorController() {
   useMountEffect(() => {
-    if (!import.meta.env.DEV || typeof window === 'undefined') return;
+    if (!import.meta.env.DEV) return;
 
     let enabled = true;
     let logEnabled = true;

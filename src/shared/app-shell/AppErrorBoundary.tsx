@@ -76,7 +76,6 @@ function AppErrorFallback(props: { error: unknown }) {
   const value = untrack(() => props.error);
   const error = value instanceof Error ? value : null;
   onSettled(() => {
-    if (typeof window === 'undefined') return;
     reportClientError({
       kind: 'react-boundary',
       message: error?.message ?? '发生了未知错误',

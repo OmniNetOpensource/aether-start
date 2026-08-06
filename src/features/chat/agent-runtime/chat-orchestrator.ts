@@ -121,13 +121,11 @@ const scheduleAutoReconnect = (runtime: ChatRuntimeState, conversationId: string
 
 /**
  * 解析 Agent 的 base URL。
- * 根据当前页面的 protocol 与 host 拼接，SSR 时回退到 localhost:3100。
+ * 根据当前页面的 protocol 与 host 拼接。
  */
 const resolveAgentBaseUrl = () => {
-  const protocol =
-    typeof window !== 'undefined' && window.location.protocol === 'https:' ? 'https' : 'http';
-  const host = typeof window !== 'undefined' ? window.location.host : 'localhost:3100';
-  return `${protocol}://${host}/agents/${AGENT_NAME}`;
+  const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+  return `${protocol}://${window.location.host}/agents/${AGENT_NAME}`;
 };
 
 /**
