@@ -76,11 +76,7 @@ const enqueueStreamThinking = (runtime: ChatState, text: string) => {
   schedulePump();
 };
 
-const enqueueStreamArtifactCode = (
-  runtime: ChatState,
-  artifactId: string,
-  delta: string,
-) => {
+const enqueueStreamArtifactCode = (runtime: ChatState, artifactId: string, delta: string) => {
   if (!delta) return;
   const last = queue[queue.length - 1];
   if (last?.kind === 'artifact' && last.artifactId === artifactId && last.runtime === runtime) {
