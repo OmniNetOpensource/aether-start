@@ -1,10 +1,8 @@
 import { Outlet, createFileRoute } from '@tanstack/solid-router';
 import { createEffect, onSettled } from 'solid-js';
 import { ArtifactPanel, ArtifactToggleButton } from '@/frontend/chat/artifact';
-import {
-  cancelStreamSubscription,
-  resetLastEventId,
-} from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
 import { Composer } from '@/frontend/chat/composer/Composer';
 import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';

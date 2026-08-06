@@ -1,4 +1,5 @@
 import { createEffect, createSignal } from 'solid-js';
+import { isServer } from '@solidjs/web';
 import { useMountEffect } from '@/frontend/app-shell/useMountEffect';
 import { defaultTheme, findTheme, type Theme } from '@/frontend/themes/registry';
 
@@ -19,7 +20,9 @@ const getInitialTheme = (): Theme => {
 };
 
 export function useTheme() {
-  const [theme, setThemeState] = createSignal<Theme>(getInitialTheme());
+  const [theme, setThemeState] = createSignal<Theme>(
+    isServer ? defaultTheme.light : getInitialTheme(),
+  );
 
   createEffect(theme, applyTheme);
 

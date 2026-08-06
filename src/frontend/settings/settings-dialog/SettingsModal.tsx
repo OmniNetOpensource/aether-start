@@ -3,7 +3,7 @@ import { useNavigate } from '@tanstack/solid-router';
 import { Ban, Gift, Loader2, LogOut, Plus } from '@/frontend/design-system/icons';
 import { authClient } from '@/frontend/auth/client';
 import { getSessionStateFn } from '@/rpc/auth';
-import { resetLastEventId } from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { clearMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';

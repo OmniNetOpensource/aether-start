@@ -2,6 +2,85 @@ import type { ChatErrorCode, ChatErrorInfo, ChatServerToClientEvent } from '@/sh
 import { upsertConversationInCache } from '@/frontend/conversations/session';
 import type { ChatState } from './chat-state';
 
+/** 对话已在生成回复时的提示文案 */
+const BUSY_WARNING = 'This conversation is already generating a response.';
+
+/**
+ * 已处理的最大 eventId，用于去重和断点续传。
+ * 服务端事件带 eventId，客户端只处理 eventId > lastEventId 的事件。
+ */
+let lastEventId = 0;
+
+export const getLastEventId = () => lastEventId;
+
+/** 重置 lastEventId 与打字缓冲，每次新请求前调用，避免沿用旧会话的状态 */
+export const resetLastEventId = () => {
+  lastEventId = 0;
+  resetStreamBuffer();
+};
+
+/**
+ * 处理单条 SSE 消息。
+ * @param event - SSE 的 event 字段（如 chat_event、chat_finished 等）
+ * @param raw - data 字段的原始 JSON 字符串
+ */
+export const handleSSEMessage = (runtime: ChatState, event: string, raw: string) => {
+  let payload: Record<string, unknown>;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return;
+  }
+
+  switch (event) {
+    case 'chat_event': {
+      /* 单条聊天事件：需有 eventId 且大于 lastEventId 才处理，避免重复 */
+      if (typeof payload.eventId !== 'number') return;
+      if (payload.eventId <= lastEventId) return;
+      lastEventId = payload.eventId;
+
+      applyChatEventToTree(runtime, payload.event as ChatServerToClientEvent);
+      return;
+    }
+    case 'chat_finished':
+      flushStreamBuffer();
+      if (typeof payload.assistantCompletedAt === 'string') {
+        runtime.messageTree.stampAssistantCompletedAt(payload.assistantCompletedAt);
+      }
+      runtime.setStatus('idle');
+      return;
+    case 'chat_paused':
+      // 服务端调用 askuserquestions 后会先发 chat_paused 再关闭 SSE，
+      // background task 仍在等 /tool-answer。前端把当前请求视为结束，
+      // 等用户提交答案后由 submitToolAnswer 触发 resumeRunningConversation。
+      flushStreamBuffer();
+      runtime.setStatus('idle');
+      return;
+    case 'sync_response': {
+      /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
+      flushStreamBuffer();
+      runtime.setStatus(payload.status === 'running' ? 'streaming' : 'idle');
+      if (Array.isArray(payload.events)) {
+        for (const item of payload.events) {
+          const record = item as Record<string, unknown>;
+          if (typeof record.eventId === 'number' && record.eventId > lastEventId) {
+            lastEventId = record.eventId;
+            applyChatEventToTree(runtime, record.event as ChatServerToClientEvent);
+          }
+        }
+      }
+      if (typeof payload.assistantCompletedAt === 'string') {
+        runtime.messageTree.stampAssistantCompletedAt(payload.assistantCompletedAt);
+      }
+      return;
+    }
+    case 'busy':
+      runtime.toast.warning(BUSY_WARNING);
+      runtime.setStatus('streaming');
+      return;
+  }
+};
+
 /* ---------- 流式打字缓冲：把服务端一次到达的大段文本按帧逐步渲染 ---------- */
 
 /** 每帧最多展示多少个 Unicode 码位（展开字符串迭代），过大则调快，过小则更平滑 */

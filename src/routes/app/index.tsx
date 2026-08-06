@@ -1,9 +1,7 @@
 import { createFileRoute } from '@tanstack/solid-router';
 import { onSettled } from 'solid-js';
-import {
-  cancelStreamSubscription,
-  resetLastEventId,
-} from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { artifacts, clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { NewChatGreeting } from '@/frontend/chat/message-thread/NewChatGreeting';

@@ -4,7 +4,6 @@ import { emailOTPClient } from 'better-auth/client/plugins';
 import { useMountEffect } from '@/frontend/app-shell/useMountEffect';
 
 export const authClient = createAuthClient({
-  baseURL: window.location.origin,
   plugins: [emailOTPClient()],
 });
 

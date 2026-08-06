@@ -2,9 +2,9 @@ import { createFileRoute, redirect } from '@tanstack/solid-router';
 import { createEffect } from 'solid-js';
 import {
   cancelStreamSubscription,
-  resetLastEventId,
   resumeRunningConversation,
 } from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { setArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { isMessage } from '@/shared/chat/message';
