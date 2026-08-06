@@ -223,19 +223,8 @@ export const checkAgentStatus = async (
   if (response.status === 404) return { status: 'idle' };
   if (!response.ok) throw new Error(`Agent status probe failed: ${response.status}`);
 
-  const data = (await response.json()) as Record<string, unknown>;
-  const status = data.status;
-
-  return {
-    status:
-      status === 'idle' ||
-      status === 'running' ||
-      status === 'completed' ||
-      status === 'aborted' ||
-      status === 'error'
-        ? status
-        : 'idle',
-  };
+  const data: { status: ChatAgentStatus } = await response.json();
+  return data;
 };
 
 /**

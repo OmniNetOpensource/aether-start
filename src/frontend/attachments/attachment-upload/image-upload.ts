@@ -46,17 +46,7 @@ export const uploadImageToStorage = async (file: File, id: string): Promise<Atta
     throw new Error(await response.text());
   }
 
-  const uploaded: unknown = await response.json();
-  if (
-    typeof uploaded !== 'object' ||
-    uploaded === null ||
-    !('storageKey' in uploaded) ||
-    !('url' in uploaded) ||
-    typeof uploaded.storageKey !== 'string' ||
-    typeof uploaded.url !== 'string'
-  ) {
-    throw new Error('Invalid image upload response.');
-  }
+  const uploaded: { storageKey: string; url: string } = await response.json();
 
   return {
     id,
