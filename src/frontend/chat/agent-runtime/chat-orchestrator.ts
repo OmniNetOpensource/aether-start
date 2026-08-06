@@ -318,8 +318,11 @@ const handleSSEMessage = (runtime: ChatRuntimeState, event: string, raw: string)
  * 以 \n\n 分割事件块，解析 event: 与 data: 行，调用 handleSSEMessage 处理。
  * 支持 signal 中断；结束时调用 reader.cancel 释放资源。
  */
-const consumeStreamResponse = async (runtime: ChatRuntimeState, response: Response) => {
-  const signal = activeController!.signal;
+const consumeStreamResponse = async (
+  runtime: ChatRuntimeState,
+  response: Response,
+  signal: AbortSignal,
+) => {
   if (!response.ok || !response.body) {
     throw new Error(`Chat request failed: ${response.status}`);
   }
@@ -379,10 +382,12 @@ const consumeStreamResponse = async (runtime: ChatRuntimeState, response: Respon
  */
 export const checkAgentStatus = async (
   conversationId: string,
+  signal?: AbortSignal,
 ): Promise<{ status: ChatAgentStatus }> => {
   const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}`, {
     method: 'GET',
     credentials: 'include',
+    signal,
   });
 
   if (response.status === 404) return { status: 'idle' };
@@ -497,7 +502,7 @@ export const startChatRequest = async (
         signal: controller.signal,
       },
     );
-    await consumeStreamResponse(runtime, eventsResponse);
+    await consumeStreamResponse(runtime, eventsResponse, controller.signal);
     finalizeStream(runtime);
   } catch (error) {
     if (isAbortError(error)) {
@@ -667,13 +672,19 @@ export const resumeRunningConversation = async (
     return;
   }
 
+  /* 从发起探测的那一刻起就占据 activeController，
+     让切换会话时的 cancelStreamSubscription 能 abort 掉还在探测中的 resume，
+     避免旧会话的事件流叠加到新会话的消息树上 */
+  const controller = new AbortController();
+  activeController = controller;
   runtime.setStatus('sending');
 
   let agentStatus: { status: ChatAgentStatus };
 
   try {
-    agentStatus = await checkAgentStatus(conversationId);
+    agentStatus = await checkAgentStatus(conversationId, controller.signal);
   } catch (error) {
+    if (isAbortError(error)) return;
     console.error('Failed to probe agent status:', error);
     if (reconnectConversationId === conversationId) {
       scheduleAutoReconnect(runtime, conversationId);
@@ -684,18 +695,20 @@ export const resumeRunningConversation = async (
     return;
   }
 
+  if (controller.signal.aborted) return;
+
   if (
     agentStatus.status !== 'running' &&
     !(replayCompletedEvents && agentStatus.status !== 'idle')
   ) {
     clearReconnectState();
     activeRequestAcceptedCallback = null;
+    if (activeController === controller) {
+      activeController = null;
+    }
     runtime.setStatus('idle');
     return;
   }
-
-  const controller = new AbortController();
-  activeController = controller;
 
   try {
     const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/events`, {
@@ -706,7 +719,9 @@ export const resumeRunningConversation = async (
       signal: controller.signal,
     });
 
-    await consumeStreamResponse(runtime, response);
+    if (controller.signal.aborted) return;
+
+    await consumeStreamResponse(runtime, response, controller.signal);
 
     if (runtime.getStatus() === 'idle') {
       clearReconnectState();

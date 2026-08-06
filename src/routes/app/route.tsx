@@ -29,11 +29,10 @@ import { useToast } from '@/frontend/app-shell/useToast';
 
 export const Route = createFileRoute('/app')({
   loader: async () => {
-    const conversationListPromise = queryClient.getQueryData(
-      conversationInfiniteQueryOptions.queryKey,
-    )
-      ? Promise.resolve()
-      : queryClient.prefetchInfiniteQuery(conversationInfiniteQueryOptions);
+    const conversationListPromise = queryClient.prefetchInfiniteQuery({
+      ...conversationInfiniteQueryOptions,
+      staleTime: Infinity,
+    });
     const [availableModels, availablePrompts, initialSelection] = await Promise.all([
       queryClient.ensureQueryData({
         queryKey: ['chat-options', 'models'],
