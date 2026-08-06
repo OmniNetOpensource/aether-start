@@ -22,7 +22,6 @@ import {
 } from './event-handlers';
 import type { ChatState } from './chat-state';
 import { readSSEStream } from './sse-stream';
-import { isMessage } from '@/shared/chat/message';
 import { appendConfirmedUserMessage } from '@/shared/conversations';
 import type { ChatAgentStatus, ChatCommandResponse, ChatOperation } from '@/shared/chat/chat-api';
 
@@ -206,38 +205,6 @@ const applyChatAcceptedPayload = (runtime: ChatState, acceptedPayload: ChatComma
   runtime.setConversationId(acceptedPayload.conversationId);
 };
 
-const parseChatCommandResponse = (value: unknown): ChatCommandResponse | null => {
-  if (
-    typeof value !== 'object' ||
-    value === null ||
-    !('type' in value) ||
-    !('conversationId' in value) ||
-    typeof value.conversationId !== 'string' ||
-    !value.conversationId
-  ) {
-    return null;
-  }
-
-  if (value.type === 'regenerate') {
-    return { type: 'regenerate', conversationId: value.conversationId };
-  }
-
-  if (
-    value.type === 'append' &&
-    'message' in value &&
-    isMessage(value.message) &&
-    value.message.role === 'user'
-  ) {
-    return {
-      type: 'append',
-      conversationId: value.conversationId,
-      message: value.message,
-    };
-  }
-
-  return null;
-};
-
 /**
  * 探测指定对话的 Agent 状态。
  * GET /agents/conversation-runner/:conversationId，返回 idle | running | completed | aborted | error。
@@ -346,10 +313,7 @@ export const startChatRequest = async (
       return;
     }
 
-    const acceptedPayload = parseChatCommandResponse(await response.json());
-    if (!acceptedPayload) {
-      throw new Error('Invalid chat response');
-    }
+    const acceptedPayload: ChatCommandResponse = await response.json();
     acceptedConversationId = acceptedPayload.conversationId;
     applyChatAcceptedPayload(runtime, acceptedPayload);
     accepted = true;

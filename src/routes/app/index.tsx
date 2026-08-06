@@ -1,9 +1,10 @@
 import { createFileRoute } from '@tanstack/solid-router';
-import { onSettled } from 'solid-js';
+import { Show, onSettled } from 'solid-js';
 import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { artifacts, clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
+import { MessageList } from '@/frontend/chat/message-thread/MessageList';
 import { NewChatGreeting } from '@/frontend/chat/message-thread/NewChatGreeting';
 import {
   clearConversationMeta,
@@ -29,5 +30,11 @@ function NewChatPage() {
     clearArtifacts();
   });
 
-  return <NewChatGreeting />;
+  /* 新会话发出第一条消息后，消息已进树但路由还没跳到 /app/:id，
+     先渲染 MessageList 避免跳转前出现空白 */
+  return (
+    <Show when={messages().length > 0} fallback={<NewChatGreeting />}>
+      <MessageList />
+    </Show>
+  );
 }
