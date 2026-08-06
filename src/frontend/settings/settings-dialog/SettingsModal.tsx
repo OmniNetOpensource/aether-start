@@ -4,7 +4,7 @@ import { Ban, Gift, Loader2, LogOut, Plus } from '@/frontend/design-system/icons
 import { authClient } from '@/frontend/auth/client';
 import { getSessionStateFn } from '@/rpc/auth';
 import { resetLastEventId } from '@/frontend/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { clearMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { clearConversationMeta } from '@/frontend/conversations/session/conversation-meta';
@@ -64,7 +64,7 @@ export function SettingsModal(props: SettingsModalProps) {
     try {
       await authClient.signOut();
     } finally {
-      chatRuntime.setStatus('idle');
+      chatState.setStatus('idle');
       clearConversationMeta();
       clearMessageTree();
       clearArtifacts();

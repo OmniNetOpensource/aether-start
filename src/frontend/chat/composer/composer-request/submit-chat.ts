@@ -1,5 +1,5 @@
 import { startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
-import type { ChatRuntimeState } from '@/frontend/chat/agent-runtime/chat-runtime-state';
+import type { ChatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { upsertConversationInCache } from '@/frontend/conversations/session';
 import {
   composerDocumentToBlocks,
@@ -10,7 +10,7 @@ import {
 
 // 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
 export async function submitMessage(
-  runtime: ChatRuntimeState,
+  runtime: ChatState,
   document: ComposerDocument,
   navigateToNewChat: (conversationId: string) => Promise<void> | void,
   clearComposer: () => void,

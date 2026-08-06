@@ -5,7 +5,7 @@ import {
   cancelStreamSubscription,
   resetLastEventId,
 } from '@/frontend/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime, registerChatToast } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
 import { Composer } from '@/frontend/chat/composer/Composer';
 import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
 import { getAvailableModelsFn, getAvailablePromptsFn } from '@/rpc/chat-options';
@@ -93,7 +93,7 @@ function AppLayout() {
 
   onSettled(() => {
     return () => {
-      cancelStreamSubscription(chatRuntime, 'app/unmount');
+      cancelStreamSubscription(chatState, 'app/unmount');
       resetLastEventId();
     };
   });

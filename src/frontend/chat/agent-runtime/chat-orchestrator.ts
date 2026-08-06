@@ -13,9 +13,8 @@
  * 接收 chat_event、chat_finished 等事件，并调用 event-handlers 更新 UI 状态。
  */
 import type { AskUserQuestionsAnswer } from '@/shared/chat/ask-user-questions';
-import { applyChatEventToTree } from './event-handlers';
-import { flushAll, reset as resetStreamDisplayBuffer } from './stream-display-buffer';
-import type { ChatRuntimeState } from './chat-runtime-state';
+import { applyChatEventToTree, flushStreamBuffer, resetStreamBuffer } from './event-handlers';
+import type { ChatState } from './chat-state';
 import { isMessage } from '@/shared/chat/message';
 import { appendConfirmedUserMessage } from '@/shared/conversations';
 import type {
@@ -41,7 +40,7 @@ let lastEventId = 0;
 /** 重置 lastEventId，每次新请求前调用，避免沿用旧会话的 eventId */
 export const resetLastEventId = () => {
   lastEventId = 0;
-  resetStreamDisplayBuffer();
+  resetStreamBuffer();
 };
 
 /**
@@ -93,7 +92,7 @@ const resolveStopWaiters = () => {
   }
 };
 
-const scheduleAutoReconnect = (runtime: ChatRuntimeState, conversationId: string) => {
+const scheduleAutoReconnect = (runtime: ChatState, conversationId: string) => {
   if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
     clearReconnectState();
     runtime.toast.error('连接已断开');
@@ -165,7 +164,7 @@ const getResponseErrorMessage = async (response: Response) => {
  * 流结束后的收尾逻辑。
  * 异常结束时尝试自动重连；正常 idle 或无法重连时清理重连状态。
  */
-const finalizeStream = (runtime: ChatRuntimeState) => {
+const finalizeStream = (runtime: ChatState) => {
   if (runtime.getStatus() !== 'idle') {
     const conversationId = runtime.getConversationId();
     if (conversationId) {
@@ -177,7 +176,7 @@ const finalizeStream = (runtime: ChatRuntimeState) => {
   clearReconnectState();
 };
 
-const applyChatAcceptedPayload = (runtime: ChatRuntimeState, value: unknown) => {
+const applyChatAcceptedPayload = (runtime: ChatState, value: unknown) => {
   const acceptedPayload = parseChatCommandResponse(value);
   if (!acceptedPayload) {
     throw new Error('Invalid chat response');
@@ -253,7 +252,7 @@ const parseChatCommandResponse = (value: unknown): ChatCommandResponse | null =>
  * @param event - SSE 的 event 字段（如 chat_event、chat_finished 等）
  * @param raw - data 字段的原始 JSON 字符串
  */
-const handleSSEMessage = (runtime: ChatRuntimeState, event: string, raw: string) => {
+const handleSSEMessage = (runtime: ChatState, event: string, raw: string) => {
   let payload: Record<string, unknown>;
   try {
     payload = JSON.parse(raw);
@@ -273,7 +272,7 @@ const handleSSEMessage = (runtime: ChatRuntimeState, event: string, raw: string)
     }
     case 'chat_finished':
       clearReconnectState();
-      flushAll();
+      flushStreamBuffer();
       if (typeof payload.assistantCompletedAt === 'string') {
         runtime.messageTree.stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
@@ -285,12 +284,12 @@ const handleSSEMessage = (runtime: ChatRuntimeState, event: string, raw: string)
       // background task 仍在等 /tool-answer。前端把当前请求视为结束，
       // 等用户提交答案后由 submitToolAnswer 触发 resumeRunningConversation。
       clearReconnectState();
-      flushAll();
+      flushStreamBuffer();
       runtime.setStatus('idle');
       return;
     case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
-      flushAll();
+      flushStreamBuffer();
       runtime.setStatus(payload.status === 'running' ? 'streaming' : 'idle');
       if (Array.isArray(payload.events)) {
         for (const item of payload.events) {
@@ -319,7 +318,7 @@ const handleSSEMessage = (runtime: ChatRuntimeState, event: string, raw: string)
  * 支持 signal 中断；结束时调用 reader.cancel 释放资源。
  */
 const consumeStreamResponse = async (
-  runtime: ChatRuntimeState,
+  runtime: ChatState,
   response: Response,
   signal: AbortSignal,
 ) => {
@@ -370,7 +369,7 @@ const consumeStreamResponse = async (
     buffer += decoder.decode().replace(/\r\n/g, '\n');
     flush();
   } finally {
-    flushAll();
+    flushStreamBuffer();
     await Promise.allSettled([reader.cancel()]);
   }
 };
@@ -419,7 +418,7 @@ export const checkAgentStatus = async (
  * 异常：AbortError 静默忽略；TypeError（如网络错误）调用 finalizeStream；其他恢复 idle。
  */
 export const startChatRequest = async (
-  runtime: ChatRuntimeState,
+  runtime: ChatState,
   operation: ChatOperation,
   onAccepted?: (response: ChatCommandResponse) => void,
 ) => {
@@ -542,13 +541,13 @@ export const startChatRequest = async (
   }
 };
 
-export const cancelSending = async (runtime: ChatRuntimeState, _reason: string) => {
+export const cancelSending = async (runtime: ChatState, _reason: string) => {
   if (runtime.getStatus() !== 'sending') {
     return;
   }
 
   clearReconnectState();
-  flushAll();
+  flushStreamBuffer();
   activeController?.abort();
   activeController = null;
   activeRequestAcceptedCallback = null;
@@ -559,9 +558,9 @@ export const cancelSending = async (runtime: ChatRuntimeState, _reason: string) 
  * 取消订阅流式输出。
  * abort 本地 activeController，将 status 设为 idle。
  */
-export const cancelStreamSubscription = (runtime: ChatRuntimeState, _reason: string) => {
+export const cancelStreamSubscription = (runtime: ChatState, _reason: string) => {
   clearReconnectState();
-  flushAll();
+  flushStreamBuffer();
   activeController?.abort();
   activeController = null;
   activeRequestAcceptedCallback = null;
@@ -574,7 +573,7 @@ export const cancelStreamSubscription = (runtime: ChatRuntimeState, _reason: str
  * 取消正在进行的 AI 回复。
  * 保持 SSE 连接，等服务端 abort 后通过 chat_finished 收口。
  */
-export const cancelAnswering = async (runtime: ChatRuntimeState, _reason: string) => {
+export const cancelAnswering = async (runtime: ChatState, _reason: string) => {
   const conversationId = runtime.getConversationId();
   const status = runtime.getStatus();
 
@@ -616,7 +615,7 @@ export const cancelAnswering = async (runtime: ChatRuntimeState, _reason: string
 };
 
 export const submitToolAnswer = async (
-  runtime: ChatRuntimeState,
+  runtime: ChatState,
   callId: string,
   answers: AskUserQuestionsAnswer[],
 ) => {
@@ -664,7 +663,7 @@ export const submitToolAnswer = async (
  * 取消方式：对话页卸载时调用 cancelStreamSubscription 即可 abort
  */
 export const resumeRunningConversation = async (
-  runtime: ChatRuntimeState,
+  runtime: ChatState,
   conversationId: string,
   replayCompletedEvents = false,
 ) => {

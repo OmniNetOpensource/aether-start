@@ -2,7 +2,7 @@ import { createEffect, createSignal, createUniqueId } from 'solid-js';
 import { useHydrated, useNavigate } from '@tanstack/solid-router';
 import { ArrowUp, Loader2, Paperclip, Square } from '@/frontend/design-system/icons';
 import { cancelAnswering, cancelSending } from '@/frontend/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime, status } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { chatState, status } from '@/frontend/chat/agent-runtime/chat-state';
 import { useMountEffect } from '@/frontend/app-shell/useMountEffect';
 import { useToast } from '@/frontend/app-shell/useToast';
 import { Button } from '@/frontend/design-system/button';
@@ -79,7 +79,7 @@ export function Composer() {
 
   const submit = () => {
     void submitMessage(
-      chatRuntime,
+      chatState,
       composerDocument(),
       async (conversationId) => {
         await navigate({
@@ -124,14 +124,14 @@ export function Composer() {
       return;
     }
     if (action() === 'sending') {
-      void cancelSending(chatRuntime, 'Composer/sendButton').catch((error) => {
+      void cancelSending(chatState, 'Composer/sendButton').catch((error) => {
         console.error('Failed to cancel sending:', error);
         toast.error(error instanceof Error ? error.message : '取消发送失败');
       });
       return;
     }
     if (action() === 'streaming') {
-      void cancelAnswering(chatRuntime, 'Composer/stopButton').catch((error) => {
+      void cancelAnswering(chatState, 'Composer/stopButton').catch((error) => {
         console.error('Failed to stop answering:', error);
         toast.error(error instanceof Error ? error.message : '停止失败');
       });

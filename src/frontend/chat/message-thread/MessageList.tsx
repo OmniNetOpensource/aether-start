@@ -6,7 +6,7 @@ import {
   isComposerDocumentEmpty,
 } from '@/frontend/chat/composer/composer-editor/composer-document';
 import { getBranchInfo } from '@/shared/conversations';
-import { chatRuntime, status } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { chatState, status } from '@/frontend/chat/agent-runtime/chat-state';
 import {
   currentPath,
   messages,
@@ -43,15 +43,15 @@ export function MessageList() {
   const submitEdit = async () => {
     const editing = editingState();
     if (!editing) return;
-    if (!chatRuntime.getCurrentModelId()) {
-      chatRuntime.toast.warning('请先选择模型');
+    if (!chatState.getCurrentModelId()) {
+      chatState.toast.warning('请先选择模型');
       return;
     }
-    if (chatRuntime.getStatus() !== 'idle') {
-      await cancelAnswering(chatRuntime, 'message/submitEdit');
+    if (chatState.getStatus() !== 'idle') {
+      await cancelAnswering(chatState, 'message/submitEdit');
     }
     if (isComposerDocumentEmpty(editing.editedDocument)) {
-      chatRuntime.toast.warning('请输入内容或添加附件');
+      chatState.toast.warning('请输入内容或添加附件');
       return;
     }
 
@@ -62,7 +62,7 @@ export function MessageList() {
     }
 
     await startChatRequest(
-      chatRuntime,
+      chatState,
       {
         type: 'append',
         message: {
@@ -77,19 +77,19 @@ export function MessageList() {
   };
 
   const retryFromMessage = async (messageId: number) => {
-    if (!chatRuntime.getCurrentModelId()) {
-      chatRuntime.toast.warning('请先选择模型');
+    if (!chatState.getCurrentModelId()) {
+      chatState.toast.warning('请先选择模型');
       return;
     }
-    if (chatRuntime.getStatus() !== 'idle') {
-      await cancelAnswering(chatRuntime, 'message/retry');
+    if (chatState.getStatus() !== 'idle') {
+      await cancelAnswering(chatState, 'message/retry');
     }
 
     const target = messages()[messageId - 1];
     if (!target) return;
     if (target.role === 'user') {
       await startChatRequest(
-        chatRuntime,
+        chatState,
         {
           type: 'append',
           message: { role: 'user', blocks: target.blocks },
@@ -102,7 +102,7 @@ export function MessageList() {
     }
     if (target.parentId === null) return;
     await startChatRequest(
-      chatRuntime,
+      chatState,
       { type: 'regenerate', currentMessageId: target.parentId },
       () => setEditingState(null),
     );

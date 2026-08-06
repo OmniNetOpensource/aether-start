@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { act, renderTest } from '@/test/render';
 import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
-import { chatRuntime, registerChatToast } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
 import {
   clearMessageTree,
   initializeMessageTree,
@@ -19,7 +19,7 @@ afterEach(() => {
   clearConversationMeta();
   clearMessageTree();
   clearArtifacts();
-  chatRuntime.setStatus('idle');
+  chatState.setStatus('idle');
 });
 
 describe('MessageItem', () => {
@@ -93,7 +93,7 @@ describe('MessageItem', () => {
       completedAt: null,
     };
     initializeMessageTree([initialMessage], [1]);
-    chatRuntime.setStatus('streaming');
+    chatState.setStatus('streaming');
 
     const { container } = renderTest(() => (
       <ToastProvider>

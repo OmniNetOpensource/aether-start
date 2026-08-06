@@ -1,7 +1,7 @@
 import { createSignal } from 'solid-js';
 import { Share2 } from '@/frontend/design-system/icons';
 import { Button } from '@/frontend/design-system/button';
-import { status } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { status } from '@/frontend/chat/agent-runtime/chat-state';
 import { currentPath } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { ShareDialog } from './ShareDialog';
 

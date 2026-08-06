@@ -2,7 +2,7 @@ import { ArrowUp, ImagePlus, X } from '@/frontend/design-system/icons';
 import { Button } from '@/frontend/design-system/button';
 import { useToast } from '@/frontend/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
-import { status } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { status } from '@/frontend/chat/agent-runtime/chat-state';
 import { currentModelId } from '@/frontend/conversations/session/chat-selection';
 import {
   registerActiveInput,

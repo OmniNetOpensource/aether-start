@@ -8,7 +8,7 @@ import { Copy, Check, AlertCircle, Pencil, RotateCcw } from '@/frontend/design-s
 import { Button } from '@/frontend/design-system/button';
 import { useToast } from '@/frontend/app-shell/useToast';
 import { submitToolAnswer } from '@/frontend/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime, status } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { chatState, status } from '@/frontend/chat/agent-runtime/chat-state';
 import { navigateMessageBranch } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import type { BranchInfo } from '@/shared/chat/message';
 import type { EditingState } from './editing-state';
@@ -224,7 +224,7 @@ export function MessageItem(props: MessageItemProps) {
                             block={block}
                             readonly={!isUsable}
                             onSubmit={(answers) =>
-                              submitToolAnswer(chatRuntime, block.callId, answers)
+                              submitToolAnswer(chatState, block.callId, answers)
                             }
                           />
                         );

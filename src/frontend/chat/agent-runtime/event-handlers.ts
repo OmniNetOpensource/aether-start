@@ -1,12 +1,129 @@
 import type { ChatErrorCode, ChatErrorInfo, ChatServerToClientEvent } from '@/shared/chat/chat-api';
 import { upsertConversationInCache } from '@/frontend/conversations/session';
-import type { ChatRuntimeState } from './chat-runtime-state';
-import {
-  enqueueStreamArtifactCode,
-  enqueueStreamContent,
-  enqueueStreamThinking,
-  flushAll,
-} from './stream-display-buffer';
+import type { ChatState } from './chat-state';
+
+/* ---------- 流式打字缓冲：把服务端一次到达的大段文本按帧逐步渲染 ---------- */
+
+/** 每帧最多展示多少个 Unicode 码位（展开字符串迭代），过大则调快，过小则更平滑 */
+const CHARS_PER_FRAME = 14;
+
+type Segment =
+  | { kind: 'content'; text: string; runtime: ChatState }
+  | { kind: 'thinking'; text: string; runtime: ChatState }
+  | { kind: 'artifact'; artifactId: string; text: string; runtime: ChatState };
+
+let queue: Segment[] = [];
+let rafId: number | null = null;
+
+const schedulePump = () => {
+  if (rafId !== null) return;
+  rafId = requestAnimationFrame(tick);
+};
+
+const tick = () => {
+  rafId = null;
+  if (queue.length === 0) {
+    return;
+  }
+
+  const head = queue[0];
+  if (!head.text) {
+    queue.shift();
+    schedulePump();
+    return;
+  }
+
+  const units = [...head.text];
+  const chunk = units.slice(0, CHARS_PER_FRAME).join('');
+  head.text = units.slice(CHARS_PER_FRAME).join('');
+
+  if (head.kind === 'content') {
+    head.runtime.messageTree.appendToAssistant({ type: 'content', content: chunk });
+  } else if (head.kind === 'thinking') {
+    head.runtime.messageTree.appendToAssistant({ kind: 'thinking', text: chunk });
+  } else {
+    head.runtime.artifacts.appendCode(head.artifactId, chunk);
+  }
+
+  if (!head.text) {
+    queue.shift();
+  }
+
+  if (queue.length > 0) {
+    schedulePump();
+  }
+};
+
+const enqueueStreamContent = (runtime: ChatState, text: string) => {
+  if (!text) return;
+  const last = queue[queue.length - 1];
+  if (last?.kind === 'content' && last.runtime === runtime) {
+    last.text += text;
+  } else {
+    queue.push({ kind: 'content', text, runtime });
+  }
+  schedulePump();
+};
+
+const enqueueStreamThinking = (runtime: ChatState, text: string) => {
+  if (!text) return;
+  const last = queue[queue.length - 1];
+  if (last?.kind === 'thinking' && last.runtime === runtime) {
+    last.text += text;
+  } else {
+    queue.push({ kind: 'thinking', text, runtime });
+  }
+  schedulePump();
+};
+
+const enqueueStreamArtifactCode = (
+  runtime: ChatState,
+  artifactId: string,
+  delta: string,
+) => {
+  if (!delta) return;
+  const last = queue[queue.length - 1];
+  if (last?.kind === 'artifact' && last.artifactId === artifactId && last.runtime === runtime) {
+    last.text += delta;
+  } else {
+    queue.push({ kind: 'artifact', artifactId, text: delta, runtime });
+  }
+  schedulePump();
+};
+
+/** 立即把缓冲中剩余的文本全部渲染出来（流结束或遇到非文本事件时调用） */
+export const flushStreamBuffer = () => {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  if (queue.length === 0) {
+    return;
+  }
+
+  for (const seg of queue) {
+    if (!seg.text) continue;
+    if (seg.kind === 'content') {
+      seg.runtime.messageTree.appendToAssistant({ type: 'content', content: seg.text });
+    } else if (seg.kind === 'thinking') {
+      seg.runtime.messageTree.appendToAssistant({ kind: 'thinking', text: seg.text });
+    } else {
+      seg.runtime.artifacts.appendCode(seg.artifactId, seg.text);
+    }
+  }
+  queue = [];
+};
+
+/** 丢弃缓冲内容（新请求开始前调用，避免旧会话文本串场） */
+export const resetStreamBuffer = () => {
+  if (rafId !== null) {
+    cancelAnimationFrame(rafId);
+    rafId = null;
+  }
+  queue = [];
+};
+
+/* ---------- 服务端事件 → 前端状态 ---------- */
 
 const ERROR_COPY: Record<ChatErrorCode, { title: string; cause: string; suggestion: string }> = {
   invalid_request: {
@@ -167,7 +284,7 @@ export const enhanceServerErrorMessage = (safeMessage: string, errorInfo?: ChatE
   );
 };
 
-export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServerToClientEvent) => {
+export const applyChatEventToTree = (runtime: ChatState, event: ChatServerToClientEvent) => {
   if (event.type === 'content') {
     const addition =
       typeof event.content === 'string' ? event.content : String(event.content ?? '');
@@ -186,7 +303,7 @@ export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServe
     return;
   }
 
-  flushAll();
+  flushStreamBuffer();
 
   if (event.type === 'artifact_started') {
     runtime.artifacts.start(event.artifactId);

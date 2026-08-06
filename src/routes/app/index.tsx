@@ -4,7 +4,7 @@ import {
   cancelStreamSubscription,
   resetLastEventId,
 } from '@/frontend/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { artifacts, clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { NewChatGreeting } from '@/frontend/chat/message-thread/NewChatGreeting';
 import {
@@ -24,7 +24,7 @@ function NewChatPage() {
   onSettled(() => {
     if (conversationId() === null && messages().length === 0 && artifacts().length === 0) return;
 
-    cancelStreamSubscription(chatRuntime, 'conversation/new');
+    cancelStreamSubscription(chatState, 'conversation/new');
     resetLastEventId();
     clearConversationMeta();
     clearMessageTree();

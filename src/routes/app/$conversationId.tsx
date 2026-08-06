@@ -5,7 +5,7 @@ import {
   resetLastEventId,
   resumeRunningConversation,
 } from '@/frontend/chat/agent-runtime/chat-orchestrator';
-import { chatRuntime } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { setArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { isMessage } from '@/shared/chat/message';
 import { MessageList } from '@/frontend/chat/message-thread/MessageList';
@@ -49,7 +49,7 @@ function ConversationPage() {
       if (!conversation) return;
       if (conversationId() === conversation.id) return;
 
-      cancelStreamSubscription(chatRuntime, 'conversation/change');
+      cancelStreamSubscription(chatState, 'conversation/change');
       resetLastEventId();
       initializeMessageTree(
         conversation.messages,
@@ -61,7 +61,7 @@ function ConversationPage() {
       setPageTitle(conversation.title ?? 'Aether');
       setCurrentModelId(conversation.model ?? '');
       setConversationId(conversation.id);
-      void resumeRunningConversation(chatRuntime, conversation.id);
+      void resumeRunningConversation(chatState, conversation.id);
     },
   );
 

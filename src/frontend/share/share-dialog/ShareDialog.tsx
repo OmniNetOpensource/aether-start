@@ -9,7 +9,7 @@ import {
   revokeConversationShareFn,
 } from '@/rpc/share';
 import { useConversationsQuery, selectAllConversations } from '@/frontend/conversations/session';
-import { status } from '@/frontend/chat/agent-runtime/chat-runtime';
+import { status } from '@/frontend/chat/agent-runtime/chat-state';
 import {
   currentPath,
   messages,
