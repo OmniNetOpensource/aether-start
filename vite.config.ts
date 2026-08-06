@@ -78,6 +78,7 @@ export default defineConfig(({ command }) => {
         },
         spa: {
           enabled: true,
+          maskPath: '/404',
         },
       }),
       viteSolid({ ssr: true }),
