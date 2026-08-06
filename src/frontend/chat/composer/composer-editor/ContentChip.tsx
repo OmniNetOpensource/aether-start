@@ -21,8 +21,6 @@ type ContentChipProps =
     };
 
 export function ContentChip(props: ContentChipProps) {
-  const isQuote = props.kind === 'quote';
-
   return (
     <span
       data-content-chip={props.kind}
@@ -31,7 +29,7 @@ export function ContentChip(props: ContentChipProps) {
         props.class,
       )}
     >
-      {isQuote ? (
+      {props.kind === 'quote' ? (
         <Quote class='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
       ) : props.url ? (
         <ImagePreview
@@ -46,11 +44,11 @@ export function ContentChip(props: ContentChipProps) {
       ) : (
         <FileText class='h-3.5 w-3.5 shrink-0 text-muted-foreground' />
       )}
-      <span class='truncate'>{isQuote ? props.text : props.name}</span>
+      <span class='truncate'>{props.kind === 'quote' ? props.text : props.name}</span>
       {props.onRemove ? (
         <button
           type='button'
-          aria-label={isQuote ? '删除引用' : '删除图片'}
+          aria-label={props.kind === 'quote' ? '删除引用' : '删除图片'}
           onClick={props.onRemove}
           class='grid h-5 w-5 shrink-0 place-items-center rounded text-muted-foreground hover:bg-hover hover:text-foreground'
         >

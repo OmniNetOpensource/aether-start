@@ -1,5 +1,5 @@
 import { Outlet, createFileRoute } from '@tanstack/solid-router';
-import { createEffect, onSettled } from 'solid-js';
+import { createEffect, deep, onSettled } from 'solid-js';
 import { ArtifactPanel, ArtifactToggleButton } from '@/frontend/chat/artifact';
 import {
   cancelStreamSubscription,
@@ -102,8 +102,8 @@ function AppLayout() {
       conversationId: conversationId(),
       title: pageTitle(),
       model: currentModelId(),
-      tree: getMessageTreeState(),
-      artifacts: artifacts(),
+      tree: deep(getMessageTreeState()),
+      artifacts: deep(artifacts()),
     }),
     (state) => {
       if (!state.conversationId) return;

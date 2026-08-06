@@ -45,7 +45,8 @@ export function SettingsModal(props: SettingsModalProps) {
   const [isAdmin, setIsAdmin] = createSignal(false);
   const [adminCodes, setAdminCodes] = createSignal<AdminCode[]>([]);
   const [adminCodesLoading, setAdminCodesLoading] = createSignal(false);
-  const [createCode, setCreateCode] = createSignal({ code: '', amount: 50 });
+  const [newCode, setNewCode] = createSignal('');
+  const [newAmount, setNewAmount] = createSignal(50);
   const [createLoading, setCreateLoading] = createSignal(false);
 
   createEffect(
@@ -147,7 +148,8 @@ export function SettingsModal(props: SettingsModalProps) {
   };
 
   const handleCreateCode = async () => {
-    const { code, amount } = createCode();
+    const code = newCode();
+    const amount = newAmount();
     if (!code.trim() || amount < 1 || createLoading()) {
       return;
     }
@@ -157,7 +159,8 @@ export function SettingsModal(props: SettingsModalProps) {
       await adminCreateRedeemCodeFn({
         data: { code: code.trim().toUpperCase(), amount, expiresAt: null },
       });
-      setCreateCode({ code: '', amount: 50 });
+      setNewCode('');
+      setNewAmount(50);
       toast.success('Redeem code created');
       await reloadAdminCodes();
     } catch (error) {
@@ -250,13 +253,8 @@ export function SettingsModal(props: SettingsModalProps) {
                 <div class='flex gap-2'>
                   <Input
                     placeholder='Code'
-                    value={createCode().code}
-                    onChange={(event) =>
-                      setCreateCode((current) => ({
-                        ...current,
-                        code: event.currentTarget.value,
-                      }))
-                    }
+                    value={newCode()}
+                    onChange={(event) => setNewCode(event.currentTarget.value)}
                     disabled={createLoading()}
                     class='w-32'
                   />
@@ -264,22 +262,15 @@ export function SettingsModal(props: SettingsModalProps) {
                     type='number'
                     min={1}
                     placeholder='Amount'
-                    value={createCode().amount || ''}
-                    onChange={(event) =>
-                      setCreateCode((current) => ({
-                        ...current,
-                        amount: parseInt(event.currentTarget.value, 10) || 0,
-                      }))
-                    }
+                    value={newAmount() || ''}
+                    onChange={(event) => setNewAmount(parseInt(event.currentTarget.value, 10) || 0)}
                     disabled={createLoading()}
                     class='w-20'
                   />
                   <Button
                     size='sm'
                     onClick={handleCreateCode}
-                    disabled={
-                      !createCode().code.trim() || createCode().amount < 1 || createLoading()
-                    }
+                    disabled={!newCode().trim() || newAmount() < 1 || createLoading()}
                   >
                     {createLoading() ? (
                       <Loader2 class='h-4 w-4 animate-spin' />

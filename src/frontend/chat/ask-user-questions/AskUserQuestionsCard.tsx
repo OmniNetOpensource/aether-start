@@ -1,4 +1,4 @@
-import { createSignal, For } from 'solid-js';
+import { createSignal, createStore, For } from 'solid-js';
 import {
   Check,
   CheckCircle2,
@@ -62,10 +62,10 @@ const isOptionIndex = (
 ): optionIndex is number => optionIndex !== null && Boolean(question.options[optionIndex]);
 
 export function AskUserQuestionsCard(props: AskUserQuestionsCardProps) {
-  const [draftAnswers, setDraftAnswers] = createSignal(toDraftAnswers(props.block.answers));
+  const [draftAnswers, setDraftAnswers] = createStore(toDraftAnswers(props.block.answers));
   const [currentPage, setCurrentPage] = createSignal(0);
   const answerSource = () =>
-    props.block.status === 'answered' ? toDraftAnswers(props.block.answers) : draftAnswers();
+    props.block.status === 'answered' ? toDraftAnswers(props.block.answers) : draftAnswers;
   const isLocked = () => (props.readonly ?? false) || props.block.status !== 'pending';
   const canSubmit = () =>
     !isLocked() &&
@@ -96,14 +96,10 @@ export function AskUserQuestionsCard(props: AskUserQuestionsCardProps) {
 
     setDraftAnswers((current) => {
       const existing = getDraft(current, currentPage());
-
-      return {
-        ...current,
-        [currentPage()]: {
-          selectedOptionIndexes: nextOptionIndexes,
-          customSelected: nextCustomSelected,
-          customText: existing.customText,
-        },
+      current[currentPage()] = {
+        selectedOptionIndexes: nextOptionIndexes,
+        customSelected: nextCustomSelected,
+        customText: existing.customText,
       };
     });
   };
@@ -115,15 +111,11 @@ export function AskUserQuestionsCard(props: AskUserQuestionsCardProps) {
 
     setDraftAnswers((current) => {
       const existing = getDraft(current, currentPage());
-      return {
-        ...current,
-        [currentPage()]: {
-          ...existing,
-          selectedOptionIndexes:
-            question().multiSelect || text.length === 0 ? existing.selectedOptionIndexes : [],
-          customText: text,
-          customSelected: existing.customSelected || text.length > 0,
-        },
+      current[currentPage()] = {
+        selectedOptionIndexes:
+          question().multiSelect || text.length === 0 ? existing.selectedOptionIndexes : [],
+        customText: text,
+        customSelected: existing.customSelected || text.length > 0,
       };
     });
   };

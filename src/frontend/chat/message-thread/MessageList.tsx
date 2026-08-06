@@ -1,4 +1,4 @@
-import { createEffect, createMemo, createSignal, For, Show } from 'solid-js';
+import { createEffect, createSignal, For, Show } from 'solid-js';
 import { cancelAnswering, startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import {
   composerDocumentFromBlocks,
@@ -120,8 +120,8 @@ export function MessageList() {
             >
               <For each={currentPath()}>
                 {(messageId, index) => {
-                  const message = createMemo(() => messages()[messageId - 1]);
-                  const isLastMessage = createMemo(() => index() === currentPath().length - 1);
+                  const message = () => messages()[messageId - 1];
+                  const isLastMessage = () => index() === currentPath().length - 1;
 
                   return (
                     <Show when={message()}>

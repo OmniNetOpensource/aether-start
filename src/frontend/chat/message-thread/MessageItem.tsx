@@ -1,5 +1,5 @@
 import { AskUserQuestionsCard } from '@/frontend/chat/ask-user-questions';
-import { createSignal, For } from 'solid-js';
+import { createSignal, For, Show } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import Markdown from '@/frontend/design-system/Markdown';
 import type { Message } from '@/shared/chat/message';
@@ -109,21 +109,9 @@ const formatMessageTime = (iso: string) =>
 export function MessageItem(props: MessageItemProps) {
   const toast = useToast();
   const messageId = () => props.message.id;
-  const isEditing = () => props.editingState?.messageId === messageId();
-  const renderEditor = () => {
-    const editingState = props.editingState;
-    if (!editingState || editingState.messageId !== messageId()) return null;
-
-    return (
-      <MessageEditor
-        messageId={messageId()}
-        document={editingState.editedDocument}
-        onDocumentChange={props.onEditDocumentChange}
-        onCancel={props.onCancelEditing}
-        onSubmit={props.onSubmitEdit}
-      />
-    );
-  };
+  const editingState = () =>
+    props.editingState?.messageId === messageId() ? props.editingState : null;
+  const isEditing = () => editingState() !== null;
   const isBusy = () => status() !== 'idle';
 
   const handleStartEditing = () => props.onStartEditing(messageId());
@@ -160,7 +148,17 @@ export function MessageItem(props: MessageItemProps) {
           {shouldRenderBody() && (
             <>
               {isEditing() ? (
-                renderEditor()
+                <Show when={editingState()}>
+                  {(editing) => (
+                    <MessageEditor
+                      messageId={messageId()}
+                      document={editing().editedDocument}
+                      onDocumentChange={props.onEditDocumentChange}
+                      onCancel={props.onCancelEditing}
+                      onSubmit={props.onSubmitEdit}
+                    />
+                  )}
+                </Show>
               ) : isUser() ? (
                 <div class='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'>
                   <div class='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
