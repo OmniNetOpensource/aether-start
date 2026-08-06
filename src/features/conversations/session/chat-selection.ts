@@ -1,4 +1,5 @@
-import { createServerFn } from '@tanstack/react-start';
+import { createServerFn } from '@tanstack/solid-start';
+import { createSignal } from 'solid-js';
 
 export type ChatSessionSelectionState = {
   currentModelId: string;
@@ -10,6 +11,20 @@ export const initialChatSessionSelectionState: ChatSessionSelectionState = {
   currentModelId: '',
   currentPromptId: '',
   currentFetchProvider: 'jina',
+};
+
+const [currentModelId, setCurrentModelId] = createSignal('');
+const [currentPromptId, setCurrentPromptId] = createSignal('');
+const [currentFetchProvider, setCurrentFetchProvider] =
+  createSignal<ChatSessionSelectionState['currentFetchProvider']>('jina');
+
+export {
+  currentFetchProvider,
+  currentModelId,
+  currentPromptId,
+  setCurrentFetchProvider,
+  setCurrentModelId,
+  setCurrentPromptId,
 };
 
 const SELECTION_COOKIE_KEY = 'aether_chat_selection';
@@ -43,7 +58,7 @@ const parseChatSessionSelection = (value: string | undefined): ChatSessionSelect
 };
 
 export const getChatSessionSelectionFn = createServerFn({ method: 'GET' }).handler(async () => {
-  const { getCookie } = await import('@tanstack/react-start/server');
+  const { getCookie } = await import('@tanstack/solid-start/server');
   return parseChatSessionSelection(getCookie(SELECTION_COOKIE_KEY));
 });
 

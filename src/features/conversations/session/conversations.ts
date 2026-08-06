@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/react-start';
+import { createServerFn } from '@tanstack/solid-start';
 import { z } from 'zod';
 
 const listCursorSchema = z
@@ -40,7 +40,7 @@ const conversationPayloadSchema = z.object({
 });
 
 export const listConversationsPageFn = createServerFn({ method: 'POST' })
-  .inputValidator(
+  .validator(
     z.object({
       limit: z.number().int().positive().max(100),
       cursor: listCursorSchema,
@@ -64,7 +64,7 @@ export const listConversationsPageFn = createServerFn({ method: 'POST' })
   });
 
 export const searchConversationsFn = createServerFn({ method: 'POST' })
-  .inputValidator(
+  .validator(
     z.object({
       query: z.string().trim().min(1).max(200),
       limit: z.number().int().positive().max(50),
@@ -89,7 +89,7 @@ export const searchConversationsFn = createServerFn({ method: 'POST' })
   });
 
 export const getConversationFn = createServerFn({ method: 'POST' })
-  .inputValidator(
+  .validator(
     z.object({
       id: z.string().min(1),
     }),
@@ -107,7 +107,7 @@ export const getConversationFn = createServerFn({ method: 'POST' })
   });
 
 export const upsertConversationFn = createServerFn({ method: 'POST' })
-  .inputValidator(conversationPayloadSchema)
+  .validator(conversationPayloadSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { upsertConversation }] = await Promise.all([
       import('@/shared/worker/env.server'),
@@ -124,7 +124,7 @@ export const upsertConversationFn = createServerFn({ method: 'POST' })
   });
 
 export const deleteConversationFn = createServerFn({ method: 'POST' })
-  .inputValidator(
+  .validator(
     z.object({
       id: z.string().min(1),
     }),
@@ -155,7 +155,7 @@ export const clearConversationsFn = createServerFn({ method: 'POST' }).handler(a
 });
 
 export const updateConversationTitleFn = createServerFn({ method: 'POST' })
-  .inputValidator(
+  .validator(
     z.object({
       id: z.string().min(1),
       title: z.string().nullable(),
@@ -179,7 +179,7 @@ export const updateConversationTitleFn = createServerFn({ method: 'POST' })
   });
 
 export const setConversationPinnedFn = createServerFn({ method: 'POST' })
-  .inputValidator(
+  .validator(
     z.object({
       id: z.string().min(1),
       pinned: z.boolean(),

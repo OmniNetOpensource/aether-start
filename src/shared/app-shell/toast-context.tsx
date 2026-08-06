@@ -1,4 +1,5 @@
-import { createContext, useContext, useState, type ReactNode } from 'react';
+import { createContext, createSignal, useContext } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 import { ToastContainer } from './toast-container';
 
 export type ToastVariant = 'info' | 'success' | 'warning' | 'error';
@@ -15,8 +16,8 @@ export type ToastApi = Record<ToastVariant, (message: string, duration?: number)
 const ToastContext = createContext<ToastApi | null>(null);
 const defaultDuration = 4000;
 
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<ToastMessage[]>([]);
+export function ToastProvider(props: { children: JSX.Element }) {
+  const [toasts, setToasts] = createSignal<ToastMessage[]>([]);
 
   const addToast = (variant: ToastVariant, message: string, duration?: number) => {
     const id = Math.random().toString(36).substring(2, 9);
@@ -27,21 +28,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     return id;
   };
 
-  const [toast] = useState<ToastApi>(() => ({
+  const toast: ToastApi = {
     info: (message, duration) => addToast('info', message, duration),
     success: (message, duration) => addToast('success', message, duration),
     warning: (message, duration) => addToast('warning', message, duration),
     error: (message, duration) => addToast('error', message, duration),
-  }));
+  };
 
   return (
-    <ToastContext.Provider value={toast}>
-      {children}
+    <ToastContext value={toast}>
+      {props.children}
       <ToastContainer
-        toasts={toasts}
+        toasts={toasts()}
         onRemove={(id) => setToasts((current) => current.filter((item) => item.id !== id))}
       />
-    </ToastContext.Provider>
+    </ToastContext>
   );
 }
 

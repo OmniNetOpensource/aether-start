@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/react-start';
+import { createServerFn } from '@tanstack/solid-start';
 import { z } from 'zod';
 import {
   getShareByConversation,
@@ -229,7 +229,7 @@ const buildPublicSnapshot = (
 };
 
 export const getConversationShareFn = createServerFn({ method: 'POST' })
-  .inputValidator(conversationIdSchema)
+  .validator(conversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }] = await Promise.all([
       import('@/shared/worker/env.server'),
@@ -245,7 +245,7 @@ export const getConversationShareFn = createServerFn({ method: 'POST' })
   });
 
 export const createConversationShareFn = createServerFn({ method: 'POST' })
-  .inputValidator(createShareSchema)
+  .validator(createShareSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { getConversationById }] = await Promise.all([
       import('@/shared/worker/env.server'),
@@ -276,7 +276,7 @@ export const createConversationShareFn = createServerFn({ method: 'POST' })
   });
 
 export const revokeConversationShareFn = createServerFn({ method: 'POST' })
-  .inputValidator(conversationIdSchema)
+  .validator(conversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }] = await Promise.all([
       import('@/shared/worker/env.server'),
@@ -292,7 +292,7 @@ export const revokeConversationShareFn = createServerFn({ method: 'POST' })
   });
 
 export const getPublicConversationShareFn = createServerFn({ method: 'POST' })
-  .inputValidator(
+  .validator(
     z.object({
       token: shareTokenSchema,
     }),

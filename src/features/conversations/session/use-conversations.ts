@@ -1,4 +1,4 @@
-import { useInfiniteQuery, useMutation } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation } from '@tanstack/solid-query';
 import {
   listConversationsPageFn,
   deleteConversationFn,
@@ -90,13 +90,13 @@ export const conversationInfiniteQueryOptions = {
 };
 
 export function useConversationsQuery() {
-  return useInfiniteQuery(conversationInfiniteQueryOptions);
+  return useInfiniteQuery(() => conversationInfiniteQueryOptions);
 }
 
 // -- Mutations --
 
 export function useDeleteConversation() {
-  return useMutation({
+  return useMutation(() => ({
     mutationFn: (id: string) => deleteConversationFn({ data: { id } }),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: conversationListQueryKey });
@@ -126,11 +126,11 @@ export function useDeleteConversation() {
         queryClient.setQueryData(conversationListQueryKey, context.previous);
       }
     },
-  });
+  }));
 }
 
 export function useSetConversationPinned() {
-  return useMutation({
+  return useMutation(() => ({
     mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
       setConversationPinnedFn({ data: { id, pinned } }),
     onMutate: async ({ id, pinned }) => {
@@ -183,11 +183,11 @@ export function useSetConversationPinned() {
         queryClient.setQueryData(conversationListQueryKey, context.previous);
       }
     },
-  });
+  }));
 }
 
 export function useUpdateConversationTitle() {
-  return useMutation({
+  return useMutation(() => ({
     mutationFn: ({ id, title }: { id: string; title: string | null }) =>
       updateConversationTitleFn({ data: { id, title } }),
     onMutate: async ({ id, title }) => {
@@ -215,11 +215,11 @@ export function useUpdateConversationTitle() {
         queryClient.setQueryData(conversationListQueryKey, context.previous);
       }
     },
-  });
+  }));
 }
 
 export function useClearConversations() {
-  return useMutation({
+  return useMutation(() => ({
     mutationFn: () => clearConversationsFn(),
     onSuccess: () => {
       queryClient.removeQueries({ queryKey: ['conversation'] });
@@ -231,7 +231,7 @@ export function useClearConversations() {
         },
       );
     },
-  });
+  }));
 }
 
 // -- Imperative cache helper for non-React code --

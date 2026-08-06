@@ -1,5 +1,8 @@
-import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/react-router';
+import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/solid-router';
+import type { JSX } from '@solidjs/web';
+import { QueryClientProvider } from '@tanstack/solid-query';
 import { AppErrorBoundary } from '@/shared/app-shell/AppErrorBoundary';
+import { queryClient } from '@/features/conversations/session';
 
 import { useViewportHeight } from '@/shared/app-shell/useViewportHeight';
 import { TooltipProvider } from '@/shared/design-system/tooltip';
@@ -57,9 +60,17 @@ function RootComponent() {
   useViewportHeight();
 
   return (
-    <AppErrorBoundary>
-      <Outlet />
-    </AppErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ResponsiveProvider>
+        <TooltipProvider>
+          <ToastProvider>
+            <AppErrorBoundary>
+              <Outlet />
+            </AppErrorBoundary>
+          </ToastProvider>
+        </TooltipProvider>
+      </ResponsiveProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -67,22 +78,18 @@ const globalErrorScript = `(function(){var shown=false;function esc(s){var d=doc
 
 const preHydrationInputScript = `(function(){var v=localStorage.getItem('aether_composer_draft');window.__preHydrationInput=v===null?'':v;})();`;
 
-function RootDocument({ children }: { children: React.ReactNode }) {
+function RootDocument(props: { children: JSX.Element }) {
   return (
     <html
       lang='en'
       data-theme={defaultTheme.light.id}
       data-color-scheme={defaultTheme.light.colorScheme}
-      suppressHydrationWarning
     >
       <head>
-        {import.meta.env.DEV && (
-          <script crossOrigin='anonymous' src='https://unpkg.com/react-scan/dist/auto.global.js' />
-        )}
-        <meta charSet='utf-8' />
+        <meta charset='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <link rel='preconnect' href='https://fonts.googleapis.com' />
-        <link rel='preconnect' href='https://fonts.gstatic.com' crossOrigin='' />
+        <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin='' />
         <link
           rel='stylesheet'
           href='https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=optional'
@@ -90,17 +97,13 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <link rel='stylesheet' href={appCss} />
         <link rel='manifest' href='/manifest.webmanifest' />
         <link rel='icon' type='image/png' href='/aether-sf-icon-32.png' />
-        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
-        <script dangerouslySetInnerHTML={{ __html: globalErrorScript }} />
-        <script dangerouslySetInnerHTML={{ __html: preHydrationInputScript }} />
+        <script innerHTML={themeInitScript} />
+        <script innerHTML={globalErrorScript} />
+        <script innerHTML={preHydrationInputScript} />
         <HeadContent />
       </head>
       <body>
-        <ResponsiveProvider>
-          <TooltipProvider>
-            <ToastProvider>{children}</ToastProvider>
-          </TooltipProvider>
-        </ResponsiveProvider>
+        {props.children}
         <Scripts />
       </body>
     </html>

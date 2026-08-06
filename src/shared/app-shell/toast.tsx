@@ -1,4 +1,5 @@
-import * as React from 'react';
+import { onSettled } from 'solid-js';
+import { Dynamic } from '@solidjs/web';
 import { cva, type VariantProps } from 'class-variance-authority';
 import {
   XIcon,
@@ -6,7 +7,7 @@ import {
   CheckCircle2Icon,
   AlertTriangleIcon,
   AlertCircleIcon,
-} from 'lucide-react';
+} from '@/shared/design-system/icons';
 
 import { cn } from '@/shared/core/utils';
 import type { ToastMessage } from '@/shared/app-shell/toast-context';
@@ -56,37 +57,38 @@ interface ToastProps extends VariantProps<typeof toastVariants> {
   onExited: () => void;
 }
 
-export function Toast({ toast, isExiting, onClose, onExited }: ToastProps) {
-  const Icon = iconMap[toast.variant];
-
-  React.useEffect(() => {
-    if (toast.duration && toast.duration > 0) {
+export function Toast(props: ToastProps) {
+  onSettled(() => {
+    if (props.toast.duration && props.toast.duration > 0) {
       const timer = setTimeout(() => {
-        onClose();
-      }, toast.duration);
+        props.onClose();
+      }, props.toast.duration);
 
       return () => clearTimeout(timer);
     }
-  }, [toast.duration, onClose]);
+  });
 
   return (
     <div
-      className={cn(
-        toastVariants({ variant: toast.variant }),
-        isExiting
+      class={cn(
+        toastVariants({ variant: props.toast.variant }),
+        props.isExiting
           ? 'animate-[toast-exit_0.2s_var(--transition-smooth)_forwards]'
           : 'animate-[toast-enter_0.2s_var(--transition-smooth)]',
       )}
-      onAnimationEnd={isExiting ? onExited : undefined}
+      onAnimationEnd={props.isExiting ? props.onExited : undefined}
     >
-      <Icon className={cn(iconVariants({ variant: toast.variant }), 'size-5')} />
-      <div className='flex-1 text-sm leading-relaxed'>{toast.message}</div>
+      <Dynamic
+        component={iconMap[props.toast.variant]}
+        class={cn(iconVariants({ variant: props.toast.variant }), 'size-5')}
+      />
+      <div class='flex-1 text-sm leading-relaxed'>{props.toast.message}</div>
       <button
-        onClick={onClose}
-        className='shrink-0 rounded-sm text-secondary transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
+        onClick={props.onClose}
+        class='shrink-0 rounded-sm text-secondary transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
         aria-label='Close'
       >
-        <XIcon className='size-4' />
+        <XIcon class='size-4' />
       </button>
     </div>
   );

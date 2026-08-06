@@ -34,11 +34,11 @@ const tick = () => {
   head.text = units.slice(CHARS_PER_FRAME).join('');
 
   if (head.kind === 'content') {
-    head.runtime.session.appendToAssistant({ type: 'content', content: chunk });
+    head.runtime.messageTree.appendToAssistant({ type: 'content', content: chunk });
   } else if (head.kind === 'thinking') {
-    head.runtime.session.appendToAssistant({ kind: 'thinking', text: chunk });
+    head.runtime.messageTree.appendToAssistant({ kind: 'thinking', text: chunk });
   } else {
-    head.runtime.session.appendArtifactCode(head.artifactId, chunk);
+    head.runtime.artifacts.appendCode(head.artifactId, chunk);
   }
 
   if (!head.text) {
@@ -99,11 +99,11 @@ export const flushAll = () => {
   for (const seg of queue) {
     if (!seg.text) continue;
     if (seg.kind === 'content') {
-      seg.runtime.session.appendToAssistant({ type: 'content', content: seg.text });
+      seg.runtime.messageTree.appendToAssistant({ type: 'content', content: seg.text });
     } else if (seg.kind === 'thinking') {
-      seg.runtime.session.appendToAssistant({ kind: 'thinking', text: seg.text });
+      seg.runtime.messageTree.appendToAssistant({ kind: 'thinking', text: seg.text });
     } else {
-      seg.runtime.session.appendArtifactCode(seg.artifactId, seg.text);
+      seg.runtime.artifacts.appendCode(seg.artifactId, seg.text);
     }
   }
   queue = [];

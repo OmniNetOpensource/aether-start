@@ -1,4 +1,5 @@
-import * as React from 'react';
+import { omit, onSettled } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 
 import { cn } from '@/shared/core/utils';
 
@@ -9,32 +10,36 @@ function autoResize(el: HTMLTextAreaElement) {
   el.style.height = `${el.scrollHeight}px`;
 }
 
-function Textarea({ className, onChange, ref, ...props }: React.ComponentProps<'textarea'>) {
-  const innerRef = React.useRef<HTMLTextAreaElement | null>(null);
+type TextareaProps = Omit<JSX.TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> & {
+  class?: string;
+  onChange?: JSX.EventHandlerUnion<HTMLTextAreaElement, InputEvent>;
+};
 
-  React.useEffect(() => {
-    if (!supportsFieldSizing && innerRef.current) {
-      autoResize(innerRef.current);
+function Textarea(props: TextareaProps) {
+  let textarea: HTMLTextAreaElement | undefined;
+
+  onSettled(() => {
+    if (!supportsFieldSizing && textarea) {
+      autoResize(textarea);
     }
   });
 
   return (
     <textarea
-      ref={(el) => {
-        innerRef.current = el;
-        if (typeof ref === 'function') ref(el);
-        else if (ref) ref.current = el;
+      {...omit(props, 'class', 'onChange', 'ref')}
+      ref={(element) => {
+        textarea = element;
+        if (typeof props.ref === 'function') props.ref(element);
       }}
       data-slot='textarea'
-      className={cn(
+      class={cn(
         'flex field-sizing-content w-full outline-none disabled:cursor-not-allowed',
-        className,
+        props.class,
       )}
-      onChange={(e) => {
-        if (!supportsFieldSizing) autoResize(e.currentTarget);
-        onChange?.(e);
+      onInput={(event) => {
+        if (!supportsFieldSizing) autoResize(event.currentTarget);
+        if (typeof props.onChange === 'function') props.onChange(event);
       }}
-      {...props}
     />
   );
 }

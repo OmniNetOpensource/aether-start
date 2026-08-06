@@ -1,17 +1,21 @@
 import {
   createContext,
-  isValidElement,
-  memo,
+  createMemo,
+  createSignal,
+  For,
+  omit,
+  onCleanup,
   useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ComponentProps,
-  type ReactNode,
-} from 'react';
-import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
-import { Check, Copy, ExternalLink } from 'lucide-react';
-import { toJsxRuntime, type Components } from 'hast-util-to-jsx-runtime';
+  type Accessor,
+  type Component,
+} from 'solid-js';
+import { createComponent, Dynamic, type JSX } from '@solidjs/web';
+import { Check, Copy, ExternalLink } from '@/shared/design-system/icons';
+import {
+  toJsxRuntime,
+  type Components,
+  type Props as RuntimeProps,
+} from 'hast-util-to-jsx-runtime';
 import { harden as rehypeHarden } from 'rehype-harden';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
@@ -76,6 +80,7 @@ function splitMarkdownParagraphs(text: string): string[] {
 type Props = {
   content: string;
   isAnimating?: boolean;
+  splitParagraphs?: boolean;
 };
 
 const sanitizeSchema = {
@@ -103,51 +108,44 @@ const markdownProcessor = unified()
   .use(rehypeKatex);
 
 const copyResetDelayMs = 2000;
-const MarkdownAnimatingContext = createContext(false);
+const MarkdownAnimatingContext = createContext<Accessor<boolean>>(() => false);
+const Fragment = (props: RuntimeProps) => props.children;
+const isComponent = (type: unknown): type is Component<RuntimeProps> => typeof type === 'function';
+const jsx = (type: unknown, props: RuntimeProps) => {
+  if (isComponent(type)) return createComponent(type, props);
+  if (typeof type === 'string') return createComponent(Dynamic, { component: type, ...props });
+  throw new TypeError('Unsupported Markdown element');
+};
 
-function LinkSafetyModal({
-  isOpen,
-  onClose,
-  onConfirm,
-  url,
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  onConfirm: () => void;
-  url: string;
-}) {
+function LinkSafetyModal(props: { onClose: () => void; onConfirm: () => void; url: string }) {
   const toast = useToast();
-  const [copied, setCopied] = useState(false);
-  const copyTimerRef = useRef<number | null>(null);
+  const [copied, setCopied] = createSignal(false);
+  let copyTimer: number | undefined;
 
-  useEffect(() => {
-    return () => {
-      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
-    };
-  }, []);
+  onCleanup(() => {
+    if (copyTimer !== undefined) window.clearTimeout(copyTimer);
+  });
 
   const clearCopiedState = () => {
-    if (copyTimerRef.current !== null) {
-      window.clearTimeout(copyTimerRef.current);
-      copyTimerRef.current = null;
-    }
+    if (copyTimer !== undefined) window.clearTimeout(copyTimer);
+    copyTimer = undefined;
     setCopied(false);
   };
 
   const handleOpenChange = (open: boolean) => {
     if (open) return;
     clearCopiedState();
-    onClose();
+    props.onClose();
   };
 
   const handleCopy = () => {
-    void navigator.clipboard.writeText(url).then(
+    void navigator.clipboard.writeText(props.url).then(
       () => {
         setCopied(true);
-        if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
-        copyTimerRef.current = window.setTimeout(() => {
+        if (copyTimer !== undefined) window.clearTimeout(copyTimer);
+        copyTimer = window.setTimeout(() => {
           setCopied(false);
-          copyTimerRef.current = null;
+          copyTimer = undefined;
         }, copyResetDelayMs);
       },
       (error) => {
@@ -158,33 +156,33 @@ function LinkSafetyModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className='flex h-[50dvh] max-w-[calc(100%-2rem)] flex-col gap-6 overflow-hidden sm:max-w-3xl'>
-        <div className='flex min-h-0 flex-1 flex-col gap-6'>
-          <DialogHeader className='gap-3 text-left'>
-            <DialogTitle className='text-2xl sm:text-3xl'>Open external link</DialogTitle>
-            <DialogDescription className='max-w-2xl text-sm sm:text-base'>
+    <Dialog open onOpenChange={handleOpenChange}>
+      <DialogContent class='flex h-[50dvh] max-w-[calc(100%-2rem)] flex-col gap-6 overflow-hidden sm:max-w-3xl'>
+        <div class='flex min-h-0 flex-1 flex-col gap-6'>
+          <DialogHeader class='gap-3 text-left'>
+            <DialogTitle class='text-2xl sm:text-3xl'>Open external link</DialogTitle>
+            <DialogDescription class='max-w-2xl text-sm sm:text-base'>
               This link points outside the app. Copy it or open it in a new tab.
             </DialogDescription>
           </DialogHeader>
-          <div className='flex min-h-0 flex-1 items-stretch overflow-y-auto'>
-            <div className='w-full rounded-lg border bg-muted p-4 font-mono text-sm break-all sm:p-5 sm:text-base'>
-              {url}
+          <div class='flex min-h-0 flex-1 items-stretch overflow-y-auto'>
+            <div class='w-full rounded-lg border bg-muted p-4 font-mono text-sm break-all sm:p-5 sm:text-base'>
+              {props.url}
             </div>
           </div>
-          <div className='flex gap-3 sm:justify-end'>
+          <div class='flex gap-3 sm:justify-end'>
             <Button
-              className='flex-1 sm:flex-none'
+              class='flex-1 sm:flex-none'
               onClick={handleCopy}
               size='lg'
               type='button'
               variant='outline'
             >
-              {copied ? <Check className='size-4' /> : <Copy className='size-4' />}
-              {copied ? 'Copied' : 'Copy'}
+              {copied() ? <Check class='size-4' /> : <Copy class='size-4' />}
+              {copied() ? 'Copied' : 'Copy'}
             </Button>
-            <Button className='flex-1 sm:flex-none' onClick={onConfirm} size='lg' type='button'>
-              <ExternalLink className='size-4' />
+            <Button class='flex-1 sm:flex-none' onClick={props.onConfirm} size='lg' type='button'>
+              <ExternalLink class='size-4' />
               Visit
             </Button>
           </div>
@@ -194,65 +192,40 @@ function LinkSafetyModal({
   );
 }
 
-function MarkdownLink({ children, href, ...props }: ComponentProps<'a'>) {
-  const [isOpen, setIsOpen] = useState(false);
-
-  if (!href) return <a {...props}>{children}</a>;
-
+function MarkdownLink(props: JSX.AnchorHTMLAttributes<HTMLAnchorElement>) {
   return (
-    <>
-      <a
-        {...props}
-        data-markdown='link'
-        href={href}
-        onClick={(event) => {
-          event.preventDefault();
-          setIsOpen(true);
-        }}
-      >
-        {children}
-      </a>
-      <LinkSafetyModal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        onConfirm={() => {
-          window.open(href, '_blank', 'noopener,noreferrer');
-          setIsOpen(false);
-        }}
-        url={href}
-      />
-    </>
+    <a {...omit(props, 'children')} data-markdown='link'>
+      {props.children}
+    </a>
   );
 }
 
-function MarkdownTable({ children, ...props }: ComponentProps<'table'>) {
+function MarkdownTable(props: JSX.HTMLAttributes<HTMLTableElement>) {
   return (
-    <div className='my-4 max-w-full overflow-x-auto' data-markdown='table-container'>
-      <table {...props}>{children}</table>
+    <div class='my-4 max-w-full overflow-x-auto' data-markdown='table-container'>
+      <table {...omit(props, 'children')}>{props.children}</table>
     </div>
   );
 }
 
-function MarkdownCodeBlock({ code, language }: { code: string; language: string }) {
+function MarkdownCodeBlock(props: { code: string; language: string }) {
   const toast = useToast();
   const isAnimating = useContext(MarkdownAnimatingContext);
-  const [copied, setCopied] = useState(false);
-  const copyTimerRef = useRef<number | null>(null);
+  const [copied, setCopied] = createSignal(false);
+  let copyTimer: number | undefined;
 
-  useEffect(() => {
-    return () => {
-      if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
-    };
-  }, []);
+  onCleanup(() => {
+    if (copyTimer !== undefined) window.clearTimeout(copyTimer);
+  });
 
   const handleCopy = () => {
-    void navigator.clipboard.writeText(code).then(
+    void navigator.clipboard.writeText(props.code).then(
       () => {
         setCopied(true);
-        if (copyTimerRef.current !== null) window.clearTimeout(copyTimerRef.current);
-        copyTimerRef.current = window.setTimeout(() => {
+        if (copyTimer !== undefined) window.clearTimeout(copyTimer);
+        copyTimer = window.setTimeout(() => {
           setCopied(false);
-          copyTimerRef.current = null;
+          copyTimer = undefined;
         }, copyResetDelayMs);
       },
       (error) => {
@@ -263,25 +236,56 @@ function MarkdownCodeBlock({ code, language }: { code: string; language: string 
   };
 
   return (
-    <section data-language={language} data-markdown='code-block'>
+    <section data-language={props.language} data-markdown='code-block'>
       <header>
-        <span>{language || 'text'}</span>
-        <button disabled={isAnimating} onClick={handleCopy} title='Copy code' type='button'>
-          {copied ? <Check /> : <Copy />}
+        <span>{props.language || 'text'}</span>
+        <button disabled={isAnimating()} onClick={handleCopy} title='Copy code' type='button'>
+          {copied() ? <Check /> : <Copy />}
         </button>
       </header>
-      <HighlightedCode code={code} isCompleted={!isAnimating} language={language} />
+      <HighlightedCode code={props.code} isCompleted={!isAnimating()} language={props.language} />
     </section>
   );
 }
 
-function MarkdownPre({ children }: ComponentProps<'pre'>) {
-  if (!isValidElement<{ children?: ReactNode; className?: string }>(children)) {
-    return <pre>{children}</pre>;
+function MarkdownPre(props: JSX.HTMLAttributes<HTMLPreElement> & { node?: unknown }) {
+  if (!props.node || typeof props.node !== 'object' || !('children' in props.node)) {
+    return <pre {...omit(props, 'children', 'node')}>{props.children}</pre>;
   }
-
-  const code = typeof children.props.children === 'string' ? children.props.children : '';
-  const language = children.props.className?.match(/language-([^\s]+)/)?.[1] ?? '';
+  const children = props.node.children;
+  if (!Array.isArray(children))
+    return <pre {...omit(props, 'children', 'node')}>{props.children}</pre>;
+  const codeNode = children[0];
+  if (
+    !codeNode ||
+    typeof codeNode !== 'object' ||
+    !('properties' in codeNode) ||
+    !('children' in codeNode)
+  ) {
+    return <pre {...omit(props, 'children', 'node')}>{props.children}</pre>;
+  }
+  const properties = codeNode.properties;
+  const codeChildren = codeNode.children;
+  const classes: unknown[] =
+    properties &&
+    typeof properties === 'object' &&
+    'className' in properties &&
+    Array.isArray(properties.className)
+      ? properties.className
+      : [];
+  const code = Array.isArray(codeChildren)
+    ? codeChildren
+        .flatMap((child) =>
+          typeof child === 'object' && child && 'value' in child && typeof child.value === 'string'
+            ? [child.value]
+            : [],
+        )
+        .join('')
+    : '';
+  const languageClass = classes.find(
+    (className: unknown) => typeof className === 'string' && className.startsWith('language-'),
+  );
+  const language = typeof languageClass === 'string' ? languageClass.slice('language-'.length) : '';
 
   return <MarkdownCodeBlock code={code.replace(/\n$/, '')} language={language} />;
 }
@@ -293,43 +297,75 @@ const markdownComponents: Partial<Components> = {
   table: MarkdownTable,
 };
 
-const MarkdownBlock = memo(function MarkdownBlock({
-  isAnimating,
-  markdown,
-}: {
-  isAnimating: boolean;
-  markdown: string;
-}) {
-  const source = isAnimating ? remend(markdown, { linkMode: 'text-only' }) : markdown;
-  const tree = markdownProcessor.runSync(markdownProcessor.parse(source));
+function MarkdownBlock(props: { isAnimating: boolean; markdown: string }) {
+  const tree = createMemo(() => {
+    const source = props.isAnimating
+      ? remend(props.markdown, { linkMode: 'text-only' })
+      : props.markdown;
+    return markdownProcessor.runSync(markdownProcessor.parse(source));
+  });
 
   return (
-    <div style={{ contentVisibility: 'auto', containIntrinsicBlockSize: 'auto 0px' }}>
-      <MarkdownAnimatingContext.Provider value={isAnimating}>
-        {toJsxRuntime(tree, {
+    <div style={{ 'content-visibility': 'auto', 'contain-intrinsic-block-size': 'auto 0px' }}>
+      <MarkdownAnimatingContext value={() => props.isAnimating}>
+        {toJsxRuntime(tree(), {
           Fragment,
           components: markdownComponents,
           jsx,
-          jsxs,
+          jsxs: jsx,
+          passNode: true,
+          passKeys: false,
+          elementAttributeNameCase: 'html',
         })}
-      </MarkdownAnimatingContext.Provider>
+      </MarkdownAnimatingContext>
     </div>
   );
-});
+}
 
-function MarkdownImpl({ content, isAnimating = false }: Props) {
-  const paragraphs = splitMarkdownParagraphs(content);
+function MarkdownImpl(props: Props) {
+  const [externalUrl, setExternalUrl] = createSignal<string>();
+  const paragraphs = createMemo(() =>
+    props.splitParagraphs === false ? [props.content] : splitMarkdownParagraphs(props.content),
+  );
+  const renderExternalLinkModal = () => {
+    const url = externalUrl();
+    if (!url) return null;
+
+    return (
+      <LinkSafetyModal
+        onClose={() => setExternalUrl()}
+        onConfirm={() => {
+          window.open(url, '_blank', 'noopener,noreferrer');
+          setExternalUrl();
+        }}
+        url={url}
+      />
+    );
+  };
 
   return (
-    <div className='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
-      {paragraphs.map((paragraph, index) => (
-        <MarkdownBlock
-          isAnimating={isAnimating && index === paragraphs.length - 1}
-          key={index}
-          markdown={paragraph}
-        />
-      ))}
-    </div>
+    <>
+      <div
+        class='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'
+        onClick={(event) => {
+          if (!(event.target instanceof Element)) return;
+          const link = event.target.closest<HTMLAnchorElement>('a[data-markdown="link"]');
+          if (!link) return;
+          event.preventDefault();
+          setExternalUrl(link.href);
+        }}
+      >
+        <For each={paragraphs()}>
+          {(paragraph, index) => (
+            <MarkdownBlock
+              isAnimating={(props.isAnimating ?? false) && index() === paragraphs().length - 1}
+              markdown={paragraph}
+            />
+          )}
+        </For>
+      </div>
+      {renderExternalLinkModal()}
+    </>
   );
 }
 

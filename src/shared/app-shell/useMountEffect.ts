@@ -1,7 +1,6 @@
-import { useEffect } from 'react';
+import { onSettled } from 'solid-js';
 
-/** 挂载后执行一次；可返回清理函数，与 `useEffect(fn, [])` 等价。 */
+/** 首次渲染稳定后执行一次，也负责注册清理函数。 */
 export function useMountEffect(effect: () => void | (() => void)) {
-  // oxlint-disable-next-line eslint-plugin-react-hooks(exhaustive-deps) -- intentional mount-only
-  useEffect(() => effect(), []);
+  onSettled(effect);
 }

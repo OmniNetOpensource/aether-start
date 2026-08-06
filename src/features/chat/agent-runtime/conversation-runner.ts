@@ -1133,14 +1133,14 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
             ? 'tool_calls'
             : 'completed';
 
-        // 长链路 tool-use 中途崩溃时，中间快照能保住已生成的树状态；regenerateTitle 仅当本轮 completed 为 true。
+        // 长链路 tool-use 中途崩溃时，中间快照能保住已生成的树状态；标题统一在最终快照生成一次。
         try {
           await this.persistConversationSnapshot(
             message.conversationId,
             userId,
             cloneTreeSnapshot(workingTree),
             message.model,
-            modelStopReason === 'completed',
+            false,
           );
         } catch (error) {
           log('AGENT', 'Intermediate snapshot persist failed', {

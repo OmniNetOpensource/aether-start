@@ -1,13 +1,9 @@
 {
   "include": ["**/*.ts", "**/*.tsx", "**/*.d.ts"],
-  "exclude": [
-    "packages/react-render-tracker/src/**/*.test.ts",
-    "packages/react-render-tracker/src/**/*.test.tsx",
-    "packages/react-render-tracker/src/test-setup.ts"
-  ],
   "compilerOptions": {
     "target": "ES2022",
-    "jsx": "react-jsx",
+    "jsx": "preserve",
+    "jsxImportSource": "@solidjs/web",
     "module": "ESNext",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["node", "vite/client"],
@@ -27,9 +23,7 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./src/*"],
-      "@aether/react-render-tracker": ["./packages/react-render-tracker/src/index.ts"],
-      "@aether/react-render-tracker/auto": ["./packages/react-render-tracker/src/auto.ts"]
+      "@/*": ["./src/*"]
     }
   }
 }

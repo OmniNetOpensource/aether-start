@@ -1,20 +1,24 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/solid-router';
 
 export const Route = createFileRoute('/auth/login')({
+  validateSearch: (search: Record<string, unknown>) => ({
+    redirect: typeof search.redirect === 'string' ? search.redirect : undefined,
+    email: typeof search.email === 'string' ? search.email : undefined,
+    reset: typeof search.reset === 'string' ? search.reset : undefined,
+  }),
   beforeLoad: async ({ search }) => {
     const params = new URLSearchParams();
-    const nextSearch = search as Record<string, string | undefined>;
 
-    if (nextSearch.redirect) {
-      params.set('redirect', nextSearch.redirect);
+    if (typeof search.redirect === 'string') {
+      params.set('redirect', search.redirect);
     }
 
-    if (nextSearch.email) {
-      params.set('email', nextSearch.email);
+    if (typeof search.email === 'string') {
+      params.set('email', search.email);
     }
 
-    if (nextSearch.reset) {
-      params.set('reset', nextSearch.reset);
+    if (typeof search.reset === 'string') {
+      params.set('reset', search.reset);
     }
 
     const queryString = params.toString();

@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from '@tanstack/react-router';
-import { MoreHorizontal, Pin, PinOff, Trash2 } from 'lucide-react';
+import { createSignal, onSettled } from 'solid-js';
+import { useNavigate } from '@tanstack/solid-router';
+import { MoreHorizontal, Pin, PinOff, Trash2 } from '@/shared/design-system/icons';
 import { Shimmer } from '@/shared/design-system/shimmer';
 import {
   DropdownMenu,
@@ -28,40 +28,37 @@ type ConversationItemProps = {
   onDropdownOpenChange: (open: boolean) => void;
 };
 
-export function ConversationItem({
-  conversation,
-  isActive,
-  onDropdownOpenChange,
-}: ConversationItemProps) {
-  const title = conversation.title || 'Untitled Chat';
-  const displayTitle = truncateMiddle(title, 32);
-  const useShimmer = isPlaceholderTitle(conversation.title);
-  const [menuOpen, setMenuOpen] = useState(false);
+export function ConversationItem(props: ConversationItemProps) {
+  const title = () => props.conversation.title || 'Untitled Chat';
+  const displayTitle = () => truncateMiddle(title(), 32);
+  const useShimmer = () => isPlaceholderTitle(props.conversation.title);
+  const [menuOpen, setMenuOpen] = createSignal(false);
   const navigate = useNavigate();
   const deleteMutation = useDeleteConversation();
   const pinMutation = useSetConversationPinned();
 
-  const handleClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
+  const handleClick = (event: MouseEvent) => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) {
       return;
     }
-  };
-
-  const handleMenuClick = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
-    event.stopPropagation();
+    void navigate({
+      to: '/app/$conversationId',
+      params: { conversationId: props.conversation.id },
+    }).catch((error) => {
+      console.error('Failed to navigate to conversation:', error);
+    });
   };
 
   const handleDelete = () => {
     const confirmed = window.confirm('Delete this conversation? This action cannot be undone.');
     if (!confirmed) return;
 
-    deleteMutation.mutate(conversation.id);
+    deleteMutation.mutate(props.conversation.id);
 
-    if (isActive) {
+    if (props.isActive) {
       void navigate({
-        to: '/app/{-$conversationId}',
-        params: { conversationId: undefined },
+        to: '/app',
       }).catch((error) => {
         console.error('Failed to navigate after deleting conversation:', error);
       });
@@ -69,87 +66,85 @@ export function ConversationItem({
   };
 
   const handleSetPinned = (pinned: boolean) => {
-    pinMutation.mutate({ id: conversation.id, pinned });
+    pinMutation.mutate({ id: props.conversation.id, pinned });
   };
 
   const handleMenuOpenChange = (open: boolean) => {
     setMenuOpen(open);
-    onDropdownOpenChange(open);
+    props.onDropdownOpenChange(open);
   };
 
-  useEffect(() => {
-    return () => {
-      onDropdownOpenChange(false);
-    };
-  }, [onDropdownOpenChange]);
+  onSettled(() => () => props.onDropdownOpenChange(false));
 
   return (
     <div
-      className={`group relative flex-col w-full items-start justify-center gap-3 rounded-sm p-0.5 text-left transition-all  ${
-        isActive ? 'bg-active' : 'bg-transparent hover:bg-hover'
+      class={`group relative flex-col w-full items-start justify-center gap-3 rounded-sm p-0.5 text-left transition-all  ${
+        props.isActive ? 'bg-active' : 'bg-transparent hover:bg-hover'
       }`}
     >
-      <Link
-        to='/app/{-$conversationId}'
-        params={{ conversationId: conversation.id }}
-        onClick={handleClick}
-        className='absolute inset-0 z-0'
-        aria-label={title}
-      />
-      <div className='flex w-full items-center justify-between gap-3 px-1'>
-        <div className='pointer-events-none relative z-10 min-w-0 flex-1'>
-          <div className='flex min-w-0 items-center gap-2'>
-            {conversation.is_pinned ? (
-              <Pin className='size-3.5 shrink-0 text-muted-foreground' />
+      <div class='flex w-full items-center justify-between gap-3 px-1'>
+        <a
+          href={`/app/${props.conversation.id}`}
+          onClick={handleClick}
+          class='min-w-0 flex-1'
+          aria-label={title()}
+        >
+          <div class='flex min-w-0 items-center gap-2'>
+            {props.conversation.is_pinned ? (
+              <Pin class='size-3.5 shrink-0 text-muted-foreground' />
             ) : null}
-            <span className='min-w-0 flex-1' title={title}>
-              {useShimmer ? (
-                <Shimmer as='span' className='block text-sm font-medium text-secondary'>
-                  {displayTitle}
+            <span class='min-w-0 flex-1' title={title()}>
+              {useShimmer() ? (
+                <Shimmer as='span' class='block text-sm font-medium text-secondary'>
+                  {displayTitle()}
                 </Shimmer>
               ) : (
-                <span className='block text-sm font-medium text-secondary'>{displayTitle}</span>
+                <span class='block text-sm font-medium text-secondary'>{displayTitle()}</span>
               )}
             </span>
           </div>
-        </div>
-        <div className='relative z-20'>
-          <DropdownMenu modal={false} open={menuOpen} onOpenChange={handleMenuOpenChange}>
-            <DropdownMenuTrigger asChild>
-              <button
-                type='button'
-                onClick={handleMenuClick}
-                aria-label='Conversation actions'
-                className='flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-100 transition-opacity hover:bg-hover hover:text-foreground md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100'
-              >
-                <MoreHorizontal className='size-4' />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent
-              align='end'
-              side='right'
-              className='min-w-34'
-              onClick={(event) => event.stopPropagation()}
-            >
+        </a>
+        <div class='relative z-20'>
+          <DropdownMenu
+            open={menuOpen()}
+            onOpenChange={handleMenuOpenChange}
+            positioning={{ placement: 'right-end', gutter: 4 }}
+          >
+            <DropdownMenuTrigger
+              asChild={(triggerProps) => (
+                <button
+                  {...triggerProps}
+                  type='button'
+                  onClick={(event) => {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    if (typeof triggerProps.onClick === 'function') triggerProps.onClick(event);
+                  }}
+                  aria-label='Conversation actions'
+                  class='flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-100 transition-opacity hover:bg-hover hover:text-foreground md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100'
+                >
+                  <MoreHorizontal class='size-4' />
+                </button>
+              )}
+            />
+            <DropdownMenuContent class='min-w-34' onClick={(event) => event.stopPropagation()}>
               <DropdownMenuItem
+                value='toggle-pin'
                 onSelect={() => {
-                  handleSetPinned(!conversation.is_pinned);
+                  handleSetPinned(!props.conversation.is_pinned);
                 }}
               >
-                {conversation.is_pinned ? (
-                  <PinOff className='size-4' />
-                ) : (
-                  <Pin className='size-4' />
-                )}
-                {conversation.is_pinned ? 'Unpin' : 'Pin'}
+                {props.conversation.is_pinned ? <PinOff class='size-4' /> : <Pin class='size-4' />}
+                {props.conversation.is_pinned ? 'Unpin' : 'Pin'}
               </DropdownMenuItem>
               <DropdownMenuItem
+                value='delete'
                 onSelect={() => {
                   handleDelete();
                 }}
                 variant='destructive'
               >
-                <Trash2 className='size-4' />
+                <Trash2 class='size-4' />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

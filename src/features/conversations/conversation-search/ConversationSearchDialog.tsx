@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { Loader2, Search } from 'lucide-react';
+import { createEffect, createSignal, For } from 'solid-js';
+import { useNavigate } from '@tanstack/solid-router';
+import { Loader2, Search } from '@/shared/design-system/icons';
 import type { ConversationSearchItem } from '@/features/conversations/session';
 import {
   searchConversationsFn,
@@ -36,235 +36,207 @@ export type ConversationSearchDialogProps = {
   onOpenChange: (next: boolean) => void;
 };
 
-function ConversationSearchContent({ onClose }: { onClose: () => void }) {
+function ConversationSearchContent(props: { onClose: () => void }) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [items, setItems] = useState<ConversationSearchItem[]>([]);
-  const [cursor, setCursor] = useState<ConversationSearchCursor>(null);
-  const [loading, setLoading] = useState(false);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
+  const [query, setQuery] = createSignal('');
+  const [debouncedQuery, setDebouncedQuery] = createSignal('');
+  const [items, setItems] = createSignal<ConversationSearchItem[]>([]);
+  const [cursor, setCursor] = createSignal<ConversationSearchCursor>(null);
+  const [loading, setLoading] = createSignal(false);
+  const [loadingMore, setLoadingMore] = createSignal(false);
+  const [hasSearched, setHasSearched] = createSignal(false);
+  let requestId = 0;
 
-  const requestIdRef = useRef(0);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
-  const listRootRef = useRef<HTMLDivElement | null>(null);
+  createEffect(
+    () => query(),
+    (query) => {
+      const timer = window.setTimeout(() => {
+        setDebouncedQuery(query.trim());
+      }, 250);
+      return () => window.clearTimeout(timer);
+    },
+  );
 
-  const hasMore = cursor !== null;
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setDebouncedQuery(query.trim());
-    }, 250);
-
-    return () => window.clearTimeout(timer);
-  }, [query]);
-
-  useEffect(() => {
-    if (!debouncedQuery) {
-      setItems([]);
-      setCursor(null);
-      setLoading(false);
-      setLoadingMore(false);
-      setHasSearched(false);
-      return;
-    }
-
-    const cached = searchCache.get(debouncedQuery);
-    if (cached) {
-      setItems(cached.items);
-      setCursor(cached.nextCursor);
-      setHasSearched(true);
-      return;
-    }
-
-    const currentRequestId = requestIdRef.current + 1;
-    requestIdRef.current = currentRequestId;
-
-    setLoading(true);
-    setLoadingMore(false);
-    setItems([]);
-    setCursor(null);
-    setHasSearched(false);
-
-    void searchConversationsFn({
-      data: {
-        query: debouncedQuery,
-        limit: PAGE_SIZE,
-        cursor: null,
-      },
-    })
-      .then((page) => {
-        if (requestIdRef.current !== currentRequestId) {
-          return;
-        }
-
-        searchCache.set(debouncedQuery, page);
-        setItems(page.items);
-        setCursor(page.nextCursor);
-        setHasSearched(true);
-      })
-      .catch((error) => {
-        if (requestIdRef.current !== currentRequestId) {
-          return;
-        }
-
-        console.error('Failed to search conversations:', error);
+  createEffect(
+    () => debouncedQuery(),
+    (debouncedQuery) => {
+      if (!debouncedQuery) {
         setItems([]);
         setCursor(null);
-        setHasSearched(true);
-      })
-      .finally(() => {
-        if (requestIdRef.current !== currentRequestId) {
-          return;
-        }
-
         setLoading(false);
-      });
-  }, [debouncedQuery]);
-
-  useEffect(() => {
-    if (!hasMore || loading || loadingMore) {
-      return;
-    }
-
-    const loadMore = async () => {
-      if (!debouncedQuery || loading || loadingMore || !cursor) {
+        setLoadingMore(false);
+        setHasSearched(false);
         return;
       }
 
-      const currentRequestId = requestIdRef.current + 1;
-      requestIdRef.current = currentRequestId;
-      setLoadingMore(true);
-
-      try {
-        const page = await searchConversationsFn({
-          data: {
-            query: debouncedQuery,
-            limit: PAGE_SIZE,
-            cursor,
-          },
-        });
-
-        if (requestIdRef.current !== currentRequestId) {
-          return;
-        }
-
-        setItems((prev) => [...prev, ...page.items]);
-        setCursor(page.nextCursor);
+      const cached = searchCache.get(debouncedQuery);
+      if (cached) {
+        setItems(cached.items);
+        setCursor(cached.nextCursor);
         setHasSearched(true);
-      } catch (error) {
-        if (requestIdRef.current !== currentRequestId) {
-          return;
-        }
-
-        console.error('Failed to load more search results:', error);
-      } finally {
-        if (requestIdRef.current === currentRequestId) {
-          setLoadingMore(false);
-        }
+        return;
       }
-    };
 
-    const target = sentinelRef.current;
-    if (!target) {
+      const currentRequestId = ++requestId;
+
+      setLoading(true);
+      setLoadingMore(false);
+      setItems([]);
+      setCursor(null);
+      setHasSearched(false);
+
+      void searchConversationsFn({
+        data: {
+          query: debouncedQuery,
+          limit: PAGE_SIZE,
+          cursor: null,
+        },
+      })
+        .then((page) => {
+          if (requestId !== currentRequestId) {
+            return;
+          }
+
+          searchCache.set(debouncedQuery, page);
+          setItems(page.items);
+          setCursor(page.nextCursor);
+          setHasSearched(true);
+        })
+        .catch((error) => {
+          if (requestId !== currentRequestId) {
+            return;
+          }
+
+          console.error('Failed to search conversations:', error);
+          setItems([]);
+          setCursor(null);
+          setHasSearched(true);
+        })
+        .finally(() => {
+          if (requestId !== currentRequestId) {
+            return;
+          }
+
+          setLoading(false);
+        });
+    },
+  );
+
+  const loadMore = async () => {
+    if (!debouncedQuery() || loading() || loadingMore() || !cursor()) {
       return;
     }
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (!entries.some((entry) => entry.isIntersecting)) {
-          return;
-        }
+    const currentRequestId = ++requestId;
+    setLoadingMore(true);
 
-        void loadMore();
-      },
-      {
-        root: listRootRef.current,
-        rootMargin: '120px',
-      },
-    );
+    try {
+      const page = await searchConversationsFn({
+        data: {
+          query: debouncedQuery(),
+          limit: PAGE_SIZE,
+          cursor: cursor(),
+        },
+      });
 
-    observer.observe(target);
+      if (requestId !== currentRequestId) {
+        return;
+      }
 
-    return () => observer.disconnect();
-  }, [hasMore, loading, loadingMore, debouncedQuery, cursor]);
+      setItems((prev) => [...prev, ...page.items]);
+      setCursor(page.nextCursor);
+      setHasSearched(true);
+    } catch (error) {
+      if (requestId !== currentRequestId) {
+        return;
+      }
+
+      console.error('Failed to load more search results:', error);
+    } finally {
+      if (requestId === currentRequestId) {
+        setLoadingMore(false);
+      }
+    }
+  };
 
   const handleSelect = (item: ConversationSearchItem) => {
-    onClose();
+    props.onClose();
     navigate({
-      to: '/app/{-$conversationId}',
+      to: '/app/$conversationId',
       params: { conversationId: item.id },
     });
   };
 
   return (
     <>
-      <DialogHeader className='sr-only'>
+      <DialogHeader class='sr-only'>
         <DialogTitle>搜索聊天记录</DialogTitle>
       </DialogHeader>
 
-      <div className='flex items-center px-4 py-4'>
-        <Search className='size-6 text-secondary' />
+      <div class='flex items-center px-4 py-4'>
+        <Search class='size-6 text-secondary' />
         <input
-          autoFocus
-          value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          autofocus
+          value={query()}
+          onInput={(event) => setQuery(event.currentTarget.value)}
           placeholder='你想找什么？'
-          className='ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-muted-foreground'
+          class='ml-4 flex-1 bg-transparent text-xl font-light outline-none placeholder:text-muted-foreground'
         />
-        {loading && <Loader2 className='size-5 animate-spin text-secondary' />}
+        {loading() && <Loader2 class='size-5 animate-spin text-secondary' />}
       </div>
 
-      <div className='h-[1px] w-full bg-muted' />
+      <div class='h-[1px] w-full bg-muted' />
 
-      <div ref={listRootRef} className='max-h-[60vh] overflow-y-auto p-2'>
-        {!debouncedQuery ? (
-          <p className='px-3 py-10 text-center text-sm text-muted-foreground'>
-            输入关键词搜索聊天记录
-          </p>
+      <div
+        class='max-h-[60vh] overflow-y-auto p-2'
+        onScroll={(event) => {
+          const element = event.currentTarget;
+          if (element.scrollHeight - element.scrollTop - element.clientHeight < 120)
+            void loadMore();
+        }}
+      >
+        {!debouncedQuery() ? (
+          <p class='px-3 py-10 text-center text-sm text-muted-foreground'>输入关键词搜索聊天记录</p>
         ) : null}
 
-        {debouncedQuery && !loading && hasSearched && items.length === 0 ? (
-          <p className='px-3 py-10 text-center text-sm text-muted-foreground'>没有找到相关会话</p>
+        {debouncedQuery() && !loading() && hasSearched() && items().length === 0 ? (
+          <p class='px-3 py-10 text-center text-sm text-muted-foreground'>没有找到相关会话</p>
         ) : null}
 
-        {items.length > 0 ? (
-          <div className='flex flex-col gap-0.5'>
-            {items.map((item) => {
-              const title = item.title || '未命名会话';
-              const displayTitle = truncateMiddle(title, 48);
+        {items().length > 0 ? (
+          <div class='flex flex-col gap-0.5'>
+            <For each={items()}>
+              {(item) => {
+                const title = item.title || '未命名会话';
+                const displayTitle = truncateMiddle(title, 48);
 
-              return (
-                <button
-                  key={item.id}
-                  type='button'
-                  className='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-muted active:scale-[0.98]'
-                  onClick={() => handleSelect(item)}
-                >
-                  <div className='flex w-full items-baseline justify-between'>
-                    <span className='min-w-0 text-base font-medium text-foreground' title={title}>
-                      {displayTitle}
+                return (
+                  <button
+                    type='button'
+                    class='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-muted active:scale-[0.98]'
+                    onClick={() => handleSelect(item)}
+                  >
+                    <div class='flex w-full items-baseline justify-between'>
+                      <span class='min-w-0 text-base font-medium text-foreground' title={title}>
+                        {displayTitle}
+                      </span>
+                      <span class='ml-4 shrink-0 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100'>
+                        {formatUpdatedAt(item.updated_at)}
+                      </span>
+                    </div>
+                    <span class='mt-0.5 truncate text-sm text-muted-foreground'>
+                      {item.excerpt || '暂无可展示内容'}
                     </span>
-                    <span className='ml-4 shrink-0 text-xs text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 sm:opacity-100'>
-                      {formatUpdatedAt(item.updated_at)}
-                    </span>
-                  </div>
-                  <span className='mt-0.5 truncate text-sm text-muted-foreground'>
-                    {item.excerpt || '暂无可展示内容'}
-                  </span>
-                </button>
-              );
-            })}
+                  </button>
+                );
+              }}
+            </For>
           </div>
         ) : null}
 
-        {items.length > 0 && (hasMore || loadingMore) ? (
-          <div
-            ref={sentinelRef}
-            className='flex items-center justify-center py-2 text-muted-foreground'
-          >
-            {loadingMore ? <Loader2 className='size-4 animate-spin text-secondary' /> : null}
+        {items().length > 0 && (cursor() !== null || loadingMore()) ? (
+          <div class='flex items-center justify-center py-2 text-muted-foreground'>
+            {loadingMore() ? <Loader2 class='size-4 animate-spin text-secondary' /> : null}
           </div>
         ) : null}
       </div>
@@ -272,15 +244,15 @@ function ConversationSearchContent({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function ConversationSearchDialog({ open, onOpenChange }: ConversationSearchDialogProps) {
+export function ConversationSearchDialog(props: ConversationSearchDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {open ? (
+    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+      {props.open ? (
         <DialogContent
-          className='max-h-[80vh] overflow-hidden border-0 bg-background p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl'
+          class='max-h-[80vh] overflow-hidden border-0 bg-background p-0 shadow-2xl sm:max-w-2xl sm:rounded-2xl'
           showCloseButton={false}
         >
-          <ConversationSearchContent onClose={() => onOpenChange(false)} />
+          <ConversationSearchContent onClose={() => props.onOpenChange(false)} />
         </DialogContent>
       ) : null}
     </Dialog>

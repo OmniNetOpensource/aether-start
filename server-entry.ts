@@ -1,8 +1,8 @@
-import { createStartHandler, defaultStreamHandler } from '@tanstack/react-start/server';
+import { createStartHandler, defaultStreamHandler } from '@tanstack/solid-start/server';
 import { env } from 'cloudflare:workers';
-import { createServerEntry } from '@tanstack/react-start/server-entry';
-import type { RequestHandler } from '@tanstack/react-start/server';
-import type { Register } from '@tanstack/react-router';
+import { createServerEntry } from '@tanstack/solid-start/server-entry';
+import type { RequestHandler } from '@tanstack/solid-start/server';
+import type { Register } from '@tanstack/solid-router';
 import { getSessionFromRequest } from '@/features/auth/session/request.server';
 
 // 所有发往聊天 Durable Object 的请求都约定挂在这个前缀下：

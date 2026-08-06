@@ -15,9 +15,8 @@ export async function submitMessage(
   navigateToNewChat: (conversationId: string) => Promise<void> | void,
   clearComposer: () => void,
 ) {
-  const sessionState = runtime.getSession();
-
-  const currentModelId = sessionState.currentModelId;
+  const currentModelId = runtime.getCurrentModelId();
+  const tree = runtime.getMessageTree();
   const isBusy = runtime.getStatus() !== 'idle';
 
   const hasModel = !!currentModelId;
@@ -41,14 +40,12 @@ export async function submitMessage(
   }
 
   const blocks = composerDocumentToBlocks(document);
-  const parentId = sessionState.currentPath.at(-1) ?? null;
+  const parentId = tree.currentPath.at(-1) ?? null;
   const previousSiblingId =
-    parentId === null
-      ? sessionState.latestRootId
-      : (sessionState.messages[parentId - 1]?.latestChild ?? null);
+    parentId === null ? tree.latestRootId : (tree.messages[parentId - 1]?.latestChild ?? null);
   runtime.setStatus('sending');
 
-  const isNewConversation = !sessionState.conversationId;
+  const isNewConversation = !runtime.getConversationId();
 
   await startChatRequest(
     runtime,
@@ -68,16 +65,16 @@ export async function submitMessage(
         throw new Error('New conversation did not return a user message');
       }
 
-      const state = runtime.getSession();
+      const nextTree = runtime.getMessageTree();
       const now = response.message.createdAt;
       cacheConversation({
         id: response.conversationId,
         title: 'New Chat',
-        model: state.currentModelId,
+        model: runtime.getCurrentModelId(),
         is_pinned: false,
         pinned_at: null,
-        currentPath: state.currentPath,
-        messages: state.messages,
+        currentPath: nextTree.currentPath,
+        messages: nextTree.messages,
         artifacts: [],
         created_at: now,
         updated_at: now,
@@ -85,7 +82,7 @@ export async function submitMessage(
       upsertConversationInCache({
         id: response.conversationId,
         title: 'New Chat',
-        model: state.currentModelId,
+        model: runtime.getCurrentModelId(),
         is_pinned: false,
         pinned_at: null,
         created_at: now,

@@ -1,21 +1,21 @@
 export function NewChatGreeting() {
   return (
     <div
-      className='absolute inset-0 flex flex-col items-center px-4 font-serif'
-      style={{ paddingTop: '8vh' }}
+      class='absolute inset-0 flex flex-col items-center px-4 font-serif'
+      style={{ 'padding-top': '8vh' }}
     >
-      <div className='flex items-center gap-1 sm:gap-2 text-2xl sm:text-3xl font-medium text-muted-foreground'>
+      <div class='flex items-center gap-1 sm:gap-2 text-2xl sm:text-3xl font-medium text-muted-foreground'>
         <span>今天想</span>
-        <div className='relative h-[1.2em] overflow-hidden text-foreground'>
+        <div class='relative h-[1.2em] overflow-hidden text-foreground'>
           <div
-            className='flex flex-col'
+            class='flex flex-col'
             style={{ animation: 'scrollUp 12s cubic-bezier(0.4,0,0.2,1) infinite' }}
           >
-            <span className='flex h-[1.2em] items-center'>探索</span>
-            <span className='flex h-[1.2em] items-center'>创造</span>
-            <span className='flex h-[1.2em] items-center'>学习</span>
-            <span className='flex h-[1.2em] items-center'>发现</span>
-            <span className='flex h-[1.2em] items-center'>探索</span>
+            <span class='flex h-[1.2em] items-center'>探索</span>
+            <span class='flex h-[1.2em] items-center'>创造</span>
+            <span class='flex h-[1.2em] items-center'>学习</span>
+            <span class='flex h-[1.2em] items-center'>发现</span>
+            <span class='flex h-[1.2em] items-center'>探索</span>
           </div>
         </div>
         <span>些什么？</span>

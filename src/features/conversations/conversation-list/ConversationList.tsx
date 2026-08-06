@@ -1,49 +1,40 @@
-import { useEffect, useRef } from 'react';
-import { Loader2 } from 'lucide-react';
+import { For, onSettled } from 'solid-js';
+import { Loader2 } from '@/shared/design-system/icons';
 import {
   useConversationsQuery,
   selectAllConversations,
   upsertConversationInCache,
 } from '@/features/conversations/session';
+import { conversationId } from '@/features/conversations/session/conversation-meta';
 import { ConversationItem } from './ConversationItem';
 
 type ConversationListProps = {
   onDropdownOpenChange: (open: boolean) => void;
-  activeConversationId: string | null;
 };
 
-export function ConversationList({
-  onDropdownOpenChange,
-  activeConversationId,
-}: ConversationListProps) {
-  const { data, isLoading, isFetchingNextPage, hasNextPage, fetchNextPage } =
-    useConversationsQuery();
-  const historyScrollRef = useRef<HTMLDivElement | null>(null);
-  const sentinelRef = useRef<HTMLDivElement | null>(null);
+export function ConversationList(props: ConversationListProps) {
+  const query = useConversationsQuery();
+  let historyScroll: HTMLDivElement | undefined;
+  let sentinel: HTMLDivElement | undefined;
 
-  useEffect(() => {
-    if (!hasNextPage) return;
-
-    const target = sentinelRef.current;
-    const root = historyScrollRef.current;
-    if (!target || !root) return;
-
+  onSettled(() => {
+    if (!sentinel || !historyScroll) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
-        if (isFetchingNextPage || !hasNextPage) return;
-        void fetchNextPage().catch((error) => {
+        if (query.isFetchingNextPage || !query.hasNextPage) return;
+        void query.fetchNextPage().catch((error) => {
           console.error('Failed to fetch more conversations:', error);
         });
       },
-      { root, rootMargin: '120px' },
+      { root: historyScroll, rootMargin: '120px' },
     );
 
-    observer.observe(target);
+    observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasNextPage, fetchNextPage, isFetchingNextPage]);
+  });
 
-  useEffect(() => {
+  onSettled(() => {
     const ch = new BroadcastChannel('conversation_title');
     ch.onmessage = (event: MessageEvent<{ id: string; title: string; updated_at: string }>) => {
       upsertConversationInCache({
@@ -56,49 +47,53 @@ export function ConversationList({
       });
     };
     return () => ch.close();
-  }, []);
+  });
 
-  const conversations = selectAllConversations(data);
-
-  if (isLoading && conversations.length === 0) {
-    return (
-      <div className='flex items-center justify-center py-6 text-muted-foreground'>
-        <Loader2 className='h-4 w-4 animate-spin' />
-        <span className='ml-2 text-xs'>加载会话中…</span>
-      </div>
-    );
-  }
-
+  const conversations = () => selectAllConversations(query.data);
   return (
-    <div
-      ref={historyScrollRef}
-      className='flex h-full min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pr-1'
-    >
-      <div className='flex flex-col gap-1'>
-        {conversations.map((conversation) => (
-          <ConversationItem
-            key={conversation.id}
-            conversation={conversation}
-            isActive={conversation.id === activeConversationId}
-            onDropdownOpenChange={onDropdownOpenChange}
-          />
-        ))}
-        {hasNextPage || isFetchingNextPage ? (
-          <div
-            ref={sentinelRef}
-            className='flex items-center justify-center py-3 text-muted-foreground'
-          >
-            {isFetchingNextPage ? (
-              <>
-                <Loader2 className='h-4 w-4 animate-spin' />
-                <span className='ml-2 text-xs'>加载更多...</span>
-              </>
-            ) : (
-              <span className='text-xs'>滚动加载更多...</span>
-            )}
+    <>
+      {query.isLoading && conversations().length === 0 ? (
+        <div class='flex items-center justify-center py-6 text-muted-foreground'>
+          <Loader2 class='h-4 w-4 animate-spin' />
+          <span class='ml-2 text-xs'>加载会话中…</span>
+        </div>
+      ) : (
+        <div
+          ref={(element) => {
+            historyScroll = element;
+          }}
+          class='flex h-full min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pr-1'
+        >
+          <div class='flex flex-col gap-1'>
+            <For each={conversations()}>
+              {(conversation) => (
+                <ConversationItem
+                  conversation={conversation}
+                  isActive={conversation.id === conversationId()}
+                  onDropdownOpenChange={props.onDropdownOpenChange}
+                />
+              )}
+            </For>
+            {query.hasNextPage || query.isFetchingNextPage ? (
+              <div
+                ref={(element) => {
+                  sentinel = element;
+                }}
+                class='flex items-center justify-center py-3 text-muted-foreground'
+              >
+                {query.isFetchingNextPage ? (
+                  <>
+                    <Loader2 class='h-4 w-4 animate-spin' />
+                    <span class='ml-2 text-xs'>加载更多...</span>
+                  </>
+                ) : (
+                  <span class='text-xs'>滚动加载更多...</span>
+                )}
+              </div>
+            ) : null}
           </div>
-        ) : null}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   );
 }

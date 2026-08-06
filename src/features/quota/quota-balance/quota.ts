@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/react-start';
+import { createServerFn } from '@tanstack/solid-start';
 import { z } from 'zod';
 import { getServerBindings } from '@/shared/worker/env';
 import { getOrCreateUserQuota, redeemSingleUseCode } from '@/features/quota/quota-balance';
@@ -17,7 +17,7 @@ const redeemInputSchema = z.object({
 });
 
 export const redeemCodeFn = createServerFn({ method: 'POST' })
-  .inputValidator(redeemInputSchema)
+  .validator(redeemInputSchema)
   .handler(async ({ data }) => {
     const { requireSession } = await import('@/features/auth/session/request.server');
     const { DB } = getServerBindings();

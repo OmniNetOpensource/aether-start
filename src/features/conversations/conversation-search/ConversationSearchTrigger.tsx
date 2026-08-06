@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Search } from 'lucide-react';
+import { createSignal } from 'solid-js';
+import { Search } from '@/shared/design-system/icons';
 import { ConversationSearchDialog } from './ConversationSearchDialog';
 import { Button } from '@/shared/design-system/button';
 
@@ -7,18 +7,18 @@ type ConversationSearchTriggerProps = {
   variant?: 'sidebar' | 'icon';
 };
 
-export function ConversationSearchTrigger({ variant = 'icon' }: ConversationSearchTriggerProps) {
-  const [open, setOpen] = useState(false);
-  const isSidebar = variant === 'sidebar';
+export function ConversationSearchTrigger(props: ConversationSearchTriggerProps) {
+  const [open, setOpen] = createSignal(false);
+  const isSidebar = () => (props.variant ?? 'icon') === 'sidebar';
 
   return (
     <>
       <Button
         type='button'
         variant='ghost'
-        size={isSidebar ? 'default' : 'icon-lg'}
-        className={
-          isSidebar
+        size={isSidebar() ? 'default' : 'icon-lg'}
+        class={
+          isSidebar()
             ? 'group relative h-10 w-full justify-start overflow-hidden rounded-md border px-3 transition-all duration-300 bg-transparent text-secondary hover:bg-hover hover:text-foreground'
             : 'rounded-lg'
         }
@@ -26,21 +26,21 @@ export function ConversationSearchTrigger({ variant = 'icon' }: ConversationSear
         title='搜索聊天记录'
         onClick={() => setOpen(true)}
       >
-        {isSidebar ? (
+        {isSidebar() ? (
           <>
-            <span className='flex h-10 w-10 shrink-0 items-center justify-center'>
-              <Search className='h-5 w-5' />
+            <span class='flex h-10 w-10 shrink-0 items-center justify-center'>
+              <Search class='h-5 w-5' />
             </span>
-            <span className='overflow-hidden whitespace-nowrap text-sm font-medium transition-all duration-500'>
+            <span class='overflow-hidden whitespace-nowrap text-sm font-medium transition-all duration-500'>
               搜索聊天记录
             </span>
           </>
         ) : (
-          <Search className='h-5 w-5' />
+          <Search class='h-5 w-5' />
         )}
       </Button>
 
-      <ConversationSearchDialog open={open} onOpenChange={setOpen} />
+      <ConversationSearchDialog open={open()} onOpenChange={setOpen} />
     </>
   );
 }

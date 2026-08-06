@@ -1,0 +1,154 @@
+import { Outlet, createFileRoute } from '@tanstack/solid-router';
+import { createEffect, onSettled } from 'solid-js';
+import { ArtifactPanel, ArtifactToggleButton } from '@/features/chat/artifact';
+import {
+  cancelStreamSubscription,
+  resetLastEventId,
+} from '@/features/chat/agent-runtime/chat-orchestrator';
+import { chatRuntime, registerChatToast } from '@/features/chat/agent-runtime/chat-runtime';
+import { artifacts } from '@/features/chat/artifact/artifact-state';
+import { Composer } from '@/features/chat/composer/Composer';
+import {
+  DEFAULT_MODEL_ID,
+  getAvailableModelsFn,
+  getAvailablePromptsFn,
+} from '@/features/chat/model-catalog';
+import Sidebar from '@/features/conversations/conversation-list';
+import { NewChatButton } from '@/features/conversations/conversation-list/NewChatButton';
+import {
+  conversationInfiniteQueryOptions,
+  cacheConversation,
+  getConversationFromCache,
+  queryClient,
+  conversationId,
+  currentFetchProvider,
+  currentModelId,
+  currentPromptId,
+  getChatSessionSelectionFn,
+  pageTitle,
+  persistChatSessionSelection,
+  setCurrentFetchProvider,
+  setCurrentModelId,
+  setCurrentPromptId,
+} from '@/features/conversations/session';
+import { getMessageTreeState } from '@/features/conversations/conversation-tree/message-tree-state';
+import { ShareButton } from '@/features/share/share-dialog';
+import { useToast } from '@/shared/app-shell/useToast';
+
+export const Route = createFileRoute('/app')({
+  loader: async () => {
+    const conversationListPromise = queryClient.getQueryData(
+      conversationInfiniteQueryOptions.queryKey,
+    )
+      ? Promise.resolve()
+      : queryClient.prefetchInfiniteQuery(conversationInfiniteQueryOptions);
+    const [availableModels, availablePrompts, initialSelection] = await Promise.all([
+      queryClient.ensureQueryData({
+        queryKey: ['chat-options', 'models'],
+        queryFn: () => getAvailableModelsFn(),
+        staleTime: Infinity,
+        gcTime: Infinity,
+      }),
+      queryClient.ensureQueryData({
+        queryKey: ['chat-options', 'prompts'],
+        queryFn: () => getAvailablePromptsFn(),
+        staleTime: Infinity,
+        gcTime: Infinity,
+      }),
+      getChatSessionSelectionFn(),
+      conversationListPromise,
+    ]);
+
+    const modelId = availableModels.some((model) => model.id === initialSelection.currentModelId)
+      ? initialSelection.currentModelId
+      : DEFAULT_MODEL_ID;
+    const promptId = availablePrompts.some(
+      (prompt) => prompt.id === initialSelection.currentPromptId,
+    )
+      ? initialSelection.currentPromptId
+      : (availablePrompts[0]?.id ?? 'aether');
+    setCurrentModelId(modelId);
+    setCurrentPromptId(promptId);
+    setCurrentFetchProvider(initialSelection.currentFetchProvider);
+
+    return {
+      availableModels,
+      availablePrompts,
+      initialModelId: DEFAULT_MODEL_ID,
+      initialPromptId: availablePrompts[0]?.id ?? 'aether',
+      initialSelection,
+    };
+  },
+  component: AppLayout,
+});
+
+function AppLayout() {
+  registerChatToast(useToast());
+
+  createEffect(pageTitle, (title) => {
+    document.title = title;
+  });
+
+  createEffect(
+    () => ({
+      modelId: currentModelId(),
+      promptId: currentPromptId(),
+      fetchProvider: currentFetchProvider(),
+    }),
+    (selection) => {
+      persistChatSessionSelection(selection.modelId, selection.promptId, selection.fetchProvider);
+    },
+  );
+
+  createEffect(
+    () => ({
+      conversationId: conversationId(),
+      title: pageTitle(),
+      model: currentModelId(),
+      tree: getMessageTreeState(),
+      artifacts: artifacts(),
+    }),
+    (state) => {
+      if (!state.conversationId) return;
+      const currentConversation = getConversationFromCache(state.conversationId);
+      if (!currentConversation) return;
+
+      cacheConversation({
+        ...currentConversation,
+        title: state.title,
+        model: state.model,
+        currentPath: state.tree.currentPath,
+        messages: state.tree.messages,
+        artifacts: state.artifacts,
+      });
+    },
+  );
+
+  onSettled(() => {
+    return () => {
+      cancelStreamSubscription(chatRuntime, 'app/unmount');
+      resetLastEventId();
+    };
+  });
+
+  return (
+    <div class='relative flex h-screen w-screen overflow-hidden text-foreground'>
+      <Sidebar />
+      <div class='relative flex-1 z-0 min-w-0 flex flex-col gap-2 min-h-0'>
+        <div class='flex shrink-0 h-16 items-center gap-3 px-4 bg-transparent'>
+          <div class='flex-1' />
+          <ArtifactToggleButton />
+          <ShareButton />
+          <NewChatButton variant='topbar' class='rounded-lg' />
+        </div>
+        <main class='relative flex flex-row flex-1 min-h-0 min-w-0'>
+          <div class='@container relative h-full flex-1 min-w-0'>
+            <Outlet />
+            <Composer />
+          </div>
+          <ArtifactPanel />
+        </main>
+      </div>
+    </div>
+  );
+}

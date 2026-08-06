@@ -2,8 +2,6 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@source "../../node_modules/@heroui/styles/dist/**/*.js";
-
 /* Custom styles */
 @import '../styles/theme.css';
 @import '../styles/base.css';

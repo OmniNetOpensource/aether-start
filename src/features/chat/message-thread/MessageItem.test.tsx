@@ -1,18 +1,30 @@
-import { render } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
+import { act, renderTest } from '@/test/render';
+import { clearArtifacts } from '@/features/chat/artifact/artifact-state';
+import { chatRuntime, registerChatToast } from '@/features/chat/agent-runtime/chat-runtime';
 import {
-  createChatSessionActions,
-  createInitialChatSessionState,
-  initialChatSessionSelectionState,
-  type ChatSessionState,
-} from '@/features/conversations/session';
-import type { ChatRuntimeState } from '@/features/chat/agent-runtime/chat-runtime-state';
+  clearMessageTree,
+  initializeMessageTree,
+  setMessageTreeState,
+} from '@/features/conversations/conversation-tree/message-tree-state';
+import { clearConversationMeta } from '@/features/conversations/session/conversation-meta';
 import { ToastProvider } from '@/shared/app-shell/toast-context';
 import type { Message } from './message';
 import { MessageItem } from './MessageItem';
+import { MessageList } from './MessageList';
+
+const notify = () => '';
+
+afterEach(() => {
+  clearConversationMeta();
+  clearMessageTree();
+  clearArtifacts();
+  chatRuntime.setStatus('idle');
+});
 
 describe('MessageItem', () => {
   it('renders user text, quote, attachment, and following text in block order', () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
     const message: Message = {
       id: 1,
       parentId: null,
@@ -42,51 +54,62 @@ describe('MessageItem', () => {
       createdAt: '2026-08-04T08:00:00.000Z',
       completedAt: '2026-08-04T08:00:00.000Z',
     };
-    let session: ChatSessionState = createInitialChatSessionState(
-      '',
-      '',
-      initialChatSessionSelectionState,
-    );
-    const sessionActions = createChatSessionActions(
-      () => session,
-      (update) => {
-        session = typeof update === 'function' ? update(session) : update;
-      },
-    );
-    const notify = () => '';
-    const runtime: ChatRuntimeState = {
-      getSession: () => session,
-      session: sessionActions,
-      getStatus: () => 'idle',
-      setStatus: () => {},
-      toast: { info: notify, success: notify, warning: notify, error: notify },
-    };
 
-    const { container } = render(
+    const { container } = renderTest(() => (
       <ToastProvider>
         <MessageItem
           message={message}
-          index={0}
           depth={1}
           isStreaming={false}
           isLastInPath
-          status='idle'
           branchInfo={null}
           editingState={null}
-          runtime={runtime}
           onStartEditing={() => {}}
           onEditDocumentChange={() => {}}
           onCancelEditing={() => {}}
           onSubmitEdit={async () => {}}
           onRetry={async () => {}}
-          onNavigateBranch={() => {}}
         />
-      </ToastProvider>,
-    );
+      </ToastProvider>
+    ));
 
     expect(container.querySelector('.text-base')?.textContent).toBe(
       '开头引用内容图片.png结尾\n\n旧正文',
     );
     expect(container.querySelector('.text-2xs')?.textContent).toBe('8/4, 04:00 PM');
+  });
+
+  it('updates an existing message while streaming', async () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    const initialMessage: Message = {
+      id: 1,
+      parentId: null,
+      prevSibling: null,
+      nextSibling: null,
+      latestChild: null,
+      role: 'assistant',
+      blocks: [{ type: 'content', content: '部分回复' }],
+      createdAt: '2026-08-04T08:00:00.000Z',
+      completedAt: null,
+    };
+    initializeMessageTree([initialMessage], [1]);
+    chatRuntime.setStatus('streaming');
+
+    const { container } = renderTest(() => (
+      <ToastProvider>
+        <MessageList />
+      </ToastProvider>
+    ));
+
+    expect(container.textContent).toContain('部分回复');
+
+    await act(() => {
+      setMessageTreeState({
+        messages: [{ ...initialMessage, blocks: [{ type: 'content', content: '完整回复' }] }],
+      });
+    });
+
+    expect(container.textContent).toContain('完整回复');
+    expect(container.textContent).not.toContain('部分回复');
   });
 });

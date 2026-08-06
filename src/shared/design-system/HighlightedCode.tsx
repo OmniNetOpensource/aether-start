@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createEffect, createMemo, createSignal, For } from 'solid-js';
 import type { TokensResult } from '@shikijs/core';
 import { bundledLanguages, codeToTokens } from '@/shared/design-system/shiki-bundle';
 
@@ -15,84 +15,93 @@ type Highlight = {
   result: TokensResult;
 };
 
-export function HighlightedCode({
-  code,
-  isCompleted,
-  language,
-}: {
-  code: string;
-  isCompleted: boolean;
-  language: string;
-}) {
-  const highlightKey = `${language}\0${code}`;
-  const canHighlight = !language || language in bundledLanguages;
-  const [highlight, setHighlight] = useState<Highlight | null>(() => {
-    const result = highlightCache.get(highlightKey);
-    return result ? { key: highlightKey, result } : null;
+export function HighlightedCode(props: { code: string; isCompleted: boolean; language: string }) {
+  const highlightKey = () => `${props.language}\0${props.code}`;
+  const canHighlight = () => !props.language || props.language in bundledLanguages;
+  const [highlight, setHighlight] = createSignal<Highlight | null>(null);
+  const result = createMemo(() => {
+    const current = highlight();
+    return current?.key === highlightKey() ? current.result : highlightCache.get(highlightKey());
   });
-  const result =
-    highlight?.key === highlightKey ? highlight.result : highlightCache.get(highlightKey);
+  let request = 0;
 
-  useEffect(() => {
-    if (!canHighlight || !isCompleted || highlightCache.has(highlightKey)) return;
+  createEffect(
+    () => ({
+      code: props.code,
+      isCompleted: props.isCompleted,
+      language: props.language,
+      canHighlight: canHighlight(),
+      highlightKey: highlightKey(),
+    }),
+    ({
+      code: currentCode,
+      isCompleted: completed,
+      language: currentLanguage,
+      canHighlight: available,
+      highlightKey: key,
+    }) => {
+      if (!available || !completed || highlightCache.has(key)) return;
+      const currentRequest = ++request;
 
-    let cancelled = false;
+      void codeToTokens(currentCode, {
+        lang: currentLanguage || 'text',
+        themes: { light: 'github-light', dark: 'github-dark' },
+      }).then(
+        (nextResult) => {
+          highlightCache.set(key, nextResult);
+          if (currentRequest === request) setHighlight({ key, result: nextResult });
+        },
+        (error) => {
+          console.error(`Failed to highlight ${currentLanguage || 'plain text'} code:`, error);
+        },
+      );
+    },
+  );
 
-    void codeToTokens(code, {
-      lang: language || 'text',
-      themes: { light: 'github-light', dark: 'github-dark' },
-    }).then(
-      (nextResult) => {
-        highlightCache.set(highlightKey, nextResult);
-        if (!cancelled) setHighlight({ key: highlightKey, result: nextResult });
-      },
-      (error) => {
-        console.error(`Failed to highlight ${language || 'plain text'} code:`, error);
-      },
-    );
-
-    return () => {
-      cancelled = true;
-    };
-  }, [canHighlight, code, highlightKey, isCompleted, language]);
-
-  if (!result) {
-    return (
-      <pre data-markdown='code-block-body'>
-        <code>{code}</code>
-      </pre>
-    );
-  }
-
-  const containerStyle: Record<string, string> = {};
-  if (result.bg) containerStyle['--markdown-code-bg'] = result.bg;
-  if (result.fg) containerStyle['--markdown-code-text'] = result.fg;
+  const containerStyle = () => {
+    const style: Record<string, string> = {};
+    if (result()?.bg) style['--markdown-code-bg'] = result()?.bg ?? '';
+    if (result()?.fg) style['--markdown-code-text'] = result()?.fg ?? '';
+    return style;
+  };
 
   return (
-    <pre data-markdown='code-block-body' style={containerStyle}>
-      <code className='[counter-increment:line_0] [counter-reset:line]'>
-        {result.tokens.map((line, lineIndex) => (
-          <span className={lineClass} key={lineIndex}>
-            {line.map((token, tokenIndex) => {
-              const style: Record<string, string> = {};
-              if (token.color) style['--markdown-light'] = token.color;
-              if (token.bgColor) style['--markdown-token-bg'] = token.bgColor;
+    <>
+      {result() ? (
+        <pre data-markdown='code-block-body' style={containerStyle()}>
+          <code class='[counter-increment:line_0] [counter-reset:line]'>
+            <For each={result()?.tokens ?? []}>
+              {(line) => (
+                <span class={lineClass}>
+                  <For each={line}>
+                    {(token) => {
+                      const style: Record<string, string> = {};
+                      if (token.color) style['--markdown-light'] = token.color;
+                      if (token.bgColor) style['--markdown-token-bg'] = token.bgColor;
 
-              for (const [name, value] of Object.entries(token.htmlStyle ?? {})) {
-                if (name === 'color') style['--markdown-light'] = value;
-                else if (name === 'background-color') style['--markdown-token-bg'] = value;
-                else style[name] = value;
-              }
+                      for (const [name, value] of Object.entries(token.htmlStyle ?? {})) {
+                        if (name === 'color') style['--markdown-light'] = value;
+                        else if (name === 'background-color') style['--markdown-token-bg'] = value;
+                        else style[name] = value;
+                      }
 
-              return (
-                <span className={tokenClass} key={tokenIndex} style={style} {...token.htmlAttrs}>
-                  {token.content}
+                      return (
+                        <span class={tokenClass} style={style} {...token.htmlAttrs}>
+                          {token.content}
+                        </span>
+                      );
+                    }}
+                  </For>
                 </span>
-              );
-            })}
-          </span>
-        ))}
-      </code>
-    </pre>
+              )}
+            </For>
+          </code>
+        </pre>
+      ) : (
+        <pre data-markdown='code-block-body'>
+          <code>{props.code}</code>
+        </pre>
+      )}
+    </>
   );
 }

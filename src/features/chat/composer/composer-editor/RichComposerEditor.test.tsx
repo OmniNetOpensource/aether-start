@@ -1,20 +1,22 @@
-import { createRef } from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, screen, waitFor } from '@testing-library/dom';
 import { describe, expect, it, vi } from 'vitest';
+import { act, renderTest } from '@/test/render';
 import { RichComposerEditor, type RichComposerEditorHandle } from './RichComposerEditor';
 import { ToastProvider } from '@/shared/app-shell/toast-context';
 
 describe('RichComposerEditor', () => {
   it('keeps an empty document stable', async () => {
-    render(
-      <RichComposerEditor
-        id='empty-editor'
-        document={[]}
-        onChange={() => {}}
-        onSubmit={() => {}}
-        placeholder='Type here'
-      />,
-      { wrapper: ToastProvider },
+    renderTest(
+      () => (
+        <RichComposerEditor
+          id='empty-editor'
+          document={[]}
+          onChange={() => {}}
+          onSubmit={() => {}}
+          placeholder='Type here'
+        />
+      ),
+      (children) => <ToastProvider>{children()}</ToastProvider>,
     );
 
     expect(await screen.findByRole('textbox')).toBeTruthy();
@@ -22,24 +24,28 @@ describe('RichComposerEditor', () => {
   });
 
   it('inserts and removes an atomic quote chip inside the text editor', async () => {
-    const editor = createRef<RichComposerEditorHandle>();
+    let editor: RichComposerEditorHandle | null = null;
     const onChange = vi.fn();
 
-    render(
-      <RichComposerEditor
-        ref={editor}
-        id='test-editor'
-        document={[{ type: 'text', text: 'hello' }]}
-        onChange={onChange}
-        onSubmit={() => {}}
-        placeholder='Type here'
-      />,
-      { wrapper: ToastProvider },
+    renderTest(
+      () => (
+        <RichComposerEditor
+          ref={(currentEditor) => {
+            editor = currentEditor;
+          }}
+          id='test-editor'
+          document={[{ type: 'text', text: 'hello' }]}
+          onChange={onChange}
+          onSubmit={() => {}}
+          placeholder='Type here'
+        />
+      ),
+      (children) => <ToastProvider>{children()}</ToastProvider>,
     );
 
     expect((await screen.findByRole('textbox')).textContent).toContain('hello');
 
-    act(() => editor.current?.insertQuote('quoted text'));
+    await act(() => editor?.insertQuote('quoted text'));
 
     expect(await screen.findByText('quoted text')).toBeTruthy();
     await waitFor(() =>

@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/react-start';
+import { createServerFn } from '@tanstack/solid-start';
 import { z } from 'zod';
 
 const inputSchema = z.object({
@@ -180,7 +180,7 @@ export async function deployHtmlToNetlify({
 }
 
 export const deployToNetlifyFn = createServerFn({ method: 'POST' })
-  .inputValidator(inputSchema)
+  .validator(inputSchema)
   .handler(async ({ data }) => {
     const [{ requireSession }, { log }, { getServerBindings, getServerEnv }] = await Promise.all([
       import('@/features/auth/session/request.server'),

@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/react-start';
+import { createServerFn } from '@tanstack/solid-start';
 import { z } from 'zod';
 import { getServerBindings } from '@/shared/worker/env';
 import {
@@ -16,7 +16,7 @@ const cursorSchema = z
   .nullable();
 
 export const adminListRedeemCodesFn = createServerFn({ method: 'POST' })
-  .inputValidator(
+  .validator(
     z.object({
       limit: z.number().int().positive().max(100),
       cursor: cursorSchema,
@@ -40,7 +40,7 @@ const createCodeSchema = z.object({
 });
 
 export const adminCreateRedeemCodeFn = createServerFn({ method: 'POST' })
-  .inputValidator(createCodeSchema)
+  .validator(createCodeSchema)
   .handler(async ({ data }) => {
     const { requireAdminSession } = await import('@/features/auth/admin-access/admin.server');
     const { DB } = getServerBindings();
@@ -63,7 +63,7 @@ export const adminCreateRedeemCodeFn = createServerFn({ method: 'POST' })
   });
 
 export const adminDeactivateRedeemCodeFn = createServerFn({ method: 'POST' })
-  .inputValidator(z.object({ id: z.string().min(1) }))
+  .validator(z.object({ id: z.string().min(1) }))
   .handler(async ({ data }) => {
     const { requireAdminSession } = await import('@/features/auth/admin-access/admin.server');
     const { DB } = getServerBindings();

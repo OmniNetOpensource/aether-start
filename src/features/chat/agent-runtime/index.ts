@@ -1,6 +1,7 @@
 export * from './attachment-utils';
 export * from './providers/backend-config';
 export * from './conversation-runner';
+export * from './chat-runtime';
 export * from './event-processor';
 export * from './fetch-tool';
 export * from './logger';

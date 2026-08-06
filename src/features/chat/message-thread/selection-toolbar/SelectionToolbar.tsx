@@ -1,62 +1,47 @@
-/**
- * 选区工具栏 - 主组件
- *
- * 在用户于 assistant 消息内选中文本时，显示浮动工具栏，提供：
- * - 引用：将选中文本插入到输入框光标处
- *
- * 依赖 useSelectionToolbar 做选区检测与定位。使用 CSS transitions 替代 Framer Motion，实现硬件加速（Emil Design Engineering）。
- */
-
-import { useEffect, useState, type RefObject } from 'react';
-import { Quote } from 'lucide-react';
+import { createEffect, createSignal, type Accessor } from 'solid-js';
+import { Quote } from '@/shared/design-system/icons';
 import { Button } from '@/shared/design-system/button';
 import { addQuoteToActiveInput } from '@/features/chat/composer/composer-editor/active-input';
 import { useSelectionToolbar } from './useSelectionToolbar';
 
-type SelectionToolbarProps = {
-  /** 消息列表滚动容器的 ref，用于限定选区检测范围 */
-  containerRef: RefObject<HTMLElement | null>;
-};
+export function SelectionToolbar(props: { container: Accessor<HTMLElement | undefined> }) {
+  const toolbar = useSelectionToolbar(props.container);
+  const [mounted, setMounted] = createSignal(false);
 
-export function SelectionToolbar({ containerRef }: SelectionToolbarProps) {
-  const { text, hasSelection, clearSelection, floatingRef, floatingStyles } =
-    useSelectionToolbar(containerRef);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    if (hasSelection && !mounted) {
-      const id = requestAnimationFrame(() => setMounted(true));
-      return () => cancelAnimationFrame(id);
+  createEffect(toolbar.hasSelection, (hasSelection) => {
+    if (!hasSelection) {
+      setMounted(false);
+      return;
     }
-  }, [hasSelection, mounted]);
-
-  const handleQuote = () => {
-    if (text) {
-      addQuoteToActiveInput(text);
-      clearSelection();
-    }
-  };
-
-  if (!hasSelection) return null;
+    requestAnimationFrame(() => setMounted(true));
+  });
 
   return (
-    <div
-      ref={floatingRef}
-      style={floatingStyles}
-      data-mounted={mounted}
-      className='flex gap-1 rounded-lg bg-background p-1 shadow-lg backdrop-blur-md border border-border transition-[opacity,transform] duration-150 ease-[var(--ease-out)] data-[mounted=false]:opacity-0 data-[mounted=false]:translate-y-1 data-[mounted=false]:scale-[0.95]'
-      data-selection-toolbar
-    >
-      <Button
-        type='button'
-        variant='ghost'
-        size='sm'
-        onClick={handleQuote}
-        className='h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-hover'
-      >
-        <Quote className='h-3.5 w-3.5' />
-        引用
-      </Button>
-    </div>
+    <>
+      {toolbar.hasSelection() && (
+        <div
+          ref={toolbar.setFloating}
+          style={toolbar.floatingStyles()}
+          data-mounted={mounted() ? 'true' : 'false'}
+          class='flex gap-1 rounded-lg bg-background p-1 shadow-lg backdrop-blur-md border border-border transition-[opacity,transform] duration-150 ease-[var(--ease-out)] data-[mounted=false]:opacity-0 data-[mounted=false]:translate-y-1 data-[mounted=false]:scale-[0.95]'
+          data-selection-toolbar
+        >
+          <Button
+            type='button'
+            variant='ghost'
+            size='sm'
+            onClick={() => {
+              if (!toolbar.text()) return;
+              addQuoteToActiveInput(toolbar.text());
+              toolbar.clearSelection();
+            }}
+            class='h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-hover'
+          >
+            <Quote class='h-3.5 w-3.5' />
+            引用
+          </Button>
+        </div>
+      )}
+    </>
   );
 }

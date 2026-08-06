@@ -193,35 +193,33 @@ export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServe
   flushAll();
 
   if (event.type === 'artifact_started') {
-    runtime.session.startArtifact(event.artifactId);
+    runtime.artifacts.start(event.artifactId);
     return;
   }
 
   if (event.type === 'artifact_title') {
-    runtime.session.updateArtifactTitle(event.artifactId, event.title);
+    runtime.artifacts.setTitle(event.artifactId, event.title);
     return;
   }
 
   if (event.type === 'artifact_language') {
-    runtime.session.updateArtifactLanguage(event.artifactId, event.language);
+    runtime.artifacts.setLanguage(event.artifactId, event.language);
     return;
   }
 
   if (event.type === 'artifact_completed') {
-    runtime.session.completeArtifact(event.artifactId);
+    runtime.artifacts.complete(event.artifactId);
     return;
   }
 
   if (event.type === 'artifact_failed') {
-    runtime.session.failArtifact(event.artifactId, event.message);
+    runtime.artifacts.fail(event.artifactId, event.message);
     return;
   }
 
   if (event.type === 'conversation_updated') {
-    const store = runtime.getSession();
-
-    if (store.conversationId === event.conversationId && typeof event.title === 'string') {
-      runtime.session.setPageTitle(event.title);
+    if (runtime.getConversationId() === event.conversationId && typeof event.title === 'string') {
+      runtime.setPageTitle(event.title);
     }
 
     if (event.title) {
@@ -246,7 +244,7 @@ export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServe
     const args =
       event.args && typeof event.args === 'object' ? (event.args as Record<string, unknown>) : {};
 
-    runtime.session.appendToAssistant({
+    runtime.messageTree.appendToAssistant({
       kind: 'tool',
       data: {
         call: {
@@ -270,7 +268,7 @@ export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServe
       }
     }
 
-    runtime.session.appendToAssistant({
+    runtime.messageTree.appendToAssistant({
       kind: 'tool_result',
       tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
       result: resultText,
@@ -279,7 +277,7 @@ export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServe
   }
 
   if (event.type === 'ask_user_questions_requested') {
-    runtime.session.appendToAssistant({
+    runtime.messageTree.appendToAssistant({
       kind: 'ask_user_questions_requested',
       callId: event.callId,
       questions: event.questions,
@@ -288,7 +286,7 @@ export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServe
   }
 
   if (event.type === 'ask_user_questions_answered') {
-    runtime.session.appendToAssistant({
+    runtime.messageTree.appendToAssistant({
       kind: 'ask_user_questions_answered',
       callId: event.callId,
       answers: event.answers,
@@ -302,7 +300,7 @@ export const applyChatEventToTree = (runtime: ChatRuntimeState, event: ChatServe
     const safeMessage = rawMessage || 'unknown error';
     const enhancedMessage = enhanceServerErrorMessage(safeMessage, event.error);
 
-    runtime.session.appendToAssistant({
+    runtime.messageTree.appendToAssistant({
       type: 'error',
       message: enhancedMessage,
     });

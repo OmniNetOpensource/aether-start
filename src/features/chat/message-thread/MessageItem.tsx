@@ -1,16 +1,15 @@
 import { AskUserQuestionsCard } from '@/features/chat/ask-user-questions';
-import { useState, type ReactNode } from 'react';
+import { createSignal, For } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 import Markdown from '@/shared/design-system/Markdown';
-import { Message } from '@/features/chat/message-thread';
+import type { Message } from '@/features/chat/message-thread';
 import { ResearchBlock } from '../research/ResearchBlock';
-import { Copy, Check, AlertCircle, Pencil, RotateCcw } from 'lucide-react';
+import { Copy, Check, AlertCircle, Pencil, RotateCcw } from '@/shared/design-system/icons';
 import { Button } from '@/shared/design-system/button';
 import { useToast } from '@/shared/app-shell/useToast';
 import { submitToolAnswer } from '@/features/chat/agent-runtime/chat-orchestrator';
-import type {
-  ChatRuntimeState,
-  ChatStatus,
-} from '@/features/chat/agent-runtime/chat-runtime-state';
+import { chatRuntime, status } from '@/features/chat/agent-runtime/chat-runtime';
+import { navigateMessageBranch } from '@/features/conversations/conversation-tree/message-tree-state';
 import type { BranchInfo } from '@/features/chat/message-thread';
 import type { EditingState } from './editing-state';
 import { MessageEditor } from './MessageEditor';
@@ -21,11 +20,11 @@ type CopyButtonProps = {
   blocks: Message['blocks'];
 };
 
-const CopyButton = ({ blocks }: CopyButtonProps) => {
-  const [isCopied, setIsCopied] = useState(false);
+const CopyButton = (props: CopyButtonProps) => {
+  const [isCopied, setIsCopied] = createSignal(false);
 
   const handleCopy = async () => {
-    let text = blocks
+    let text = props.blocks
       .filter((b) => b.type === 'content')
       .map((b) => b.content)
       .join('\n\n');
@@ -51,13 +50,13 @@ const CopyButton = ({ blocks }: CopyButtonProps) => {
       variant='ghost'
       size='sm'
       onClick={handleCopy}
-      className='text-2xs text-muted-foreground'
+      class='text-2xs text-muted-foreground'
       title='复制内容'
     >
-      {isCopied ? (
-        <Check className='h-3.5 w-3.5' strokeWidth={2.5} />
+      {isCopied() ? (
+        <Check class='h-3.5 w-3.5' stroke-width={2.5} />
       ) : (
-        <Copy className='h-3.5 w-3.5' strokeWidth={2.5} />
+        <Copy class='h-3.5 w-3.5' stroke-width={2.5} />
       )}
     </Button>
   );
@@ -67,39 +66,35 @@ type ActionButtonProps = {
   onClick: () => void;
   disabled?: boolean;
   title: string;
-  icon: ReactNode;
+  icon: JSX.Element;
 };
 
-const ActionButton = ({ onClick, disabled, title, icon }: ActionButtonProps) => (
+const ActionButton = (props: ActionButtonProps) => (
   <Button
     type='button'
     variant='ghost'
     size='sm'
-    onClick={onClick}
-    disabled={disabled}
-    className='text-2xs text-muted-foreground'
-    title={title}
+    onClick={props.onClick}
+    disabled={props.disabled}
+    class='text-2xs text-muted-foreground'
+    title={props.title}
   >
-    {icon}
+    {props.icon}
   </Button>
 );
 
 type MessageItemProps = {
   message: Message;
-  index: number;
   depth: number;
   isStreaming: boolean;
   isLastInPath: boolean;
-  status: ChatStatus;
   branchInfo: BranchInfo | null;
   editingState: EditingState | null;
-  runtime: ChatRuntimeState;
   onStartEditing: (messageId: number) => void;
   onEditDocumentChange: (document: EditingState['editedDocument']) => void;
   onCancelEditing: () => void;
-  onSubmitEdit: (depth: number) => Promise<void>;
-  onRetry: (messageId: number, depth: number) => Promise<void>;
-  onNavigateBranch: (messageId: number, depth: number, direction: 'prev' | 'next') => void;
+  onSubmitEdit: () => Promise<void>;
+  onRetry: (messageId: number) => Promise<void>;
 };
 
 const formatMessageTime = (iso: string) =>
@@ -111,204 +106,193 @@ const formatMessageTime = (iso: string) =>
     minute: '2-digit',
   });
 
-export function MessageItem({
-  message,
-  index,
-  depth,
-  isStreaming,
-  isLastInPath,
-  status,
-  branchInfo,
-  editingState,
-  runtime,
-  onStartEditing,
-  onEditDocumentChange,
-  onCancelEditing,
-  onSubmitEdit,
-  onRetry,
-  onNavigateBranch,
-}: MessageItemProps) {
+export function MessageItem(props: MessageItemProps) {
   const toast = useToast();
-  const messageId = message.id;
-  const isEditing = editingState?.messageId === messageId;
-  const isBusy = status !== 'idle';
+  const messageId = () => props.message.id;
+  const isEditing = () => props.editingState?.messageId === messageId();
+  const renderEditor = () => {
+    const editingState = props.editingState;
+    if (!editingState || editingState.messageId !== messageId()) return null;
 
-  const handleStartEditing = () => onStartEditing(messageId);
+    return (
+      <MessageEditor
+        messageId={messageId()}
+        document={editingState.editedDocument}
+        onDocumentChange={props.onEditDocumentChange}
+        onCancel={props.onCancelEditing}
+        onSubmit={props.onSubmitEdit}
+      />
+    );
+  };
+  const isBusy = () => status() !== 'idle';
+
+  const handleStartEditing = () => props.onStartEditing(messageId());
 
   const handleRetry = () => {
-    void onRetry(messageId, depth).catch((error) => {
+    void props.onRetry(messageId()).catch((error) => {
       console.error('Failed to retry message:', error);
       toast.error(error instanceof Error ? error.message : '重新生成失败');
     });
   };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
-    if (status === 'idle') {
-      onNavigateBranch(messageId, depth, direction);
+    if (status() === 'idle') {
+      navigateMessageBranch(messageId(), props.depth, direction);
     }
   };
 
-  const isUser = message.role === 'user';
-  const assistantBlocks = !isUser ? message.blocks : [];
-  const shouldRenderBody = isEditing || !isUser || message.blocks.length > 0;
-  const contentWidthClass = isUser ? 'w-full max-w-[90%]' : 'w-full';
-
-  const shouldShowToolbar = !isEditing && (isUser || !isStreaming);
-  const timeLabel = isUser
-    ? formatMessageTime(message.createdAt)
-    : message.completedAt
-      ? formatMessageTime(message.completedAt)
-      : null;
+  const isUser = () => props.message.role === 'user';
+  const assistantBlocks = () => (!isUser() ? props.message.blocks : []);
+  const shouldRenderBody = () => isEditing() || !isUser() || props.message.blocks.length > 0;
+  const contentWidthClass = () => (isUser() ? 'w-full max-w-[90%]' : 'w-full');
+  const shouldShowToolbar = () => !isEditing() && (isUser() || !props.isStreaming);
+  const timeLabel = () =>
+    isUser()
+      ? formatMessageTime(props.message.createdAt)
+      : props.message.completedAt
+        ? formatMessageTime(props.message.completedAt)
+        : null;
 
   return (
-    <div
-      key={`${message.role}-${index}`}
-      data-message-id={messageId}
-      data-role={message.role}
-      className='w-full py-10'
-    >
-      <div className='w-full min-w-0 flex flex-col items-start text-left'>
-        <div className={`${contentWidthClass} ${isUser ? 'ml-auto' : ''}`}>
-          {shouldRenderBody && (
+    <div data-message-id={messageId()} data-role={props.message.role} class='w-full py-10'>
+      <div class='w-full min-w-0 flex flex-col items-start text-left'>
+        <div class={`${contentWidthClass()} ${isUser() ? 'ml-auto' : ''}`}>
+          {shouldRenderBody() && (
             <>
-              {isEditing ? (
-                <MessageEditor
-                  messageId={messageId}
-                  document={editingState.editedDocument}
-                  status={status}
-                  currentModelId={runtime.getSession().currentModelId}
-                  onDocumentChange={onEditDocumentChange}
-                  onCancel={onCancelEditing}
-                  onSubmit={() => onSubmitEdit(depth)}
-                />
-              ) : isUser ? (
-                <div className='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'>
-                  <div className='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
-                    {message.blocks.map((block, blockIndex) => {
-                      if (block.type === 'content') {
+              {isEditing() ? (
+                renderEditor()
+              ) : isUser() ? (
+                <div class='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'>
+                  <div class='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
+                    <For each={props.message.blocks}>
+                      {(block, blockIndex) => {
+                        if (block.type === 'content') {
+                          return (
+                            <span>
+                              {props.message.blocks[blockIndex() - 1]?.type === 'content'
+                                ? '\n\n'
+                                : null}
+                              {block.content}
+                            </span>
+                          );
+                        }
+
+                        if (block.type === 'quotes') {
+                          return (
+                            <For each={block.quotes}>
+                              {(quote) => (
+                                <ContentChip kind='quote' text={quote.text} class='mx-1' />
+                              )}
+                            </For>
+                          );
+                        }
+
+                        if (block.type !== 'attachments') return null;
                         return (
-                          <span key={blockIndex}>
-                            {message.blocks[blockIndex - 1]?.type === 'content' ? '\n\n' : null}
-                            {block.content}
-                          </span>
+                          <For each={block.attachments}>
+                            {(attachment) => (
+                              <ContentChip
+                                kind='attachment'
+                                name={attachment.name}
+                                size={attachment.size}
+                                mimeType={attachment.mimeType}
+                                url={attachment.url}
+                                class='mx-1'
+                              />
+                            )}
+                          </For>
                         );
-                      }
-
-                      if (block.type === 'quotes') {
-                        return block.quotes.map((quote) => (
-                          <ContentChip
-                            key={quote.id}
-                            kind='quote'
-                            text={quote.text}
-                            className='mx-1'
-                          />
-                        ));
-                      }
-
-                      return block.attachments.map((attachment) => (
-                        <ContentChip
-                          key={attachment.id}
-                          kind='attachment'
-                          name={attachment.name}
-                          size={attachment.size}
-                          mimeType={attachment.mimeType}
-                          url={attachment.url}
-                          className='mx-1'
-                        />
-                      ));
-                    })}
+                      }}
+                    </For>
                   </div>
                 </div>
               ) : (
-                <div className='flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-secondary wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
-                  {assistantBlocks.map((block, blockIndex) => {
-                    const blockKey = `${index}-${blockIndex}`;
-                    if (block.type === 'research') {
-                      return (
-                        <div key={blockKey} className='not-italic'>
-                          <ResearchBlock
-                            items={block.items}
-                            blockIndex={blockIndex}
-                            messageIndex={index}
-                          />
-                        </div>
-                      );
-                    }
+                <div class='flex flex-col space-y-3 min-w-0 w-full text-base leading-relaxed text-secondary wrap-anywhere [&_pre]:break-normal [&_pre]:wrap-normal'>
+                  <For each={assistantBlocks()}>
+                    {(block, blockIndex) => {
+                      if (block.type === 'research') {
+                        return (
+                          <div class='not-italic'>
+                            <ResearchBlock items={block.items} />
+                          </div>
+                        );
+                      }
 
-                    if (block.type === 'ask_user_questions') {
-                      const isLastBlock = blockIndex === assistantBlocks.length - 1;
-                      const isUsable = isLastInPath && isLastBlock && status === 'idle';
+                      if (block.type === 'ask_user_questions') {
+                        const isLastBlock = blockIndex() === assistantBlocks().length - 1;
+                        const isUsable = props.isLastInPath && isLastBlock && status() === 'idle';
+                        return (
+                          <AskUserQuestionsCard
+                            block={block}
+                            readonly={!isUsable}
+                            onSubmit={(answers) =>
+                              submitToolAnswer(chatRuntime, block.callId, answers)
+                            }
+                          />
+                        );
+                      }
+
+                      if (block.type === 'error') {
+                        return (
+                          <div class='flex items-start gap-2 rounded-lg border border-destructive bg-destructive-muted px-3 py-2 text-sm text-destructive not-italic'>
+                            <AlertCircle class='mt-0.5 h-4 w-4 shrink-0' />
+                            <div class='flex-1 whitespace-pre-wrap'>{block.message}</div>
+                          </div>
+                        );
+                      }
+
+                      if (block.type !== 'content') return null;
                       return (
-                        <AskUserQuestionsCard
-                          key={blockKey}
-                          block={block}
-                          readonly={!isUsable}
-                          onSubmit={(answers) => submitToolAnswer(runtime, block.callId, answers)}
+                        <Markdown
+                          content={block.content}
+                          isAnimating={
+                            props.isStreaming && blockIndex() === assistantBlocks().length - 1
+                          }
                         />
                       );
-                    }
-
-                    if (block.type === 'error') {
-                      return (
-                        <div
-                          key={blockKey}
-                          className='flex items-start gap-2 rounded-lg border border-destructive bg-destructive-muted px-3 py-2 text-sm text-destructive not-italic'
-                        >
-                          <AlertCircle className='mt-0.5 h-4 w-4 shrink-0' />
-                          <div className='flex-1 whitespace-pre-wrap'>{block.message}</div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <Markdown
-                        key={blockKey}
-                        content={block.content}
-                        isAnimating={isStreaming && blockIndex === assistantBlocks.length - 1}
-                      />
-                    );
-                  })}
+                    }}
+                  </For>
                 </div>
               )}
             </>
           )}
 
-          {timeLabel && <p className='mt-2 text-2xs text-muted-foreground'>{timeLabel}</p>}
-          {shouldShowToolbar && (
-            <div className='mt-4 flex items-center transition-opacity duration-150 opacity-100 pointer-events-auto'>
-              {isUser && (
+          {timeLabel() && <p class='mt-2 text-2xs text-muted-foreground'>{timeLabel()}</p>}
+          {shouldShowToolbar() && (
+            <div class='mt-4 flex items-center transition-opacity duration-150 opacity-100 pointer-events-auto'>
+              {isUser() && (
                 <>
                   <ActionButton
                     onClick={handleStartEditing}
-                    disabled={isBusy}
+                    disabled={isBusy()}
                     title='编辑消息'
-                    icon={<Pencil className='h-3.5 w-3.5' strokeWidth={2.5} />}
+                    icon={<Pencil class='h-3.5 w-3.5' stroke-width={2.5} />}
                   />
                   <ActionButton
                     onClick={handleRetry}
-                    disabled={isBusy}
+                    disabled={isBusy()}
                     title='重试生成'
-                    icon={<RotateCcw className='h-3.5 w-3.5' strokeWidth={2.5} />}
+                    icon={<RotateCcw class='h-3.5 w-3.5' stroke-width={2.5} />}
                   />
                 </>
               )}
-              <CopyButton blocks={message.blocks} />
-              {!isUser && (
+              <CopyButton blocks={props.message.blocks} />
+              {!isUser() && (
                 <ActionButton
                   onClick={handleRetry}
-                  disabled={isBusy}
+                  disabled={isBusy()}
                   title='重试生成'
-                  icon={<RotateCcw className='h-3.5 w-3.5' />}
+                  icon={<RotateCcw class='h-3.5 w-3.5' />}
                 />
               )}
             </div>
           )}
-          {branchInfo && !isEditing && (
-            <div className='mt-2 flex items-center transition-opacity duration-150 pointer-events-auto'>
+          {props.branchInfo && !isEditing() && (
+            <div class='mt-2 flex items-center transition-opacity duration-150 pointer-events-auto'>
               <BranchNavigator
-                branchInfo={branchInfo}
+                branchInfo={props.branchInfo}
                 onNavigate={handleNavigate}
-                disabled={isBusy}
+                disabled={isBusy()}
               />
             </div>
           )}

@@ -5,10 +5,10 @@ type Props = {
   isAnimating?: boolean;
 };
 
-function Markdown({ content, isAnimating = false }: Props) {
+function Markdown(props: Props) {
   return (
     <div>
-      <MarkdownImpl content={content} isAnimating={isAnimating} />
+      <MarkdownImpl content={props.content} isAnimating={props.isAnimating ?? false} />
     </div>
   );
 }

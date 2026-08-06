@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/react-router';
+import { createFileRoute } from '@tanstack/solid-router';
 import { getSessionFromRequest } from '@/features/auth/session/request.server';
 import { getServerBindings } from '@/shared/worker/env';
 

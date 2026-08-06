@@ -1,4 +1,4 @@
-import { getRequestHeaders } from '@tanstack/react-start/server';
+import { getRequestHeaders } from '@tanstack/solid-start/server';
 import type { AuthInstance } from '@/features/auth/identity';
 import { getAuth } from '../identity/auth';
 

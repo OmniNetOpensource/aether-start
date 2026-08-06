@@ -3,7 +3,8 @@
  * golden-box flash on the component's root DOM element.
  */
 
-import { useLayoutEffect, useRef } from 'react';
+import { onSettled } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 
 const FLASH_DURATION_MS = 700;
@@ -35,60 +36,47 @@ export function useRenderMonitor(componentName: string): void {
 
 interface RenderMonitorBoundaryProps {
   name: string;
-  children: React.ReactNode;
+  children: JSX.Element;
 }
 
-export function RenderMonitorBoundary({ name, children }: RenderMonitorBoundaryProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const instanceIdRef = useRef<number | null>(null);
-  const renderCountRef = useRef(0);
-  const mountTimeRef = useRef<number>(0);
+export function RenderMonitorBoundary(props: RenderMonitorBoundaryProps) {
+  let element: HTMLDivElement | undefined;
+  let instanceId: number | undefined;
 
-  useLayoutEffect(() => {
+  onSettled(() => {
     if (!import.meta.env.DEV) return;
     const cfg = typeof window !== 'undefined' ? window.__RENDER_MONITOR__ : undefined;
     if (cfg && !cfg.enabled) return;
 
-    const el = ref.current;
-    if (!el) return;
+    if (!element) return;
 
-    if (instanceIdRef.current === null) {
-      instanceIdRef.current = getInstanceId();
-    }
-    renderCountRef.current += 1;
-    const phase = renderCountRef.current === 1 ? 'mount' : 'update';
-
-    const now = performance.now();
-    const elapsed = mountTimeRef.current > 0 ? now - mountTimeRef.current : 0;
-    if (phase === 'mount') {
-      mountTimeRef.current = now;
-    }
+    instanceId = getInstanceId();
 
     const logEnabled = cfg?.logEnabled !== false;
     if (logEnabled) {
-      console.log(
-        `[render-monitor] ${phase} ${name}#${instanceIdRef.current} (render #${renderCountRef.current}${elapsed > 0 ? `, +${elapsed.toFixed(1)}ms` : ''})`,
-      );
+      console.log(`[render-monitor] mount ${props.name}#${instanceId} (render #1)`);
     }
 
     const duration = cfg?.flashDurationMs ?? FLASH_DURATION_MS;
-    el.classList.add(FLASH_CLASS);
+    element.classList.add(FLASH_CLASS);
     const t = setTimeout(() => {
-      el.classList.remove(FLASH_CLASS);
+      element?.classList.remove(FLASH_CLASS);
     }, duration);
     return () => clearTimeout(t);
-  }, [name]);
+  });
 
   if (!import.meta.env.DEV) {
-    return <>{children}</>;
+    return <>{props.children}</>;
   }
 
   return (
     <div
-      ref={ref}
-      style={{ display: 'inline-block', position: 'relative', minWidth: 0, minHeight: 0 }}
+      ref={(current) => {
+        element = current;
+      }}
+      style={{ display: 'inline-block', position: 'relative', 'min-width': 0, 'min-height': 0 }}
     >
-      {children}
+      {props.children}
     </div>
   );
 }

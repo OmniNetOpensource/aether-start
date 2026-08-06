@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from '@tanstack/react-router';
+import { createFileRoute, redirect } from '@tanstack/solid-router';
 import { getSessionStateFn } from '@/features/auth/session';
 
 export const Route = createFileRoute('/')({
@@ -6,11 +6,13 @@ export const Route = createFileRoute('/')({
     const sessionState = await getSessionStateFn();
     if (sessionState.isAuthenticated) {
       throw redirect({
-        to: '/app/{-$conversationId}',
-        params: { conversationId: undefined },
+        to: '/app',
       });
     }
 
-    throw redirect({ to: '/auth/login' });
+    throw redirect({
+      to: '/auth/login',
+      search: { redirect: undefined, email: undefined, reset: undefined },
+    });
   },
 });

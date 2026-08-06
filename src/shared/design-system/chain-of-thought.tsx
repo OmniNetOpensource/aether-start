@@ -1,230 +1,182 @@
-import { createContext } from 'react';
-import * as CollapsiblePrimitive from '@radix-ui/react-collapsible';
-import { ChevronRight } from 'lucide-react';
+import { createContext, createSignal, omit, useContext, type Accessor } from 'solid-js';
+import type { JSX } from '@solidjs/web';
+import { ChevronRight } from '@/shared/design-system/icons';
 import { cn } from '@/shared/core/utils';
 import { Badge } from './badge';
 
-// Context for sharing state between components
-type ChainOfThoughtContextValue = {
+const ChainOfThoughtContext = createContext<{ open: Accessor<boolean>; toggle: () => void }>();
+
+type ChainOfThoughtProps = JSX.HTMLAttributes<HTMLDivElement> & {
   open?: boolean;
+  defaultOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-const ChainOfThoughtContext = createContext<ChainOfThoughtContextValue>({});
-
-// Root container
-type ChainOfThoughtProps = React.ComponentProps<typeof CollapsiblePrimitive.Root>;
-
-function ChainOfThought({ defaultOpen = true, ...props }: ChainOfThoughtProps) {
+function ChainOfThought(props: ChainOfThoughtProps) {
+  const [internalOpen, setInternalOpen] = createSignal(props.defaultOpen ?? true);
+  const open = () => props.open ?? internalOpen();
+  const toggle = () => {
+    const nextOpen = !open();
+    if (props.open === undefined) setInternalOpen(nextOpen);
+    props.onOpenChange?.(nextOpen);
+  };
   return (
-    <ChainOfThoughtContext value={{ open: props.open ?? defaultOpen }}>
-      <CollapsiblePrimitive.Root
+    <ChainOfThoughtContext value={{ open, toggle }}>
+      <div
+        {...omit(props, 'class', 'open', 'defaultOpen', 'onOpenChange', 'children')}
         data-slot='chain-of-thought'
-        defaultOpen={defaultOpen}
-        className='my-4 bg-transparent px-1 pt-0 pb-2'
-        {...props}
-      />
+        class={cn('my-4 bg-transparent px-1 pt-0 pb-2', props.class)}
+      >
+        {props.children}
+      </div>
     </ChainOfThoughtContext>
   );
 }
 
-// Header with collapsible trigger
-type ChainOfThoughtHeaderProps = React.ComponentProps<
-  typeof CollapsiblePrimitive.CollapsibleTrigger
-> & {
-  children?: React.ReactNode;
-};
-
-function ChainOfThoughtHeader({
-  children = '思考过程',
-  className,
-  ...props
-}: ChainOfThoughtHeaderProps) {
+function ChainOfThoughtHeader(props: JSX.ButtonHTMLAttributes<HTMLButtonElement>) {
+  const context = useContext(ChainOfThoughtContext);
+  if (!context) throw new Error('ChainOfThoughtHeader must be used inside ChainOfThought');
   return (
-    <CollapsiblePrimitive.CollapsibleTrigger
+    <button
+      {...omit(props, 'class', 'onClick')}
+      type='button'
       data-slot='chain-of-thought-header'
+      data-state={context.open() ? 'open' : 'closed'}
       title='点击展开或收起'
-      className={cn(
-        'group sticky top-0 z-0 flex w-full cursor-pointer items-center gap-1.5 py-0 text-xs font-medium text-muted-foreground',
-        'bg-background -mx-1 px-1',
-        'hover:text-foreground',
-        'transition-colors duration-150',
-        className,
+      class={cn(
+        'group sticky top-0 z-0 flex w-full cursor-pointer items-center gap-1.5 py-0 text-xs font-medium text-muted-foreground bg-background -mx-1 px-1 hover:text-foreground transition-colors duration-150',
+        props.class,
       )}
-      {...props}
+      onClick={context.toggle}
     >
       <ChevronRight
-        aria-hidden
-        className='h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90 group-hover:text-foreground'
+        aria-hidden='true'
+        class='h-3.5 w-3.5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-90 group-hover:text-foreground'
       />
-      <span>{children}</span>
-    </CollapsiblePrimitive.CollapsibleTrigger>
+      <span>{props.children ?? '思考过程'}</span>
+    </button>
   );
 }
 
-// Content wrapper
-type ChainOfThoughtContentProps = React.ComponentProps<
-  typeof CollapsiblePrimitive.CollapsibleContent
->;
-
-function ChainOfThoughtContent({ className, ...props }: ChainOfThoughtContentProps) {
+function ChainOfThoughtContent(props: JSX.HTMLAttributes<HTMLDivElement>) {
+  const context = useContext(ChainOfThoughtContext);
+  if (!context) throw new Error('ChainOfThoughtContent must be used inside ChainOfThought');
   return (
-    <CollapsiblePrimitive.CollapsibleContent
-      data-slot='chain-of-thought-content'
-      className={cn(
-        'overflow-hidden',
-        'data-[state=open]:animate-in data-[state=closed]:animate-out',
-        'data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0',
-        'data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2',
-        className,
+    <>
+      {context.open() && (
+        <div
+          {...omit(props, 'class', 'children')}
+          data-slot='chain-of-thought-content'
+          data-state='open'
+          class={cn('overflow-hidden animate-in fade-in-0 slide-in-from-top-2', props.class)}
+        >
+          {props.children}
+        </div>
       )}
-      {...props}
-    />
+    </>
   );
 }
 
-// Individual step
 type StepStatus = 'complete' | 'active' | 'pending';
-
-type ChainOfThoughtStepProps = React.HTMLAttributes<HTMLDivElement> & {
-  icon?: React.ReactNode;
+type ChainOfThoughtStepProps = JSX.HTMLAttributes<HTMLDivElement> & {
+  icon?: JSX.Element;
   label?: string;
   description?: string;
   status?: StepStatus;
   hideConnector?: boolean;
 };
 
-function ChainOfThoughtStep({
-  icon,
-  description,
-  status = 'complete',
-  hideConnector = false,
-  children,
-  className,
-  ...props
-}: ChainOfThoughtStepProps) {
-  const dotStatusStyles = {
-    complete: 'opacity-100',
-    active: 'opacity-100 ring-1 ring-accent',
-    pending: 'text-muted-foreground',
-  };
-
-  const wrapperStatusStyles = {
-    complete: '',
-    active: '',
-    pending: 'text-muted-foreground',
-  };
-
-  const nodeContent = icon ?? (
-    <div
-      className={cn(
-        'h-1.5 w-1.5 rounded-full bg-current transition-opacity',
-        dotStatusStyles[status],
-      )}
-    />
-  );
-
+function ChainOfThoughtStep(props: ChainOfThoughtStepProps) {
+  const status = () => props.status ?? 'complete';
   return (
     <div
+      {...omit(props, 'class', 'icon', 'label', 'description', 'status', 'hideConnector')}
       data-slot='chain-of-thought-step'
-      className={cn('flex gap-4 py-2 first:pt-4 animate-in fade-in duration-200', className)}
-      {...props}
+      class={cn('flex gap-4 py-2 first:pt-4 animate-in fade-in duration-200', props.class)}
     >
-      {/* Node column */}
-      <div className='flex flex-col items-center pt-0.5'>
+      <div class='flex flex-col items-center pt-0.5'>
         <div
-          className={cn(
+          class={cn(
             'flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-secondary',
-            icon && wrapperStatusStyles[status],
+            props.icon && status() === 'pending' && 'text-muted-foreground',
           )}
         >
-          {nodeContent}
+          {props.icon ?? (
+            <div
+              class={cn(
+                'h-1.5 w-1.5 rounded-full bg-current transition-opacity',
+                status() === 'active' && 'ring-1 ring-accent',
+                status() === 'pending' && 'text-muted-foreground',
+              )}
+            />
+          )}
         </div>
-        {/* Connector line */}
-        {!hideConnector && <div className='w-px flex-1 min-h-4 mt-0.5 bg-border' />}
+        {!props.hideConnector && <div class='w-px flex-1 min-h-4 mt-0.5 bg-border' />}
       </div>
-
-      {/* Content column */}
-      <div className='flex-1 min-w-0 pb-4'>
-        {description && <div className='text-xs text-secondary leading-relaxed'>{description}</div>}
-        {children && <div className={description ? 'mt-2' : ''}>{children}</div>}
+      <div class='flex-1 min-w-0 pb-4'>
+        {props.description && (
+          <div class='text-xs text-secondary leading-relaxed'>{props.description}</div>
+        )}
+        {props.children && <div class={props.description ? 'mt-2' : ''}>{props.children}</div>}
       </div>
     </div>
   );
 }
 
-// Search results container
-type ChainOfThoughtSearchResultsProps = React.HTMLAttributes<HTMLDivElement>;
-
-function ChainOfThoughtSearchResults({ className, ...props }: ChainOfThoughtSearchResultsProps) {
+function ChainOfThoughtSearchResults(props: JSX.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      {...omit(props, 'class', 'children')}
       data-slot='chain-of-thought-search-results'
-      className={cn('flex flex-wrap gap-2', className)}
-      {...props}
-    />
+      class={cn('flex flex-wrap gap-2', props.class)}
+    >
+      {props.children}
+    </div>
   );
 }
 
-// Individual search result badge
-type ChainOfThoughtSearchResultProps = {
+function ChainOfThoughtSearchResult(props: {
   href?: string;
-  icon?: React.ReactNode;
+  icon?: JSX.Element;
   url?: string;
-  children?: React.ReactNode;
-  className?: string;
-};
-
-function ChainOfThoughtSearchResult({
-  href,
-  icon,
-  url,
-  className,
-  children,
-}: ChainOfThoughtSearchResultProps) {
+  children?: JSX.Element;
+  class?: string;
+}) {
   const content = (
     <Badge
       variant='outline'
-      className={cn(
+      class={cn(
         'gap-1.5 px-2 py-0.5 text-[11px] max-w-full font-normal border-0 hover:bg-hover cursor-pointer transition-colors',
-        className,
+        props.class,
       )}
     >
-      {icon && <span className='shrink-0'>{icon}</span>}
-      <span className='truncate min-w-0'>{children}</span>
-      {url && (
-        <span className='shrink-0 text-muted-foreground'>
-          {URL.canParse(url) ? new URL(url).host : url}
+      {props.icon && <span class='shrink-0'>{props.icon}</span>}
+      <span class='truncate min-w-0'>{props.children}</span>
+      {props.url && (
+        <span class='shrink-0 text-muted-foreground'>
+          {URL.canParse(props.url) ? new URL(props.url).host : props.url}
         </span>
       )}
     </Badge>
   );
-
-  if (href) {
-    return (
-      <a href={href} target='_blank' rel='noopener noreferrer' className='no-underline max-w-full'>
-        {content}
-      </a>
-    );
-  }
-
-  return content;
+  return props.href ? (
+    <a href={props.href} target='_blank' rel='noopener noreferrer' class='no-underline max-w-full'>
+      {content}
+    </a>
+  ) : (
+    content
+  );
 }
 
-// Image display
-type ChainOfThoughtImageProps = React.ImgHTMLAttributes<HTMLImageElement> & {
-  caption?: string;
-};
-
-function ChainOfThoughtImage({ src, alt, caption, className, ...props }: ChainOfThoughtImageProps) {
+type ChainOfThoughtImageProps = JSX.ImgHTMLAttributes<HTMLImageElement> & { caption?: string };
+function ChainOfThoughtImage(props: ChainOfThoughtImageProps) {
   return (
-    <div data-slot='chain-of-thought-image' className='space-y-2'>
+    <div data-slot='chain-of-thought-image' class='space-y-2'>
       <img
-        src={src}
-        alt={alt}
-        className={cn('max-w-full rounded-lg border border-border', className)}
-        {...props}
+        {...omit(props, 'class', 'caption')}
+        class={cn('max-w-full rounded-lg border border-border', props.class)}
       />
-      {caption && <div className='text-xs text-secondary'>{caption}</div>}
+      {props.caption && <div class='text-xs text-secondary'>{props.caption}</div>}
     </div>
   );
 }

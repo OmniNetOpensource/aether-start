@@ -108,7 +108,7 @@ const scheduleAutoReconnect = (runtime: ChatRuntimeState, conversationId: string
   reconnectTimer = setTimeout(async () => {
     reconnectTimer = null;
 
-    const currentId = runtime.getSession().conversationId;
+    const currentId = runtime.getConversationId();
     if (currentId !== conversationId || reconnectConversationId !== conversationId) {
       clearReconnectState();
       return;
@@ -169,7 +169,7 @@ const getResponseErrorMessage = async (response: Response) => {
  */
 const finalizeStream = (runtime: ChatRuntimeState) => {
   if (runtime.getStatus() !== 'idle') {
-    const conversationId = runtime.getSession().conversationId;
+    const conversationId = runtime.getConversationId();
     if (conversationId) {
       scheduleAutoReconnect(runtime, conversationId);
       return;
@@ -184,21 +184,19 @@ const applyChatAcceptedPayload = (runtime: ChatRuntimeState, value: unknown) => 
   if (!acceptedPayload) {
     throw new Error('Invalid chat response');
   }
-  const sessionState = runtime.getSession();
-  if (
-    sessionState.conversationId &&
-    sessionState.conversationId !== acceptedPayload.conversationId
-  ) {
+  const conversationId = runtime.getConversationId();
+  const tree = runtime.getMessageTree();
+  if (conversationId && conversationId !== acceptedPayload.conversationId) {
     throw new Error('Conversation ID mismatch');
   }
 
   if (acceptedPayload.type === 'append') {
     const nextTree = appendConfirmedUserMessage(
       {
-        messages: sessionState.messages,
-        currentPath: sessionState.currentPath,
-        latestRootId: sessionState.latestRootId,
-        nextId: sessionState.nextId,
+        messages: tree.messages,
+        currentPath: tree.currentPath,
+        latestRootId: tree.latestRootId,
+        nextId: tree.nextId,
       },
       {
         type: 'append',
@@ -211,10 +209,10 @@ const applyChatAcceptedPayload = (runtime: ChatRuntimeState, value: unknown) => 
     if (!nextTree) {
       throw new Error('Failed to append confirmed user message');
     }
-    runtime.session.setTreeState(nextTree);
+    runtime.messageTree.setState(nextTree);
   }
 
-  runtime.session.setConversationId(acceptedPayload.conversationId);
+  runtime.setConversationId(acceptedPayload.conversationId);
   activeRequestStarted = true;
   activeRequestAcceptedCallback?.(acceptedPayload);
   activeRequestAcceptedCallback = null;
@@ -279,7 +277,7 @@ const handleSSEMessage = (runtime: ChatRuntimeState, event: string, raw: string)
       clearReconnectState();
       flushAll();
       if (typeof payload.assistantCompletedAt === 'string') {
-        runtime.session.stampAssistantCompletedAt(payload.assistantCompletedAt);
+        runtime.messageTree.stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
       runtime.setStatus('idle');
       resolveStopWaiters();
@@ -306,7 +304,7 @@ const handleSSEMessage = (runtime: ChatRuntimeState, event: string, raw: string)
         }
       }
       if (typeof payload.assistantCompletedAt === 'string') {
-        runtime.session.stampAssistantCompletedAt(payload.assistantCompletedAt);
+        runtime.messageTree.stampAssistantCompletedAt(payload.assistantCompletedAt);
       }
       return;
     }
@@ -422,17 +420,16 @@ export const startChatRequest = async (
   operation: ChatOperation,
   onAccepted?: (response: ChatCommandResponse) => void,
 ) => {
-  const sessionState = runtime.getSession();
-
   resetLastEventId();
   activeRequestStarted = false;
-  if (!sessionState.currentModelId) {
+  const modelId = runtime.getCurrentModelId();
+  if (!modelId) {
     runtime.toast.warning(SELECT_MODEL_WARNING);
     runtime.setStatus('idle');
     return;
   }
 
-  const conversationId = sessionState.conversationId;
+  const conversationId = runtime.getConversationId();
   const idempotencyKey = generateId('msg'); /* 幂等键，防止重复提交 */
 
   if (
@@ -447,9 +444,9 @@ export const startChatRequest = async (
 
   const body = {
     idempotencyKey,
-    model: sessionState.currentModelId,
-    promptId: sessionState.currentPromptId || undefined,
-    fetchProvider: sessionState.currentFetchProvider,
+    model: modelId,
+    promptId: runtime.getCurrentPromptId() || undefined,
+    fetchProvider: runtime.getCurrentFetchProvider(),
     conversationId,
     operation,
   };
@@ -513,7 +510,7 @@ export const startChatRequest = async (
 
     const currentStatus = runtime.getStatus();
     if (error instanceof TypeError && currentStatus !== 'idle' && acceptedConversationId) {
-      runtime.session.setConversationId(acceptedConversationId);
+      runtime.setConversationId(acceptedConversationId);
       scheduleAutoReconnect(runtime, acceptedConversationId);
       return;
     }
@@ -575,7 +572,7 @@ export const cancelStreamSubscription = (runtime: ChatRuntimeState, _reason: str
  * 保持 SSE 连接，等服务端 abort 后通过 chat_finished 收口。
  */
 export const cancelAnswering = async (runtime: ChatRuntimeState, _reason: string) => {
-  const conversationId = runtime.getSession().conversationId;
+  const conversationId = runtime.getConversationId();
   const status = runtime.getStatus();
 
   if (status === 'idle') {
@@ -620,13 +617,13 @@ export const submitToolAnswer = async (
   callId: string,
   answers: AskUserQuestionsAnswer[],
 ) => {
-  const conversationId = runtime.getSession().conversationId;
+  const conversationId = runtime.getConversationId();
 
   if (!conversationId) {
     throw new Error('Conversation not found');
   }
 
-  runtime.session.setAskUserQuestionsBlockStatus(callId, 'submitting');
+  runtime.messageTree.setAskUserQuestionsBlockStatus(callId, 'submitting');
 
   try {
     const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/tool-answer`, {
@@ -645,7 +642,7 @@ export const submitToolAnswer = async (
 
     throw new Error(message);
   } catch (error) {
-    runtime.session.setAskUserQuestionsBlockStatus(callId, 'pending');
+    runtime.messageTree.setAskUserQuestionsBlockStatus(callId, 'pending');
     runtime.toast.error(error instanceof Error ? error.message : '提交失败');
     throw error;
   }

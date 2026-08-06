@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { createEffect, createSignal } from 'solid-js';
 import { useMountEffect } from '@/shared/app-shell/useMountEffect';
 import { defaultTheme, findTheme, type Theme } from '@/themes/registry';
 
@@ -22,11 +22,9 @@ const getInitialTheme = (): Theme => {
 };
 
 export function useTheme() {
-  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
+  const [theme, setThemeState] = createSignal<Theme>(getInitialTheme());
 
-  useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
+  createEffect(theme, applyTheme);
 
   useMountEffect(() => {
     const onStorage = (event: StorageEvent) => {

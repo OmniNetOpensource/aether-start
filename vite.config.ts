@@ -1,23 +1,15 @@
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { devtools } from '@tanstack/devtools-vite';
-import { tanstackStart } from '@tanstack/react-start/plugin/vite';
-import viteReact from '@vitejs/plugin-react';
+import { tanstackStart } from '@tanstack/solid-start/plugin/vite';
+import viteSolid from 'vite-plugin-solid';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import viteTsConfigPaths from 'vite-tsconfig-paths';
 import { resolve } from 'path';
 
 const createManualChunk = (id: string) => {
-  if (id.includes('node_modules/react-dom')) {
-    return 'vendor-react';
-  }
-
-  if (id.includes('node_modules/react')) {
-    return 'vendor-react';
-  }
-
-  if (id.includes('node_modules/streamdown') || id.includes('node_modules/@streamdown/')) {
-    return 'streamdown-benchmark';
+  if (id.includes('node_modules/solid-js') || id.includes('node_modules/@solidjs/web')) {
+    return 'vendor-solid';
   }
 
   if (
@@ -32,13 +24,21 @@ const createManualChunk = (id: string) => {
   return undefined;
 };
 
-const reactCompilerPlugin = [
-  ['babel-plugin-react-compiler', { target: '19', compilationMode: 'infer' }],
-];
+const skipUnusedReactStartOptimization = (): Plugin => ({
+  name: 'skip-unused-react-start-optimization',
+  enforce: 'post',
+  configEnvironment(name) {
+    if (name !== 'ssr') return;
+    return {
+      optimizeDeps: {
+        exclude: ['@tanstack/react-start', '@tanstack/start-server-core'],
+      },
+    };
+  },
+});
 
 export default defineConfig(({ command }) => {
   const enableBuildSourcemap = process.env.VITE_BUILD_SOURCEMAP === 'true';
-  const enableReactCompiler = process.env.VITE_ENABLE_REACT_COMPILER === 'true';
 
   return {
     envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
@@ -56,7 +56,6 @@ export default defineConfig(({ command }) => {
       },
     },
     resolve: {
-      dedupe: ['react', 'react-dom'],
       alias: [
         {
           find: /^shiki$/,
@@ -77,16 +76,12 @@ export default defineConfig(({ command }) => {
         router: {
           routesDirectory: 'routes',
         },
+        spa: {
+          enabled: true,
+        },
       }),
-      viteReact(
-        enableReactCompiler
-          ? {
-              babel: {
-                plugins: reactCompilerPlugin,
-              },
-            }
-          : undefined,
-      ),
+      viteSolid({ ssr: true }),
+      skipUnusedReactStartOptimization(),
     ],
   };
 });

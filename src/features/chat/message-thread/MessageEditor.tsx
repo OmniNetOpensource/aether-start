@@ -1,9 +1,9 @@
-import { useRef } from 'react';
-import { ArrowUp, ImagePlus, X } from 'lucide-react';
+import { ArrowUp, ImagePlus, X } from '@/shared/design-system/icons';
 import { Button } from '@/shared/design-system/button';
 import { useToast } from '@/shared/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
-import type { ChatStatus } from '@/features/chat/agent-runtime/chat-runtime-state';
+import { status } from '@/features/chat/agent-runtime/chat-runtime';
+import { currentModelId } from '@/features/conversations/session/chat-selection';
 import {
   registerActiveInput,
   setLastFocusedInput,
@@ -21,107 +21,102 @@ import {
 type MessageEditorProps = {
   messageId: number;
   document: ComposerDocument;
-  status: ChatStatus;
-  currentModelId: string;
   onDocumentChange: (document: ComposerDocument) => void;
   onCancel: () => void;
   onSubmit: () => Promise<void>;
 };
 
-export function MessageEditor({
-  messageId,
-  document,
-  status,
-  currentModelId,
-  onDocumentChange,
-  onCancel,
-  onSubmit,
-}: MessageEditorProps) {
+export function MessageEditor(props: MessageEditorProps) {
   const toast = useToast();
-  const editorRef = useRef<RichComposerEditorHandle | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  let editor: RichComposerEditorHandle | null = null;
+  let fileInput: HTMLInputElement | undefined;
 
-  const uploading = isComposerDocumentUploading(document);
-  const sendDisabled =
-    status !== 'idle' || uploading || isComposerDocumentEmpty(document) || !currentModelId;
+  const uploading = () => isComposerDocumentUploading(props.document);
+  const sendDisabled = () =>
+    status() !== 'idle' ||
+    uploading() ||
+    isComposerDocumentEmpty(props.document) ||
+    !currentModelId();
 
   const handleSubmit = () => {
-    if (sendDisabled) {
+    if (sendDisabled()) {
       return;
     }
 
-    void onSubmit().catch((error) => {
+    void props.onSubmit().catch((error) => {
       console.error('Failed to submit edit:', error);
       toast.error(error instanceof Error ? error.message : '编辑失败');
     });
   };
 
   return (
-    <div className='relative flex w-full flex-col gap-2 rounded-xl border bg-muted p-3 shadow-sm'>
+    <div class='relative flex w-full flex-col gap-2 rounded-xl border bg-muted p-3 shadow-sm'>
       <Button
         type='button'
         variant='ghost'
         size='icon'
         aria-label='Cancel editing'
-        onClick={onCancel}
-        className='absolute right-2 top-2 z-10 h-7 w-7 text-secondary transition-colors hover:text-foreground'
+        onClick={props.onCancel}
+        class='absolute right-2 top-2 z-10 h-7 w-7 text-secondary transition-colors hover:text-foreground'
       >
-        <X className='h-4 w-4' />
+        <X class='h-4 w-4' />
       </Button>
 
       <RichComposerEditor
-        ref={(editor) => {
-          editorRef.current = editor;
-          registerActiveInput({ type: 'edit', messageId }, editor);
+        ref={(currentEditor) => {
+          editor = currentEditor;
+          registerActiveInput({ type: 'edit', messageId: props.messageId }, currentEditor);
         }}
-        id={`message-editor-${messageId}`}
-        document={document}
-        onChange={onDocumentChange}
-        onFocus={() => setLastFocusedInput({ type: 'edit', messageId })}
+        id={`message-editor-${props.messageId}`}
+        document={props.document}
+        onChange={props.onDocumentChange}
+        onFocus={() => setLastFocusedInput({ type: 'edit', messageId: props.messageId })}
         onSubmit={handleSubmit}
         autoFocus
         placeholder='Edit your message...'
-        className='min-h-10 max-h-[200px] pr-8'
+        class='min-h-10 max-h-[200px] pr-8'
       />
 
-      <div className='flex items-center justify-between gap-2 pt-1'>
+      <div class='flex items-center justify-between gap-2 pt-1'>
         <input
-          ref={fileInputRef}
+          ref={(element) => {
+            fileInput = element;
+          }}
           type='file'
           multiple
           accept='image/*'
-          className='hidden'
+          class='hidden'
           onChange={(event) => {
-            const files = Array.from(event.target.files ?? []);
-            event.target.value = '';
-            void editorRef.current?.insertFiles(files);
+            const files = Array.from(event.currentTarget.files ?? []);
+            event.currentTarget.value = '';
+            void editor?.insertFiles(files);
           }}
         />
         <Button
           type='button'
           variant='ghost'
           size='sm'
-          className='h-8 gap-1.5 px-2 text-xs'
-          onClick={() => fileInputRef.current?.click()}
-          disabled={uploading}
+          class='h-8 gap-1.5 px-2 text-xs'
+          onClick={() => fileInput?.click()}
+          disabled={uploading()}
         >
-          <ImagePlus className='h-3.5 w-3.5' />
+          <ImagePlus class='h-3.5 w-3.5' />
           Add image
         </Button>
         <Button
           type='button'
           onClick={handleSubmit}
-          disabled={sendDisabled}
+          disabled={sendDisabled()}
           size='icon'
           aria-label='Submit edit'
-          className={cn(
+          class={cn(
             'h-8 w-8 rounded-full transition-all duration-200',
-            sendDisabled
+            sendDisabled()
               ? 'cursor-not-allowed bg-muted text-muted-foreground'
               : 'hover:scale-105 active:scale-95',
           )}
         >
-          <ArrowUp className='h-4 w-4' />
+          <ArrowUp class='h-4 w-4' />
         </Button>
       </div>
     </div>

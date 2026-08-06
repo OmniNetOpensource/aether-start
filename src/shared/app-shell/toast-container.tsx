@@ -1,15 +1,9 @@
-import { useState } from 'react';
+import { For, createSignal } from 'solid-js';
 import { Toast } from '@/shared/app-shell/toast';
 import type { ToastMessage } from '@/shared/app-shell/toast-context';
 
-export function ToastContainer({
-  toasts,
-  onRemove,
-}: {
-  toasts: ToastMessage[];
-  onRemove: (id: string) => void;
-}) {
-  const [exitingIds, setExitingIds] = useState<Set<string>>(new Set());
+export function ToastContainer(props: { toasts: ToastMessage[]; onRemove: (id: string) => void }) {
+  const [exitingIds, setExitingIds] = createSignal(new Set<string>());
 
   const handleClose = (id: string) => {
     setExitingIds((prev) => new Set(prev).add(id));
@@ -21,24 +15,26 @@ export function ToastContainer({
       next.delete(id);
       return next;
     });
-    onRemove(id);
+    props.onRemove(id);
   };
 
   return (
     <div
-      className='fixed top-4 right-4 flex flex-col gap-2 pointer-events-none'
-      style={{ zIndex: 'var(--z-toast)' }}
+      class='fixed top-4 right-4 flex flex-col gap-2 pointer-events-none'
+      style={{ 'z-index': 'var(--z-toast)' }}
     >
-      {toasts.map((toast) => (
-        <div key={toast.id} className='pointer-events-auto'>
-          <Toast
-            toast={toast}
-            isExiting={exitingIds.has(toast.id)}
-            onClose={() => handleClose(toast.id)}
-            onExited={() => handleExited(toast.id)}
-          />
-        </div>
-      ))}
+      <For each={props.toasts}>
+        {(toast) => (
+          <div class='pointer-events-auto'>
+            <Toast
+              toast={toast}
+              isExiting={exitingIds().has(toast.id)}
+              onClose={() => handleClose(toast.id)}
+              onExited={() => handleExited(toast.id)}
+            />
+          </div>
+        )}
+      </For>
     </div>
   );
 }

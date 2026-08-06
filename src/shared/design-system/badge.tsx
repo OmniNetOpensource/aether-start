@@ -1,29 +1,27 @@
-import { Slot } from '@radix-ui/react-slot';
+import { omit } from 'solid-js';
+import type { JSX } from '@solidjs/web';
 import { cn } from '@/shared/core/utils';
 
-type BadgeProps = React.HTMLAttributes<HTMLDivElement> & {
+type BadgeProps = JSX.HTMLAttributes<HTMLDivElement> & {
   variant?: 'default' | 'secondary' | 'outline' | 'destructive';
-  asChild?: boolean;
 };
 
-function Badge({ variant = 'default', className, asChild = false, ...props }: BadgeProps) {
-  const Comp = asChild ? Slot : 'div';
-
+function Badge(props: BadgeProps) {
   return (
-    <Comp
+    <div
+      {...omit(props, 'class', 'variant')}
       data-slot='badge'
-      className={cn(
+      class={cn(
         'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-colors',
         {
-          'bg-surface text-foreground hover:bg-hover': variant === 'default',
-          'bg-muted text-secondary hover:bg-hover': variant === 'secondary',
+          'bg-surface text-foreground hover:bg-hover': (props.variant ?? 'default') === 'default',
+          'bg-muted text-secondary hover:bg-hover': props.variant === 'secondary',
           'border border-border bg-transparent text-secondary hover:bg-hover':
-            variant === 'outline',
-          'bg-destructive-muted text-destructive': variant === 'destructive',
+            props.variant === 'outline',
+          'bg-destructive-muted text-destructive': props.variant === 'destructive',
         },
-        className,
+        props.class,
       )}
-      {...props}
     />
   );
 }

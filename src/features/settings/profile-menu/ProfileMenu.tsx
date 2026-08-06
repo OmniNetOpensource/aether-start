@@ -1,12 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Check, Palette, Settings } from 'lucide-react';
+import { createSignal, For, onSettled } from 'solid-js';
+import { Check, Palette, Settings } from '@/shared/design-system/icons';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/shared/design-system/dropdown-menu';
-import { authClient } from '@/features/auth/auth-client';
+import { useAuthSession } from '@/features/auth/auth-client';
 import { useTheme } from '@/shared/app-shell/useTheme';
 import { themes } from '@/themes/registry';
 import { SettingsModal } from '../settings-dialog/SettingsModal';
@@ -14,137 +14,134 @@ import { SettingsModal } from '../settings-dialog/SettingsModal';
 type ProfileMenuProps = {
   isCollapsed?: boolean;
   onDropdownOpenChange: (open: boolean) => void;
-  onSignOut: () => void;
 };
 
-export function ProfileMenu({
-  isCollapsed = false,
-  onDropdownOpenChange,
-  onSignOut,
-}: ProfileMenuProps) {
-  const { data: session } = authClient.useSession();
+export function ProfileMenu(props: ProfileMenuProps) {
+  const session = useAuthSession();
   const { theme, setTheme } = useTheme();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [themeMenuOpen, setThemeMenuOpen] = useState(false);
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = createSignal(false);
+  const [themeMenuOpen, setThemeMenuOpen] = createSignal(false);
+  const [settingsOpen, setSettingsOpen] = createSignal(false);
 
-  const displayName = session?.user.name || session?.user.email?.split('@')[0] || 'User';
-  const subtitle = session?.user.email || '已登录';
+  const displayName = () =>
+    session().data?.user.name || session().data?.user.email?.split('@')[0] || 'User';
+  const subtitle = () => session().data?.user.email || '已登录';
 
   const handleMenuOpenChange = (open: boolean) => {
     setMenuOpen(open);
     if (!open) setThemeMenuOpen(false);
-    onDropdownOpenChange(open);
+    props.onDropdownOpenChange(open);
   };
 
-  useEffect(() => {
-    return () => {
-      onDropdownOpenChange(false);
-    };
-  }, [onDropdownOpenChange]);
+  onSettled(() => () => props.onDropdownOpenChange(false));
 
   return (
     <div
-      className='border-t border-border py-5 transition-all duration-500'
+      class='border-t border-border py-5 transition-all duration-500'
       style={{
-        paddingLeft: isCollapsed ? 16 : 24,
-        paddingRight: isCollapsed ? 16 : 24,
+        'padding-left': props.isCollapsed ? '16px' : '24px',
+        'padding-right': props.isCollapsed ? '16px' : '24px',
       }}
     >
-      <div className='flex'>
+      <div class='flex'>
         <div
-          className='mx-auto relative transition-all duration-500'
-          style={{ width: isCollapsed ? 'auto' : '100%' }}
+          class='mx-auto relative transition-all duration-500'
+          style={{ width: props.isCollapsed ? 'auto' : '100%' }}
         >
-          <DropdownMenu open={menuOpen} onOpenChange={handleMenuOpenChange}>
-            <DropdownMenuTrigger asChild>
-              <button
-                type='button'
-                className='flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-hover hover:text-foreground'
-                style={{
-                  width: isCollapsed ? 40 : '100%',
-                  height: isCollapsed ? 40 : 'auto',
-                  padding: isCollapsed ? 4 : '6px 8px',
-                  borderRadius: isCollapsed ? 6 : 6,
-                  justifyContent: isCollapsed ? 'center' : 'flex-start',
-                }}
-              >
-                <span
-                  className={`flex min-w-0 shrink-0 items-center overflow-hidden text-left transition-all duration-500 ${
-                    isCollapsed ? 'justify-center' : 'gap-2'
-                  }`}
+          <DropdownMenu
+            open={menuOpen()}
+            onOpenChange={handleMenuOpenChange}
+            positioning={{ placement: 'top-start', gutter: 4 }}
+          >
+            <DropdownMenuTrigger
+              asChild={(triggerProps) => (
+                <button
+                  {...triggerProps}
+                  type='button'
+                  class='flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-hover hover:text-foreground'
+                  style={{
+                    width: props.isCollapsed ? '40px' : '100%',
+                    height: props.isCollapsed ? '40px' : 'auto',
+                    padding: props.isCollapsed ? '4px' : '6px 8px',
+                    'border-radius': '6px',
+                    'justify-content': props.isCollapsed ? 'center' : 'flex-start',
+                  }}
                 >
                   <span
-                    className='truncate text-sm font-semibold text-foreground'
-                    style={{
-                      width: isCollapsed ? 'auto' : undefined,
-                      maxWidth: isCollapsed ? 24 : undefined,
-                    }}
+                    class={`flex min-w-0 shrink-0 items-center overflow-hidden text-left transition-all duration-500 ${
+                      props.isCollapsed ? 'justify-center' : 'gap-2'
+                    }`}
                   >
-                    {isCollapsed ? (displayName[0]?.toUpperCase() ?? 'U') : displayName}
+                    <span
+                      class='truncate text-sm font-semibold text-foreground'
+                      style={{
+                        width: props.isCollapsed ? 'auto' : undefined,
+                        'max-width': props.isCollapsed ? '24px' : undefined,
+                      }}
+                    >
+                      {props.isCollapsed ? (displayName()[0]?.toUpperCase() ?? 'U') : displayName()}
+                    </span>
                   </span>
-                </span>
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side='top' align='start' className='min-w-55 p-1'>
-              <div className='flex items-center gap-1.5 px-2 py-1.5'>
-                <div className='min-w-0 flex-1'>
-                  <div className='flex min-w-0 items-center gap-2.5'>
-                    <span className='truncate text-sm font-medium text-foreground'>
-                      {displayName}
+                </button>
+              )}
+            />
+            <DropdownMenuContent class='min-w-55 p-1'>
+              <div class='flex items-center gap-1.5 px-2 py-1.5'>
+                <div class='min-w-0 flex-1'>
+                  <div class='flex min-w-0 items-center gap-2.5'>
+                    <span class='truncate text-sm font-medium text-foreground'>
+                      {displayName()}
                     </span>
                   </div>
-                  <div className='text-xs leading-tight text-muted-foreground'>{subtitle}</div>
+                  <div class='text-xs leading-tight text-muted-foreground'>{subtitle()}</div>
                 </div>
               </div>
 
-              <div className='-mx-1 my-1 h-px bg-border' />
+              <div class='-mx-1 my-1 h-px bg-border' />
 
               <DropdownMenuItem
                 onSelect={(e) => {
                   e.preventDefault();
-                  setThemeMenuOpen(!themeMenuOpen);
+                  setThemeMenuOpen(!themeMenuOpen());
                 }}
               >
-                <Palette className='h-4 w-4' />
-                主题: {theme.label}
+                <Palette class='h-4 w-4' />
+                主题: {theme().label}
               </DropdownMenuItem>
 
-              {themeMenuOpen &&
-                themes.map((item) => (
-                  <DropdownMenuItem
-                    key={item.id}
-                    onSelect={(e) => {
-                      e.preventDefault();
-                      setTheme(item);
-                    }}
-                  >
-                    {theme.id === item.id ? (
-                      <Check className='h-3.5 w-3.5' />
-                    ) : (
-                      <span className='h-3.5 w-3.5' />
-                    )}
-                    <span className='text-xs'>{item.label}</span>
-                  </DropdownMenuItem>
-                ))}
+              {themeMenuOpen() && (
+                <For each={themes}>
+                  {(item) => (
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        setTheme(item);
+                      }}
+                    >
+                      {theme().id === item.id ? (
+                        <Check class='h-3.5 w-3.5' />
+                      ) : (
+                        <span class='h-3.5 w-3.5' />
+                      )}
+                      <span class='text-xs'>{item.label}</span>
+                    </DropdownMenuItem>
+                  )}
+                </For>
+              )}
 
               <DropdownMenuItem
                 onSelect={() => {
                   setSettingsOpen(true);
                 }}
               >
-                <Settings className='h-4 w-4' />
+                <Settings class='h-4 w-4' />
                 设置
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {settingsOpen ? (
-            <SettingsModal
-              open={settingsOpen}
-              onOpenChange={setSettingsOpen}
-              onSignOut={onSignOut}
-            />
+          {settingsOpen() ? (
+            <SettingsModal open={settingsOpen()} onOpenChange={setSettingsOpen} />
           ) : null}
         </div>
       </div>

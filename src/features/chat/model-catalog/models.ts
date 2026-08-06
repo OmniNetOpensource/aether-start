@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/react-start';
+import { createServerFn } from '@tanstack/solid-start';
 import { z } from 'zod';
 import { getServerEnv } from '@/shared/worker/env';
 import {
@@ -30,6 +30,15 @@ const geminiModelListSchema = z.object({
   ),
   nextPageToken: z.string().nullish(),
 });
+
+const availableModelsSchema = z.array(
+  z.object({
+    id: z.string(),
+    name: z.string(),
+  }),
+);
+
+const MODEL_LIST_CACHE_TTL_SECONDS = 60 * 60;
 
 const toModelInfo = (backend: ChatBackend, provider: string, model: string, name?: string) => {
   if (backend === 'ikun' && model === 'claude-opus-4-6') {
@@ -97,6 +106,13 @@ const fetchGeminiModelList = async (
 };
 
 export const getAvailableModelsFn = createServerFn({ method: 'GET' }).handler(async () => {
+  const cacheKey = 'https://aether-model-list.invalid/v1';
+  const modelListCache = await caches.open('aether:model-list:v1');
+  const cachedResponse = await modelListCache.match(cacheKey);
+  if (cachedResponse) {
+    return availableModelsSchema.parse(await cachedResponse.json());
+  }
+
   const env = getServerEnv();
   const requests: Promise<{ id: string; name: string }[]>[] = [];
 
@@ -154,7 +170,19 @@ export const getAvailableModelsFn = createServerFn({ method: 'GET' }).handler(as
 
   const models = new Map((await Promise.all(requests)).flat().map((model) => [model.id, model]));
   models.delete(DEFAULT_MODEL_ID);
-  return [DEFAULT_MODEL_INFO, ...models.values()];
+  const availableModels = [DEFAULT_MODEL_INFO, ...models.values()];
+
+  await modelListCache.put(
+    cacheKey,
+    new Response(JSON.stringify(availableModels), {
+      headers: {
+        'Cache-Control': `public, max-age=${MODEL_LIST_CACHE_TTL_SECONDS}`,
+        'Content-Type': 'application/json',
+      },
+    }),
+  );
+
+  return availableModels;
 });
 
 export const getAvailablePromptsFn = createServerFn({ method: 'GET' }).handler(() =>

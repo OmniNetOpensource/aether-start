@@ -8,7 +8,7 @@ function inject(code: string, tag: string, content: string): string {
 
 export function buildPreviewDocument(code: string): string {
   const needsBabel =
-    !code.includes('babel') && code.includes('esm.sh/react') && code.includes('className=');
+    !code.includes('babel') && code.includes('esm.sh/react') && code.includes('class=');
 
   let result = needsBabel
     ? code
