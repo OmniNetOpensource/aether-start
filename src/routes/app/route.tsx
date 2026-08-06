@@ -1,12 +1,11 @@
 import { Outlet, createFileRoute } from '@tanstack/solid-router';
-import { createEffect, deep, onSettled } from 'solid-js';
+import { createEffect, onSettled } from 'solid-js';
 import { ArtifactPanel, ArtifactToggleButton } from '@/frontend/chat/artifact';
 import {
   cancelStreamSubscription,
   resetLastEventId,
 } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { chatRuntime, registerChatToast } from '@/frontend/chat/agent-runtime/chat-runtime';
-import { artifacts } from '@/frontend/chat/artifact/artifact-state';
 import { Composer } from '@/frontend/chat/composer/Composer';
 import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
 import { getAvailableModelsFn, getAvailablePromptsFn } from '@/rpc/chat-options';
@@ -14,10 +13,7 @@ import Sidebar from '@/frontend/conversations/conversation-list';
 import { NewChatButton } from '@/frontend/conversations/conversation-list/NewChatButton';
 import {
   conversationInfiniteQueryOptions,
-  cacheConversation,
-  getConversationFromCache,
   queryClient,
-  conversationId,
   currentFetchProvider,
   currentModelId,
   currentPromptId,
@@ -28,7 +24,6 @@ import {
   setCurrentModelId,
   setCurrentPromptId,
 } from '@/frontend/conversations/session';
-import { getMessageTreeState } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { ShareButton } from '@/frontend/share/share-dialog';
 import { useToast } from '@/frontend/app-shell/useToast';
 
@@ -94,30 +89,6 @@ function AppLayout() {
     }),
     (selection) => {
       persistChatSessionSelection(selection.modelId, selection.promptId, selection.fetchProvider);
-    },
-  );
-
-  createEffect(
-    () => ({
-      conversationId: conversationId(),
-      title: pageTitle(),
-      model: currentModelId(),
-      tree: deep(getMessageTreeState()),
-      artifacts: deep(artifacts()),
-    }),
-    (state) => {
-      if (!state.conversationId) return;
-      const currentConversation = getConversationFromCache(state.conversationId);
-      if (!currentConversation) return;
-
-      cacheConversation({
-        ...currentConversation,
-        title: state.title,
-        model: state.model,
-        currentPath: state.tree.currentPath,
-        messages: state.tree.messages,
-        artifacts: state.artifacts,
-      });
     },
   );
 

@@ -14,16 +14,6 @@ const PAGE_SIZE = 10;
 
 export const conversationListQueryKey = ['conversations'];
 
-export const conversationDetailQueryKey = (conversationId: string) => [
-  'conversation',
-  conversationId,
-];
-
-queryClient.setQueryDefaults(['conversation'], {
-  gcTime: Infinity,
-  staleTime: Infinity,
-});
-
 type ConversationPage = {
   items: ConversationMeta[];
   nextCursor: ConversationListCursor;
@@ -117,9 +107,6 @@ export function useDeleteConversation() {
         },
       );
       return { previous };
-    },
-    onSuccess: (_result, id) => {
-      queryClient.removeQueries({ queryKey: conversationDetailQueryKey(id), exact: true });
     },
     onError: (_error, _id, context) => {
       if (context?.previous) {
@@ -222,7 +209,6 @@ export function useClearConversations() {
   return useMutation(() => ({
     mutationFn: () => clearConversationsFn(),
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ['conversation'] });
       queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
         conversationListQueryKey,
         {
@@ -283,12 +269,4 @@ export function removeConversationFromCache(conversationId: string) {
       };
     },
   );
-  queryClient.removeQueries({ queryKey: conversationDetailQueryKey(conversationId), exact: true });
 }
-
-export const getConversationFromCache = (conversationId: string) =>
-  queryClient.getQueryData<ConversationDetail>(conversationDetailQueryKey(conversationId));
-
-export const cacheConversation = (conversation: ConversationDetail) => {
-  queryClient.setQueryData(conversationDetailQueryKey(conversation.id), conversation);
-};

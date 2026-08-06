@@ -1,5 +1,5 @@
-import { createFileRoute, useHydrated } from '@tanstack/solid-router';
-import { createEffect } from 'solid-js';
+import { createFileRoute } from '@tanstack/solid-router';
+import { onSettled } from 'solid-js';
 import {
   cancelStreamSubscription,
   resetLastEventId,
@@ -21,24 +21,15 @@ export const Route = createFileRoute('/app/')({
 });
 
 function NewChatPage() {
-  const hydrated = useHydrated();
+  onSettled(() => {
+    if (conversationId() === null && messages().length === 0 && artifacts().length === 0) return;
 
-  createEffect(
-    () => hydrated(),
-    (isHydrated) => {
-      if (!isHydrated) return;
-      queueMicrotask(() => {
-        if (conversationId() === null && messages().length === 0 && artifacts().length === 0)
-          return;
-
-        cancelStreamSubscription(chatRuntime, 'conversation/new');
-        resetLastEventId();
-        clearConversationMeta();
-        clearMessageTree();
-        clearArtifacts();
-      });
-    },
-  );
+    cancelStreamSubscription(chatRuntime, 'conversation/new');
+    resetLastEventId();
+    clearConversationMeta();
+    clearMessageTree();
+    clearArtifacts();
+  });
 
   return <NewChatGreeting />;
 }
