@@ -110,7 +110,7 @@ Important files:
 - `src/frontend/chat/artifact/ArtifactToggleButton.tsx`
 - `src/backend/chat/tools/render-tool.ts`
 - `src/shared/chat/render-artifact-stream.ts`
-- `src/backend/chat/tools/tool-executor.ts`
+- `src/backend/chat/agent/tool-executor.ts`
 - `src/backend/conversations/conversations-db.ts`
 - `migrations/0015_conversation_artifacts.sql`
 
@@ -150,7 +150,7 @@ Configured backends currently include:
 
 ### Tools
 
-Tool execution lives in `src/backend/chat/tools/tool-executor.ts`.
+Tool execution lives in `src/backend/chat/agent/tool-executor.ts`.
 
 Current tools:
 

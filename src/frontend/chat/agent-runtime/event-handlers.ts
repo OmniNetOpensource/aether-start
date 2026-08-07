@@ -16,8 +16,8 @@ export const resetLastEventId = () => {
   resetStreamBuffer();
 };
 
-/** SSE data 字段的信封结构，由服务端序列化，反序列化后按此结构读取 */
-type SSEPayload = {
+/** WebSocket 消息 data 字段的信封结构，由服务端序列化，反序列化后按此结构读取 */
+type ServerMessagePayload = {
   eventId?: number;
   event?: ChatServerToClientEvent;
   assistantMessageId?: number;
@@ -29,21 +29,26 @@ type SSEPayload = {
   finishedRuns?: { assistantMessageId: number; assistantCompletedAt?: string }[];
 };
 
-/**
- * 处理单条 SSE 消息。
- * @param event - SSE 的 event 字段（如 chat_event、chat_finished 等）
- * @param raw - data 字段的原始 JSON 字符串
- */
-export const handleSSEMessage = (runtime: ChatState, event: string, raw: string) => {
-  let payload: SSEPayload;
-  try {
-    payload = JSON.parse(raw);
-  } catch {
-    console.error('[SSE] Malformed event payload', { event, raw });
-    return;
-  }
+/** 一条 WebSocket 消息 = { event, data } 信封，event 取值与旧 SSE event name 一致 */
+export type ServerMessage = { event: string; data: ServerMessagePayload };
 
-  switch (event) {
+export const parseServerMessage = (raw: unknown): ServerMessage | null => {
+  if (typeof raw !== 'string') return null;
+  try {
+    const message: ServerMessage = JSON.parse(raw);
+    if (typeof message.event === 'string') return message;
+  } catch {
+    // fallthrough
+  }
+  console.error('[WS] Malformed server message', { raw });
+  return null;
+};
+
+/** 处理单条服务端消息（chat_event、chat_finished 等） */
+export const handleServerMessage = (runtime: ChatState, message: ServerMessage) => {
+  const payload = message.data ?? {};
+
+  switch (message.event) {
     case 'chat_event': {
       /* 单条聊天事件：需有 eventId 且大于 lastEventId 才处理，避免重复 */
       if (typeof payload.eventId !== 'number') return;
@@ -65,14 +70,17 @@ export const handleSSEMessage = (runtime: ChatState, event: string, raw: string)
         );
       }
       if (payload.remainingRuns === 0) {
+        /* 最后一个 run 收口时服务端清空 eventCache;DO 若随后休眠重建,eventId 会从 1 重新计数,
+           这里同步归零,否则重连后新事件会被 lastEventId 过滤掉 */
+        lastEventId = 0;
         runtime.setStatus('idle');
       }
       return;
     }
     case 'chat_paused':
-      // 服务端所有 run 都在等 askuserquestions 时会先发 chat_paused 再关闭 SSE，
-      // background task 仍在等 /tool-answer。前端把当前请求视为结束，
-      // 等用户提交答案后由 submitToolAnswer 触发 resumeRunningConversation。
+      // 服务端所有 run 都在等 askuserquestions 用户提交。WebSocket 保持打开，
+      // 用户提交答案后 run 继续，后续事件从同一条连接到达
+      // (ask_user_questions_answered 会把状态切回 streaming)。
       flushStreamBuffer();
       runtime.messageTree.clearStreamingAssistants();
       runtime.setStatus('idle');
@@ -508,6 +516,9 @@ export const applyChatEventToTree = (
       callId: event.callId,
       answers: event.answers,
     });
+    // 提交答案后 run 从暂停恢复，把 chat_paused 清掉的流式状态补回来。
+    runtime.messageTree.markAssistantStreaming(assistantMessageId);
+    runtime.setStatus('streaming');
     return;
   }
 

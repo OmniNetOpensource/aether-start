@@ -6,7 +6,7 @@ import {
 } from '@/shared/chat/research/search-result-payload';
 import { log } from '@/backend/chat/logger';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
-import { createRateLimitedQueue } from './rate-limit';
+import { createRateLimitedQueue } from './shared/rate-limit';
 
 type SearchArgs = {
   query: string;

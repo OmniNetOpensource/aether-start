@@ -1,6 +1,6 @@
 import { isAbortError } from '@/backend/chat/abort';
-import { askUserQuestionsTool } from './ask-user-questions';
-import { fetchUrlTool } from './fetch-tool';
+import { askUserQuestionsTool } from '@/backend/chat/tools/ask-user-questions';
+import { fetchUrlTool } from '@/backend/chat/tools/fetch-tool';
 import {
   buildFetchClientPayload,
   stringifyFetchClientPayload,
@@ -9,8 +9,8 @@ import {
   parseSearchClientPayload,
   stringifySearchClientPayload,
 } from '@/shared/chat/research/search-result-payload';
-import { searchTool } from './search-tool';
-import { renderTool } from './render-tool';
+import { searchTool } from '@/backend/chat/tools/search-tool';
+import { renderTool } from '@/backend/chat/tools/render-tool';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
 import { log } from '@/backend/chat/logger';
 import type { ChatTool, ToolContext, ToolHandler } from '@/shared/chat/tool-types';

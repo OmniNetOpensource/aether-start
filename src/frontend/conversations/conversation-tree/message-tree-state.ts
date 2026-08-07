@@ -77,27 +77,30 @@ export const initializeMessageTree = (
 export const getMessagesFromPath = () =>
   computeMessagesFromPath(messageTree.messages, messageTree.currentPath);
 
-export const selectMessage = (messageId: number) => {
+const selectMessageInTree = (state: MessageTreeState, messageId: number) => {
   const targetPath: number[] = [];
   const visited = new Set<number>();
   let currentId: number | null = messageId;
 
   while (currentId !== null) {
-    if (visited.has(currentId)) return;
-    const currentMessage: Message | undefined = messageTree.messages[currentId - 1];
-    if (!currentMessage) return;
+    if (visited.has(currentId)) return state;
+    const currentMessage: Message | undefined = state.messages[currentId - 1];
+    if (!currentMessage) return state;
     targetPath.push(currentId);
     visited.add(currentId);
     currentId = currentMessage.parentId;
   }
 
   targetPath.reverse();
-  let nextState: MessageTreeState = messageTree;
+  let nextState = state;
   for (let index = 0; index < targetPath.length; index += 1) {
     nextState = switchBranch(nextState, index + 1, targetPath[index]);
   }
-  replaceTree(nextState);
+  return nextState;
 };
+
+export const selectMessage = (messageId: number) =>
+  replaceTree(selectMessageInTree(messageTree, messageId));
 
 // 正在流式输出的 assistant 消息集合:tree_operation 加入,chat_finished 移除。
 // UI 用它判断某条消息是否在生成中(替代全局 status 闸门)。
@@ -322,7 +325,17 @@ export const applyChatAccepted = (userMessage: UserMessage, assistantMessage: As
     }
     messages[message.id - 1] = message;
   }
-  setMessageTreeState({ messages, nextId: messages.length + 1 });
+  replaceTree(
+    selectMessageInTree(
+      {
+        messages,
+        currentPath: messageTree.currentPath,
+        latestRootId: messageTree.latestRootId,
+        nextId: messages.length + 1,
+      },
+      assistantMessage.id,
+    ),
+  );
 };
 
 export const messageTreeActions = {

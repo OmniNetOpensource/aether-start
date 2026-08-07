@@ -10,18 +10,18 @@
  * - 断线自动重连
  *
  * 与 conversation-runner 服务端配合：/chat 回执带回 user 消息与 assistant 占位,发起方据此建容器;
- * /events 是会话级订阅,一条连接接收所有 run 的 chat_event、chat_finished 等事件。
+ * /events 是会话级 WebSocket 订阅,一条连接接收所有 run 的 chat_event、chat_finished 等事件。
  */
 import type { AskUserQuestionsAnswer } from '@/shared/chat/ask-user-questions';
 import {
   applyChatEventToTree,
   flushStreamBuffer,
   getLastEventId,
-  handleSSEMessage,
+  handleServerMessage,
+  parseServerMessage,
   resetLastEventId,
 } from './event-handlers';
 import type { ChatState } from './chat-state';
-import { readSSEStream } from './sse-stream';
 import { setQueuedMessages } from '@/frontend/chat/composer/composer-request/message-queue';
 import type { ChatAgentStatus, ChatCommandResponse, Operation } from '@/shared/chat/chat-api';
 
@@ -31,14 +31,20 @@ const AGENT_NAME = 'conversation-runner';
 const SELECT_MODEL_WARNING = 'Select a model before sending a message.';
 
 /**
- * 当前会话 /events 订阅的 AbortController。
- * 订阅属于会话而非单次请求:一条连接接收所有 run 的广播,只在切会话/卸载时 abort。
+ * 当前会话 /events 的 WebSocket 订阅。
+ * 订阅属于会话而非单次请求:一条连接接收所有 run 的广播,只在切会话/卸载时关闭。
  */
-let activeController: AbortController | null = null;
+let activeSocket: WebSocket | null = null;
+
+/**
+ * resume 探测期间尚未建立 socket,但也需要能被 cancelStreamSubscription 取消。
+ * 探测用的 AbortController 挂在这里,socket 建立后清空。
+ */
+let probeController: AbortController | null = null;
 
 /**
  * 正在等待服务端 abort 收口的 Promise。
- * cancelAnswering 创建它，流结束（finalizeStream）或 cancelStreamSubscription 收口它。
+ * cancelAnswering 创建它，流结束（chat_finished 置 idle 后 socket 收口）或 cancelStreamSubscription 收口它。
  */
 let stopFinished: { promise: Promise<void>; resolve: () => void } | null = null;
 
@@ -109,6 +115,11 @@ const resolveAgentBaseUrl = () => {
   return `${protocol}://${window.location.host}/agents/${AGENT_NAME}`;
 };
 
+const resolveAgentSocketUrl = (conversationId: string) => {
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${protocol}://${window.location.host}/agents/${AGENT_NAME}/${conversationId}/events`;
+};
+
 /**
  * 生成唯一 ID。
  * 优先用 crypto.randomUUID()，不支持时用 prefix + 时间戳 + 随机数。
@@ -146,31 +157,45 @@ const getResponseErrorMessage = async (response: Response) => {
   return message || null;
 };
 
-/** 消费 /events 的 SSE 流，逐条消息交给 handleSSEMessage；结束时兜底 flush 打字缓冲 */
-const consumeEvents = async (runtime: ChatState, response: Response, signal: AbortSignal) => {
-  try {
-    await readSSEStream(response, signal, (event, data) => handleSSEMessage(runtime, event, data));
-  } finally {
-    flushStreamBuffer();
-  }
-};
-
 /**
- * 流结束后的收尾逻辑。
- * 正常结束（chat_finished/chat_paused 已置 idle）时清理重连状态并收口 stopFinished；
- * 异常结束（status 仍非 idle）时尝试自动重连。
+ * 建立会话级 /events WebSocket 订阅。
+ *
+ * onopen 发送 { lastEventId } 触发服务端补拉（sync_response），之后被动接收广播。
+ * onclose 收口：连接被本地主动替换/关闭时静默；status 已 idle 时正常收尾；
+ * 否则视为异常断开，走自动重连。
  */
-const finalizeStream = (runtime: ChatState) => {
-  if (runtime.getStatus() !== 'idle') {
-    const conversationId = runtime.getConversationId();
-    if (conversationId) {
+const openEventSocket = (runtime: ChatState, conversationId: string) => {
+  const socket = new WebSocket(resolveAgentSocketUrl(conversationId));
+  activeSocket = socket;
+  probeController = null;
+
+  socket.onopen = () => {
+    socket.send(JSON.stringify({ lastEventId: getLastEventId() }));
+  };
+
+  socket.onmessage = (event) => {
+    const message = parseServerMessage(event.data);
+    if (message) {
+      handleServerMessage(runtime, message);
+    }
+  };
+
+  socket.onclose = () => {
+    flushStreamBuffer();
+
+    /* 已被新连接取代或主动关闭（cancelStreamSubscription 置 null 后 close），不做收口 */
+    if (activeSocket !== socket) {
+      return;
+    }
+    activeSocket = null;
+
+    if (runtime.getStatus() !== 'idle') {
       scheduleAutoReconnect(runtime, conversationId);
       return;
     }
-    runtime.setStatus('idle');
-  }
-  clearReconnectState();
-  resolveStopFinished();
+    clearReconnectState();
+    resolveStopFinished();
+  };
 };
 
 /**
@@ -204,7 +229,7 @@ export const checkAgentStatus = async (
  * 3. 发起方用回执直接创建 user 消息与 assistant 占位容器;若当前没有 /events 订阅则建立一条,有则复用
  *
  * 多 run 并发:流式期间再次调用本函数不会打断已有的流,新 run 的事件走同一条订阅。
- * 异常：AbortError 静默忽略；TypeError（如网络错误）走自动重连；其他恢复状态并提示。
+ * 异常：TypeError（如网络错误）在服务端已接受后走自动重连；其他恢复状态并提示。
  */
 export const startChatRequest = async (
   runtime: ChatState,
@@ -238,10 +263,8 @@ export const startChatRequest = async (
     operation,
   };
 
-  /* 没有活跃订阅时本次请求负责建立它;已有订阅(其他 run 在流式)则复用,POST 挂它的 signal */
-  const ownsSubscription = activeController === null;
-  const controller = activeController ?? new AbortController();
-  activeController = controller;
+  /* 没有活跃订阅时本次请求负责建立它;已有订阅(其他 run 在流式)则复用 */
+  const ownsSubscription = activeSocket === null;
   if (ownsSubscription) {
     /* DO 可能在空闲后被驱逐重建,eventId 会从 1 重新计数;无订阅意味着没有在途事件,重置是安全的 */
     resetLastEventId();
@@ -260,7 +283,6 @@ export const startChatRequest = async (
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(body),
-        signal: controller.signal,
       },
     );
 
@@ -285,36 +307,15 @@ export const startChatRequest = async (
       acceptedPayload.assistantMessage,
     );
     runtime.messageTree.markAssistantStreaming(acceptedPayload.assistantMessage.id);
-    runtime.messageTree.selectMessage(acceptedPayload.assistantMessage.id);
     acceptedAssistantMessageId = acceptedPayload.assistantMessage.id;
     onAccepted?.(acceptedPayload);
     runtime.setStatus('streaming');
 
-    if (!ownsSubscription) {
-      /* 已有订阅在接收广播,本请求到此为止 */
-      return;
+    /* POST 期间可能有其他调用建立了订阅（如另一个 run），再查一次 */
+    if (ownsSubscription && activeSocket === null) {
+      openEventSocket(runtime, acceptedPayload.conversationId);
     }
-
-    const eventsResponse = await fetch(
-      `${resolveAgentBaseUrl()}/${acceptedPayload.conversationId}/events`,
-      {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lastEventId: getLastEventId() }),
-        signal: controller.signal,
-      },
-    );
-    await consumeEvents(runtime, eventsResponse, controller.signal);
-    finalizeStream(runtime);
   } catch (error) {
-    if (isAbortError(error)) {
-      if (ownsSubscription) {
-        runtime.setStatus('idle');
-      }
-      return;
-    }
-
     const reconnectId = runtime.getConversationId();
     if (error instanceof TypeError && acceptedAssistantMessageId !== null && reconnectId) {
       scheduleAutoReconnect(runtime, reconnectId);
@@ -342,10 +343,6 @@ export const startChatRequest = async (
     } else {
       runtime.toast.error(message);
     }
-  } finally {
-    if (ownsSubscription && activeController === controller) {
-      activeController = null;
-    }
   }
 };
 
@@ -358,13 +355,16 @@ export const cancelSending = async (runtime: ChatState, reason: string) => {
 
 /**
  * 取消订阅流式输出。
- * abort 本地 activeController，将 status 设为 idle，并清空排队消息与流式标记。
+ * 关闭本地 WebSocket / 中止 resume 探测，将 status 设为 idle，并清空排队消息与流式标记。
  */
 export const cancelStreamSubscription = (runtime: ChatState, _reason: string) => {
   clearReconnectState();
   flushStreamBuffer();
-  activeController?.abort();
-  activeController = null;
+  probeController?.abort();
+  probeController = null;
+  const socket = activeSocket;
+  activeSocket = null; /* 先置 null,让 onclose 识别为主动关闭 */
+  socket?.close();
   resolveStopFinished();
   setQueuedMessages([]);
   runtime.messageTree.clearStreamingAssistants();
@@ -374,7 +374,7 @@ export const cancelStreamSubscription = (runtime: ChatState, _reason: string) =>
 
 /**
  * 取消正在进行的 AI 回复。
- * 保持 SSE 连接，等服务端 abort 后通过 chat_finished 收口。
+ * 保持 WebSocket 连接，等服务端 abort 后通过 chat_finished 收口。
  * 带 assistantMessageId 时只停对应 run;不带则停全部(composer 停止按钮)。
  */
 export const cancelAnswering = async (
@@ -450,7 +450,10 @@ export const submitToolAnswer = async (
     });
 
     if (response.ok) {
-      void resumeRunningConversation(runtime, conversationId);
+      /* WebSocket 保持打开,后续事件从同一条连接到达;仅在连接已丢失时重建订阅 */
+      if (activeSocket === null) {
+        void resumeRunningConversation(runtime, conversationId);
+      }
       return;
     }
 
@@ -469,27 +472,22 @@ export const submitToolAnswer = async (
  *
  * 流程：
  * 1. 将 status 设为 sending，再调用 checkAgentStatus；若非 running 则 idle 返回
- * 2. 创建 AbortController，通过 activeController 与 cancelStreamSubscription 联动
- * 3. POST /agents/conversation-runner/:conversationId/events，body 为 { lastEventId }
- * 4. 消费返回的 SSE 流（sync_response + 后续 chat_event）
- * 5. 结束时 finalizeStream
+ * 2. 探测通过后建立 /events WebSocket 订阅（sync_response + 后续 chat_event）
  *
- * 取消方式：对话页卸载时调用 cancelStreamSubscription 即可 abort
+ * 探测期间用 probeController 联动 cancelStreamSubscription，
+ * 避免切换会话时旧会话的事件流叠加到新会话的消息树上。
  */
 export const resumeRunningConversation = async (
   runtime: ChatState,
   conversationId: string,
   replayCompletedEvents = false,
 ) => {
-  if (activeController && runtime.getStatus() === 'streaming') {
+  if (activeSocket && runtime.getStatus() === 'streaming') {
     return;
   }
 
-  /* 从发起探测的那一刻起就占据 activeController，
-     让切换会话时的 cancelStreamSubscription 能 abort 掉还在探测中的 resume，
-     避免旧会话的事件流叠加到新会话的消息树上 */
   const controller = new AbortController();
-  activeController = controller;
+  probeController = controller;
   runtime.setStatus('sending');
 
   let agentStatus: { status: ChatAgentStatus };
@@ -509,45 +507,16 @@ export const resumeRunningConversation = async (
   }
 
   if (controller.signal.aborted) return;
+  probeController = null;
 
   if (
     agentStatus.status !== 'running' &&
     !(replayCompletedEvents && agentStatus.status !== 'idle')
   ) {
     clearReconnectState();
-    if (activeController === controller) {
-      activeController = null;
-    }
     runtime.setStatus('idle');
     return;
   }
 
-  try {
-    const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/events`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lastEventId: getLastEventId() }),
-      signal: controller.signal,
-    });
-
-    if (controller.signal.aborted) return;
-
-    await consumeEvents(runtime, response, controller.signal);
-    finalizeStream(runtime);
-  } catch (error) {
-    if (isAbortError(error)) return;
-
-    if (error instanceof TypeError && reconnectConversationId === conversationId) {
-      scheduleAutoReconnect(runtime, conversationId);
-      return;
-    }
-
-    runtime.setStatus('idle');
-    runtime.toast.error(describeError(error));
-  } finally {
-    if (activeController === controller) {
-      activeController = null;
-    }
-  }
+  openEventSocket(runtime, conversationId);
 };

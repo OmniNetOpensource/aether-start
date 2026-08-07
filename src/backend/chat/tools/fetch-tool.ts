@@ -9,7 +9,7 @@ import { log } from '@/backend/chat/logger';
 import { Supadata } from '@supadata/js';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
 import { arrayBufferToBase64 } from '@/shared/core/base64';
-import { createRateLimitedQueue } from './rate-limit';
+import { createRateLimitedQueue } from './shared/rate-limit';
 
 type FetchUrlArgs = {
   url: string;

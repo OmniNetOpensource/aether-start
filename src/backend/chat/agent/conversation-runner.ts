@@ -1,6 +1,6 @@
 import { isAbortError } from '@/backend/chat/abort';
 import { DurableObject } from 'cloudflare:workers';
-import { executeToolCall, getAvailableTools } from '@/backend/chat/tools/tool-executor';
+import { executeToolCall, getAvailableTools } from '@/backend/chat/agent/tool-executor';
 import {
   getDefaultModelConfig,
   getModelConfig,
@@ -336,7 +336,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
 };
 
 // 这个 Durable Object 以 conversation 为粒度串行化整次对话：
-// 接收请求、推送 SSE、执行工具调用、缓存事件，并在结束后落库快照。
+// 接收请求、通过 WebSocket 推送事件、执行工具调用、缓存事件，并在结束后落库快照。
 export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   // instanceName 对应 URL 里的 conversationId。
   // 一个 Durable Object 实例一旦绑定某个会话，后续请求都应该落到同一个实例里。
@@ -358,9 +358,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     updatedAt: Date.now(),
   };
 
-  // assistant 的正常流和断线补连都通过 /events 挂在这里接收广播。
-  private writers = new Set<WritableStreamDefaultWriter<Uint8Array>>();
-  private encoder = new TextEncoder();
   private pendingAskUserQuestions = new Map<string, PendingAskUserQuestions>();
 
   // 第一次收到某个 conversation 的请求时，把实例和会话绑定起来。
@@ -397,7 +394,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       );
     }
 
-    if (request.method === 'POST' && sub === 'events') {
+    if (request.method === 'GET' && sub === 'events') {
       if (!userId) return new Response('Unauthorized', { status: 401 });
       return this.handleEvents(request, userId);
     }
@@ -420,36 +417,19 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     return new Response('Not found', { status: 404 });
   }
 
-  // ── SSE helpers ──────────────────────────────────────────────────────
+  // ── WebSocket broadcast ──────────────────────────────────────────────
 
-  private sendSSE(writer: WritableStreamDefaultWriter<Uint8Array>, event: string, data: unknown) {
-    // 单个连接写失败时只移除它自己，不影响其他订阅者继续收流。
-    void writer
-      .write(this.encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`))
-      .catch((error) => {
-        this.writers.delete(writer);
-        log('AGENT', 'Failed to write SSE event', {
+  // 连接由 runtime 维护(Hibernation API)，休眠恢复后 getWebSockets() 依然返回存活连接。
+  // 单个连接发送失败只记日志，不影响其他订阅者。
+  private broadcast(event: string, data: unknown) {
+    const payload = JSON.stringify({ event, data });
+    for (const ws of this.ctx.getWebSockets()) {
+      try {
+        ws.send(payload);
+      } catch (error) {
+        log('AGENT', 'Failed to send WebSocket event', {
           event,
           error: getErrorMessage(error),
-        });
-      });
-  }
-
-  private broadcast(event: string, data: unknown) {
-    for (const w of this.writers) {
-      this.sendSSE(w, event, data);
-    }
-  }
-
-  private async closeAllWriters() {
-    const writers = [...this.writers];
-    this.writers.clear();
-    const results = await Promise.allSettled(writers.map((writer) => writer.close()));
-    for (const [index, result] of results.entries()) {
-      if (result.status === 'rejected') {
-        log('AGENT', 'Failed to close SSE writer', {
-          writerIndex: index,
-          error: getErrorMessage(result.reason),
         });
       }
     }
@@ -629,26 +609,15 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     return Response.json(acceptedPayload);
   }
 
-  // ── POST /events ─────────────────────────────────────────────────────
+  // ── GET /events (WebSocket) ──────────────────────────────────────────
 
   // assistant 输出、断线重连和页面恢复共用的事件入口。
-  // 先回放 lastEventId 之后的缓存事件，再按当前状态决定是否继续挂长连接。
-  private async handleEvents(request: Request, userId: string): Promise<Response> {
-    let rawBody: unknown;
-    try {
-      rawBody = await request.json();
-    } catch (error) {
-      log('AGENT', 'Failed to parse events request body', error);
-      return Response.json({ error: 'Invalid request body' }, { status: 400 });
+  // 握手只做鉴权与升级；补拉在客户端发来第一条 { lastEventId } 消息时进行(webSocketMessage)。
+  private handleEvents(request: Request, userId: string): Response {
+    if (request.headers.get('Upgrade') !== 'websocket') {
+      return new Response('Expected WebSocket upgrade', { status: 426 });
     }
 
-    if (!isObject(rawBody)) {
-      return Response.json({ error: 'Invalid request body' }, { status: 400 });
-    }
-
-    const lastEventId = Number(rawBody.lastEventId ?? 0);
-
-    // /events 虽然是只读补拉，但仍然只能由会话拥有者访问。
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
       return new Response('Unauthorized', { status: 401 });
     }
@@ -656,53 +625,62 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       this.runtimeState = { ...this.runtimeState, ownerUserId: userId };
     }
 
-    const { readable, writable } = new TransformStream<Uint8Array>();
-    const writer = writable.getWriter();
+    const pair = new WebSocketPair();
+    // acceptWebSocket 走 Hibernation API:等待期间 DO 可休眠，连接保持打开，
+    // 消息到达时通过 webSocketMessage 唤醒。
+    this.ctx.acceptWebSocket(pair[1]);
+    return new Response(null, { status: 101, webSocket: pair[0] });
+  }
 
-    // 先把客户端缺失的事件一次性补齐，再决定是否保持连接接收后续增量。
-    const events = this.listEvents(lastEventId);
-    this.sendSSE(writer, 'sync_response', {
-      status: this.runtimeState.status,
-      events,
-      activeRuns: [...this.runs.keys()],
-      finishedRuns: [...this.finishedRuns].map(([assistantMessageId, assistantCompletedAt]) => ({
-        assistantMessageId,
-        assistantCompletedAt,
-      })),
-    });
+  // 客户端连上后发 { lastEventId }，这里回放缺失事件并附带当前 run 状态。
+  // 之后该连接只被动接收 broadcast，不再有其他上行消息。
+  webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
+    if (typeof message !== 'string') return;
 
-    // 刷新后重连时，若某个 run 仍卡在 askuserquestions 等用户提交,
-    // 之前广播的 chat_paused 已随旧连接断掉，这里必须再补一次，
-    // 否则前端会一直卡在 streaming 而不会启用 askuserquestions 卡片。
-    // 只有当没有其他 run 在流式输出时,连接才走「暂停即关闭」;否则保持长连接接收其他 run 的事件。
+    let rawBody: unknown;
+    try {
+      rawBody = JSON.parse(message);
+    } catch (error) {
+      log('AGENT', 'Failed to parse WebSocket message', { error: getErrorMessage(error) });
+      return;
+    }
+    if (!isObject(rawBody)) return;
+
+    const lastEventId = Number(rawBody.lastEventId ?? 0);
+    ws.send(
+      JSON.stringify({
+        event: 'sync_response',
+        data: {
+          status: this.runtimeState.status,
+          events: this.listEvents(lastEventId),
+          activeRuns: [...this.runs.keys()],
+          finishedRuns: [...this.finishedRuns].map(
+            ([assistantMessageId, assistantCompletedAt]) => ({
+              assistantMessageId,
+              assistantCompletedAt,
+            }),
+          ),
+        },
+      }),
+    );
+
+    // 刷新后重连时，若所有 run 都卡在 askuserquestions 等用户提交，
+    // 之前广播的 chat_paused 该连接没收到，这里补一次，否则前端会一直卡在 streaming。
     const isPausedForAskUser =
       this.runtimeState.status === 'running' &&
       this.pendingAskUserQuestions.size > 0 &&
       this.pendingAskUserQuestions.size === this.runs.size;
-
-    // 会话还在运行时，需要继续保持长连接；否则回放完缓存即可关闭。
-    if (this.runtimeState.status === 'running' && !isPausedForAskUser) {
-      // Keep connection open to receive future events
-      this.writers.add(writer);
-    } else {
-      if (isPausedForAskUser) {
-        this.sendSSE(writer, 'chat_paused', {});
-      }
-      // Not running — write sync data and close
-      void writer.close().catch((error) => {
-        log('AGENT', 'Failed to close sync response writer', {
-          error: getErrorMessage(error),
-        });
-      });
+    if (isPausedForAskUser) {
+      ws.send(JSON.stringify({ event: 'chat_paused', data: {} }));
     }
+  }
 
-    return new Response(readable, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      },
-    });
+  webSocketClose() {
+    // 连接生命周期归客户端管；runtime 自动把关闭的连接从 getWebSockets() 移除。
+  }
+
+  webSocketError(_ws: WebSocket, error: unknown) {
+    log('AGENT', 'WebSocket error', { error: getErrorMessage(error) });
   }
 
   // ── POST /abort ──────────────────────────────────────────────────────
@@ -967,11 +945,10 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         questions,
       });
 
-      // 只有当所有 run 都在等用户提交时才走「暂停即断开」;
-      // 还有其他 run 在流式输出时连接必须保留,否则会掐断它们的事件。
+      // 所有 run 都在等用户提交时广播 chat_paused,前端据此切换 UI 状态。
+      // WebSocket 连接保持打开(Hibernation),提交答案后事件从同一条连接继续。
       if (this.pendingAskUserQuestions.size + 1 === this.runs.size || this.runs.size === 1) {
         this.broadcast('chat_paused', {});
-        await this.closeAllWriters();
       }
 
       const modelResult = await this.waitForAskUserQuestionsAnswer(
@@ -1048,7 +1025,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
    * - 拒绝本 run 仍在等待的 askuserquestions,避免 /tool-answer 误匹配。
    * - 非成功结束时为本 run 未完结 artifact 补发 failed(经 emitEvent,与正常事件同源)。
    * - 给本 run 的 assistant 打 completedAt,落共享树快照,广播 chat_finished。
-   * - 只有最后一个收口的 run 负责:清事件缓存、释放共享树、置终态、关闭 SSE、重新生成标题。
+   * - 只有最后一个收口的 run 负责:清事件缓存、释放共享树、置终态、重新生成标题。
    * runState 以对象传入,便于最终快照失败时把 finalStatus 纠正为 error。
    */
   private async finalize(
@@ -1119,7 +1096,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     this.broadcast('chat_finished', finishedPayload);
 
     if (remainingRuns === 0) {
-      await this.closeAllWriters();
       this.eventCache = [];
       this.finishedRuns.clear();
       this.activeTree = null;

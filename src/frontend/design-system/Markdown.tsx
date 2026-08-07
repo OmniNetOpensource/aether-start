@@ -419,12 +419,14 @@ function Markdown(props: Props) {
   return (
     <div class='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
       <For each={indexes()}>
-        {(index) => (
-          <MarkdownBlock
-            isAnimating={(props.isAnimating ?? false) && index === paragraphs().length - 1}
-            markdown={paragraphs()[index] ?? ''}
-          />
-        )}
+        {(index) => {
+          const markdown = createMemo(() => paragraphs()[index] ?? '');
+          const isAnimating = createMemo(
+            () => (props.isAnimating ?? false) && index === paragraphs().length - 1,
+          );
+
+          return <MarkdownBlock isAnimating={isAnimating()} markdown={markdown()} />;
+        }}
       </For>
     </div>
   );

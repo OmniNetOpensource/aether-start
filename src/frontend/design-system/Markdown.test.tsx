@@ -58,6 +58,21 @@ describe('Markdown', () => {
     expect(spans[1]?.textContent).toBe(',世界');
   });
 
+  it('keeps completed paragraph DOM while the last paragraph streams', () => {
+    const [content, setContent] = createSignal('第一段\n\n第二段');
+    const { container } = renderTest(
+      () => <Markdown content={content()} isAnimating />,
+      (children) => <ToastProvider>{children()}</ToastProvider>,
+    );
+
+    const completedParagraph = container.querySelectorAll('p')[0];
+
+    setContent('第一段\n\n第二段继续增长');
+    flush();
+
+    expect(container.querySelectorAll('p')[0]).toBe(completedParagraph);
+  });
+
   it('does not turn unsafe URLs or raw HTML into executable elements', () => {
     const { container } = renderTest(
       () => <Markdown content={'[unsafe](javascript:alert(1))\n\n<script>alert(1)</script>'} />,
