@@ -28,7 +28,7 @@ export function ModelSelector() {
   const selectedModelId = () =>
     availableModels().some((model) => model.id === currentModelId())
       ? currentModelId()
-      : loaderData().initialModelId;
+      : availableModels()[0]?.id;
   const currentModelName = () =>
     availableModels().find((model) => model.id === selectedModelId())?.name ?? '';
   const filteredModels = () => {

@@ -20,11 +20,10 @@ export function PromptSelector() {
   const loaderData = appRoute.useLoaderData();
   const availablePrompts = () => loaderData().availablePrompts;
 
-  // 持久化优先：currentPromptId 由 persist 中间件 hydrate；loader 仅在首次访问兜底。
   const selectedPromptId = () =>
     availablePrompts().some((prompt) => prompt.id === currentPromptId())
       ? currentPromptId()
-      : loaderData().initialPromptId;
+      : availablePrompts()[0]?.id;
 
   const currentPromptName = () =>
     availablePrompts().find((prompt) => prompt.id === selectedPromptId())?.name ?? 'aether';

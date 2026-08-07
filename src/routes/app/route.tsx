@@ -5,22 +5,13 @@ import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orc
 import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
 import { Composer } from '@/frontend/chat/composer/Composer';
-import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
 import { getAvailableModelsFn, getAvailablePromptsFn } from '@/rpc/chat-options';
 import Sidebar from '@/frontend/conversations/conversation-list';
 import { NewChatButton } from '@/frontend/conversations/conversation-list/NewChatButton';
 import {
   conversationInfiniteQueryOptions,
   queryClient,
-  currentFetchProvider,
-  currentModelId,
-  currentPromptId,
-  getChatSessionSelectionFn,
   pageTitle,
-  persistChatSessionSelection,
-  setCurrentFetchProvider,
-  setCurrentModelId,
-  setCurrentPromptId,
 } from '@/frontend/conversations/session';
 import { ShareButton } from '@/frontend/share/share-dialog';
 import { useToast } from '@/frontend/app-shell/useToast';
@@ -31,7 +22,7 @@ export const Route = createFileRoute('/app')({
       ...conversationInfiniteQueryOptions,
       staleTime: Infinity,
     });
-    const [availableModels, availablePrompts, initialSelection] = await Promise.all([
+    const [availableModels, availablePrompts] = await Promise.all([
       queryClient.ensureQueryData({
         queryKey: ['chat-options', 'models'],
         queryFn: () => getAvailableModelsFn(),
@@ -44,28 +35,12 @@ export const Route = createFileRoute('/app')({
         staleTime: Infinity,
         gcTime: Infinity,
       }),
-      getChatSessionSelectionFn(),
       conversationListPromise,
     ]);
-
-    const modelId = availableModels.some((model) => model.id === initialSelection.currentModelId)
-      ? initialSelection.currentModelId
-      : DEFAULT_MODEL_ID;
-    const promptId = availablePrompts.some(
-      (prompt) => prompt.id === initialSelection.currentPromptId,
-    )
-      ? initialSelection.currentPromptId
-      : (availablePrompts[0]?.id ?? 'aether');
-    setCurrentModelId(modelId);
-    setCurrentPromptId(promptId);
-    setCurrentFetchProvider(initialSelection.currentFetchProvider);
 
     return {
       availableModels,
       availablePrompts,
-      initialModelId: DEFAULT_MODEL_ID,
-      initialPromptId: availablePrompts[0]?.id ?? 'aether',
-      initialSelection,
     };
   },
   component: AppLayout,
@@ -77,17 +52,6 @@ function AppLayout() {
   createEffect(pageTitle, (title) => {
     document.title = title;
   });
-
-  createEffect(
-    () => ({
-      modelId: currentModelId(),
-      promptId: currentPromptId(),
-      fetchProvider: currentFetchProvider(),
-    }),
-    (selection) => {
-      persistChatSessionSelection(selection.modelId, selection.promptId, selection.fetchProvider);
-    },
-  );
 
   onSettled(() => {
     return () => {

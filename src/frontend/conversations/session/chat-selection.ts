@@ -1,15 +1,10 @@
 import { createSignal } from 'solid-js';
-import {
-  CHAT_SELECTION_COOKIE_KEY,
-  type ChatSessionSelectionState,
-} from '@/shared/conversations/chat-selection';
+import { DEFAULT_MODEL_ID, getDefaultPromptId } from '@/shared/chat/model-catalog';
+import type { FetchProvider } from '@/shared/chat/tool-types';
 
-export type { ChatSessionSelectionState } from '@/shared/conversations/chat-selection';
-
-const [currentModelId, setCurrentModelId] = createSignal('');
-const [currentPromptId, setCurrentPromptId] = createSignal('');
-const [currentFetchProvider, setCurrentFetchProvider] =
-  createSignal<ChatSessionSelectionState['currentFetchProvider']>('jina');
+const [currentModelId, setCurrentModelId] = createSignal(DEFAULT_MODEL_ID);
+const [currentPromptId, setCurrentPromptId] = createSignal(getDefaultPromptId());
+const [currentFetchProvider, setCurrentFetchProvider] = createSignal<FetchProvider>('jina');
 
 export {
   currentFetchProvider,
@@ -18,16 +13,4 @@ export {
   setCurrentFetchProvider,
   setCurrentModelId,
   setCurrentPromptId,
-};
-
-export const persistChatSessionSelection = (
-  currentModelId: string,
-  currentPromptId: string,
-  currentFetchProvider: ChatSessionSelectionState['currentFetchProvider'],
-) => {
-  const value = encodeURIComponent(
-    JSON.stringify({ currentModelId, currentPromptId, currentFetchProvider }),
-  );
-  const secure = location.protocol === 'https:' ? '; Secure' : '';
-  document.cookie = `${CHAT_SELECTION_COOKIE_KEY}=${value}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
 };

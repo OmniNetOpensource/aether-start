@@ -15,9 +15,9 @@ import {
   currentFetchProvider,
   currentModelId,
   currentPromptId,
-  type ChatSessionSelectionState,
 } from '@/frontend/conversations/session/chat-selection';
 import type { ToastApi } from '@/frontend/app-shell/useToast';
+import type { FetchProvider } from '@/shared/chat/tool-types';
 
 export type ChatStatus = 'idle' | 'sending' | 'streaming' | 'stopping';
 
@@ -26,7 +26,7 @@ export type ChatState = {
   setConversationId: (conversationId: string | null) => void;
   getCurrentModelId: () => string;
   getCurrentPromptId: () => string;
-  getCurrentFetchProvider: () => ChatSessionSelectionState['currentFetchProvider'];
+  getCurrentFetchProvider: () => FetchProvider;
   getMessageTree: () => MessageTreeState;
   messageTree: MessageTreeActions;
   artifacts: ArtifactActions;
