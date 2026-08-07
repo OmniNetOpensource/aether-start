@@ -16,11 +16,15 @@ export function useSelectionToolbar(container: Accessor<HTMLElement | undefined>
   let timeout: ReturnType<typeof setTimeout> | undefined;
   let floating: HTMLDivElement | undefined;
 
-  const clearSelection = () => {
-    window.getSelection()?.removeAllRanges();
+  const hideToolbar = () => {
     setText('');
     setRect(undefined);
     if (timeout) clearTimeout(timeout);
+  };
+
+  const clearSelection = () => {
+    window.getSelection()?.removeAllRanges();
+    hideToolbar();
   };
 
   onSettled(() => {
@@ -35,7 +39,7 @@ export function useSelectionToolbar(container: Accessor<HTMLElement | undefined>
       timeout = setTimeout(() => {
         const selection = window.getSelection();
         if (!selection || selection.isCollapsed || selection.rangeCount === 0)
-          return clearSelection();
+          return hideToolbar();
         const selectedText = selection.toString().trim();
         const range = selection.getRangeAt(0);
         const selectionContainer = getSelectionContainer(range);
@@ -47,9 +51,9 @@ export function useSelectionToolbar(container: Accessor<HTMLElement | undefined>
           !root.contains(selectionContainer) ||
           !selectionContainer.closest("[data-role='assistant']")
         )
-          return clearSelection();
+          return hideToolbar();
         const selectionRect = getSelectionRect(range);
-        if (!selectionRect) return clearSelection();
+        if (!selectionRect) return hideToolbar();
         setText(selectedText);
         setRect(selectionRect);
       }, 300);

@@ -262,13 +262,11 @@ export function MessageItem(props: MessageItemProps) {
                 <>
                   <ActionButton
                     onClick={handleStartEditing}
-                    disabled={isBusy()}
                     title='编辑消息'
                     icon={<Pencil class='h-3.5 w-3.5' stroke-width={2.5} />}
                   />
                   <ActionButton
                     onClick={handleRetry}
-                    disabled={isBusy()}
                     title='重试生成'
                     icon={<RotateCcw class='h-3.5 w-3.5' stroke-width={2.5} />}
                   />
@@ -278,7 +276,6 @@ export function MessageItem(props: MessageItemProps) {
               {!isUser() && (
                 <ActionButton
                   onClick={handleRetry}
-                  disabled={isBusy()}
                   title='重试生成'
                   icon={<RotateCcw class='h-3.5 w-3.5' />}
                 />

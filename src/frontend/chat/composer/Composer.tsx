@@ -1,6 +1,6 @@
-import { createEffect, createSignal, createUniqueId } from 'solid-js';
+import { createEffect, createSignal, createUniqueId, For } from 'solid-js';
 import { useHydrated, useNavigate } from '@tanstack/solid-router';
-import { ArrowUp, Loader2, Paperclip, Square } from '@/frontend/design-system/icons';
+import { ArrowUp, Loader2, Paperclip, Square, X } from '@/frontend/design-system/icons';
 import { cancelAnswering, cancelSending } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { chatState, status } from '@/frontend/chat/agent-runtime/chat-state';
 import { useMountEffect } from '@/frontend/app-shell/useMountEffect';
@@ -23,6 +23,7 @@ import {
   type RichComposerEditorHandle,
 } from './composer-editor/RichComposerEditor';
 import { submitMessage } from './composer-request/submit-chat';
+import { queuedMessages, setQueuedMessages } from './composer-request/message-queue';
 
 declare global {
   interface Window {
@@ -77,25 +78,41 @@ export function Composer() {
     return () => document.removeEventListener('keydown', handleGlobalKeyDown);
   });
 
-  const submit = () => {
+  const send = (document: ComposerDocument, onAccepted: () => void) => {
     void submitMessage(
       chatState,
-      composerDocument(),
+      document,
       async (conversationId) => {
         await navigate({
           to: '/app/$conversationId',
           params: { conversationId },
         });
       },
-      () => {
-        setComposerDocument([]);
-        editor?.clear();
-      },
+      onAccepted,
     ).catch((error) => {
       console.error('Failed to submit message:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send message');
     });
   };
+
+  const submit = () => {
+    send(composerDocument(), () => {
+      setComposerDocument([]);
+      editor?.clear();
+    });
+  };
+
+  /* 流式输出结束回到 idle 后，自动发送队列里的下一条消息 */
+  createEffect(
+    () => ({ status: status(), queue: queuedMessages() }),
+    ({ status, queue }) => {
+      if (status !== 'idle') return;
+      const [next, ...rest] = queue;
+      if (!next) return;
+      setQueuedMessages(rest);
+      send(next, () => {});
+    },
+  );
 
   createEffect(
     () => ({ document: composerDocument(), action: action() }),
@@ -156,6 +173,23 @@ export function Composer() {
           if (files.length) void onFilesSelected(files);
         }}
       >
+        <For each={queuedMessages()}>
+          {(queued, index) => (
+            <div class='liquid-glass pointer-events-auto flex items-center gap-2 rounded-lg border px-3 py-1.5 text-sm text-muted-foreground backdrop-blur-xl'>
+              <span class='min-w-0 flex-1 truncate'>
+                {getComposerText(queued).trim() || '（附件）'}
+              </span>
+              <button
+                type='button'
+                aria-label='取消排队消息'
+                onClick={() => setQueuedMessages((queue) => queue.filter((_, i) => i !== index()))}
+                class='shrink-0 rounded-full p-0.5 hover:bg-hover'
+              >
+                <X class='h-3.5 w-3.5' />
+              </button>
+            </div>
+          )}
+        </For>
         <div class='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md'>
           <div class='flex w-full items-end gap-2'>
             <RichComposerEditor

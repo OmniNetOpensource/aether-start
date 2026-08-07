@@ -22,6 +22,7 @@ import {
 } from './event-handlers';
 import type { ChatState } from './chat-state';
 import { readSSEStream } from './sse-stream';
+import { setQueuedMessages } from '@/frontend/chat/composer/composer-request/message-queue';
 import { appendConfirmedUserMessage } from '@/shared/conversations';
 import type { ChatAgentStatus, ChatCommandResponse, ChatOperation } from '@/shared/chat/chat-api';
 
@@ -364,7 +365,7 @@ export const cancelSending = async (runtime: ChatState, reason: string) => {
 
 /**
  * 取消订阅流式输出。
- * abort 本地 activeController，将 status 设为 idle。
+ * abort 本地 activeController，将 status 设为 idle，并清空排队消息。
  */
 export const cancelStreamSubscription = (runtime: ChatState, _reason: string) => {
   clearReconnectState();
@@ -372,6 +373,7 @@ export const cancelStreamSubscription = (runtime: ChatState, _reason: string) =>
   activeController?.abort();
   activeController = null;
   resolveStopFinished();
+  setQueuedMessages([]);
 
   runtime.setStatus('idle');
 };

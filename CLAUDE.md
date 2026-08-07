@@ -270,7 +270,6 @@ Never commit real secrets.
 ## Code Standards
 
 - Never typecast. Never use `as`.
-- Do not call `setState` synchronously inside an effect body.
 - 用尽可能少的 Tailwind CSS 和 `div` 达成同样效果。
 - Write extremely easy to consume code. Optimize for readability. Keep code skimmable. Avoid cleverness. Use early returns. Reduce the number of possible states. Prefer discriminated unions when they simplify the code. Remove optionality that is not real optionality. Do not add override parameters unless they are strictly necessary.
 

@@ -7,8 +7,10 @@ import {
   isComposerDocumentUploading,
   type ComposerDocument,
 } from '../composer-editor/composer-document';
+import { setQueuedMessages } from './message-queue';
 
-// 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求
+// 校验输入，发送成功后清空 composer，并在必要时创建新会话后发起聊天请求。
+// 若当前正在流式输出，则将消息加入队列，等流结束后自动发送。
 export async function submitMessage(
   runtime: ChatState,
   document: ComposerDocument,
@@ -22,10 +24,6 @@ export async function submitMessage(
   const hasModel = !!currentModelId;
   const hasPendingUpload = isComposerDocumentUploading(document);
 
-  if (isBusy) {
-    runtime.toast.warning('Wait for the current request to finish before sending another message.');
-    return;
-  }
   if (isComposerDocumentEmpty(document)) {
     runtime.toast.warning('Type a message before sending.');
     return;
@@ -36,6 +34,12 @@ export async function submitMessage(
   }
   if (hasPendingUpload) {
     runtime.toast.warning('Attachments are still uploading. Please wait.');
+    return;
+  }
+
+  if (isBusy) {
+    setQueuedMessages((queue) => [...queue, document]);
+    clearComposer();
     return;
   }
 
