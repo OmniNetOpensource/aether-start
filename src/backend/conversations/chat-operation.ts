@@ -1,6 +1,6 @@
 import type { ChatOperation, MessageTreeSnapshot } from '@/shared/chat/chat-api';
 import type { Message, UserMessage } from '@/shared/chat/message';
-import { cloneMessages } from './block-operations';
+import { cloneMessages } from '@/shared/conversations';
 
 const buildPathToMessage = (messages: Message[], messageId: number) => {
   const path: number[] = [];
@@ -131,57 +131,4 @@ export const applyChatOperation = (
   messages.push(currentMessage);
 
   return finishOperation(messages, id);
-};
-
-export const appendConfirmedUserMessage = (
-  snapshot: MessageTreeSnapshot,
-  operation: Extract<ChatOperation, { type: 'append' }>,
-  message: UserMessage,
-) => {
-  const existingMessage = snapshot.messages[message.id - 1];
-  if (existingMessage) {
-    if (
-      existingMessage.role !== 'user' ||
-      existingMessage.id !== message.id ||
-      existingMessage.parentId !== message.parentId ||
-      existingMessage.prevSibling !== message.prevSibling
-    ) {
-      return null;
-    }
-
-    const messages = cloneMessages(snapshot.messages);
-    messages[message.id - 1] = cloneMessages([message])[0];
-    return {
-      messages,
-      currentPath: snapshot.currentPath,
-      latestRootId: snapshot.latestRootId,
-      nextId: messages.length + 1,
-    };
-  }
-
-  const result = applyChatOperation(snapshot.messages, operation, message.createdAt);
-  if (!result) {
-    return null;
-  }
-
-  const messageId = result.treeSnapshot.currentPath.at(-1);
-  const expectedMessage = messageId ? result.treeSnapshot.messages[messageId - 1] : null;
-  if (
-    !expectedMessage ||
-    expectedMessage.role !== 'user' ||
-    expectedMessage.id !== message.id ||
-    expectedMessage.parentId !== message.parentId ||
-    expectedMessage.prevSibling !== message.prevSibling ||
-    expectedMessage.nextSibling !== message.nextSibling
-  ) {
-    return null;
-  }
-
-  const messages = cloneMessages(result.treeSnapshot.messages);
-  messages[message.id - 1] = cloneMessages([message])[0];
-
-  return {
-    ...result.treeSnapshot,
-    messages,
-  };
 };

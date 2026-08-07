@@ -17,6 +17,7 @@ import type {
   ContentBlock,
   Message,
   ResearchItem,
+  UserMessage,
 } from '@/shared/chat/message';
 
 export type MessageTreeState = ReturnType<typeof createEmptyMessageState>;
@@ -300,9 +301,73 @@ export const editMessage = (depth: number, messageId: number, blocks: ContentBlo
   return result;
 };
 
+// 服务端落库后回传的权威用户消息，接进本地树。
+// 消息自带 parentId/prevSibling/nextSibling，直接按链接拼接；
+// id 或链接对不上说明本地树已与服务端发散，立刻抛错。
+export const attachConfirmedUserMessage = (message: UserMessage) => {
+  const existing = messageTree.messages[message.id - 1];
+
+  if (existing) {
+    /* 重连或幂等重试：消息已在树里，用服务端版本覆盖 */
+    if (existing.role !== 'user' || existing.parentId !== message.parentId) {
+      throw new Error('Local message tree diverged from server');
+    }
+    const messages = [...messageTree.messages];
+    messages[message.id - 1] = message;
+    setMessageTreeState({ messages });
+    return;
+  }
+
+  if (message.id !== messageTree.messages.length + 1) {
+    throw new Error('Local message tree diverged from server');
+  }
+
+  const messages = [...messageTree.messages];
+  const relink = (id: number | null, patch: (node: Message) => void) => {
+    if (id === null) return;
+    const node = messages[id - 1];
+    if (!node) {
+      throw new Error('Local message tree diverged from server');
+    }
+    const copy = { ...node };
+    patch(copy);
+    messages[id - 1] = copy;
+  };
+  relink(message.parentId, (node) => {
+    node.latestChild = message.id;
+  });
+  relink(message.prevSibling, (node) => {
+    node.nextSibling = message.id;
+  });
+  relink(message.nextSibling, (node) => {
+    node.prevSibling = message.id;
+  });
+  messages.push(message);
+
+  /* 沿 parentId 走到根，得到新的 currentPath */
+  const currentPath: number[] = [];
+  let currentId: number | null = message.id;
+  while (currentId !== null) {
+    const node: Message | undefined = messages[currentId - 1];
+    if (!node || currentPath.length > messages.length) {
+      throw new Error('Local message tree diverged from server');
+    }
+    currentPath.unshift(node.id);
+    currentId = node.parentId;
+  }
+
+  replaceTree({
+    messages,
+    currentPath,
+    latestRootId: currentPath[0] ?? null,
+    nextId: messages.length + 1,
+  });
+};
+
 export const messageTreeActions = {
   addMessage,
   appendToAssistant,
+  attachConfirmedUserMessage,
   clear: clearMessageTree,
   editMessage,
   getBranchInfo: getMessageBranchInfo,

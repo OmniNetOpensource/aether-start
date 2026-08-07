@@ -23,7 +23,6 @@ import {
 import type { ChatState } from './chat-state';
 import { readSSEStream } from './sse-stream';
 import { setQueuedMessages } from '@/frontend/chat/composer/composer-request/message-queue';
-import { appendConfirmedUserMessage } from '@/shared/conversations';
 import type { ChatAgentStatus, ChatCommandResponse, ChatOperation } from '@/shared/chat/chat-api';
 
 /** Agent 路由名，对应 /agents/conversation-runner */
@@ -174,33 +173,15 @@ const finalizeStream = (runtime: ChatState) => {
   resolveStopFinished();
 };
 
+/** 服务端已落库：核对会话 ID，把回传的权威用户消息接进本地树 */
 const applyChatAcceptedPayload = (runtime: ChatState, acceptedPayload: ChatCommandResponse) => {
   const conversationId = runtime.getConversationId();
-  const tree = runtime.getMessageTree();
   if (conversationId && conversationId !== acceptedPayload.conversationId) {
     throw new Error('Conversation ID mismatch');
   }
 
   if (acceptedPayload.type === 'append') {
-    const nextTree = appendConfirmedUserMessage(
-      {
-        messages: tree.messages,
-        currentPath: tree.currentPath,
-        latestRootId: tree.latestRootId,
-        nextId: tree.nextId,
-      },
-      {
-        type: 'append',
-        message: { role: 'user', blocks: acceptedPayload.message.blocks },
-        parentId: acceptedPayload.message.parentId,
-        previousSiblingId: acceptedPayload.message.prevSibling,
-      },
-      acceptedPayload.message,
-    );
-    if (!nextTree) {
-      throw new Error('Failed to append confirmed user message');
-    }
-    runtime.messageTree.setState(nextTree);
+    runtime.messageTree.attachConfirmedUserMessage(acceptedPayload.message);
   }
 
   runtime.setConversationId(acceptedPayload.conversationId);

@@ -13,7 +13,8 @@ import type { ChatProvider, ProviderRunResult } from '@/backend/chat/providers/p
 import type { FetchProvider } from '@/shared/chat/tool-types';
 import { generateTitleFromConversation } from '@/backend/chat/chat-title';
 import { processEventToTree, cloneTreeSnapshot } from './event-processor';
-import { applyChatOperation, computeMessagesFromPath } from '@/shared/conversations';
+import { applyChatOperation } from '@/backend/conversations/chat-operation';
+import { computeMessagesFromPath } from '@/shared/conversations';
 import {
   buildAskUserQuestionsModelResult,
   normalizeAskUserQuestionsAnswers,
