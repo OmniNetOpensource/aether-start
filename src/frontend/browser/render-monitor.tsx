@@ -5,7 +5,6 @@
 
 import { onSettled } from 'solid-js';
 import type { JSX } from '@solidjs/web';
-import { useMountEffect } from '@/frontend/app-shell/useMountEffect';
 
 const FLASH_DURATION_MS = 700;
 const FLASH_CLASS = 'render-monitor-flash';
@@ -82,7 +81,7 @@ export function RenderMonitorBoundary(props: RenderMonitorBoundaryProps) {
 }
 
 export function RenderMonitorController() {
-  useMountEffect(() => {
+  onSettled(() => {
     if (!import.meta.env.DEV) return;
 
     let enabled = true;

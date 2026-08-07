@@ -1,5 +1,5 @@
 import { AskUserQuestionsCard } from '@/frontend/chat/ask-user-questions';
-import { createSignal, For, Show } from 'solid-js';
+import { createSignal, For, onSettled, Show } from 'solid-js';
 import type { JSX } from '@solidjs/web';
 import Markdown from '@/frontend/design-system/Markdown';
 import type { Message } from '@/shared/chat/message';
@@ -15,6 +15,7 @@ import type { EditingState } from './editing-state';
 import { MessageEditor } from './MessageEditor';
 import { BranchNavigator } from './BranchNavigator';
 import { ContentChip } from '@/frontend/chat/composer/composer-editor/ContentChip';
+import { consumeSendFlipRect } from './send-flip';
 
 type CopyButtonProps = {
   blocks: Message['blocks'];
@@ -130,6 +131,28 @@ export function MessageItem(props: MessageItemProps) {
   };
 
   const isUser = () => props.message.role === 'user';
+
+  /* 刚发送的用户消息挂载时，从 composer 位置 FLIP 到气泡位置，带果冻回弹 */
+  let bubbleEl: HTMLDivElement | undefined;
+  onSettled(() => {
+    if (!isUser() || !bubbleEl) return;
+    const from = consumeSendFlipRect();
+    if (!from) return;
+    const to = bubbleEl.getBoundingClientRect();
+    bubbleEl.animate(
+      [
+        {
+          transform: `translate(${from.right - to.right}px, ${from.top - to.top}px) scale(0.97)`,
+          opacity: 0.7,
+        },
+        { transform: 'translate(0, -4px) scale(1.02, 0.94)', opacity: 1, offset: 0.7 },
+        { transform: 'scale(0.99, 1.02)', offset: 0.85 },
+        { transform: 'none' },
+      ],
+      { duration: 480, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+    );
+  });
+
   const assistantBlocks = () => (!isUser() ? props.message.blocks : []);
   const shouldRenderBody = () => isEditing() || !isUser() || props.message.blocks.length > 0;
   const contentWidthClass = () => (isUser() ? 'w-full max-w-[90%]' : 'w-full');
@@ -160,7 +183,12 @@ export function MessageItem(props: MessageItemProps) {
                   )}
                 </Show>
               ) : isUser() ? (
-                <div class='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'>
+                <div
+                  ref={(element) => {
+                    bubbleEl = element;
+                  }}
+                  class='relative z-10 overflow-visible rounded-lg bg-muted px-4 py-3'
+                >
                   <div class='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
                     <For each={props.message.blocks}>
                       {(block, blockIndex) => {

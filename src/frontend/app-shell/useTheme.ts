@@ -1,6 +1,5 @@
-import { createEffect, createSignal } from 'solid-js';
+import { createEffect, createSignal, onSettled } from 'solid-js';
 import { isServer } from '@solidjs/web';
-import { useMountEffect } from '@/frontend/app-shell/useMountEffect';
 import { defaultTheme, findTheme, type Theme } from '@/frontend/themes/registry';
 
 const THEME_STORAGE_KEY = 'theme';
@@ -26,7 +25,7 @@ export function useTheme() {
 
   createEffect(theme, applyTheme);
 
-  useMountEffect(() => {
+  onSettled(() => {
     const onStorage = (event: StorageEvent) => {
       if (event.key !== THEME_STORAGE_KEY) return;
       const next = findTheme(event.newValue);

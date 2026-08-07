@@ -1,4 +1,4 @@
-import { useMountEffect } from '@/frontend/app-shell/useMountEffect';
+import { onSettled } from 'solid-js';
 import { AetherLogo } from '@/frontend/app-shell/AetherLogo';
 import { NewChatButton } from '@/frontend/conversations/conversation-list/NewChatButton';
 import { useResponsive } from '@/frontend/app-shell/ResponsiveContext';
@@ -53,7 +53,7 @@ export default function Sidebar() {
     }
   };
 
-  useMountEffect(() => {
+  onSettled(() => {
     const closeSidebarFromOutside = () => {
       openDropdown = false;
       sidebar?.classList.add('-translate-x-full');
@@ -78,7 +78,7 @@ export default function Sidebar() {
     return () => document.removeEventListener('pointerdown', handlePointerDownOutside);
   });
 
-  useMountEffect(() => {
+  onSettled(() => {
     const closeSidebarOnEscape = () => {
       openDropdown = false;
       sidebar?.classList.add('-translate-x-full');

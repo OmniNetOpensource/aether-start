@@ -1,9 +1,8 @@
-import { createEffect, createSignal, createUniqueId, For } from 'solid-js';
+import { createEffect, createSignal, createUniqueId, For, onSettled } from 'solid-js';
 import { useHydrated, useNavigate } from '@tanstack/solid-router';
 import { ArrowUp, Loader2, Paperclip, Square, X } from '@/frontend/design-system/icons';
 import { cancelAnswering, cancelSending } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { chatState, status } from '@/frontend/chat/agent-runtime/chat-state';
-import { useMountEffect } from '@/frontend/app-shell/useMountEffect';
 import { useToast } from '@/frontend/app-shell/useToast';
 import { Button } from '@/frontend/design-system/button';
 import { cn } from '@/shared/core/utils';
@@ -24,6 +23,7 @@ import {
 } from './composer-editor/RichComposerEditor';
 import { submitMessage } from './composer-request/submit-chat';
 import { queuedMessages, setQueuedMessages } from './composer-request/message-queue';
+import { setSendFlipRect } from '@/frontend/chat/message-thread/send-flip';
 
 declare global {
   interface Window {
@@ -42,6 +42,7 @@ export function Composer() {
     composerDocumentState() ??
     createComposerDocument(hydrated() ? (window.__preHydrationInput ?? '') : '');
   let editor: RichComposerEditorHandle | null = null;
+  let inputBox: HTMLDivElement | undefined;
   const fileInputId = createUniqueId();
   const uploading = () => isComposerDocumentUploading(composerDocument());
   const action = () => {
@@ -62,7 +63,7 @@ export function Composer() {
     },
   );
 
-  useMountEffect(() => {
+  onSettled(() => {
     const handleGlobalKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.metaKey || event.ctrlKey || event.altKey || event.key.length !== 1) return;
 
@@ -79,6 +80,7 @@ export function Composer() {
   });
 
   const send = (document: ComposerDocument, onAccepted: () => void) => {
+    if (inputBox) setSendFlipRect(inputBox.getBoundingClientRect());
     void submitMessage(
       chatState,
       document,
@@ -190,7 +192,12 @@ export function Composer() {
             </div>
           )}
         </For>
-        <div class='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md'>
+        <div
+          ref={(element) => {
+            inputBox = element;
+          }}
+          class='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md'
+        >
           <div class='flex w-full items-end gap-2'>
             <RichComposerEditor
               ref={(currentEditor) => {
