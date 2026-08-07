@@ -1,84 +1,30 @@
 import { applyAssistantAddition, cloneMessages } from '@/shared/conversations';
-import { addMessage, buildCurrentPath } from '@/shared/conversations';
+import { buildCurrentPath } from '@/shared/conversations';
+import type { AssistantAddition } from '@/shared/conversations/block-operations';
 import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/shared/chat/chat-api';
-import type {
-  AskUserQuestionsAnswer,
-  AskUserQuestionsQuestion,
-} from '@/shared/chat/ask-user-questions';
 import type { AssistantMessage, Message } from '@/shared/chat/message';
 
 type TreeState = MessageTreeSnapshot;
 
-const ensureAssistantTarget = (state: TreeState) => {
-  const lastId = state.currentPath[state.currentPath.length - 1] ?? null;
-  const lastMessage = lastId ? state.messages[lastId - 1] : null;
-
-  if (lastMessage && lastMessage.role === 'assistant') {
-    return {
-      state,
-      assistantId: lastId,
-    };
-  }
-
-  const result = addMessage(
-    {
-      messages: state.messages,
-      currentPath: state.currentPath,
-      latestRootId: state.latestRootId,
-      nextId: state.nextId,
-    },
-    'assistant',
-    [],
-  );
-
-  return {
-    state: {
-      messages: result.messages,
-      currentPath: result.currentPath,
-      latestRootId: result.latestRootId,
-      nextId: result.nextId,
-    },
-    assistantId: result.addedMessage.id,
-  };
-};
-
+/** 把增量写进指定的 assistant 消息。目标不存在或角色不符时忽略(事件与树不一致属于服务端 bug)。 */
 const appendToAssistant = (
   state: TreeState,
-  addition:
-    | { type: 'content'; content: string }
-    | { type: 'error'; message: string }
-    | { kind: 'thinking'; text: string }
-    | { kind: 'tool'; data: { call: { tool: string; args: Record<string, unknown> } } }
-    | { kind: 'tool_result'; tool: string; result: string }
-    | {
-        kind: 'ask_user_questions_requested';
-        callId: string;
-        questions: AskUserQuestionsQuestion[];
-      }
-    | { kind: 'ask_user_questions_status'; callId: string; status: 'pending' | 'submitting' }
-    | {
-        kind: 'ask_user_questions_answered';
-        callId: string;
-        answers: AskUserQuestionsAnswer[];
-      },
+  assistantMessageId: number,
+  addition: AssistantAddition,
 ): TreeState => {
-  const target = ensureAssistantTarget(state);
-  const nextMessages = [...target.state.messages];
-  const assistant = nextMessages[target.assistantId - 1];
-
+  const assistant = state.messages[assistantMessageId - 1];
   if (!assistant || assistant.role !== 'assistant') {
-    return target.state;
+    return state;
   }
 
-  const updatedAssistant: AssistantMessage = {
-    ...(assistant as AssistantMessage),
-    blocks: applyAssistantAddition((assistant as AssistantMessage).blocks ?? [], addition),
-  };
-
-  nextMessages[target.assistantId - 1] = updatedAssistant;
+  const nextMessages = [...state.messages];
+  nextMessages[assistantMessageId - 1] = {
+    ...assistant,
+    blocks: applyAssistantAddition(assistant.blocks, addition),
+  } satisfies AssistantMessage;
 
   return {
-    ...target.state,
+    ...state,
     messages: nextMessages,
   };
 };
@@ -86,23 +32,32 @@ const appendToAssistant = (
 const normalizeToolArgs = (args: unknown) =>
   (args && typeof args === 'object' ? args : {}) as Record<string, unknown>;
 
-export const processEventToTree = (state: TreeState, event: ChatServerToClientEvent): TreeState => {
+/**
+ * 事件 → 服务端共享树。所有 run 写同一棵树,事件由信封里的 assistantMessageId 定点路由。
+ * tree_operation 不在这里处理:服务端侧它就是 applyChatOperation 的执行本身,
+ * 事件只是发给客户端同步的通知。
+ */
+export const processEventToTree = (
+  state: TreeState,
+  event: ChatServerToClientEvent,
+  assistantMessageId: number,
+): TreeState => {
   if (event.type === 'content') {
-    return appendToAssistant(state, {
+    return appendToAssistant(state, assistantMessageId, {
       type: 'content',
       content: typeof event.content === 'string' ? event.content : String(event.content ?? ''),
     });
   }
 
   if (event.type === 'thinking') {
-    return appendToAssistant(state, {
+    return appendToAssistant(state, assistantMessageId, {
       kind: 'thinking',
       text: typeof event.content === 'string' ? event.content : String(event.content ?? ''),
     });
   }
 
   if (event.type === 'tool_call') {
-    return appendToAssistant(state, {
+    return appendToAssistant(state, assistantMessageId, {
       kind: 'tool',
       data: {
         call: {
@@ -125,7 +80,7 @@ export const processEventToTree = (state: TreeState, event: ChatServerToClientEv
             }
           })();
 
-    return appendToAssistant(state, {
+    return appendToAssistant(state, assistantMessageId, {
       kind: 'tool_result',
       tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
       result: resultText,
@@ -133,14 +88,14 @@ export const processEventToTree = (state: TreeState, event: ChatServerToClientEv
   }
 
   if (event.type === 'error') {
-    return appendToAssistant(state, {
+    return appendToAssistant(state, assistantMessageId, {
       type: 'error',
       message: typeof event.message === 'string' ? event.message : String(event.message ?? ''),
     });
   }
 
   if (event.type === 'ask_user_questions_requested') {
-    return appendToAssistant(state, {
+    return appendToAssistant(state, assistantMessageId, {
       kind: 'ask_user_questions_requested',
       callId: event.callId,
       questions: event.questions,
@@ -148,7 +103,7 @@ export const processEventToTree = (state: TreeState, event: ChatServerToClientEv
   }
 
   if (event.type === 'ask_user_questions_answered') {
-    return appendToAssistant(state, {
+    return appendToAssistant(state, assistantMessageId, {
       kind: 'ask_user_questions_answered',
       callId: event.callId,
       answers: event.answers,

@@ -384,7 +384,7 @@ function MarkdownBlock(props: { isAnimating: boolean; markdown: string }) {
 
   const tree = createMemo(() => {
     const source = props.isAnimating
-      ? remend(props.markdown, { linkMode: 'text-only' })
+      ? remend(props.markdown)
       : props.markdown;
     return markdownProcessor.runSync(markdownProcessor.parse(source));
   });

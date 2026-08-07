@@ -83,7 +83,11 @@ export function ShareDialog(props: ShareDialogProps) {
     setShareActionLoading('create');
     try {
       const result = await createConversationShareFn({
-        data: { conversationId: currentConversationId, title: conversationTitle() },
+        data: {
+          conversationId: currentConversationId,
+          title: conversationTitle(),
+          currentPath: [...currentPath()],
+        },
       });
       setShare({ status: 'active', token: result.token });
       toast.success('Share URL created');

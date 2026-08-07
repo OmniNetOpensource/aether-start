@@ -4,18 +4,19 @@
  * 聊天请求编排器：负责客户端与 Cloudflare Agent 之间的通信。
  *
  * 职责：
- * - 发起聊天请求（startChatRequest）
+ * - 发起聊天请求（startChatRequest）,同一会话可多个 run 并发
  * - 取消正在进行的 AI 回复（cancelAnswering）
  * - 恢复正在进行的对话流（resumeRunningConversation）
  * - 断线自动重连
  *
- * 与 conversation-runner 服务端配合：/chat 返回服务端确认的用户消息，/events 通过 SSE
- * 接收 chat_event、chat_finished 等事件，交给 event-handlers 更新 UI 状态。
+ * 与 conversation-runner 服务端配合：/chat 只回回执,树变更经 tree_operation 事件送达;
+ * /events 是会话级订阅,一条连接接收所有 run 的 chat_event、chat_finished 等事件。
  */
 import type { AskUserQuestionsAnswer } from '@/shared/chat/ask-user-questions';
 import {
   applyChatEventToTree,
   flushStreamBuffer,
+  followTreeOperation,
   getLastEventId,
   handleSSEMessage,
   resetLastEventId,
@@ -31,8 +32,8 @@ const AGENT_NAME = 'conversation-runner';
 const SELECT_MODEL_WARNING = 'Select a model before sending a message.';
 
 /**
- * 当前活跃的 AbortController。
- * 同一时刻只允许一个请求在跑，新请求会 abort 掉旧的。
+ * 当前会话 /events 订阅的 AbortController。
+ * 订阅属于会话而非单次请求:一条连接接收所有 run 的广播,只在切会话/卸载时 abort。
  */
 let activeController: AbortController | null = null;
 
@@ -173,20 +174,6 @@ const finalizeStream = (runtime: ChatState) => {
   resolveStopFinished();
 };
 
-/** 服务端已落库：核对会话 ID，把回传的权威用户消息接进本地树 */
-const applyChatAcceptedPayload = (runtime: ChatState, acceptedPayload: ChatCommandResponse) => {
-  const conversationId = runtime.getConversationId();
-  if (conversationId && conversationId !== acceptedPayload.conversationId) {
-    throw new Error('Conversation ID mismatch');
-  }
-
-  if (acceptedPayload.type === 'append') {
-    runtime.messageTree.attachConfirmedUserMessage(acceptedPayload.message);
-  }
-
-  runtime.setConversationId(acceptedPayload.conversationId);
-};
-
 /**
  * 探测指定对话的 Agent 状态。
  * GET /agents/conversation-runner/:conversationId，返回 idle | running | completed | aborted | error。
@@ -213,22 +200,21 @@ export const checkAgentStatus = async (
  * 发起一次聊天请求。
  *
  * 流程：
- * 1. 校验 status 为 idle、已选模型
- * 2. 发起 POST /chat，等待服务端落库并返回正式用户消息
- * 3. append 服务端响应后，再连接 /events 消费 assistant SSE
+ * 1. 校验已选模型与会话 ID 规则
+ * 2. POST /chat,服务端应用树操作后回执 { conversationId, assistantMessageId }
+ * 3. 树变更由 tree_operation 事件送达;若当前没有 /events 订阅则建立一条,有则复用
  *
- * 异常：AbortError 静默忽略；TypeError（如网络错误）调用 finalizeStream；其他恢复 idle。
+ * 多 run 并发:流式期间再次调用本函数不会打断已有的流,新 run 的事件走同一条订阅。
+ * 异常：AbortError 静默忽略；TypeError（如网络错误）走自动重连；其他恢复状态并提示。
  */
 export const startChatRequest = async (
   runtime: ChatState,
   operation: ChatOperation,
   onAccepted?: (response: ChatCommandResponse) => void,
 ) => {
-  resetLastEventId();
   const modelId = runtime.getCurrentModelId();
   if (!modelId) {
     runtime.toast.warning(SELECT_MODEL_WARNING);
-    runtime.setStatus('idle');
     return;
   }
 
@@ -241,7 +227,6 @@ export const startChatRequest = async (
       operation.parentId !== null ||
       operation.previousSiblingId !== null)
   ) {
-    runtime.setStatus('idle');
     throw new Error('Conversation not found');
   }
 
@@ -254,13 +239,17 @@ export const startChatRequest = async (
     operation,
   };
 
-  activeController?.abort(); /* 取消之前的请求，保证同一时刻只有一个在跑 */
-  const controller = new AbortController();
+  /* 没有活跃订阅时本次请求负责建立它;已有订阅(其他 run 在流式)则复用,POST 挂它的 signal */
+  const ownsSubscription = activeController === null;
+  const controller = activeController ?? new AbortController();
   activeController = controller;
-  runtime.setStatus('sending');
-  /* 服务端是否已接受请求：接受后出错要写进消息树，接受前只弹 toast */
-  let accepted = false;
-  let acceptedConversationId: string | null = conversationId;
+  if (ownsSubscription) {
+    /* DO 可能在空闲后被驱逐重建,eventId 会从 1 重新计数;无订阅意味着没有在途事件,重置是安全的 */
+    resetLastEventId();
+    runtime.setStatus('sending');
+  }
+  /* 服务端是否已接受请求:接受后出错要写进消息树,接受前只弹 toast */
+  let acceptedAssistantMessageId: number | null = null;
 
   try {
     const response = await fetch(
@@ -280,16 +269,26 @@ export const startChatRequest = async (
       const message =
         (await getResponseErrorMessage(response)) ?? `Chat request failed: ${response.status}`;
       runtime.toast.error(message);
-      runtime.setStatus('idle');
+      if (ownsSubscription) {
+        runtime.setStatus('idle');
+      }
       return;
     }
 
     const acceptedPayload: ChatCommandResponse = await response.json();
-    acceptedConversationId = acceptedPayload.conversationId;
-    applyChatAcceptedPayload(runtime, acceptedPayload);
-    accepted = true;
+    if (conversationId && conversationId !== acceptedPayload.conversationId) {
+      throw new Error('Conversation ID mismatch');
+    }
+    runtime.setConversationId(acceptedPayload.conversationId);
+    followTreeOperation(acceptedPayload.assistantMessageId);
+    acceptedAssistantMessageId = acceptedPayload.assistantMessageId;
     onAccepted?.(acceptedPayload);
     runtime.setStatus('streaming');
+
+    if (!ownsSubscription) {
+      /* 已有订阅在接收广播,本请求到此为止 */
+      return;
+    }
 
     const eventsResponse = await fetch(
       `${resolveAgentBaseUrl()}/${acceptedPayload.conversationId}/events`,
@@ -305,33 +304,41 @@ export const startChatRequest = async (
     finalizeStream(runtime);
   } catch (error) {
     if (isAbortError(error)) {
+      if (ownsSubscription) {
+        runtime.setStatus('idle');
+      }
+      return;
+    }
+
+    const reconnectId = runtime.getConversationId();
+    if (error instanceof TypeError && acceptedAssistantMessageId !== null && reconnectId) {
+      scheduleAutoReconnect(runtime, reconnectId);
+      return;
+    }
+
+    if (ownsSubscription) {
       runtime.setStatus('idle');
-      return;
     }
-
-    if (error instanceof TypeError && runtime.getStatus() !== 'idle' && acceptedConversationId) {
-      runtime.setConversationId(acceptedConversationId);
-      scheduleAutoReconnect(runtime, acceptedConversationId);
-      return;
-    }
-
-    runtime.setStatus('idle');
     const message = describeError(error);
-    if (accepted) {
-      applyChatEventToTree(runtime, {
-        type: 'error',
-        message,
-        error: {
-          code: error instanceof TypeError ? 'network_error' : 'unknown',
-          retryable: error instanceof TypeError,
-          details: message,
+    if (acceptedAssistantMessageId !== null) {
+      applyChatEventToTree(
+        runtime,
+        {
+          type: 'error',
+          message,
+          error: {
+            code: error instanceof TypeError ? 'network_error' : 'unknown',
+            retryable: error instanceof TypeError,
+            details: message,
+          },
         },
-      });
+        acceptedAssistantMessageId,
+      );
     } else {
       runtime.toast.error(message);
     }
   } finally {
-    if (activeController === controller) {
+    if (ownsSubscription && activeController === controller) {
       activeController = null;
     }
   }
@@ -346,7 +353,7 @@ export const cancelSending = async (runtime: ChatState, reason: string) => {
 
 /**
  * 取消订阅流式输出。
- * abort 本地 activeController，将 status 设为 idle，并清空排队消息。
+ * abort 本地 activeController，将 status 设为 idle，并清空排队消息与流式标记。
  */
 export const cancelStreamSubscription = (runtime: ChatState, _reason: string) => {
   clearReconnectState();
@@ -355,6 +362,7 @@ export const cancelStreamSubscription = (runtime: ChatState, _reason: string) =>
   activeController = null;
   resolveStopFinished();
   setQueuedMessages([]);
+  runtime.messageTree.clearStreamingAssistants();
 
   runtime.setStatus('idle');
 };
@@ -362,8 +370,13 @@ export const cancelStreamSubscription = (runtime: ChatState, _reason: string) =>
 /**
  * 取消正在进行的 AI 回复。
  * 保持 SSE 连接，等服务端 abort 后通过 chat_finished 收口。
+ * 带 assistantMessageId 时只停对应 run;不带则停全部(composer 停止按钮)。
  */
-export const cancelAnswering = async (runtime: ChatState, _reason: string) => {
+export const cancelAnswering = async (
+  runtime: ChatState,
+  _reason: string,
+  assistantMessageId?: number,
+) => {
   const conversationId = runtime.getConversationId();
   const status = runtime.getStatus();
 
@@ -380,24 +393,32 @@ export const cancelAnswering = async (runtime: ChatState, _reason: string) => {
     return;
   }
 
-  runtime.setStatus('stopping');
-  const finished = waitForStopFinished();
+  /* 只停单个 run 时不动全局 status:其他 run 还在流式,收口由对应 chat_finished 驱动 */
+  const stopsAll = assistantMessageId === undefined;
+  if (stopsAll) {
+    runtime.setStatus('stopping');
+  }
+  const finished = stopsAll ? waitForStopFinished() : null;
 
   try {
     const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/abort`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify(stopsAll ? {} : { assistantMessageId }),
     });
 
     if (!response.ok) {
       throw new Error(`Abort request failed: ${response.status}`);
     }
 
-    await finished;
+    if (finished) {
+      await finished;
+    }
   } catch (error) {
-    runtime.setStatus('streaming');
+    if (stopsAll) {
+      runtime.setStatus('streaming');
+    }
     throw error;
   }
 };

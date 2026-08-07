@@ -1,16 +1,17 @@
 import { createSignal, For, Show } from 'solid-js';
 import { useNavigate } from '@tanstack/solid-router';
-import { cancelAnswering, startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
+import { startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import {
   composerDocumentFromBlocks,
   composerDocumentToBlocks,
   isComposerDocumentEmpty,
 } from '@/frontend/chat/composer/composer-editor/composer-document';
 import { getBranchInfo } from '@/shared/conversations';
-import { chatState, status } from '@/frontend/chat/agent-runtime/chat-state';
+import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import {
   currentPath,
   messages,
+  streamingAssistantIds,
 } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { conversationId } from '@/frontend/conversations/session/conversation-meta';
 import { branchConversationFn } from '@/rpc/conversations';
@@ -33,7 +34,6 @@ export function MessageList() {
   const setEditingState = (state: EditingState | null) =>
     setEditing(state ? { conversationId: conversationId(), state } : null);
   const widthClass = 'w-[90%] @[921px]:w-[60%]';
-  const isStreaming = () => status() === 'streaming';
 
   const startEditing = (messageId: number) => {
     const target = messages()[messageId - 1];
@@ -50,9 +50,6 @@ export function MessageList() {
     if (!chatState.getCurrentModelId()) {
       chatState.toast.warning('请先选择模型');
       return;
-    }
-    if (chatState.getStatus() !== 'idle') {
-      await cancelAnswering(chatState, 'message/submitEdit');
     }
     if (isComposerDocumentEmpty(editing.editedDocument)) {
       chatState.toast.warning('请输入内容或添加附件');
@@ -84,9 +81,6 @@ export function MessageList() {
     if (!chatState.getCurrentModelId()) {
       chatState.toast.warning('请先选择模型');
       return;
-    }
-    if (chatState.getStatus() !== 'idle') {
-      await cancelAnswering(chatState, 'message/retry');
     }
 
     const target = messages()[messageId - 1];
@@ -160,7 +154,7 @@ export function MessageList() {
                         <MessageItem
                           message={currentMessage()}
                           depth={index() + 1}
-                          isStreaming={isLastMessage() && isStreaming()}
+                          isStreaming={streamingAssistantIds().has(messageId)}
                           isLastInPath={isLastMessage()}
                           branchInfo={getBranchInfo(messages(), messageId)}
                           editingState={editingState()}

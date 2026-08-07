@@ -8,6 +8,8 @@ import {
   isSafeShareToken,
   resolveStorageKeyForSharedAttachment,
 } from '@/shared/share/share-assets';
+import { buildPathToLatestAssistant } from '@/shared/conversations';
+import { isMessage } from '@/shared/chat/message';
 import type {
   SharedAttachmentSnapshot,
   SharedConversationSnapshot,
@@ -15,7 +17,6 @@ import type {
 } from '@/shared/share/share';
 
 type SnapshotSourceConversation = {
-  currentPath: number[];
   messages: unknown[];
 };
 
@@ -152,6 +153,7 @@ const toSharedMessageSnapshot = (
 
 const buildSnapshotFromConversation = (
   conversation: SnapshotSourceConversation,
+  currentPath: number[],
 ): SharedConversationSnapshot => {
   const messagesById = new Map<number, unknown>();
   for (const message of conversation.messages) {
@@ -161,7 +163,21 @@ const buildSnapshotFromConversation = (
     messagesById.set(message.id, message);
   }
 
-  const currentPathMessages = conversation.currentPath
+  // 路径由客户端提交,逐级校验 parentId 连续性;非法或为空时回退到最新 assistant 分支。
+  const isValidPath =
+    currentPath.length > 0 &&
+    currentPath.every((messageId, index) => {
+      const message = messagesById.get(messageId);
+      if (!isRecord(message)) return false;
+      const expectedParent = index === 0 ? null : currentPath[index - 1];
+      return message.parentId === expectedParent;
+    });
+
+  const resolvedPath = isValidPath
+    ? currentPath
+    : buildPathToLatestAssistant(conversation.messages.filter(isMessage));
+
+  const currentPathMessages = resolvedPath
     .map((messageId) => messagesById.get(messageId))
     .filter((message): message is unknown => message !== undefined);
 
@@ -257,7 +273,7 @@ export const createConversationShareFn = createServerFn({ method: 'POST' })
       throw new Error('Conversation not found');
     }
 
-    const snapshot = buildSnapshotFromConversation(conversation);
+    const snapshot = buildSnapshotFromConversation(conversation, data.currentPath);
     if (snapshot.messages.length === 0) {
       throw new Error('No messages to share');
     }

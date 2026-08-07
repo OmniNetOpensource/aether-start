@@ -21,7 +21,6 @@ export type ConversationRecord = {
   model: string | null;
   is_pinned: boolean;
   pinned_at: string | null;
-  currentPath: number[];
   messages: object[];
   artifacts: ConversationArtifact[];
   created_at: string;
@@ -33,7 +32,6 @@ export type ConversationPayload = {
   id: string;
   title: string | null;
   model?: string | null;
-  currentPath: number[];
   messages: object[];
   created_at: string;
   updated_at: string;
@@ -67,19 +65,6 @@ export type ConversationSearchItem = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
-
-const safeParsePath = (value: string): number[] => {
-  try {
-    const parsed = JSON.parse(value);
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    return parsed.filter((item): item is number => typeof item === 'number');
-  } catch {
-    return [];
-  }
-};
 
 const safeParseMessages = (value: string): object[] => {
   try {
@@ -277,7 +262,6 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
   const isPinned = toPinnedBoolean(row.is_pinned);
   const pinnedAtRaw = toPinnedAt(row.pinned_at);
   const pinnedAt = isPinned ? (pinnedAtRaw ?? updatedAt) : null;
-  const currentPathJson = typeof row.current_path_json === 'string' ? row.current_path_json : '[]';
   const messagesJson = typeof row.messages_json === 'string' ? row.messages_json : '[]';
 
   return {
@@ -287,7 +271,6 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
     model,
     is_pinned: isPinned,
     pinned_at: pinnedAt,
-    currentPath: safeParsePath(currentPathJson),
     messages: safeParseMessages(messagesJson),
     artifacts: [],
     created_at: createdAt,
@@ -315,7 +298,6 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
     model,
     is_pinned: isPinned,
     pinned_at: pinnedAt,
-    currentPath: [],
     messages: [],
     artifacts: [],
     created_at: createdAt,
@@ -630,7 +612,7 @@ export const getConversationById = async (db: D1Database, id: string, userId: st
     db
       .prepare(
         `
-      SELECT m.user_id, m.id, m.title, m.model, m.is_pinned, m.pinned_at, m.created_at, m.updated_at, b.current_path_json, b.messages_json
+      SELECT m.user_id, m.id, m.title, m.model, m.is_pinned, m.pinned_at, m.created_at, m.updated_at, b.messages_json
       FROM conversation_metas m
       JOIN conversation_bodies b ON b.user_id = m.user_id AND b.id = m.id
       WHERE m.id = ?1 AND m.user_id = ?2
@@ -743,19 +725,13 @@ export const upsertConversation = async (db: D1Database, payload: ConversationPa
     db
       .prepare(
         `
-      INSERT INTO conversation_bodies(user_id, id, current_path_json, messages_json)
-      VALUES (?1, ?2, ?3, ?4)
+      INSERT INTO conversation_bodies(user_id, id, messages_json)
+      VALUES (?1, ?2, ?3)
       ON CONFLICT(user_id, id) DO UPDATE SET
-        current_path_json = excluded.current_path_json,
         messages_json = excluded.messages_json
       `,
       )
-      .bind(
-        payload.user_id,
-        payload.id,
-        JSON.stringify(payload.currentPath ?? []),
-        JSON.stringify(messages),
-      ),
+      .bind(payload.user_id, payload.id, JSON.stringify(messages)),
     db
       .prepare('DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2')
       .bind(payload.user_id, payload.id),
@@ -822,7 +798,6 @@ export const branchConversation = async (
     id: conversationId,
     title,
     model,
-    currentPath: branchedMessages.map((message) => message.id),
     messages: branchedMessages,
     created_at: now,
     updated_at: now,

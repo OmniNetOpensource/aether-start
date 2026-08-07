@@ -34,6 +34,7 @@ import type {
   ArtifactLanguage,
   ChatAgentStatus,
   ChatCommandResponse,
+  ChatFinishedPayload,
   ChatOperation,
   ChatServerToClientEvent,
   MessageTreeSnapshot,
@@ -142,7 +143,10 @@ type ChatRequestBody = {
 type PreparedChatRequest = Omit<ChatRequestBody, 'conversationId'> & {
   conversationId: string;
   conversationHistory: SerializedMessage[];
-  treeSnapshot: MessageTreeSnapshot;
+  /** 本 run 的 assistant 占位消息 id,所有流式事件的写入目标 */
+  assistantMessageId: number;
+  /** run 级路径:发给模型的分支上下文与标题生成用,不落库 */
+  runPath: number[];
 };
 
 // 流式 artifact 事件在内存里拼出的「进行中」状态；completed 或 failed 后从 Map 移除。
@@ -257,9 +261,12 @@ type PendingAskUserQuestions = {
   callId: string;
   conversationId: string;
   ownerUserId: string;
+  /** 提问所属 run 的 assistant 占位消息 id;回答事件与 finalize 清理都按它路由 */
+  assistantMessageId: number;
   questions: AskUserQuestionsQuestion[];
   submittedByUserId: string | null;
   answered: boolean;
+  emitEvent: (event: ChatServerToClientEvent) => Promise<void>;
   waitForAnswer: {
     resolve: (modelResult: string) => void;
     reject: (error: unknown) => void;
@@ -334,12 +341,15 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   // 一个 Durable Object 实例一旦绑定某个会话，后续请求都应该落到同一个实例里。
   private instanceName: string | null = null;
 
-  // abortController 负责终止当前运行中的模型调用和工具执行链路。
-  private abortController: AbortController | null = null;
+  // 每个 run(一次模型生成)以自己的 assistant 占位消息 id 为键,abort 可以精确到单个 run。
+  private runs = new Map<number, { abortController: AbortController }>();
+  // 会话级共享树:所有 run 的事件都写它,落库也永远持久化它。最后一个 run 收口后释放。
+  private activeTree: MessageTreeSnapshot | null = null;
+  // 自上次缓存清空以来已收口的 run(assistantMessageId → completedAt),供断线补拉恢复状态。
+  private finishedRuns = new Map<number, string | null>();
   // eventCache 用来支持断线重连。前端带上 lastEventId 后，可以从这里补拉遗漏事件。
   private eventCache: PersistedChatEvent[] = [];
   private nextEventId = 1;
-  private assistantCompletedAt: string | null = null;
   private runtimeState: ConversationRunnerState = {
     status: 'idle',
     conversationId: null,
@@ -351,7 +361,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   private writers = new Set<WritableStreamDefaultWriter<Uint8Array>>();
   private encoder = new TextEncoder();
   private pendingAskUserQuestions = new Map<string, PendingAskUserQuestions>();
-  private liveEventSink: ((event: ChatServerToClientEvent) => Promise<void>) | null = null;
 
   // 第一次收到某个 conversation 的请求时，把实例和会话绑定起来。
   private ensureInitialized(name: string) {
@@ -447,7 +456,8 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
 
   // ── POST /chat ───────────────────────────────────────────────────────
 
-  // 接收一次新的聊天请求。用户消息落库后返回正式消息，模型输出统一由 /events 推送。
+  // 接收一次新的聊天请求。多 run 并发:树操作应用到共享树后发出 tree_operation 事件,
+  // 响应只回回执;树变更与模型输出统一由 /events 推送。
   private async handleChat(
     request: Request,
     userId: string,
@@ -465,11 +475,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
 
     if (!requestMessage) {
       return Response.json({ error: 'Invalid request body' }, { status: 400 });
-    }
-
-    // 同一个会话实例一次只允许一个请求运行。
-    if (this.runtimeState.status === 'running') {
-      return Response.json({ type: 'busy' }, { status: 409 });
     }
 
     if (!this.instanceName) {
@@ -501,12 +506,22 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     if (createsConversation && existing) {
       return Response.json({ error: 'Conversation already exists' }, { status: 409 });
     }
-    const existingMessages = existing?.messages.filter(isMessage) ?? [];
-    if (existing && existingMessages.length !== existing.messages.length) {
-      return Response.json({ error: 'Invalid persisted message tree' }, { status: 500 });
+
+    // 有 run 在跑时共享树是最新事实(含未落库的流式内容与占位消息),必须基于它做树操作;
+    // 否则从 D1 读,并以此初始化共享树。
+    let baseMessages: Message[];
+    if (this.activeTree) {
+      baseMessages = this.activeTree.messages;
+    } else {
+      const existingMessages = existing?.messages.filter(isMessage) ?? [];
+      if (existing && existingMessages.length !== existing.messages.length) {
+        return Response.json({ error: 'Invalid persisted message tree' }, { status: 500 });
+      }
+      baseMessages = existingMessages;
     }
+
     const operationResult = applyChatOperation(
-      existingMessages,
+      baseMessages,
       requestMessage.operation,
       new Date().toISOString(),
     );
@@ -514,45 +529,25 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       return Response.json({ error: 'Invalid chat operation' }, { status: 400 });
     }
 
-    const userMessageId = operationResult.treeSnapshot.currentPath.at(-1);
-    const userMessage = userMessageId
-      ? operationResult.treeSnapshot.messages[userMessageId - 1]
-      : null;
-    let acceptedPayload: ChatCommandResponse;
-    if (requestMessage.operation.type === 'append') {
-      if (!userMessage || userMessage.role !== 'user') {
-        return Response.json({ error: 'Invalid chat operation result' }, { status: 500 });
-      }
-      acceptedPayload = {
-        type: 'append',
-        conversationId,
-        message: userMessage,
-      };
-    } else {
-      acceptedPayload = {
-        type: 'regenerate',
-        conversationId,
-      };
-    }
+    const assistantMessageId = operationResult.assistantMessage.id;
 
     const message: PreparedChatRequest = {
       ...requestMessage,
       conversationId,
-      treeSnapshot: operationResult.treeSnapshot,
+      assistantMessageId,
+      runPath: operationResult.treeSnapshot.currentPath,
       conversationHistory: computeMessagesFromPath(
         operationResult.treeSnapshot.messages,
         operationResult.treeSnapshot.currentPath,
-      ).map(
-        (item): SerializedMessage =>
-          item.role === 'user'
-            ? { role: 'user', blocks: item.blocks }
-            : { role: 'assistant', blocks: item.blocks },
-      ),
+      )
+        .filter((item) => item.id !== assistantMessageId)
+        .map(
+          (item): SerializedMessage =>
+            item.role === 'user'
+              ? { role: 'user', blocks: item.blocks }
+              : { role: 'assistant', blocks: item.blocks },
+        ),
     };
-
-    // 新请求开始后，旧请求的事件缓存已经没有意义，先清掉避免重连时串事件。
-    this.eventCache = [];
-    this.assistantCompletedAt = null;
 
     // quota 在请求被“正式接受”时扣减，避免并发提交时出现重复接受。
     const consumeResult = await consumePromptQuotaOnAccept(
@@ -578,8 +573,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         id: message.conversationId,
         title,
         model: message.model ?? existing?.model ?? null,
-        currentPath: message.treeSnapshot.currentPath,
-        messages: message.treeSnapshot.messages,
+        messages: operationResult.treeSnapshot.messages,
         created_at: existing?.created_at ?? now,
         updated_at: now,
       });
@@ -590,37 +584,48 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       return Response.json({ error: 'Failed to persist chat operation' }, { status: 500 });
     }
 
-    // 只有树操作落库后才接受请求；从这一刻开始，状态探测会把会话视为正在生成。
+    // 树操作落库后才接受请求:更新共享树,广播 tree_operation 让所有客户端同步树结构。
+    this.activeTree = operationResult.treeSnapshot;
     this.runtimeState = {
       status: 'running',
       conversationId: message.conversationId,
       ownerUserId: this.runtimeState.ownerUserId ?? userId,
       updatedAt: Date.now(),
     };
-    this.persistAndBroadcastEvent({
-      type: 'conversation_updated',
-      conversationId: message.conversationId,
-      title,
-      updated_at: now,
-    });
+    this.persistAndBroadcastEvent(
+      {
+        type: 'tree_operation',
+        userMessage: operationResult.userMessage,
+        assistantMessageId,
+        assistantCreatedAt: operationResult.assistantMessage.createdAt,
+        changedMessages: operationResult.changedMessages,
+      },
+      null,
+    );
+    this.persistAndBroadcastEvent(
+      {
+        type: 'conversation_updated',
+        conversationId: message.conversationId,
+        title,
+        updated_at: now,
+      },
+      null,
+    );
 
-    this.abortController = new AbortController();
-    const signal = this.abortController.signal;
+    const abortController = new AbortController();
+    this.runs.set(assistantMessageId, { abortController });
 
     // 客户端断连后 fetch 上下文会结束，但模型推理和最终 D1 落库仍需运行完成。
     // waitUntil 让运行时在后台任务结束前不驱逐这个 Durable Object。
     this.ctx.waitUntil(
-      this.runChatInBackground(message, userId, signal)
-        .catch((error) => {
-          log('AGENT', 'runChatInBackground failed', {
-            error: error instanceof Error ? error.message : String(error),
-          });
-        })
-        .finally(() => {
-          this.abortController = null;
-        }),
+      this.runChatInBackground(message, userId, abortController.signal).catch((error) => {
+        log('AGENT', 'runChatInBackground failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }),
     );
 
+    const acceptedPayload: ChatCommandResponse = { conversationId, assistantMessageId };
     return Response.json(acceptedPayload);
   }
 
@@ -659,14 +664,21 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     this.sendSSE(writer, 'sync_response', {
       status: this.runtimeState.status,
       events,
-      assistantCompletedAt: this.assistantCompletedAt,
+      activeRuns: [...this.runs.keys()],
+      finishedRuns: [...this.finishedRuns].map(([assistantMessageId, assistantCompletedAt]) => ({
+        assistantMessageId,
+        assistantCompletedAt,
+      })),
     });
 
-    // 刷新后重连时，若 background task 仍卡在 askuserquestions 等用户提交，
+    // 刷新后重连时，若某个 run 仍卡在 askuserquestions 等用户提交,
     // 之前广播的 chat_paused 已随旧连接断掉，这里必须再补一次，
     // 否则前端会一直卡在 streaming 而不会启用 askuserquestions 卡片。
+    // 只有当没有其他 run 在流式输出时,连接才走「暂停即关闭」;否则保持长连接接收其他 run 的事件。
     const isPausedForAskUser =
-      this.runtimeState.status === 'running' && this.pendingAskUserQuestions.size > 0;
+      this.runtimeState.status === 'running' &&
+      this.pendingAskUserQuestions.size > 0 &&
+      this.pendingAskUserQuestions.size === this.runs.size;
 
     // 会话还在运行时，需要继续保持长连接；否则回放完缓存即可关闭。
     if (this.runtimeState.status === 'running' && !isPausedForAskUser) {
@@ -695,17 +707,32 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
 
   // ── POST /abort ──────────────────────────────────────────────────────
 
-  // 中断当前运行中的请求。这里返回 ok，只表示中断信号已经发出。
-  private async handleAbort(_request: Request, userId: string): Promise<Response> {
+  // 中断运行中的请求。body 带 assistantMessageId 时只中断对应 run,不带则中断全部。
+  // 返回 ok 只表示中断信号已经发出。
+  private async handleAbort(request: Request, userId: string): Promise<Response> {
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
       return new Response('Unauthorized', { status: 401 });
     }
 
-    if (this.runtimeState.status !== 'running' || !this.abortController) {
+    let rawBody: unknown = null;
+    try {
+      rawBody = await request.json();
+    } catch {
+      // 空 body 视为「中断全部」
+    }
+    const targetId =
+      isObject(rawBody) && typeof rawBody.assistantMessageId === 'number'
+        ? rawBody.assistantMessageId
+        : null;
+
+    if (targetId !== null) {
+      this.runs.get(targetId)?.abortController.abort();
       return Response.json({ ok: true });
     }
 
-    this.abortController.abort();
+    for (const run of this.runs.values()) {
+      run.abortController.abort();
+    }
     return Response.json({ ok: true });
   }
 
@@ -713,7 +740,9 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     conversationId: string,
     userId: string,
     callId: string,
+    assistantMessageId: number,
     questions: AskUserQuestionsQuestion[],
+    emitEvent: (event: ChatServerToClientEvent) => Promise<void>,
     signal: AbortSignal,
   ) {
     if (signal.aborted) {
@@ -740,9 +769,11 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         callId,
         conversationId,
         ownerUserId: userId,
+        assistantMessageId,
         questions,
         submittedByUserId: null,
         answered: false,
+        emitEvent,
         waitForAnswer: {
           resolve,
           reject,
@@ -783,7 +814,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       return Response.json({ error: 'Tool call already answered' }, { status: 409 });
     }
 
-    if (!this.liveEventSink || !pending.waitForAnswer) {
+    if (!pending.waitForAnswer) {
       return Response.json(
         { error: 'Conversation is not waiting for a tool answer' },
         { status: 409 },
@@ -803,7 +834,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     pending.answered = true;
     pending.submittedByUserId = userId;
 
-    await this.liveEventSink({
+    await pending.emitEvent({
       type: 'ask_user_questions_answered',
       callId: pending.callId,
       answers,
@@ -936,17 +967,20 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         questions,
       });
 
-      // 暂停本轮 SSE：广播 chat_paused 后关闭所有连接，前端把状态视为 idle。
-      // background task 仍在阻塞等待 /tool-answer，模型继续生成的事件会进入 eventCache，
-      // 用户提交答案后由前端发起 resumeRunningConversation 重新订阅补拉。
-      this.broadcast('chat_paused', {});
-      await this.closeAllWriters();
+      // 只有当所有 run 都在等用户提交时才走「暂停即断开」;
+      // 还有其他 run 在流式输出时连接必须保留,否则会掐断它们的事件。
+      if (this.pendingAskUserQuestions.size + 1 === this.runs.size || this.runs.size === 1) {
+        this.broadcast('chat_paused', {});
+        await this.closeAllWriters();
+      }
 
       const modelResult = await this.waitForAskUserQuestionsAnswer(
         message.conversationId,
         userId,
         toolCall.id,
+        message.assistantMessageId,
         questions,
+        emitEvent,
         signal,
       );
 
@@ -1015,26 +1049,26 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   }
 
   /**
-   * 单次后台运行的收尾：无论 try 成功、return 还是 catch，finally 都会执行。
-   * - 断开 liveEventSink，拒绝仍在等待的 askuserquestions，避免 /tool-answer 误匹配旧会话。
-   * - 非成功结束时为未完结 artifact 补发 failed（经 emitEvent，与正常事件同源）。
-   * - 给当前路径上最后一条 assistant 打 completedAt，落最终快照，更新 DO 状态并 chat_finished。
-   * runState 以对象传入，便于最终快照失败时把 finalStatus 纠正为 error。
+   * 单个 run 的收尾:无论 try 成功、return 还是 catch,finally 都会执行。
+   * - 拒绝本 run 仍在等待的 askuserquestions,避免 /tool-answer 误匹配。
+   * - 非成功结束时为本 run 未完结 artifact 补发 failed(经 emitEvent,与正常事件同源)。
+   * - 给本 run 的 assistant 打 completedAt,落共享树快照,广播 chat_finished。
+   * - 只有最后一个收口的 run 负责:清事件缓存、释放共享树、置终态、关闭 SSE、重新生成标题。
+   * runState 以对象传入,便于最终快照失败时把 finalStatus 纠正为 error。
    */
   private async finalize(
     runState: { finalStatus: Exclude<ChatAgentStatus, 'idle' | 'running'> },
     message: PreparedChatRequest,
     userId: string,
-    workingTree: MessageTreeSnapshot,
     artifactAccumulator: ArtifactAccumulator,
     emitEvent: (event: ChatServerToClientEvent) => Promise<void>,
   ) {
-    this.liveEventSink = null;
-    for (const pending of this.pendingAskUserQuestions.values()) {
+    for (const [callId, pending] of this.pendingAskUserQuestions) {
+      if (pending.assistantMessageId !== message.assistantMessageId) continue;
       pending.waitForAnswer?.reject(new DOMException('Aborted', 'AbortError'));
       pending.waitForAnswer?.clearAbortListener();
+      this.pendingAskUserQuestions.delete(callId);
     }
-    this.pendingAskUserQuestions.clear();
 
     if (runState.finalStatus !== 'completed') {
       const reason = runState.finalStatus === 'aborted' ? 'aborted' : 'error';
@@ -1043,46 +1077,64 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       }
     }
 
-    let assistantCompletedAt: string | undefined;
-    const lastTreeId = workingTree.currentPath.at(-1);
-    if (lastTreeId) {
-      const lastTreeMsg = workingTree.messages[lastTreeId - 1];
-      if (lastTreeMsg && lastTreeMsg.role === 'assistant') {
+    let assistantCompletedAt: string | null = null;
+    const tree = this.activeTree;
+    if (tree) {
+      const assistant = tree.messages[message.assistantMessageId - 1];
+      if (assistant && assistant.role === 'assistant') {
         assistantCompletedAt = new Date().toISOString();
-        lastTreeMsg.completedAt = assistantCompletedAt;
+        assistant.completedAt = assistantCompletedAt;
+      }
+
+      try {
+        await this.persistConversationSnapshot(
+          message.conversationId,
+          userId,
+          cloneTreeSnapshot(tree),
+          message.runPath,
+          message.model,
+          runState.finalStatus === 'completed' && this.runs.size === 1,
+        );
+      } catch (error) {
+        runState.finalStatus = 'error';
+        log('AGENT', 'Persist final conversation snapshot failed', {
+          error: error instanceof Error ? error.message : String(error),
+        });
       }
     }
 
-    try {
-      await this.persistConversationSnapshot(
-        message.conversationId,
-        userId,
-        cloneTreeSnapshot(workingTree),
-        message.model,
-        runState.finalStatus === 'completed',
-      );
-    } catch (error) {
-      runState.finalStatus = 'error';
-      log('AGENT', 'Persist final conversation snapshot failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+    this.runs.delete(message.assistantMessageId);
+    this.finishedRuns.set(message.assistantMessageId, assistantCompletedAt);
+    const remainingRuns = this.runs.size;
+
+    if (remainingRuns === 0) {
+      this.runtimeState = {
+        ...this.runtimeState,
+        status: runState.finalStatus,
+        updatedAt: Date.now(),
+      };
     }
 
-    this.runtimeState = {
-      ...this.runtimeState,
+    const finishedPayload: ChatFinishedPayload = {
+      assistantMessageId: message.assistantMessageId,
       status: runState.finalStatus,
-      updatedAt: Date.now(),
+      assistantCompletedAt,
+      remainingRuns,
     };
+    this.broadcast('chat_finished', finishedPayload);
 
-    this.assistantCompletedAt = assistantCompletedAt ?? null;
-
-    this.broadcast('chat_finished', { status: runState.finalStatus, assistantCompletedAt });
-    await this.closeAllWriters();
+    if (remainingRuns === 0) {
+      await this.closeAllWriters();
+      this.eventCache = [];
+      this.finishedRuns.clear();
+      this.activeTree = null;
+    }
   }
 
   /**
-   * /chat 返回确认响应后，真正跑模型与工具的逻辑；与 HTTP handler 解耦，便于 waitUntil 后台执行。
-   * emitEvent 是单一路由：先推进 workingTree（与前端一致的事实来源）、累计 error 条数、artifact 副作用、再入缓存并 SSE。
+   * /chat 返回回执后，真正跑模型与工具的逻辑；与 HTTP handler 解耦，便于 waitUntil 后台执行。
+   * emitEvent 是单一路由：先推进共享树(事件定点写本 run 的 assistant)、累计 error 条数、
+   * artifact 副作用、再入缓存并 SSE。
    */
   private async runChatInBackground(
     message: PreparedChatRequest,
@@ -1090,19 +1142,19 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     signal: AbortSignal,
   ) {
     const runState = { finalStatus: 'completed' as Exclude<ChatAgentStatus, 'idle' | 'running'> };
-    let workingTree = cloneTreeSnapshot(message.treeSnapshot);
     let errorEventCount = 0;
     const artifactAccumulator = new ArtifactAccumulator(this.env, userId, message.conversationId);
 
     const emitEvent = async (event: ChatServerToClientEvent) => {
-      workingTree = processEventToTree(workingTree, event);
+      if (this.activeTree) {
+        this.activeTree = processEventToTree(this.activeTree, event, message.assistantMessageId);
+      }
       if (event.type === 'error') {
         errorEventCount += 1;
       }
       await artifactAccumulator.handleEvent(event);
-      this.persistAndBroadcastEvent(event);
+      this.persistAndBroadcastEvent(event, message.assistantMessageId);
     };
-    this.liveEventSink = emitEvent;
 
     try {
       const prepared = await this.prepareContext(message, emitEvent);
@@ -1135,13 +1187,16 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
 
         // 长链路 tool-use 中途崩溃时，中间快照能保住已生成的树状态；标题统一在最终快照生成一次。
         try {
-          await this.persistConversationSnapshot(
-            message.conversationId,
-            userId,
-            cloneTreeSnapshot(workingTree),
-            message.model,
-            false,
-          );
+          if (this.activeTree) {
+            await this.persistConversationSnapshot(
+              message.conversationId,
+              userId,
+              cloneTreeSnapshot(this.activeTree),
+              message.runPath,
+              message.model,
+              false,
+            );
+          }
         } catch (error) {
           log('AGENT', 'Intermediate snapshot persist failed', {
             error: error instanceof Error ? error.message : String(error),
@@ -1186,8 +1241,8 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         await emitEvent(toEventError(`错误：${errorMessage}`));
       }
     } finally {
-      // 始终收口：清理交互状态、补 artifact、最终落库、广播结束并关闭所有 SSE 连接。
-      await this.finalize(runState, message, userId, workingTree, artifactAccumulator, emitEvent);
+      // 始终收口：清理交互状态、补 artifact、最终落库、广播结束;最后一个 run 额外负责全局收尾。
+      await this.finalize(runState, message, userId, artifactAccumulator, emitEvent);
     }
   }
 
@@ -1197,12 +1252,15 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     return this.eventCache.filter((e) => e.eventId > lastEventId);
   }
 
-  private persistAndBroadcastEvent(event: ChatServerToClientEvent) {
+  private persistAndBroadcastEvent(
+    event: ChatServerToClientEvent,
+    assistantMessageId: number | null,
+  ) {
     const eventId = this.nextEventId++;
     const createdAt = Date.now();
 
-    this.eventCache.push({ eventId, event, createdAt });
-    this.broadcast('chat_event', { eventId, event });
+    this.eventCache.push({ eventId, event, assistantMessageId, createdAt });
+    this.broadcast('chat_event', { eventId, event, assistantMessageId });
   }
 
   // ── Persistence ──────────────────────────────────────────────────────
@@ -1210,12 +1268,8 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   private async persistConversationSnapshot(
     conversationId: string,
     userId: string,
-    snapshot: {
-      messages: Message[];
-      currentPath: number[];
-      latestRootId: number | null;
-      nextId: number;
-    },
+    snapshot: MessageTreeSnapshot,
+    runPath: number[],
     model?: string,
     regenerateTitle = false,
   ) {
@@ -1225,11 +1279,8 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     let resolvedTitle = existing?.title ?? 'New Chat';
 
     if (regenerateTitle) {
-      // 标题生成只基于当前路径上真正可见的正文内容，不包含工具中间态或空块。
-      const conversationTranscript = extractConversationTranscript(
-        snapshot.messages,
-        snapshot.currentPath,
-      );
+      // 标题生成只基于本 run 路径上真正可见的正文内容，不包含工具中间态或空块。
+      const conversationTranscript = extractConversationTranscript(snapshot.messages, runPath);
 
       if (conversationTranscript) {
         resolvedTitle = await generateTitleFromConversation(conversationTranscript);
@@ -1241,18 +1292,20 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       id: conversationId,
       title: resolvedTitle,
       model: model ?? existing?.model ?? null,
-      currentPath: snapshot.currentPath,
       messages: snapshot.messages,
       created_at: existing?.created_at ?? now,
       updated_at: now,
     });
 
     // 标题和更新时间变更后同步广播，让侧边栏列表和当前会话页保持一致。
-    this.persistAndBroadcastEvent({
-      type: 'conversation_updated',
-      conversationId,
-      title: resolvedTitle,
-      updated_at: now,
-    });
+    this.persistAndBroadcastEvent(
+      {
+        type: 'conversation_updated',
+        conversationId,
+        title: resolvedTitle,
+        updated_at: now,
+      },
+      null,
+    );
   }
 }

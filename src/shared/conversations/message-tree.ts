@@ -194,6 +194,32 @@ export const buildCurrentPath = (messages: Message[], latestRootId: number | nul
   return path;
 };
 
+/**
+ * 打开历史会话时的默认路径:以最新的 assistant 消息(id 最大,即最后创建)所在分支为准;
+ * 树里没有 assistant 时退化为 id 最大的消息。路径不持久化,由客户端每次重建。
+ */
+export const buildPathToLatestAssistant = (messages: Message[]): number[] => {
+  let anchor: Message | null = null;
+  for (const message of messages) {
+    if (message.role === 'assistant') {
+      anchor = message;
+    }
+  }
+  anchor ??= messages.at(-1) ?? null;
+
+  const path: number[] = [];
+  let currentId: number | null = anchor?.id ?? null;
+  while (currentId !== null) {
+    const current: Message | undefined = messages[currentId - 1];
+    if (!current || path.length > messages.length) {
+      return [];
+    }
+    path.unshift(currentId);
+    currentId = current.parentId;
+  }
+  return path;
+};
+
 export const computeMessagesFromPath = (messages: Message[], currentPath: number[]): Message[] =>
   currentPath.map((id) => messages[id - 1]).filter((message): message is Message => !!message);
 

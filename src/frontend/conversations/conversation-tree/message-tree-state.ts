@@ -1,4 +1,4 @@
-import { createStore } from 'solid-js';
+import { createSignal, createStore } from 'solid-js';
 import {
   addMessage as addMessageToTree,
   buildCurrentPath,
@@ -98,21 +98,30 @@ export const selectMessage = (messageId: number) => {
   replaceTree(nextState);
 };
 
-// 流式热路径:直接在 store draft 上做细粒度原地修改,
+// 正在流式输出的 assistant 消息集合:tree_operation 加入,chat_finished 移除。
+// UI 用它判断某条消息是否在生成中(替代全局 status 闸门)。
+const [streamingAssistantIds, setStreamingAssistantIds] = createSignal<ReadonlySet<number>>(
+  new Set<number>(),
+);
+export { streamingAssistantIds };
+
+export const markAssistantStreaming = (assistantMessageId: number) => {
+  setStreamingAssistantIds((prev) => new Set(prev).add(assistantMessageId));
+};
+
+export const unmarkAssistantStreaming = (assistantMessageId: number) => {
+  setStreamingAssistantIds((prev) => {
+    const next = new Set(prev);
+    next.delete(assistantMessageId);
+    return next;
+  });
+};
+
+export const clearStreamingAssistants = () => setStreamingAssistantIds(new Set<number>());
+
+// 流式热路径:按 id 定点写,直接在 store draft 上做细粒度原地修改,
 // 只让依赖具体字段(如正在增长的 content)的订阅者失效。
-export const appendToAssistant = (addition: AssistantAddition) => {
-  const lastId = messageTree.currentPath.at(-1) ?? null;
-  const lastMessage = lastId ? messageTree.messages[lastId - 1] : null;
-  let assistantId = lastId;
-
-  if (!lastMessage || lastMessage.role !== 'assistant') {
-    const result = addMessageToTree(messageTree, 'assistant', []);
-    assistantId = result.addedMessage.id;
-    replaceTree(result);
-  }
-  if (!assistantId) return;
-  const targetId = assistantId;
-
+export const appendToAssistant = (targetId: number, addition: AssistantAddition) => {
   setMessageTree((state) => {
     const target = state.messages[targetId - 1];
     if (!target || target.role !== 'assistant') return;
@@ -268,21 +277,9 @@ export const setMessageTreeState = (partial: Partial<MessageTreeState>) => {
   });
 };
 
-export const stampUserMessageTime = (createdAt: string) => {
+export const stampAssistantCompletedAt = (assistantMessageId: number, completedAt: string) => {
   setMessageTree((state) => {
-    const lastId = state.currentPath.at(-1);
-    if (!lastId) return;
-    const target = state.messages[lastId - 1];
-    if (!target || target.role !== 'user') return;
-    target.createdAt = createdAt;
-  });
-};
-
-export const stampAssistantCompletedAt = (completedAt: string) => {
-  setMessageTree((state) => {
-    const lastId = state.currentPath.at(-1);
-    if (!lastId) return;
-    const target = state.messages[lastId - 1];
+    const target = state.messages[assistantMessageId - 1];
     if (!target || target.role !== 'assistant') return;
     target.completedAt = completedAt;
   });
@@ -301,85 +298,94 @@ export const editMessage = (depth: number, messageId: number, blocks: ContentBlo
   return result;
 };
 
-// 服务端落库后回传的权威用户消息，接进本地树。
-// 消息自带 parentId/prevSibling/nextSibling，直接按链接拼接；
-// id 或链接对不上说明本地树已与服务端发散，立刻抛错。
-export const attachConfirmedUserMessage = (message: UserMessage) => {
-  const existing = messageTree.messages[message.id - 1];
-
-  if (existing) {
-    /* 重连或幂等重试：消息已在树里，用服务端版本覆盖 */
-    if (existing.role !== 'user' || existing.parentId !== message.parentId) {
-      throw new Error('Local message tree diverged from server');
-    }
-    const messages = [...messageTree.messages];
-    messages[message.id - 1] = message;
-    setMessageTreeState({ messages });
-    return;
-  }
-
-  if (message.id !== messageTree.messages.length + 1) {
-    throw new Error('Local message tree diverged from server');
-  }
-
+// tree_operation 事件:服务端树操作的结果,客户端纯合并——放入 user 消息与 assistant 占位,
+// 覆盖被改动指针的已有消息。id 对不上说明本地树与服务端发散,立刻抛错。
+export const applyTreeOperation = (event: {
+  userMessage: UserMessage | null;
+  assistantMessageId: number;
+  assistantCreatedAt: string;
+  changedMessages: Message[];
+}) => {
   const messages = [...messageTree.messages];
-  const relink = (id: number | null, patch: (node: Message) => void) => {
-    if (id === null) return;
-    const node = messages[id - 1];
-    if (!node) {
-      throw new Error('Local message tree diverged from server');
-    }
-    const copy = { ...node };
-    patch(copy);
-    messages[id - 1] = copy;
-  };
-  relink(message.parentId, (node) => {
-    node.latestChild = message.id;
-  });
-  relink(message.prevSibling, (node) => {
-    node.nextSibling = message.id;
-  });
-  relink(message.nextSibling, (node) => {
-    node.prevSibling = message.id;
-  });
-  messages.push(message);
 
-  /* 沿 parentId 走到根，得到新的 currentPath */
-  const currentPath: number[] = [];
-  let currentId: number | null = message.id;
-  while (currentId !== null) {
-    const node: Message | undefined = messages[currentId - 1];
-    if (!node || currentPath.length > messages.length) {
+  const place = (message: Message) => {
+    if (message.id > messages.length + 1) {
       throw new Error('Local message tree diverged from server');
     }
-    currentPath.unshift(node.id);
-    currentId = node.parentId;
+    messages[message.id - 1] = message;
+  };
+
+  for (const changed of event.changedMessages) {
+    place(changed);
+  }
+  if (event.userMessage) {
+    place(event.userMessage);
   }
 
-  replaceTree({
-    messages,
-    currentPath,
-    latestRootId: currentPath[0] ?? null,
-    nextId: messages.length + 1,
-  });
+  const existingAssistant = messages[event.assistantMessageId - 1];
+  if (!existingAssistant) {
+    const userParentId = event.userMessage?.id ?? null;
+    const parentId =
+      userParentId ??
+      (() => {
+        /* regenerate:占位的 parent 是 changedMessages 里 latestChild 指向它的 user 消息 */
+        const parent = event.changedMessages.find(
+          (message) => message.latestChild === event.assistantMessageId,
+        );
+        return parent?.id ?? null;
+      })();
+    const parent = parentId !== null ? messages[parentId - 1] : null;
+    place({
+      id: event.assistantMessageId,
+      parentId,
+      prevSibling:
+        parent && parent.latestChild === event.assistantMessageId
+          ? findPrevSibling(messages, parentId, event.assistantMessageId)
+          : null,
+      nextSibling: null,
+      latestChild: null,
+      role: 'assistant',
+      blocks: [],
+      createdAt: event.assistantCreatedAt,
+      completedAt: null,
+    });
+  }
+
+  setMessageTreeState({ messages, nextId: messages.length + 1 });
+};
+
+const findPrevSibling = (
+  messages: Message[],
+  parentId: number | null,
+  selfId: number,
+): number | null => {
+  if (parentId === null) return null;
+  for (const message of messages) {
+    if (message && message.parentId === parentId && message.nextSibling === selfId) {
+      return message.id;
+    }
+  }
+  return null;
 };
 
 export const messageTreeActions = {
   addMessage,
   appendToAssistant,
-  attachConfirmedUserMessage,
+  applyTreeOperation,
   clear: clearMessageTree,
   editMessage,
   getBranchInfo: getMessageBranchInfo,
   getMessagesFromPath,
   initialize: initializeMessageTree,
+  markAssistantStreaming,
   navigateBranch: navigateMessageBranch,
   selectMessage,
   setAskUserQuestionsBlockStatus,
   setMessages,
   setState: setMessageTreeState,
   stampAssistantCompletedAt,
-  stampUserMessageTime,
+  unmarkAssistantStreaming,
+  clearStreamingAssistants,
 };
 
 export type MessageTreeActions = typeof messageTreeActions;

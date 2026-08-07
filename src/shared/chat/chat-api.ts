@@ -1,4 +1,4 @@
-import type { Message, UserContentBlock, UserMessage } from '@/shared/chat/message';
+import type { Message, UserContentBlock } from '@/shared/chat/message';
 import type { ChatServerToClientEvent } from './chat-event-types';
 import type {
   AskUserQuestionsAnswer,
@@ -67,20 +67,24 @@ export type ChatOperation =
       currentMessageId: number;
     };
 
-export type ChatCommandResponse =
-  | {
-      type: 'append';
-      conversationId: string;
-      message: UserMessage;
-    }
-  | {
-      type: 'regenerate';
-      conversationId: string;
-    };
+/** POST /chat 的回执:树变更统一经 tree_operation 事件送达,这里只确认请求已被接受。 */
+export type ChatCommandResponse = {
+  conversationId: string;
+  assistantMessageId: number;
+};
+
+export type ChatFinishedPayload = {
+  assistantMessageId: number;
+  status: 'completed' | 'aborted' | 'error';
+  assistantCompletedAt: string | null;
+  remainingRuns: number;
+};
 
 export type PersistedChatEvent = {
   eventId: number;
   event: ChatServerToClientEvent;
+  /** 内容类事件的写入目标;tree_operation / conversation_updated 等全局事件为 null */
+  assistantMessageId: number | null;
   createdAt: number;
 };
 

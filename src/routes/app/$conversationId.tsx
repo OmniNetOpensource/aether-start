@@ -9,7 +9,7 @@ import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { setArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { isMessage } from '@/shared/chat/message';
 import { MessageList } from '@/frontend/chat/message-thread/MessageList';
-import { buildCurrentPath } from '@/shared/conversations';
+import { buildPathToLatestAssistant } from '@/shared/conversations';
 import {
   type ConversationDetail,
   conversationId,
@@ -53,9 +53,7 @@ function ConversationPage() {
       resetLastEventId();
       initializeMessageTree(
         conversation.messages,
-        conversation.currentPath.length === 0 && conversation.messages.length > 0
-          ? buildCurrentPath(conversation.messages, conversation.messages[0].id)
-          : conversation.currentPath,
+        buildPathToLatestAssistant(conversation.messages),
       );
       setArtifacts(conversation.artifacts);
       setPageTitle(conversation.title ?? 'Aether');

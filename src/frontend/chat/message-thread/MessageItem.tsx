@@ -140,9 +140,7 @@ export function MessageItem(props: MessageItemProps) {
   };
 
   const handleNavigate = (direction: 'prev' | 'next') => {
-    if (status() === 'idle') {
-      navigateMessageBranch(messageId(), props.depth, direction);
-    }
+    navigateMessageBranch(messageId(), props.depth, direction);
   };
 
   const isUser = () => props.message.role === 'user';
@@ -156,15 +154,25 @@ export function MessageItem(props: MessageItemProps) {
     const to = bubbleEl.getBoundingClientRect();
     bubbleEl.animate(
       [
+        // 起点：composer 位置，纵向拉伸（赶路中）
         {
-          transform: `translate(${from.right - to.right}px, ${from.top - to.top}px) scale(0.97)`,
+          transform: `translate(${from.right - to.right}px, ${from.top - to.top}px) scale(0.94, 1.06)`,
           opacity: 0.7,
+          easing: 'ease-out',
         },
-        { transform: 'translate(0, -4px) scale(1.02, 0.94)', opacity: 1, offset: 0.7 },
-        { transform: 'scale(0.99, 1.02)', offset: 0.85 },
+        // 冲过目标位置，撞击压扁
+        {
+          transform: 'translate(0, -14px) scale(1.1, 0.85)',
+          opacity: 1,
+          offset: 0.5,
+        },
+        // 弹回，反向拉伸
+        { transform: 'translate(0, 4px) scale(0.95, 1.07)', offset: 0.68 },
+        // 第二次小弹
+        { transform: 'translate(0, -2px) scale(1.03, 0.97)', offset: 0.84 },
         { transform: 'none' },
       ],
-      { duration: 480, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
+      { duration: 650, easing: 'ease-in-out' },
     );
   });
 
@@ -339,11 +347,7 @@ export function MessageItem(props: MessageItemProps) {
           )}
           {props.branchInfo && !isEditing() && (
             <div class='mt-2 flex items-center transition-opacity duration-150 pointer-events-auto'>
-              <BranchNavigator
-                branchInfo={props.branchInfo}
-                onNavigate={handleNavigate}
-                disabled={isBusy()}
-              />
+              <BranchNavigator branchInfo={props.branchInfo} onNavigate={handleNavigate} />
             </div>
           )}
         </div>

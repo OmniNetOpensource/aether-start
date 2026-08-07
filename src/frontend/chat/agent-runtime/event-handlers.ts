@@ -2,9 +2,6 @@ import type { ChatErrorCode, ChatErrorInfo, ChatServerToClientEvent } from '@/sh
 import { upsertConversationInCache } from '@/frontend/conversations/session';
 import type { ChatState } from './chat-state';
 
-/** 对话已在生成回复时的提示文案 */
-const BUSY_WARNING = 'This conversation is already generating a response.';
-
 /**
  * 已处理的最大 eventId，用于去重和断点续传。
  * 服务端事件带 eventId，客户端只处理 eventId > lastEventId 的事件。
@@ -13,10 +10,17 @@ let lastEventId = 0;
 
 export const getLastEventId = () => lastEventId;
 
-/** 重置 lastEventId 与打字缓冲，每次新请求前调用，避免沿用旧会话的状态 */
+/** 重置 lastEventId 与打字缓冲，切换会话时调用，避免沿用旧会话的状态 */
 export const resetLastEventId = () => {
   lastEventId = 0;
   resetStreamBuffer();
+};
+
+/** 本客户端刚发起、等待 tree_operation 事件到达后跟随切路径的 assistant id 集合 */
+const pendingFollowAssistantIds = new Set<number>();
+
+export const followTreeOperation = (assistantMessageId: number) => {
+  pendingFollowAssistantIds.add(assistantMessageId);
 };
 
 /**
@@ -39,21 +43,34 @@ export const handleSSEMessage = (runtime: ChatState, event: string, raw: string)
       if (payload.eventId <= lastEventId) return;
       lastEventId = payload.eventId;
 
-      applyChatEventToTree(runtime, payload.event as ChatServerToClientEvent);
+      applyChatEventToTree(
+        runtime,
+        payload.event as ChatServerToClientEvent,
+        typeof payload.assistantMessageId === 'number' ? payload.assistantMessageId : null,
+      );
       return;
     }
-    case 'chat_finished':
+    case 'chat_finished': {
+      if (typeof payload.assistantMessageId !== 'number') return;
       flushStreamBuffer();
+      runtime.messageTree.unmarkAssistantStreaming(payload.assistantMessageId);
       if (typeof payload.assistantCompletedAt === 'string') {
-        runtime.messageTree.stampAssistantCompletedAt(payload.assistantCompletedAt);
+        runtime.messageTree.stampAssistantCompletedAt(
+          payload.assistantMessageId,
+          payload.assistantCompletedAt,
+        );
       }
-      runtime.setStatus('idle');
+      if (payload.remainingRuns === 0) {
+        runtime.setStatus('idle');
+      }
       return;
+    }
     case 'chat_paused':
-      // 服务端调用 askuserquestions 后会先发 chat_paused 再关闭 SSE，
+      // 服务端所有 run 都在等 askuserquestions 时会先发 chat_paused 再关闭 SSE，
       // background task 仍在等 /tool-answer。前端把当前请求视为结束，
       // 等用户提交答案后由 submitToolAnswer 触发 resumeRunningConversation。
       flushStreamBuffer();
+      runtime.messageTree.clearStreamingAssistants();
       runtime.setStatus('idle');
       return;
     case 'sync_response': {
@@ -65,19 +82,37 @@ export const handleSSEMessage = (runtime: ChatState, event: string, raw: string)
           const record = item as Record<string, unknown>;
           if (typeof record.eventId === 'number' && record.eventId > lastEventId) {
             lastEventId = record.eventId;
-            applyChatEventToTree(runtime, record.event as ChatServerToClientEvent);
+            applyChatEventToTree(
+              runtime,
+              record.event as ChatServerToClientEvent,
+              typeof record.assistantMessageId === 'number' ? record.assistantMessageId : null,
+            );
           }
         }
       }
-      if (typeof payload.assistantCompletedAt === 'string') {
-        runtime.messageTree.stampAssistantCompletedAt(payload.assistantCompletedAt);
+      /* 流式标记以服务端 run 列表为准:活跃的标记,已收口的移除并补 completedAt */
+      runtime.messageTree.clearStreamingAssistants();
+      if (Array.isArray(payload.activeRuns)) {
+        for (const id of payload.activeRuns) {
+          if (typeof id === 'number') {
+            runtime.messageTree.markAssistantStreaming(id);
+          }
+        }
+      }
+      if (Array.isArray(payload.finishedRuns)) {
+        for (const item of payload.finishedRuns) {
+          const record = item as Record<string, unknown>;
+          if (typeof record.assistantMessageId !== 'number') continue;
+          if (typeof record.assistantCompletedAt === 'string') {
+            runtime.messageTree.stampAssistantCompletedAt(
+              record.assistantMessageId,
+              record.assistantCompletedAt,
+            );
+          }
+        }
       }
       return;
     }
-    case 'busy':
-      runtime.toast.warning(BUSY_WARNING);
-      runtime.setStatus('streaming');
-      return;
   }
 };
 
@@ -87,8 +122,8 @@ export const handleSSEMessage = (runtime: ChatState, event: string, raw: string)
 const CHARS_PER_FRAME = 14;
 
 type Segment =
-  | { kind: 'content'; text: string; runtime: ChatState }
-  | { kind: 'thinking'; text: string; runtime: ChatState }
+  | { kind: 'content'; targetId: number; text: string; runtime: ChatState }
+  | { kind: 'thinking'; targetId: number; text: string; runtime: ChatState }
   | { kind: 'artifact'; artifactId: string; text: string; runtime: ChatState };
 
 let queue: Segment[] = [];
@@ -117,9 +152,9 @@ const tick = () => {
   head.text = units.slice(CHARS_PER_FRAME).join('');
 
   if (head.kind === 'content') {
-    head.runtime.messageTree.appendToAssistant({ type: 'content', content: chunk });
+    head.runtime.messageTree.appendToAssistant(head.targetId, { type: 'content', content: chunk });
   } else if (head.kind === 'thinking') {
-    head.runtime.messageTree.appendToAssistant({ kind: 'thinking', text: chunk });
+    head.runtime.messageTree.appendToAssistant(head.targetId, { kind: 'thinking', text: chunk });
   } else {
     head.runtime.artifacts.appendCode(head.artifactId, chunk);
   }
@@ -133,24 +168,36 @@ const tick = () => {
   }
 };
 
-const enqueueStreamContent = (runtime: ChatState, text: string) => {
+/** 目标不在当前查看的路径上时,没有打字动画的意义,直接整段写树,避免多流互相堵队列 */
+const isTargetVisible = (runtime: ChatState, targetId: number) =>
+  runtime.getMessageTree().currentPath.at(-1) === targetId;
+
+const enqueueStreamContent = (runtime: ChatState, targetId: number, text: string) => {
   if (!text) return;
+  if (!isTargetVisible(runtime, targetId)) {
+    runtime.messageTree.appendToAssistant(targetId, { type: 'content', content: text });
+    return;
+  }
   const last = queue[queue.length - 1];
-  if (last?.kind === 'content' && last.runtime === runtime) {
+  if (last?.kind === 'content' && last.targetId === targetId && last.runtime === runtime) {
     last.text += text;
   } else {
-    queue.push({ kind: 'content', text, runtime });
+    queue.push({ kind: 'content', targetId, text, runtime });
   }
   schedulePump();
 };
 
-const enqueueStreamThinking = (runtime: ChatState, text: string) => {
+const enqueueStreamThinking = (runtime: ChatState, targetId: number, text: string) => {
   if (!text) return;
+  if (!isTargetVisible(runtime, targetId)) {
+    runtime.messageTree.appendToAssistant(targetId, { kind: 'thinking', text });
+    return;
+  }
   const last = queue[queue.length - 1];
-  if (last?.kind === 'thinking' && last.runtime === runtime) {
+  if (last?.kind === 'thinking' && last.targetId === targetId && last.runtime === runtime) {
     last.text += text;
   } else {
-    queue.push({ kind: 'thinking', text, runtime });
+    queue.push({ kind: 'thinking', targetId, text, runtime });
   }
   schedulePump();
 };
@@ -179,9 +226,15 @@ export const flushStreamBuffer = () => {
   for (const seg of queue) {
     if (!seg.text) continue;
     if (seg.kind === 'content') {
-      seg.runtime.messageTree.appendToAssistant({ type: 'content', content: seg.text });
+      seg.runtime.messageTree.appendToAssistant(seg.targetId, {
+        type: 'content',
+        content: seg.text,
+      });
     } else if (seg.kind === 'thinking') {
-      seg.runtime.messageTree.appendToAssistant({ kind: 'thinking', text: seg.text });
+      seg.runtime.messageTree.appendToAssistant(seg.targetId, {
+        kind: 'thinking',
+        text: seg.text,
+      });
     } else {
       seg.runtime.artifacts.appendCode(seg.artifactId, seg.text);
     }
@@ -359,17 +412,34 @@ export const enhanceServerErrorMessage = (safeMessage: string, errorInfo?: ChatE
   );
 };
 
-export const applyChatEventToTree = (runtime: ChatState, event: ChatServerToClientEvent) => {
+export const applyChatEventToTree = (
+  runtime: ChatState,
+  event: ChatServerToClientEvent,
+  assistantMessageId: number | null,
+) => {
+  if (event.type === 'tree_operation') {
+    flushStreamBuffer();
+    runtime.messageTree.applyTreeOperation(event);
+    runtime.messageTree.markAssistantStreaming(event.assistantMessageId);
+    /* 自己发起的操作:视野跟到新分支;其他标签页发起的只合并树内容,不打扰当前视野 */
+    if (pendingFollowAssistantIds.delete(event.assistantMessageId)) {
+      runtime.messageTree.selectMessage(event.assistantMessageId);
+    }
+    return;
+  }
+
   if (event.type === 'content') {
+    if (assistantMessageId === null) return;
     const addition =
       typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    enqueueStreamContent(runtime, addition);
+    enqueueStreamContent(runtime, assistantMessageId, addition);
     return;
   }
 
   if (event.type === 'thinking') {
+    if (assistantMessageId === null) return;
     const text = typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    enqueueStreamThinking(runtime, text);
+    enqueueStreamThinking(runtime, assistantMessageId, text);
     return;
   }
 
@@ -427,12 +497,14 @@ export const applyChatEventToTree = (runtime: ChatState, event: ChatServerToClie
     return;
   }
 
+  if (assistantMessageId === null) return;
+
   if (event.type === 'tool_call') {
     const tool = typeof event.tool === 'string' ? event.tool : 'unknown_tool';
     const args =
       event.args && typeof event.args === 'object' ? (event.args as Record<string, unknown>) : {};
 
-    runtime.messageTree.appendToAssistant({
+    runtime.messageTree.appendToAssistant(assistantMessageId, {
       kind: 'tool',
       data: {
         call: {
@@ -456,7 +528,7 @@ export const applyChatEventToTree = (runtime: ChatState, event: ChatServerToClie
       }
     }
 
-    runtime.messageTree.appendToAssistant({
+    runtime.messageTree.appendToAssistant(assistantMessageId, {
       kind: 'tool_result',
       tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
       result: resultText,
@@ -465,7 +537,7 @@ export const applyChatEventToTree = (runtime: ChatState, event: ChatServerToClie
   }
 
   if (event.type === 'ask_user_questions_requested') {
-    runtime.messageTree.appendToAssistant({
+    runtime.messageTree.appendToAssistant(assistantMessageId, {
       kind: 'ask_user_questions_requested',
       callId: event.callId,
       questions: event.questions,
@@ -474,7 +546,7 @@ export const applyChatEventToTree = (runtime: ChatState, event: ChatServerToClie
   }
 
   if (event.type === 'ask_user_questions_answered') {
-    runtime.messageTree.appendToAssistant({
+    runtime.messageTree.appendToAssistant(assistantMessageId, {
       kind: 'ask_user_questions_answered',
       callId: event.callId,
       answers: event.answers,
@@ -488,7 +560,7 @@ export const applyChatEventToTree = (runtime: ChatState, event: ChatServerToClie
     const safeMessage = rawMessage || 'unknown error';
     const enhancedMessage = enhanceServerErrorMessage(safeMessage, event.error);
 
-    runtime.messageTree.appendToAssistant({
+    runtime.messageTree.appendToAssistant(assistantMessageId, {
       type: 'error',
       message: enhancedMessage,
     });

@@ -65,11 +65,7 @@ export async function submitMessage(
         return;
       }
 
-      if (response.type !== 'append') {
-        throw new Error('New conversation did not return a user message');
-      }
-
-      const now = response.message.createdAt;
+      const now = new Date().toISOString();
       upsertConversationInCache({
         id: response.conversationId,
         title: 'New Chat',

@@ -31,7 +31,6 @@ export type ConversationDetail = {
   model?: string | null;
   is_pinned: boolean;
   pinned_at: string | null;
-  currentPath: number[];
   messages: Message[];
   artifacts: ConversationArtifact[];
   created_at: string;

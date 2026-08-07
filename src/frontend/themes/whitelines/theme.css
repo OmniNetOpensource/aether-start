@@ -1,0 +1,137 @@
+html[data-theme='whitelines'] {
+  --color-background: #f2f2f3;
+  --color-surface: #ffffff;
+  --color-muted: #e7e7e8;
+  --color-hover: rgb(244 121 74 / 12%);
+  --color-active: rgb(244 121 74 / 18%);
+  --color-foreground: #161616;
+  --color-secondary: #525254;
+  --color-muted-foreground: #797a7c;
+  --color-border: #ffffff;
+  --color-primary: #e96635;
+  --color-primary-hover: #ce4f20;
+  --color-ring: #f4794a;
+  --color-accent: #f4794a;
+  --color-destructive: #c93d3d;
+  --color-destructive-hover: #ad3030;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-muted: rgb(201 61 61 / 10%);
+  --color-info: #356f91;
+  --color-info-foreground: #ffffff;
+  --color-success: #477852;
+  --color-success-foreground: #ffffff;
+  --color-warning: #d16f2d;
+  --color-warning-foreground: #ffffff;
+  --whitelines-grid: rgb(255 255 255 / 78%);
+  --whitelines-code: #ffffff;
+  color-scheme: light;
+}
+
+html[data-theme='blacklines'] {
+  --color-background: #161616;
+  --color-surface: #202020;
+  --color-muted: #101010;
+  --color-hover: rgb(244 121 74 / 14%);
+  --color-active: rgb(244 121 74 / 22%);
+  --color-foreground: #f7f7f7;
+  --color-secondary: #c3c3c3;
+  --color-muted-foreground: #8c8c8c;
+  --color-border: #050505;
+  --color-primary: #f58a61;
+  --color-primary-hover: #ff9f7b;
+  --color-ring: #f4794a;
+  --color-accent: #f4794a;
+  --color-destructive: #ef6a6a;
+  --color-destructive-hover: #f28484;
+  --color-destructive-foreground: #161616;
+  --color-destructive-muted: rgb(239 106 106 / 12%);
+  --color-info: #77afd0;
+  --color-info-foreground: #101010;
+  --color-success: #75b482;
+  --color-success-foreground: #101010;
+  --color-warning: #f49a57;
+  --color-warning-foreground: #101010;
+  --whitelines-grid: rgb(0 0 0 / 72%);
+  --whitelines-code: #090909;
+  --shiki-dark-bg: transparent;
+  --shiki-dark: #f7f7f7;
+  color-scheme: dark;
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines']) body {
+  background-color: var(--color-background);
+  background-image:
+    linear-gradient(var(--whitelines-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--whitelines-grid) 1px, transparent 1px);
+  background-size: 1.25rem 1.25rem;
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines']) .aether-markdown {
+  font-family: 'Avenir Next', Avenir, 'Century Gothic', 'PingFang SC', sans-serif;
+  font-weight: 400;
+  line-height: 1.65;
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines'])
+  .aether-markdown
+  :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--color-foreground);
+  font-family: 'Avenir Next', Avenir, 'Century Gothic', 'PingFang SC', sans-serif;
+  font-weight: 600;
+  text-decoration-line: underline;
+  text-decoration-color: var(--color-accent);
+  text-decoration-thickness: 0.16em;
+  text-underline-offset: 0.16em;
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines'])
+  .aether-markdown
+  [data-markdown='link'] {
+  color: var(--color-primary);
+  text-decoration-color: currentColor;
+  text-underline-offset: 0.18em;
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines']) .aether-markdown blockquote {
+  margin-block: 1.4em;
+  padding: 1rem 1.2rem;
+  border: 0;
+  border-left: 0.4rem solid var(--color-accent);
+  color: var(--color-secondary);
+  background: var(--color-surface);
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines']) .aether-markdown table {
+  border-color: var(--color-border);
+  background: var(--color-background);
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines']) .aether-markdown th {
+  border-color: var(--color-accent);
+  color: #ffffff;
+  background: var(--color-accent);
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines']) .aether-markdown tr:nth-child(odd) {
+  background: var(--color-surface);
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines']) .aether-markdown :not(pre) > code {
+  border-color: var(--color-border);
+  color: var(--color-foreground);
+  background: var(--color-surface);
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines'])
+  .aether-markdown
+  [data-markdown='code-block'] {
+  border-color: var(--color-border);
+  border-radius: 0;
+  background: var(--color-surface);
+}
+
+html:is([data-theme='whitelines'], [data-theme='blacklines'])
+  .aether-markdown
+  [data-markdown='code-block-body'] {
+  background: var(--whitelines-code);
+}

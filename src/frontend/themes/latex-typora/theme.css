@@ -1,0 +1,142 @@
+html[data-theme='latex-paper'] {
+  --color-background: #ffffff;
+  --color-surface: #fbfaf7;
+  --color-muted: #f4f1eb;
+  --color-hover: rgb(24 58 99 / 7%);
+  --color-active: rgb(24 58 99 / 11%);
+  --color-foreground: #000000;
+  --color-secondary: #4d4d4d;
+  --color-muted-foreground: #707070;
+  --color-border: rgb(0 0 0 / 16%);
+  --color-primary: #183a63;
+  --color-primary-hover: #0f2745;
+  --color-ring: rgb(0 0 0 / 38%);
+  --color-accent: #8c6731;
+  --color-destructive: #8c1c1c;
+  --color-destructive-hover: #701515;
+  --color-destructive-foreground: #ffffff;
+  --color-destructive-muted: rgb(140 28 28 / 8%);
+  --color-info: #2c5a85;
+  --color-info-foreground: #ffffff;
+  --color-success: #3b5f35;
+  --color-success-foreground: #ffffff;
+  --color-warning: #875720;
+  --color-warning-foreground: #ffffff;
+  --latex-code-bg: #fbfaf7;
+  --latex-inline-code-bg: #f7f4ee;
+  --latex-quote-bg: #faf7f0;
+  color-scheme: light;
+}
+
+html[data-theme='latex-dark'] {
+  --color-background: #191918;
+  --color-surface: #20201e;
+  --color-muted: #141413;
+  --color-hover: rgb(151 178 207 / 8%);
+  --color-active: rgb(151 178 207 / 13%);
+  --color-foreground: #e8e5dd;
+  --color-secondary: #bbb7ae;
+  --color-muted-foreground: #8d8a83;
+  --color-border: rgb(232 229 221 / 16%);
+  --color-primary: #97b2cf;
+  --color-primary-hover: #b2c8df;
+  --color-ring: rgb(232 229 221 / 42%);
+  --color-accent: #c3a66e;
+  --color-destructive: #d98282;
+  --color-destructive-hover: #e49a9a;
+  --color-destructive-foreground: #191918;
+  --color-destructive-muted: rgb(217 130 130 / 10%);
+  --color-info: #8eacc9;
+  --color-info-foreground: #191918;
+  --color-success: #91ad87;
+  --color-success-foreground: #191918;
+  --color-warning: #d0a76b;
+  --color-warning-foreground: #191918;
+  --latex-code-bg: #111110;
+  --latex-inline-code-bg: #292721;
+  --latex-quote-bg: #24221e;
+  --shiki-dark-bg: transparent;
+  --shiki-dark: #e8e5dd;
+  color-scheme: dark;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark']) .aether-markdown {
+  color: var(--color-foreground);
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Songti SC', STSong, serif;
+  font-weight: 400;
+  line-height: 1.72;
+  text-align: justify;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark'])
+  .aether-markdown
+  :is(h1, h2, h3, h4, h5, h6) {
+  color: var(--color-foreground);
+  font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Songti SC', STSong, serif;
+  letter-spacing: 0;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark']) .aether-markdown h1 {
+  margin-block: 1.5em 1.3em;
+  font-size: 1.8em;
+  font-weight: 400;
+  text-align: center;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark']) .aether-markdown h2 {
+  margin-block: 2em 0.8em;
+  border: 0;
+  font-size: 1.4em;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark'])
+  .aether-markdown
+  [data-markdown='link'] {
+  color: var(--color-primary);
+  text-underline-offset: 0.16em;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark']) .aether-markdown blockquote {
+  margin: 1.5em 2em;
+  padding: 0.9em 1.2em 0.9em 1.4em;
+  border: 0;
+  border-left: 2px solid var(--color-secondary);
+  border-radius: 0 2px 2px 0;
+  color: var(--color-secondary);
+  background: var(--latex-quote-bg);
+  font-size: 0.95em;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark']) .aether-markdown table {
+  border-color: var(--color-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark']) .aether-markdown :is(th, td) {
+  border-color: var(--color-border);
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark']) .aether-markdown :not(pre) > code {
+  border: 1px solid var(--color-border);
+  border-radius: 2px;
+  color: var(--color-foreground);
+  background: var(--latex-inline-code-bg);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark'])
+  .aether-markdown
+  [data-markdown='code-block'] {
+  border-color: var(--color-border);
+  border-radius: 2px;
+  background: var(--latex-code-bg);
+  box-shadow: none;
+}
+
+html:is([data-theme='latex-paper'], [data-theme='latex-dark'])
+  .aether-markdown
+  [data-markdown='code-block-body'] {
+  background: var(--latex-code-bg);
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
+}

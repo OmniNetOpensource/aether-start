@@ -1,6 +1,8 @@
 import { estherMidnightTheme, estherPaperTheme, estherThemes } from '@/frontend/themes/esther';
+import { latexTyporaThemes } from '@/frontend/themes/latex-typora';
+import { whitelinesThemes } from '@/frontend/themes/whitelines';
 
-export const themes = estherThemes;
+export const themes = [...estherThemes, ...whitelinesThemes, ...latexTyporaThemes];
 
 export type Theme = (typeof themes)[number];
 
