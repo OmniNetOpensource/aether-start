@@ -10,10 +10,13 @@ import {
 } from '@/shared/share/share-assets';
 import { buildPathToLatestAssistant } from '@/shared/conversations';
 import { isMessage } from '@/shared/chat/message';
+import { toSharedResearchItem } from '@/shared/share/share';
 import type {
+  PublicSharedConversationSnapshot,
   SharedAttachmentSnapshot,
   SharedConversationSnapshot,
   SharedMessageBlock,
+  SharedResearchItem,
 } from '@/shared/share/share';
 
 type SnapshotSourceConversation = {
@@ -94,12 +97,12 @@ const toSharedMessageBlock = (
   }
 
   if (role === 'assistant' && value.type === 'research' && Array.isArray(value.items)) {
-    return {
-      type: 'research',
-      // Stored blocks are produced by trusted server code paths; preserve shape.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      items: value.items as any,
-    };
+    const items = value.items
+      .map(toSharedResearchItem)
+      .filter((item): item is SharedResearchItem => item !== null);
+    if (items.length > 0) {
+      return { type: 'research', items };
+    }
   }
 
   if (role === 'user' && value.type === 'attachments' && Array.isArray(value.attachments)) {
@@ -197,7 +200,7 @@ const buildSnapshotFromConversation = (
 const buildPublicSnapshot = (
   token: string,
   snapshot: SharedConversationSnapshot,
-): SharedConversationSnapshot => {
+): PublicSharedConversationSnapshot => {
   return {
     version: 1,
     messages: snapshot.messages.map((message) => ({
@@ -327,7 +330,6 @@ export const getPublicConversationShareFn = createServerFn({ method: 'POST' })
       status: 'active' as const,
       token: result.token,
       title: result.title,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- buildPublicSnapshot output matches PublicShareView structurally
-      snapshot: buildPublicSnapshot(result.token, result.snapshotRaw) as any,
+      snapshot: buildPublicSnapshot(result.token, result.snapshotRaw),
     };
   });

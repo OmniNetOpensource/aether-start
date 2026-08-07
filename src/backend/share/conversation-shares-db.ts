@@ -4,8 +4,9 @@ import type {
   SharedConversationSnapshot,
   SharedMessageBlock,
   SharedMessageSnapshot,
+  SharedResearchItem,
 } from '@/shared/share/share';
-import type { ResearchItem } from '@/shared/chat/message';
+import { toSharedResearchItem } from '@/shared/share/share';
 import {
   isSafeShareToken,
   isSafeStorageKey,
@@ -54,7 +55,9 @@ const toSharedMessageBlock = (value: unknown): SharedMessageBlock | null => {
   if (value.type === 'research' && Array.isArray(value.items)) {
     return {
       type: 'research',
-      items: value.items as ResearchItem[],
+      items: value.items
+        .map(toSharedResearchItem)
+        .filter((item): item is SharedResearchItem => item !== null),
     };
   }
 

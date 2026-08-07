@@ -67,14 +67,10 @@ export const Route = createFileRoute('/share/$token')({
 
 function SharedConversationPage() {
   const params = Route.useParams();
-  const data = createMemo(async (): Promise<PublicShareData> => {
-    try {
-      return await getPublicConversationShareFn({ data: { token: params().token } });
-    } catch (error) {
-      console.error('Failed to load public share', error);
-      return { status: 'not_found' };
-    }
-  });
+  const data = createMemo(
+    (): Promise<PublicShareData> =>
+      getPublicConversationShareFn({ data: { token: params().token } }),
+  );
   const readonlyMessages = () => {
     const share = data();
     return share.status === 'active' ? share.snapshot.messages.map(toReadonlyMessage) : [];

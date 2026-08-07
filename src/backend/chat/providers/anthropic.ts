@@ -1,3 +1,4 @@
+import { isAbortError } from '@/backend/chat/abort';
 import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt, type BackendConfig } from './backend-config';
 import { log, logProviderCommunication } from '../logger';
@@ -270,7 +271,7 @@ async function* streamAnthropicCompletion(requestParams: {
       } else if (event.delta.type === 'thinking_delta') {
         yield {
           type: 'thinking',
-          thinking: (event.delta as { type: 'thinking_delta'; thinking: string }).thinking,
+          thinking: event.delta.thinking,
         };
       }
     } else if (event.type === 'message_delta') {
@@ -327,12 +328,7 @@ export function formatToolContinuation(
     });
   }
 
-  const toolResultContent: Array<{
-    type: 'tool_result';
-    tool_use_id: string;
-    content: string | AnthropicToolResultContentItem[];
-    is_error?: boolean;
-  }> = toolResults.map((toolResult) => {
+  const toolResultContent: AnthropicContentBlock[] = toolResults.map((toolResult) => {
     try {
       const parsed = JSON.parse(toolResult.result);
       if (parsed.type === 'image' && parsed.data_url) {
@@ -384,7 +380,7 @@ export function formatToolContinuation(
 
   return [
     { role: 'assistant', content: assistantContent },
-    { role: 'user', content: toolResultContent as AnthropicMessage['content'] },
+    { role: 'user', content: toolResultContent },
   ];
 }
 
@@ -509,11 +505,7 @@ export class AnthropicChatProvider {
         }
       }
     } catch (error) {
-      if (
-        (error instanceof DOMException && error.name === 'AbortError') ||
-        (error instanceof Error && error.name === 'AbortError') ||
-        signal?.aborted
-      ) {
+      if (isAbortError(error, signal)) {
         return emptyResult;
       }
 

@@ -39,9 +39,7 @@ export const redeemCodeFn = createServerFn({ method: 'POST' })
             ? '兑换码已被使用'
             : result.reason === 'expired'
               ? '兑换码已过期'
-              : result.reason === 'inactive'
-                ? '兑换码已停用'
-                : (result.message ?? '兑换失败');
+              : '兑换码已停用';
       throw new Error(message);
     }
 

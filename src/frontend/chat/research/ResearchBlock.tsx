@@ -30,9 +30,42 @@ import {
   ChainOfThoughtSearchResult,
   ChainOfThoughtImage,
 } from '@/frontend/design-system/chain-of-thought';
-import { getToolLifecycle, getSearchResultCount } from './research-utils';
 
 type SearchResultBadge = SearchClientResult;
+
+function getSearchResultCount(rawResult: string): number | null {
+  try {
+    const data = JSON.parse(rawResult) as {
+      results?: unknown;
+      rawResults?: unknown;
+      web?: { results?: unknown };
+    };
+    const rawResults =
+      (Array.isArray(data?.results) && data.results) ||
+      (Array.isArray(data?.rawResults) && data.rawResults) ||
+      (Array.isArray(data?.web?.results) && data.web.results) ||
+      [];
+
+    if (!Array.isArray(rawResults)) {
+      return null;
+    }
+
+    return rawResults.filter((item) => {
+      if (!item || typeof item !== 'object') {
+        return false;
+      }
+      const url =
+        'url' in item && typeof item.url === 'string'
+          ? item.url
+          : 'link' in item && typeof item.link === 'string'
+            ? item.link
+            : '';
+      return Boolean(url);
+    }).length;
+  } catch {
+    return null;
+  }
+}
 
 // Parse search results to badge data
 function parseSearchResults(rawResult: string): SearchResultBadge[] {
@@ -41,8 +74,7 @@ function parseSearchResults(rawResult: string): SearchResultBadge[] {
 
 // Get step status from tool lifecycle
 function getStepStatus(tool: Tool, isActive: boolean): StepStatus {
-  const { result } = getToolLifecycle(tool);
-  if (!result) {
+  if (!tool.result) {
     return isActive ? 'active' : 'pending';
   }
   return 'complete';
@@ -50,7 +82,7 @@ function getStepStatus(tool: Tool, isActive: boolean): StepStatus {
 
 // Get status text for a tool
 function getStatusText(tool: Tool, isActive: boolean, toolName: string): string {
-  const { result } = getToolLifecycle(tool);
+  const result = tool.result;
 
   if (!result) {
     if (!isActive) return '等待中...';
@@ -103,7 +135,7 @@ function SearchStep(props: { tool: Tool; isActive: boolean; hideConnector: boole
     typeof props.tool.call.args.query === 'string' ? props.tool.call.args.query : '';
   const description = () => (query() ? `Reading the web · ${query()}` : 'Reading the web');
   const searchResults = () => {
-    const result = getToolLifecycle(props.tool).result;
+    const result = props.tool.result;
     if (!result) return [];
     return parseSearchResults(typeof result.result === 'string' ? result.result : '');
   };
@@ -168,7 +200,7 @@ function FetchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolea
   const [dialogOpen, setDialogOpen] = createSignal(false);
   const url = () => (typeof props.tool.call.args.url === 'string' ? props.tool.call.args.url : '');
   const stepStatus = () => getStepStatus(props.tool, props.isActive);
-  const result = () => getToolLifecycle(props.tool).result;
+  const result = () => props.tool.result;
   const resultText = () => {
     const value = result();
     return value && typeof value.result === 'string' ? value.result : '';

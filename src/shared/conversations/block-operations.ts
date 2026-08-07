@@ -6,7 +6,6 @@ import {
 } from '@/shared/chat/ask-user-questions';
 import type {
   AssistantContentBlock,
-  ContentBlock,
   Message,
   QuoteItem,
   ResearchItem,
@@ -40,28 +39,11 @@ export type AssistantAddition =
 
 export const cloneMessages = (messages: Message[]): Message[] =>
   messages.map(
-    (msg) =>
-      ({
-        id: msg.id,
-        parentId: msg.parentId,
-        role: msg.role,
-        blocks: cloneBlocks(msg.blocks ?? []),
-        prevSibling: msg.prevSibling,
-        nextSibling: msg.nextSibling,
-        latestChild: msg.latestChild,
-        createdAt: msg.createdAt,
-        completedAt: msg.completedAt ?? null,
-      }) as Message,
+    (msg): Message =>
+      msg.role === 'user'
+        ? { ...msg, blocks: cloneBlocks(msg.blocks) }
+        : { ...msg, blocks: cloneBlocks(msg.blocks) },
   );
-
-export const extractContentFromBlocks = (blocks: ContentBlock[]) =>
-  blocks
-    .filter((block) => block.type === 'content')
-    .map((block) => block.content)
-    .join('\n\n');
-
-export const extractQuotesFromBlocks = (blocks: ContentBlock[]) =>
-  blocks.flatMap((block) => (block.type === 'quotes' ? block.quotes : []));
 
 /** 将 quotes 转为发给模型时的引用文本格式：多行逐行以 > 开头，多条之间空一行 */
 export const quotesToModelText = (quotes: QuoteItem[]): string =>
@@ -73,16 +55,6 @@ export const quotesToModelText = (quotes: QuoteItem[]): string =>
         .join('\n'),
     )
     .join('\n\n');
-
-export const extractAttachmentsFromBlocks = (blocks: ContentBlock[]) =>
-  blocks.flatMap((block) => (block.type === 'attachments' ? block.attachments : []));
-
-export const collectAttachmentIds = (blocks: ContentBlock[]) =>
-  new Set(
-    blocks.flatMap((block) =>
-      block.type === 'attachments' ? block.attachments.map((attachment) => attachment.id) : [],
-    ),
-  );
 
 export const applyAssistantAddition = (
   blocks: AssistantContentBlock[],
@@ -101,15 +73,17 @@ export const applyAssistantAddition = (
     return [...blocks, { type: 'content' as const, content: text }];
   }
 
-  const nextBlocks = cloneBlocks(blocks ?? []) as AssistantContentBlock[];
+  const nextBlocks = cloneBlocks(blocks);
 
-  const ensureResearchBlock = (targetBlocks: AssistantContentBlock[]) => {
-    const lastBlock = targetBlocks[targetBlocks.length - 1];
-    if (!lastBlock || lastBlock.type !== 'research') {
-      targetBlocks.push({ type: 'research', items: [] });
-      return targetBlocks.length - 1;
+  /** 取（或新建）末尾的 research block，用 updater 更新其 items */
+  const updateResearchItems = (updater: (items: ResearchItem[]) => ResearchItem[]) => {
+    const last = nextBlocks[nextBlocks.length - 1];
+    if (last?.type === 'research') {
+      nextBlocks[nextBlocks.length - 1] = { ...last, items: updater([...last.items]) };
+    } else {
+      nextBlocks.push({ type: 'research', items: updater([]) });
     }
-    return targetBlocks.length - 1;
+    return nextBlocks;
   };
 
   const findToolIndex = (items: ResearchItem[], toolName: string) => {
@@ -141,59 +115,36 @@ export const applyAssistantAddition = (
 
   if ('kind' in addition) {
     if (addition.kind === 'thinking') {
-      const researchIndex = ensureResearchBlock(nextBlocks);
-      const researchBlock = nextBlocks[researchIndex] as Extract<
-        AssistantContentBlock,
-        { type: 'research' }
-      >;
-      const items = [...researchBlock.items];
-      const lastItem = items[items.length - 1];
-
-      if (lastItem?.kind === 'thinking') {
-        items[items.length - 1] = {
-          ...lastItem,
-          text: lastItem.text + addition.text,
-        };
-      } else {
-        items.push({ ...addition });
-      }
-
-      nextBlocks[researchIndex] = { ...researchBlock, items };
-      return nextBlocks;
+      return updateResearchItems((items) => {
+        const lastItem = items[items.length - 1];
+        if (lastItem?.kind === 'thinking') {
+          items[items.length - 1] = { ...lastItem, text: lastItem.text + addition.text };
+        } else {
+          items.push({ ...addition });
+        }
+        return items;
+      });
     }
 
     if (addition.kind === 'tool') {
-      const researchIndex = ensureResearchBlock(nextBlocks);
-      const researchBlock = nextBlocks[researchIndex] as Extract<
-        AssistantContentBlock,
-        { type: 'research' }
-      >;
-
-      nextBlocks[researchIndex] = {
-        ...researchBlock,
-        items: [...researchBlock.items, { ...addition }],
-      };
-      return nextBlocks;
+      return updateResearchItems((items) => [...items, { ...addition }]);
     }
 
     if (addition.kind === 'tool_result') {
-      const researchIndex = ensureResearchBlock(nextBlocks);
-      const researchBlock = nextBlocks[researchIndex] as Extract<
-        AssistantContentBlock,
-        { type: 'research' }
-      >;
-      const items = [...researchBlock.items];
-      const targetIndex = findToolIndex(items, addition.tool);
+      return updateResearchItems((items) => {
+        const targetIndex = findToolIndex(items, addition.tool);
 
-      if (targetIndex === -1) {
-        items.push({
-          kind: 'tool',
-          data: {
-            call: { tool: addition.tool, args: {} },
-            result: { result: addition.result },
-          },
-        });
-      } else {
+        if (targetIndex === -1) {
+          items.push({
+            kind: 'tool',
+            data: {
+              call: { tool: addition.tool, args: {} },
+              result: { result: addition.result },
+            },
+          });
+          return items;
+        }
+
         const targetItem = items[targetIndex];
         if (targetItem.kind === 'tool') {
           items[targetIndex] = {
@@ -204,10 +155,8 @@ export const applyAssistantAddition = (
             },
           };
         }
-      }
-
-      nextBlocks[researchIndex] = { ...researchBlock, items };
-      return nextBlocks;
+        return items;
+      });
     }
 
     if (addition.kind === 'ask_user_questions_requested') {

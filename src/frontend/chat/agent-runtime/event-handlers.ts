@@ -1,5 +1,5 @@
 import type { ChatErrorCode, ChatErrorInfo, ChatServerToClientEvent } from '@/shared/chat/chat-api';
-import { upsertConversationInCache } from '@/frontend/conversations/session';
+import { updateConversationTitleInCache } from '@/frontend/conversations/session';
 import type { ChatState } from './chat-state';
 
 /**
@@ -16,16 +16,30 @@ export const resetLastEventId = () => {
   resetStreamBuffer();
 };
 
+/** SSE data 字段的信封结构，由服务端序列化，反序列化后按此结构读取 */
+type SSEPayload = {
+  eventId?: number;
+  event?: ChatServerToClientEvent;
+  assistantMessageId?: number;
+  assistantCompletedAt?: string;
+  remainingRuns?: number;
+  status?: string;
+  events?: { eventId: number; event: ChatServerToClientEvent; assistantMessageId?: number }[];
+  activeRuns?: number[];
+  finishedRuns?: { assistantMessageId: number; assistantCompletedAt?: string }[];
+};
+
 /**
  * 处理单条 SSE 消息。
  * @param event - SSE 的 event 字段（如 chat_event、chat_finished 等）
  * @param raw - data 字段的原始 JSON 字符串
  */
 export const handleSSEMessage = (runtime: ChatState, event: string, raw: string) => {
-  let payload: Record<string, unknown>;
+  let payload: SSEPayload;
   try {
     payload = JSON.parse(raw);
   } catch {
+    console.error('[SSE] Malformed event payload', { event, raw });
     return;
   }
 
@@ -36,11 +50,8 @@ export const handleSSEMessage = (runtime: ChatState, event: string, raw: string)
       if (payload.eventId <= lastEventId) return;
       lastEventId = payload.eventId;
 
-      applyChatEventToTree(
-        runtime,
-        payload.event as ChatServerToClientEvent,
-        typeof payload.assistantMessageId === 'number' ? payload.assistantMessageId : null,
-      );
+      if (!payload.event) return;
+      applyChatEventToTree(runtime, payload.event, payload.assistantMessageId ?? null);
       return;
     }
     case 'chat_finished': {
@@ -70,38 +81,23 @@ export const handleSSEMessage = (runtime: ChatState, event: string, raw: string)
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
       flushStreamBuffer();
       runtime.setStatus(payload.status === 'running' ? 'streaming' : 'idle');
-      if (Array.isArray(payload.events)) {
-        for (const item of payload.events) {
-          const record = item as Record<string, unknown>;
-          if (typeof record.eventId === 'number' && record.eventId > lastEventId) {
-            lastEventId = record.eventId;
-            applyChatEventToTree(
-              runtime,
-              record.event as ChatServerToClientEvent,
-              typeof record.assistantMessageId === 'number' ? record.assistantMessageId : null,
-            );
-          }
+      for (const record of payload.events ?? []) {
+        if (record.eventId > lastEventId) {
+          lastEventId = record.eventId;
+          applyChatEventToTree(runtime, record.event, record.assistantMessageId ?? null);
         }
       }
       /* 流式标记以服务端 run 列表为准:活跃的标记,已收口的移除并补 completedAt */
       runtime.messageTree.clearStreamingAssistants();
-      if (Array.isArray(payload.activeRuns)) {
-        for (const id of payload.activeRuns) {
-          if (typeof id === 'number') {
-            runtime.messageTree.markAssistantStreaming(id);
-          }
-        }
+      for (const id of payload.activeRuns ?? []) {
+        runtime.messageTree.markAssistantStreaming(id);
       }
-      if (Array.isArray(payload.finishedRuns)) {
-        for (const item of payload.finishedRuns) {
-          const record = item as Record<string, unknown>;
-          if (typeof record.assistantMessageId !== 'number') continue;
-          if (typeof record.assistantCompletedAt === 'string') {
-            runtime.messageTree.stampAssistantCompletedAt(
-              record.assistantMessageId,
-              record.assistantCompletedAt,
-            );
-          }
+      for (const record of payload.finishedRuns ?? []) {
+        if (typeof record.assistantCompletedAt === 'string') {
+          runtime.messageTree.stampAssistantCompletedAt(
+            record.assistantMessageId,
+            record.assistantCompletedAt,
+          );
         }
       }
       return;
@@ -419,16 +415,13 @@ export const applyChatEventToTree = (
 
   if (event.type === 'content') {
     if (assistantMessageId === null) return;
-    const addition =
-      typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    enqueueStreamContent(runtime, assistantMessageId, addition);
+    enqueueStreamContent(runtime, assistantMessageId, event.content);
     return;
   }
 
   if (event.type === 'thinking') {
     if (assistantMessageId === null) return;
-    const text = typeof event.content === 'string' ? event.content : String(event.content ?? '');
-    enqueueStreamThinking(runtime, assistantMessageId, text);
+    enqueueStreamThinking(runtime, assistantMessageId, event.content);
     return;
   }
 
@@ -471,14 +464,7 @@ export const applyChatEventToTree = (
 
     if (event.title) {
       const now = event.updated_at ?? new Date().toISOString();
-      upsertConversationInCache({
-        id: event.conversationId,
-        title: event.title,
-        is_pinned: false,
-        pinned_at: null,
-        created_at: now,
-        updated_at: now,
-      });
+      updateConversationTitleInCache(event.conversationId, event.title, now);
       const ch = new BroadcastChannel('conversation_title');
       ch.postMessage({ id: event.conversationId, title: event.title, updated_at: now });
       ch.close();
@@ -489,38 +475,20 @@ export const applyChatEventToTree = (
   if (assistantMessageId === null) return;
 
   if (event.type === 'tool_call') {
-    const tool = typeof event.tool === 'string' ? event.tool : 'unknown_tool';
-    const args =
-      event.args && typeof event.args === 'object' ? (event.args as Record<string, unknown>) : {};
-
     runtime.messageTree.appendToAssistant(assistantMessageId, {
       kind: 'tool',
       data: {
-        call: {
-          tool,
-          args,
-        },
+        call: { tool: event.tool, args: event.args },
       },
     });
     return;
   }
 
   if (event.type === 'tool_result') {
-    let resultText: string;
-    if (typeof event.result === 'string') {
-      resultText = event.result;
-    } else {
-      try {
-        resultText = JSON.stringify(event.result, null, 2);
-      } catch {
-        resultText = String(event.result ?? '');
-      }
-    }
-
     runtime.messageTree.appendToAssistant(assistantMessageId, {
       kind: 'tool_result',
-      tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
-      result: resultText,
+      tool: event.tool,
+      result: event.result,
     });
     return;
   }
@@ -544,14 +512,9 @@ export const applyChatEventToTree = (
   }
 
   if (event.type === 'error') {
-    const rawMessage =
-      typeof event.message === 'string' ? event.message : String(event.message ?? '');
-    const safeMessage = rawMessage || 'unknown error';
-    const enhancedMessage = enhanceServerErrorMessage(safeMessage, event.error);
-
     runtime.messageTree.appendToAssistant(assistantMessageId, {
       type: 'error',
-      message: enhancedMessage,
+      message: enhanceServerErrorMessage(event.message || 'unknown error', event.error),
     });
     return;
   }

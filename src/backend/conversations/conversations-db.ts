@@ -1,18 +1,10 @@
 import type { ArtifactLanguage } from '@/shared/chat/chat-api';
 import { isMessage, type Message } from '@/shared/chat/message';
-import type { ConversationArtifact } from '@/shared/conversations/conversation';
-
-export type ConversationListCursor = {
-  is_pinned: 0 | 1;
-  sort_at: string;
-  updated_at: string;
-  id: string;
-} | null;
-
-export type ConversationSearchCursor = {
-  updated_at: string;
-  id: string;
-} | null;
+import type {
+  ConversationArtifact,
+  ConversationListCursor,
+  ConversationSearchCursor,
+} from '@/shared/conversations/conversation';
 
 export type ConversationRecord = {
   user_id: string;

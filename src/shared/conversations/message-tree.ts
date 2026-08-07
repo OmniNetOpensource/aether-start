@@ -4,21 +4,6 @@ import {
 } from '@/shared/chat/ask-user-questions';
 import type { BranchInfo, ContentBlock, Message, ResearchItem } from '@/shared/chat/message';
 
-export type LegacyMessageNode = {
-  id: string;
-  role: 'user' | 'assistant';
-  blocks: ContentBlock[];
-  parentId: string | null;
-  children: string[];
-  createdAt: string;
-};
-
-export type LegacyMessageTree = {
-  nodes: Record<string, LegacyMessageNode>;
-  rootIds: string[];
-  currentPath?: string[];
-};
-
 type MessageState = {
   messages: Message[];
   currentPath: number[];
@@ -49,7 +34,7 @@ export const cloneResearchItem = (item: ResearchItem): ResearchItem => {
   };
 };
 
-export const cloneBlocks = (blocks: ContentBlock[]): ContentBlock[] =>
+export const cloneBlocks = <T extends ContentBlock>(blocks: T[]): T[] =>
   blocks.map((block) => {
     if (block.type === 'research') {
       return {
@@ -458,119 +443,6 @@ export const createLinearMessages = (items: LinearMessageInput[]): MessageState 
     messages,
     currentPath,
     latestRootId: messages.length > 0 ? messages[0].id : null,
-    nextId: messages.length + 1,
-  };
-};
-
-const parseTimestamp = (value: string | undefined) => {
-  if (!value) {
-    return 0;
-  }
-  const timestamp = Date.parse(value);
-  return Number.isNaN(timestamp) ? 0 : timestamp;
-};
-
-export const migrateFromOldTree = (tree: LegacyMessageTree): MessageState => {
-  const nodes = Object.values(tree.nodes ?? {});
-  if (nodes.length === 0) {
-    return createEmptyMessageState();
-  }
-
-  const sortedNodes = [...nodes].sort(
-    (a, b) => parseTimestamp(a.createdAt) - parseTimestamp(b.createdAt),
-  );
-
-  const idMap = new Map<string, number>();
-  let nextId = 1;
-
-  for (const node of sortedNodes) {
-    idMap.set(node.id, nextId);
-    nextId += 1;
-  }
-
-  const messages: Message[] = [];
-
-  for (const node of sortedNodes) {
-    const newId = idMap.get(node.id);
-    if (!newId) {
-      continue;
-    }
-
-    const siblings = node.parentId
-      ? (tree.nodes?.[node.parentId]?.children ?? [])
-      : (tree.rootIds ?? []);
-    const siblingIndex = siblings.indexOf(node.id);
-
-    messages.push({
-      id: newId,
-      parentId: node.parentId ? (idMap.get(node.parentId) ?? null) : null,
-      role: node.role,
-      blocks: cloneBlocks(node.blocks ?? []),
-      prevSibling: siblingIndex > 0 ? (idMap.get(siblings[siblingIndex - 1]) ?? null) : null,
-      nextSibling:
-        siblingIndex < siblings.length - 1 ? (idMap.get(siblings[siblingIndex + 1]) ?? null) : null,
-      latestChild:
-        node.children?.length > 0
-          ? (idMap.get(node.children[node.children.length - 1]) ?? null)
-          : null,
-      createdAt: node.createdAt ?? new Date().toISOString(),
-      completedAt: null,
-    } as Message);
-  }
-
-  messages.sort((a, b) => a.id - b.id);
-
-  const legacyPath = tree.currentPath ?? [];
-  const normalizedLegacyPath: string[] = [];
-
-  for (const id of legacyPath) {
-    const node = tree.nodes?.[id];
-    if (!node) {
-      break;
-    }
-
-    if (normalizedLegacyPath.length === 0) {
-      const isRoot = node.parentId === null || tree.rootIds?.includes(id);
-      if (!isRoot) {
-        break;
-      }
-    } else {
-      const prevId = normalizedLegacyPath[normalizedLegacyPath.length - 1];
-      const prevNode = tree.nodes?.[prevId];
-      if (!prevNode?.children?.includes(id)) {
-        break;
-      }
-    }
-
-    normalizedLegacyPath.push(id);
-  }
-
-  const mappedPath = normalizedLegacyPath
-    .map((id) => idMap.get(id) ?? null)
-    .filter((id): id is number => id !== null);
-  const hasMappedPath = mappedPath.length > 0;
-
-  const latestRootId = hasMappedPath
-    ? mappedPath[0]
-    : tree.rootIds?.length > 0
-      ? (idMap.get(tree.rootIds[tree.rootIds.length - 1]) ?? null)
-      : null;
-
-  if (hasMappedPath) {
-    for (let index = 0; index < mappedPath.length; index += 1) {
-      const messageId = mappedPath[index];
-      const nextId = index < mappedPath.length - 1 ? mappedPath[index + 1] : null;
-      updateMessage(messages, messageId, (message) => ({
-        ...message,
-        latestChild: nextId,
-      }));
-    }
-  }
-
-  return {
-    messages,
-    currentPath: hasMappedPath ? mappedPath : buildCurrentPath(messages, latestRootId),
-    latestRootId,
     nextId: messages.length + 1,
   };
 };

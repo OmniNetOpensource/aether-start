@@ -5,7 +5,6 @@ import { buttonVariants } from '@/frontend/design-system/button';
 import { cn } from '@/shared/core/utils';
 
 interface NewChatButtonProps {
-  isCollapsed?: boolean;
   variant?: 'sidebar' | 'topbar';
   class?: string;
   children?: JSX.Element;
@@ -23,15 +22,7 @@ export function NewChatButton(props: NewChatButtonProps) {
       {isTopbar() ? (
         <span class='sr-only'>新对话</span>
       ) : (
-        <span
-          class='overflow-hidden whitespace-nowrap text-sm font-medium transition-all duration-500'
-          style={{
-            width: props.isCollapsed ? '0' : 'auto',
-            opacity: props.isCollapsed ? 0 : 1,
-          }}
-        >
-          新对话
-        </span>
+        <span class='whitespace-nowrap text-sm font-medium'>新对话</span>
       )}
     </>
   );
@@ -62,7 +53,7 @@ export function NewChatButton(props: NewChatButtonProps) {
           : 'justify-start px-3 rounded-md border border-border bg-muted text-foreground shadow-xs hover:shadow-sm hover:bg-hover',
         props.class,
       )}
-      style={isTopbar() ? undefined : { width: props.isCollapsed ? '40px' : '100%' }}
+      style={isTopbar() ? undefined : { width: '100%' }}
       aria-label='新对话'
     >
       {props.children ?? defaultContent}

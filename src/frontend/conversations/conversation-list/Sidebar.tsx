@@ -54,11 +54,6 @@ export default function Sidebar() {
   };
 
   onSettled(() => {
-    const closeSidebarFromOutside = () => {
-      openDropdown = false;
-      sidebar?.classList.add('-translate-x-full');
-    };
-
     const handlePointerDownOutside = (event: PointerEvent) => {
       if (
         isSidebarOpen() &&
@@ -70,7 +65,7 @@ export default function Sidebar() {
           return;
         }
 
-        closeSidebarFromOutside();
+        closeSidebar();
       }
     };
 
@@ -79,14 +74,9 @@ export default function Sidebar() {
   });
 
   onSettled(() => {
-    const closeSidebarOnEscape = () => {
-      openDropdown = false;
-      sidebar?.classList.add('-translate-x-full');
-    };
-
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape' && isSidebarOpen()) {
-        closeSidebarOnEscape();
+        closeSidebar();
       }
     };
 
@@ -116,7 +106,7 @@ export default function Sidebar() {
         </div>
 
         <div class='flex flex-col gap-2 px-6 pt-2'>
-          <NewChatButton isCollapsed={false} />
+          <NewChatButton />
           <ConversationSearchTrigger variant='sidebar' />
         </div>
 
@@ -130,7 +120,7 @@ export default function Sidebar() {
           <div class='pointer-events-none absolute bottom-0 left-0 right-0 z-10 h-6 bg-gradient-to-t from-surface to-transparent' />
         </div>
 
-        <ProfileMenu isCollapsed={false} onDropdownOpenChange={handleDropdownOpenChange} />
+        <ProfileMenu onDropdownOpenChange={handleDropdownOpenChange} />
       </aside>
     </div>
   );

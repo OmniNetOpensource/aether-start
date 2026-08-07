@@ -1,3 +1,4 @@
+import { isAbortError } from '@/backend/chat/abort';
 import {
   createFunctionResponsePartFromBase64,
   createPartFromFunctionResponse,
@@ -17,17 +18,11 @@ import type {
 } from '@/shared/chat/chat-api';
 import type { ChatTool } from '@/shared/chat/tool-types';
 import type { SerializedMessage } from '@/shared/chat/message';
-import type { ChatProvider, ChatProviderConfig } from './provider-types';
+import type { ChatProvider, ChatProviderConfig, ProviderRunResult } from './provider-types';
 import { getGeminiClient } from './gemini-client';
 import { buildGeminiThinkingConfig } from './gemini-thinking-config';
 
 export type GeminiMessage = genai.Content;
-
-type GeminiProviderRunResult = {
-  pendingToolCalls: PendingToolInvocation[];
-  thinkingBlocks: unknown[];
-  assistantText: string;
-};
 
 type GeminiChatProviderConfig = {
   model: string;
@@ -35,8 +30,6 @@ type GeminiChatProviderConfig = {
   tools: ChatTool[];
   systemPrompt: string;
 };
-
-const getClient = getGeminiClient;
 
 const convertToolsToGemini = (tools: ChatTool[]): genai.FunctionDeclaration[] => {
   return tools
@@ -164,13 +157,13 @@ export class GeminiChatProvider {
   async *run(
     messages: GeminiMessage[],
     signal?: AbortSignal,
-  ): AsyncGenerator<ChatServerToClientEvent, GeminiProviderRunResult> {
+  ): AsyncGenerator<ChatServerToClientEvent, ProviderRunResult> {
     const systemParts = [buildSystemPrompt()];
     if (this.systemPrompt.trim()) {
       systemParts.push(this.systemPrompt.trim());
     }
 
-    const emptyResult: GeminiProviderRunResult = {
+    const emptyResult: ProviderRunResult = {
       pendingToolCalls: [],
       thinkingBlocks: [],
       assistantText: '',
@@ -179,7 +172,7 @@ export class GeminiChatProvider {
     let assistantText = '';
 
     try {
-      const client = getClient(this.backendConfig);
+      const client = getGeminiClient(this.backendConfig);
 
       const config: genai.GenerateContentConfig = {
         abortSignal: signal,
@@ -239,11 +232,7 @@ export class GeminiChatProvider {
         }
       }
     } catch (error) {
-      if (
-        (error instanceof DOMException && error.name === 'AbortError') ||
-        (error instanceof Error && error.name === 'AbortError') ||
-        signal?.aborted
-      ) {
+      if (isAbortError(error, signal)) {
         return emptyResult;
       }
 

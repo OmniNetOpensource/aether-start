@@ -100,10 +100,7 @@ export const getOrCreateUserQuota = async (
   };
 };
 
-export type ConsumeResult =
-  | { ok: true }
-  | { ok: false; reason: 'insufficient' }
-  | { ok: false; reason: 'error'; message: string };
+export type ConsumeResult = { ok: true } | { ok: false; reason: 'insufficient' };
 
 export const consumePromptQuotaOnAccept = async (
   db: D1Database,
@@ -112,68 +109,58 @@ export const consumePromptQuotaOnAccept = async (
 ): Promise<ConsumeResult> => {
   const consumptionId = generateId();
 
-  try {
-    const existing = await db
-      .prepare(
-        'SELECT 1 FROM prompt_quota_consumptions WHERE user_id = ?1 AND request_id = ?2 LIMIT 1',
-      )
-      .bind(userId, idempotencyKey)
-      .first();
+  const existing = await db
+    .prepare(
+      'SELECT 1 FROM prompt_quota_consumptions WHERE user_id = ?1 AND request_id = ?2 LIMIT 1',
+    )
+    .bind(userId, idempotencyKey)
+    .first();
 
-    if (existing) {
-      return { ok: true };
-    }
-
-    const quotaRow = await db
-      .prepare('SELECT balance FROM user_prompt_quota WHERE user_id = ?1')
-      .bind(userId)
-      .first();
-
-    const balance =
-      isRecord(quotaRow) && typeof quotaRow.balance === 'number' ? quotaRow.balance : 0;
-    if (balance < 1) {
-      return { ok: false, reason: 'insufficient' };
-    }
-
-    const results = await db.batch([
-      db
-        .prepare(
-          'INSERT INTO prompt_quota_consumptions (id, user_id, request_id) VALUES (?1, ?2, ?3)',
-        )
-        .bind(consumptionId, userId, idempotencyKey),
-      db
-        .prepare(
-          'UPDATE user_prompt_quota SET balance = balance - 1, updated_at = ?1 WHERE user_id = ?2 AND balance >= 1',
-        )
-        .bind(new Date().toISOString(), userId),
-    ]);
-
-    const updateResult = results[1];
-    const meta = updateResult?.meta as { changes?: number } | undefined;
-    const changes = typeof meta?.changes === 'number' ? meta.changes : 0;
-
-    if (changes === 0) {
-      await db
-        .prepare('DELETE FROM prompt_quota_consumptions WHERE user_id = ?1 AND request_id = ?2')
-        .bind(userId, idempotencyKey)
-        .run();
-      return { ok: false, reason: 'insufficient' };
-    }
-
+  if (existing) {
     return { ok: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, reason: 'error', message };
   }
+
+  const quotaRow = await db
+    .prepare('SELECT balance FROM user_prompt_quota WHERE user_id = ?1')
+    .bind(userId)
+    .first();
+
+  const balance = isRecord(quotaRow) && typeof quotaRow.balance === 'number' ? quotaRow.balance : 0;
+  if (balance < 1) {
+    return { ok: false, reason: 'insufficient' };
+  }
+
+  const results = await db.batch([
+    db
+      .prepare(
+        'INSERT INTO prompt_quota_consumptions (id, user_id, request_id) VALUES (?1, ?2, ?3)',
+      )
+      .bind(consumptionId, userId, idempotencyKey),
+    db
+      .prepare(
+        'UPDATE user_prompt_quota SET balance = balance - 1, updated_at = ?1 WHERE user_id = ?2 AND balance >= 1',
+      )
+      .bind(new Date().toISOString(), userId),
+  ]);
+
+  const updateResult = results[1];
+  const meta = updateResult?.meta as { changes?: number } | undefined;
+  const changes = typeof meta?.changes === 'number' ? meta.changes : 0;
+
+  if (changes === 0) {
+    await db
+      .prepare('DELETE FROM prompt_quota_consumptions WHERE user_id = ?1 AND request_id = ?2')
+      .bind(userId, idempotencyKey)
+      .run();
+    return { ok: false, reason: 'insufficient' };
+  }
+
+  return { ok: true };
 };
 
 export type RedeemResult =
   | { ok: true; added: number }
-  | {
-      ok: false;
-      reason: 'invalid_code' | 'already_used' | 'expired' | 'inactive' | 'error';
-      message?: string;
-    };
+  | { ok: false; reason: 'invalid_code' | 'already_used' | 'expired' | 'inactive' };
 
 export const redeemSingleUseCode = async (
   db: D1Database,
@@ -185,80 +172,75 @@ export const redeemSingleUseCode = async (
     return { ok: false, reason: 'invalid_code' };
   }
 
-  try {
-    const codeRow = await db
-      .prepare(
-        'SELECT id, code, amount, is_active, used_at, expires_at FROM redeem_codes WHERE code = ?1 LIMIT 1',
-      )
-      .bind(normalizedCode)
-      .first();
+  const codeRow = await db
+    .prepare(
+      'SELECT id, code, amount, is_active, used_at, expires_at FROM redeem_codes WHERE code = ?1 LIMIT 1',
+    )
+    .bind(normalizedCode)
+    .first();
 
-    if (!isRecord(codeRow)) {
-      return { ok: false, reason: 'invalid_code' };
-    }
-
-    const isActive = codeRow.is_active === 1 || codeRow.is_active === true;
-    if (!isActive) {
-      return { ok: false, reason: 'inactive' };
-    }
-
-    const usedAt = codeRow.used_at;
-    if (usedAt != null && String(usedAt).length > 0) {
-      return { ok: false, reason: 'already_used' };
-    }
-
-    const expiresAt = codeRow.expires_at;
-    if (expiresAt != null && String(expiresAt).length > 0) {
-      const exp = new Date(String(expiresAt)).getTime();
-      if (Number.isFinite(exp) && Date.now() > exp) {
-        return { ok: false, reason: 'expired' };
-      }
-    }
-
-    const amount = typeof codeRow.amount === 'number' ? Math.max(0, codeRow.amount) : 0;
-    if (amount <= 0) {
-      return { ok: false, reason: 'invalid_code' };
-    }
-
-    const codeId = String(codeRow.id);
-    const now = new Date().toISOString();
-    const redemptionId = generateId();
-
-    await getOrCreateUserQuota(db, userId);
-
-    const batchResults = await db.batch([
-      db
-        .prepare(
-          `UPDATE redeem_codes SET
-            is_active = 0,
-            used_at = ?1,
-            used_by_user_id = ?2,
-            updated_at = ?1
-          WHERE id = ?3 AND is_active = 1 AND used_at IS NULL`,
-        )
-        .bind(now, userId, codeId),
-      db
-        .prepare(
-          'UPDATE user_prompt_quota SET balance = balance + ?1, updated_at = ?2 WHERE user_id = ?3',
-        )
-        .bind(amount, now, userId),
-      db
-        .prepare(
-          'INSERT INTO redeem_code_redemptions (id, redeem_code_id, user_id, amount) VALUES (?1, ?2, ?3, ?4)',
-        )
-        .bind(redemptionId, codeId, userId, amount),
-    ]);
-
-    const updateCodeMeta = batchResults[0]?.meta as { changes?: number } | undefined;
-    const changes = typeof updateCodeMeta?.changes === 'number' ? updateCodeMeta.changes : 0;
-    if (changes === 0) {
-      return { ok: false, reason: 'already_used' };
-    }
-    return { ok: true, added: amount };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, reason: 'error', message };
+  if (!isRecord(codeRow)) {
+    return { ok: false, reason: 'invalid_code' };
   }
+
+  const isActive = codeRow.is_active === 1 || codeRow.is_active === true;
+  if (!isActive) {
+    return { ok: false, reason: 'inactive' };
+  }
+
+  const usedAt = codeRow.used_at;
+  if (usedAt != null && String(usedAt).length > 0) {
+    return { ok: false, reason: 'already_used' };
+  }
+
+  const expiresAt = codeRow.expires_at;
+  if (expiresAt != null && String(expiresAt).length > 0) {
+    const exp = new Date(String(expiresAt)).getTime();
+    if (Number.isFinite(exp) && Date.now() > exp) {
+      return { ok: false, reason: 'expired' };
+    }
+  }
+
+  const amount = typeof codeRow.amount === 'number' ? Math.max(0, codeRow.amount) : 0;
+  if (amount <= 0) {
+    return { ok: false, reason: 'invalid_code' };
+  }
+
+  const codeId = String(codeRow.id);
+  const now = new Date().toISOString();
+  const redemptionId = generateId();
+
+  await getOrCreateUserQuota(db, userId);
+
+  const batchResults = await db.batch([
+    db
+      .prepare(
+        `UPDATE redeem_codes SET
+          is_active = 0,
+          used_at = ?1,
+          used_by_user_id = ?2,
+          updated_at = ?1
+        WHERE id = ?3 AND is_active = 1 AND used_at IS NULL`,
+      )
+      .bind(now, userId, codeId),
+    db
+      .prepare(
+        'UPDATE user_prompt_quota SET balance = balance + ?1, updated_at = ?2 WHERE user_id = ?3',
+      )
+      .bind(amount, now, userId),
+    db
+      .prepare(
+        'INSERT INTO redeem_code_redemptions (id, redeem_code_id, user_id, amount) VALUES (?1, ?2, ?3, ?4)',
+      )
+      .bind(redemptionId, codeId, userId, amount),
+  ]);
+
+  const updateCodeMeta = batchResults[0]?.meta as { changes?: number } | undefined;
+  const changes = typeof updateCodeMeta?.changes === 'number' ? updateCodeMeta.changes : 0;
+  if (changes === 0) {
+    return { ok: false, reason: 'already_used' };
+  }
+  return { ok: true, added: amount };
 };
 
 export type CreateRedeemCodeInput = {
@@ -271,41 +253,34 @@ export type CreateRedeemCodeInput = {
 export const createRedeemCode = async (
   db: D1Database,
   input: CreateRedeemCodeInput,
-): Promise<
-  { ok: true; id: string } | { ok: false; reason: 'duplicate_code' | 'error'; message?: string }
-> => {
+): Promise<{ ok: true; id: string } | { ok: false; reason: 'duplicate_code' | 'empty_code' }> => {
   const normalizedCode = input.code.trim().toUpperCase();
   if (!normalizedCode) {
-    return { ok: false, reason: 'error', message: 'Code cannot be empty' };
+    return { ok: false, reason: 'empty_code' };
   }
 
   const amount = Math.max(1, Math.floor(input.amount));
   const now = new Date().toISOString();
   const id = generateId();
 
-  try {
-    const existing = await db
-      .prepare('SELECT 1 FROM redeem_codes WHERE code = ?1 LIMIT 1')
-      .bind(normalizedCode)
-      .first();
+  const existing = await db
+    .prepare('SELECT 1 FROM redeem_codes WHERE code = ?1 LIMIT 1')
+    .bind(normalizedCode)
+    .first();
 
-    if (existing) {
-      return { ok: false, reason: 'duplicate_code' };
-    }
-
-    await db
-      .prepare(
-        `INSERT INTO redeem_codes (id, code, amount, is_active, created_by_user_id, expires_at, created_at, updated_at)
-         VALUES (?1, ?2, ?3, 1, ?4, ?5, ?6, ?6)`,
-      )
-      .bind(id, normalizedCode, amount, input.createdByUserId, input.expiresAt ?? null, now)
-      .run();
-
-    return { ok: true, id };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, reason: 'error', message };
+  if (existing) {
+    return { ok: false, reason: 'duplicate_code' };
   }
+
+  await db
+    .prepare(
+      `INSERT INTO redeem_codes (id, code, amount, is_active, created_by_user_id, expires_at, created_at, updated_at)
+       VALUES (?1, ?2, ?3, 1, ?4, ?5, ?6, ?6)`,
+    )
+    .bind(id, normalizedCode, amount, input.createdByUserId, input.expiresAt ?? null, now)
+    .run();
+
+  return { ok: true, id };
 };
 
 export type RedeemCodeCursor = { created_at: string; id: string } | null;
@@ -350,23 +325,18 @@ export const updateRedeemCodeStatus = async (
   db: D1Database,
   codeId: string,
   isActive: boolean,
-): Promise<{ ok: true } | { ok: false; reason: 'not_found' | 'error'; message?: string }> => {
-  try {
-    const result = await db
-      .prepare(
-        'UPDATE redeem_codes SET is_active = ?1, updated_at = ?2 WHERE id = ?3 AND used_at IS NULL',
-      )
-      .bind(isActive ? 1 : 0, new Date().toISOString(), codeId)
-      .run();
+): Promise<{ ok: true } | { ok: false; reason: 'not_found' }> => {
+  const result = await db
+    .prepare(
+      'UPDATE redeem_codes SET is_active = ?1, updated_at = ?2 WHERE id = ?3 AND used_at IS NULL',
+    )
+    .bind(isActive ? 1 : 0, new Date().toISOString(), codeId)
+    .run();
 
-    const meta = result?.meta as { changes?: number } | undefined;
-    const changes = typeof meta?.changes === 'number' ? meta.changes : 0;
-    if (changes === 0) {
-      return { ok: false, reason: 'not_found' };
-    }
-    return { ok: true };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    return { ok: false, reason: 'error', message };
+  const meta = result?.meta as { changes?: number } | undefined;
+  const changes = typeof meta?.changes === 'number' ? meta.changes : 0;
+  if (changes === 0) {
+    return { ok: false, reason: 'not_found' };
   }
+  return { ok: true };
 };

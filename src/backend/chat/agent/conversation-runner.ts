@@ -1,3 +1,4 @@
+import { isAbortError } from '@/backend/chat/abort';
 import { DurableObject } from 'cloudflare:workers';
 import { executeToolCall, getAvailableTools } from '@/backend/chat/tools/tool-executor';
 import {
@@ -556,13 +557,10 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       message.idempotencyKey,
     );
     if (!consumeResult.ok) {
-      let errorMessage: string;
-      if (consumeResult.reason === 'insufficient') {
-        errorMessage = '额度不足，请使用兑换码获取更多 prompt 额度';
-      } else {
-        errorMessage = `请求失败：${consumeResult.message}`;
-      }
-      return Response.json({ type: 'quota_error', message: errorMessage }, { status: 402 });
+      return Response.json(
+        { type: 'quota_error', message: '额度不足，请使用兑换码获取更多 prompt 额度' },
+        { status: 402 },
+      );
     }
 
     const now = new Date().toISOString();
@@ -992,12 +990,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         result: modelResult,
       };
     } catch (error) {
-      const isAbortError =
-        (error instanceof DOMException && error.name === 'AbortError') ||
-        (error instanceof Error && error.name === 'AbortError') ||
-        signal.aborted;
-
-      if (isAbortError) {
+      if (isAbortError(error, signal)) {
         throw error;
       }
 
@@ -1230,12 +1223,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       }
     } catch (error) {
       // 部分失败只通过 error 事件表达，不 throw；会走到这里的是 Abort 或真正的异常。
-      const isAbortError =
-        (error instanceof DOMException && error.name === 'AbortError') ||
-        (error instanceof Error && error.name === 'AbortError') ||
-        signal.aborted;
-
-      if (isAbortError) {
+      if (isAbortError(error, signal)) {
         runState.finalStatus = 'aborted';
       } else {
         runState.finalStatus = 'error';

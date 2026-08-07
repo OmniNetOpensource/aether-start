@@ -90,7 +90,7 @@ export const generateTitleFromConversation = async (
 
       const textBlock = message.content.find((block) => block.type === 'text');
       const rawTitle = textBlock && 'text' in textBlock ? String(textBlock.text).trim() : '';
-      const title = typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : '';
+      const title = sanitizeTitle(rawTitle);
 
       log('TITLE', 'Received title generation response', {
         ...requestLog,
@@ -130,7 +130,7 @@ export const generateTitleFromConversation = async (
     );
 
     const rawTitle = response.choices?.[0]?.message?.content?.trim() ?? '';
-    const title = typeof rawTitle === 'string' ? sanitizeTitle(rawTitle) : '';
+    const title = sanitizeTitle(rawTitle);
 
     log('TITLE', 'Received title generation response', {
       ...requestLog,

@@ -252,6 +252,25 @@ export function upsertConversationInCache(conversation: ConversationMeta) {
   );
 }
 
+/** 只更新缓存里已有条目的标题和 updated_at，保留 pinned 等其余字段；条目不存在时不动缓存 */
+export function updateConversationTitleInCache(id: string, title: string, updatedAt: string) {
+  queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
+    conversationListQueryKey,
+    (old) => {
+      if (!old) return old;
+      return {
+        ...old,
+        pages: old.pages.map((page) => ({
+          ...page,
+          items: page.items.map((item) =>
+            item.id === id ? { ...item, title, updated_at: updatedAt } : item,
+          ),
+        })),
+      };
+    },
+  );
+}
+
 export function removeConversationFromCache(conversationId: string) {
   queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
     conversationListQueryKey,

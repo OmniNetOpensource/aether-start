@@ -43,9 +43,7 @@ export const adminCreateRedeemCodeFn = createServerFn({ method: 'POST' })
     });
 
     if (!result.ok) {
-      const message =
-        result.reason === 'duplicate_code' ? '兑换码已存在' : (result.message ?? '创建失败');
-      throw new Error(message);
+      throw new Error(result.reason === 'duplicate_code' ? '兑换码已存在' : '兑换码不能为空');
     }
 
     return { id: result.id };
@@ -66,9 +64,7 @@ export const adminDeactivateRedeemCodeFn = createServerFn({ method: 'POST' })
     const result = await updateRedeemCodeStatus(DB, data.id, false);
 
     if (!result.ok) {
-      const message =
-        result.reason === 'not_found' ? '兑换码不存在或已使用' : (result.message ?? '操作失败');
-      throw new Error(message);
+      throw new Error('兑换码不存在或已使用');
     }
 
     return { ok: true };

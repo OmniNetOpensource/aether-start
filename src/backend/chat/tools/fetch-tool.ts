@@ -1,3 +1,4 @@
+import { isAbortError } from '@/backend/chat/abort';
 import type {
   ChatTool,
   FetchProvider,
@@ -8,6 +9,7 @@ import { log } from '@/backend/chat/logger';
 import { Supadata } from '@supadata/js';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
 import { arrayBufferToBase64 } from '@/shared/core/base64';
+import { createRateLimitedQueue } from './rate-limit';
 
 type FetchUrlArgs = {
   url: string;
@@ -36,43 +38,12 @@ const parseFetchUrlArgs = (args: unknown): FetchUrlArgs => {
   return { url, response_type };
 };
 
-const FETCH_URL_INTERVAL_MS = 2_000;
-let lastFetchUrlAt = 0;
-let fetchUrlQueue: Promise<void> = Promise.resolve();
-
 const sleep = (ms: number) =>
   new Promise<void>((resolve) => {
     setTimeout(resolve, ms);
   });
 
-const enqueueFetchUrlCall = async <T>(task: () => Promise<T>): Promise<T> => {
-  const waitForTurn = fetchUrlQueue;
-  let releaseQueue = () => {};
-  fetchUrlQueue = new Promise<void>((resolve) => {
-    releaseQueue = resolve;
-  });
-
-  await waitForTurn;
-
-  const runTask = async () => {
-    const now = Date.now();
-    const elapsed = now - lastFetchUrlAt;
-
-    if (elapsed < FETCH_URL_INTERVAL_MS) {
-      const waitTime = FETCH_URL_INTERVAL_MS - elapsed;
-      await sleep(waitTime);
-    }
-
-    lastFetchUrlAt = Date.now();
-    return task();
-  };
-
-  try {
-    return await runTask();
-  } finally {
-    releaseQueue();
-  }
-};
+const enqueueFetchUrlCall = createRateLimitedQueue(2_000);
 
 // Image URL detection
 const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.ico'];
@@ -145,12 +116,7 @@ const fetchDirectImage = async (url: string, signal?: AbortSignal): Promise<stri
 
     return JSON.stringify(result);
   } catch (error) {
-    const isAbortError =
-      typeof error === 'object' &&
-      error !== null &&
-      'name' in error &&
-      (error as { name?: string }).name === 'AbortError';
-    const message = isAbortError
+    const message = isAbortError(error)
       ? 'Request timed out'
       : typeof error === 'object' && error !== null
         ? (error as Error).message
@@ -193,12 +159,7 @@ export const fetchMarkdownWithJina = async (url: string, signal?: AbortSignal): 
 
     return await jinaResponse.text();
   } catch (error) {
-    const isAbortError =
-      typeof error === 'object' &&
-      error !== null &&
-      'name' in error &&
-      (error as { name?: string }).name === 'AbortError';
-    const message = isAbortError
+    const message = isAbortError(error)
       ? 'Request timed out'
       : typeof error === 'object' && error !== null
         ? (error as Error).message
@@ -276,12 +237,7 @@ const fetchMarkdownWithFirecrawl = async (url: string, signal?: AbortSignal): Pr
 
     return data.markdown;
   } catch (error) {
-    const isAbortError =
-      typeof error === 'object' &&
-      error !== null &&
-      'name' in error &&
-      (error as { name?: string }).name === 'AbortError';
-    const message = isAbortError
+    const message = isAbortError(error)
       ? 'Request timed out'
       : typeof error === 'object' && error !== null
         ? (error as Error).message
@@ -377,12 +333,7 @@ const fetchMarkdownWithExa = async (url: string, signal?: AbortSignal): Promise<
 
     return text;
   } catch (error) {
-    const isAbortError =
-      typeof error === 'object' &&
-      error !== null &&
-      'name' in error &&
-      (error as { name?: string }).name === 'AbortError';
-    const message = isAbortError
+    const message = isAbortError(error)
       ? 'Request timed out'
       : typeof error === 'object' && error !== null
         ? (error as Error).message

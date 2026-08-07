@@ -50,8 +50,20 @@ export type ConversationSearchItem = {
   excerpt: string;
 };
 
+export type ConversationListCursor = {
+  is_pinned: 0 | 1;
+  sort_at: string;
+  updated_at: string;
+  id: string;
+} | null;
+
+export type ConversationSearchCursor = {
+  updated_at: string;
+  id: string;
+} | null;
+
 export type ConversationSearchPageResult = {
   items: ConversationSearchItem[];
-  nextCursor: { updated_at: string; id: string } | null;
+  nextCursor: ConversationSearchCursor;
   mode: 'fts' | 'contains';
 };

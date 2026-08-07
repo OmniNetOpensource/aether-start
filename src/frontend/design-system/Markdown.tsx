@@ -383,9 +383,7 @@ function MarkdownBlock(props: { isAnimating: boolean; markdown: string }) {
   let streamHost: HTMLDivElement | undefined;
 
   const tree = createMemo(() => {
-    const source = props.isAnimating
-      ? remend(props.markdown)
-      : props.markdown;
+    const source = props.isAnimating ? remend(props.markdown) : props.markdown;
     return markdownProcessor.runSync(markdownProcessor.parse(source));
   });
 

@@ -9,17 +9,10 @@ import {
   updateConversationTitleSchema,
 } from '@/schema/conversations';
 
-export type ConversationListCursor = {
-  is_pinned: 0 | 1;
-  sort_at: string;
-  updated_at: string;
-  id: string;
-} | null;
-
-export type ConversationSearchCursor = {
-  updated_at: string;
-  id: string;
-} | null;
+export type {
+  ConversationListCursor,
+  ConversationSearchCursor,
+} from '@/shared/conversations/conversation';
 
 export const listConversationsPageFn = createServerFn({ method: 'POST' })
   .validator(listConversationsPageSchema)

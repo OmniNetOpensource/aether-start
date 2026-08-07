@@ -123,7 +123,10 @@ export const applyOperation = (
     }
 
     const assistantMessage = appendAssistantPlaceholder(currentMessage.id);
-    return finishOperation({ ...currentMessage, latestChild: assistantMessage.id }, assistantMessage);
+    return finishOperation(
+      { ...currentMessage, latestChild: assistantMessage.id },
+      assistantMessage,
+    );
   }
 
   const parent = operation.parentId === null ? null : messages[operation.parentId - 1];

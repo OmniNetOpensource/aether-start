@@ -3,7 +3,7 @@ import { Loader2 } from '@/frontend/design-system/icons';
 import {
   useConversationsQuery,
   selectAllConversations,
-  upsertConversationInCache,
+  updateConversationTitleInCache,
 } from '@/frontend/conversations/session';
 import { conversationId } from '@/frontend/conversations/session/conversation-meta';
 import { ConversationItem } from './ConversationItem';
@@ -37,14 +37,7 @@ export function ConversationList(props: ConversationListProps) {
   onSettled(() => {
     const ch = new BroadcastChannel('conversation_title');
     ch.onmessage = (event: MessageEvent<{ id: string; title: string; updated_at: string }>) => {
-      upsertConversationInCache({
-        id: event.data.id,
-        title: event.data.title,
-        is_pinned: false,
-        pinned_at: null,
-        created_at: event.data.updated_at,
-        updated_at: event.data.updated_at,
-      });
+      updateConversationTitleInCache(event.data.id, event.data.title, event.data.updated_at);
     };
     return () => ch.close();
   });

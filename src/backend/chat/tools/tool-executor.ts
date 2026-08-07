@@ -1,3 +1,4 @@
+import { isAbortError } from '@/backend/chat/abort';
 import { askUserQuestionsTool } from './ask-user-questions';
 import { fetchUrlTool } from './fetch-tool';
 import {
@@ -69,11 +70,7 @@ export const executeToolCall = async (
       }
       rawResult = await handleTool(toolcall.args, signal, context);
     } catch (error) {
-      if (
-        (error instanceof DOMException && error.name === 'AbortError') ||
-        (error instanceof Error && error.name === 'AbortError') ||
-        signal?.aborted
-      ) {
+      if (isAbortError(error, signal)) {
         rawResult = 'Error: Aborted';
       } else {
         log(
@@ -152,25 +149,3 @@ export const executeToolCall = async (
     },
   };
 };
-
-export async function* executeToolsGen(
-  toolCalls: PendingToolInvocation[],
-  signal?: AbortSignal,
-  context?: ToolContext,
-): AsyncGenerator<ChatServerToClientEvent, ToolInvocationResult[]> {
-  const results: ToolInvocationResult[] = [];
-
-  for (const toolcall of toolCalls) {
-    if (signal?.aborted) {
-      throw new DOMException('Aborted', 'AbortError');
-    }
-
-    const executedToolCall = await executeToolCall(toolcall, signal, context);
-    for (const event of executedToolCall.events) {
-      yield event;
-    }
-    results.push(executedToolCall.result);
-  }
-
-  return results;
-}

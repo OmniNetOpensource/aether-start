@@ -1,3 +1,4 @@
+import { isAbortError } from '@/backend/chat/abort';
 import type { ChatTool, ToolDefinition, ToolHandler } from '@/shared/chat/tool-types';
 import {
   stringifySearchClientPayload,
@@ -5,6 +6,7 @@ import {
 } from '@/shared/chat/research/search-result-payload';
 import { log } from '@/backend/chat/logger';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
+import { createRateLimitedQueue } from './rate-limit';
 
 type SearchArgs = {
   query: string;
@@ -105,43 +107,7 @@ const parseSearchArgs = (args: unknown): SearchArgs => {
   return { query };
 };
 
-const SEARCH_INTERVAL_MS = 2_000;
-let lastSearchAt = 0;
-let searchQueue: Promise<void> = Promise.resolve();
-
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
-  });
-
-const enqueueSearchCall = async <T>(task: () => Promise<T>): Promise<T> => {
-  const waitForTurn = searchQueue;
-  let releaseQueue = () => {};
-  searchQueue = new Promise<void>((resolve) => {
-    releaseQueue = resolve;
-  });
-
-  await waitForTurn;
-
-  const runTask = async () => {
-    const now = Date.now();
-    const elapsed = now - lastSearchAt;
-
-    if (elapsed < SEARCH_INTERVAL_MS) {
-      const waitTime = SEARCH_INTERVAL_MS - elapsed;
-      await sleep(waitTime);
-    }
-
-    lastSearchAt = Date.now();
-    return task();
-  };
-
-  try {
-    return await runTask();
-  } finally {
-    releaseQueue();
-  }
-};
+const enqueueSearchCall = createRateLimitedQueue(2_000);
 
 const performSearch = async (
   query: string,
@@ -180,12 +146,7 @@ const performSearch = async (
     const data = (await response.json()) as { organic?: SearchResult[] };
     return await formatSearchResponse(data);
   } catch (error) {
-    const isAbortError =
-      typeof error === 'object' &&
-      error !== null &&
-      'name' in error &&
-      (error as { name?: string }).name === 'AbortError';
-    const message = isAbortError
+    const message = isAbortError(error)
       ? 'Request timed out'
       : typeof error === 'object' && error !== null
         ? (error as Error).message

@@ -12,7 +12,6 @@ import { themes } from '@/frontend/themes/registry';
 import { SettingsModal } from '../settings-dialog/SettingsModal';
 
 type ProfileMenuProps = {
-  isCollapsed?: boolean;
   onDropdownOpenChange: (open: boolean) => void;
 };
 
@@ -36,18 +35,9 @@ export function ProfileMenu(props: ProfileMenuProps) {
   onSettled(() => () => props.onDropdownOpenChange(false));
 
   return (
-    <div
-      class='border-t border-border py-5 transition-all duration-500'
-      style={{
-        'padding-left': props.isCollapsed ? '16px' : '24px',
-        'padding-right': props.isCollapsed ? '16px' : '24px',
-      }}
-    >
+    <div class='border-t border-border px-6 py-5'>
       <div class='flex'>
-        <div
-          class='mx-auto relative transition-all duration-500'
-          style={{ width: props.isCollapsed ? 'auto' : '100%' }}
-        >
+        <div class='mx-auto relative w-full'>
           <DropdownMenu
             open={menuOpen()}
             onOpenChange={handleMenuOpenChange}
@@ -58,28 +48,11 @@ export function ProfileMenu(props: ProfileMenuProps) {
                 <button
                   {...triggerProps}
                   type='button'
-                  class='flex cursor-pointer items-center gap-3 rounded-md text-sm transition-all duration-500 hover:bg-hover hover:text-foreground'
-                  style={{
-                    width: props.isCollapsed ? '40px' : '100%',
-                    height: props.isCollapsed ? '40px' : 'auto',
-                    padding: props.isCollapsed ? '4px' : '6px 8px',
-                    'border-radius': '6px',
-                    'justify-content': props.isCollapsed ? 'center' : 'flex-start',
-                  }}
+                  class='flex w-full cursor-pointer items-center gap-3 rounded-md px-2 py-1.5 text-sm hover:bg-hover hover:text-foreground'
                 >
-                  <span
-                    class={`flex min-w-0 shrink-0 items-center overflow-hidden text-left transition-all duration-500 ${
-                      props.isCollapsed ? 'justify-center' : 'gap-2'
-                    }`}
-                  >
-                    <span
-                      class='truncate text-sm font-semibold text-foreground'
-                      style={{
-                        width: props.isCollapsed ? 'auto' : undefined,
-                        'max-width': props.isCollapsed ? '24px' : undefined,
-                      }}
-                    >
-                      {props.isCollapsed ? (displayName()[0]?.toUpperCase() ?? 'U') : displayName()}
+                  <span class='flex min-w-0 shrink-0 items-center gap-2 overflow-hidden text-left'>
+                    <span class='truncate text-sm font-semibold text-foreground'>
+                      {displayName()}
                     </span>
                   </span>
                 </button>

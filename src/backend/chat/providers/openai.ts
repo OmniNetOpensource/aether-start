@@ -1,3 +1,4 @@
+import { isAbortError } from '@/backend/chat/abort';
 import OpenAI from 'openai';
 import {
   buildCurrentDateSystemPrompt,
@@ -18,7 +19,7 @@ import type {
 } from '@/shared/chat/chat-api';
 import type { ChatTool } from '@/shared/chat/tool-types';
 import type { SerializedMessage } from '@/shared/chat/message';
-import type { ChatProvider, ChatProviderConfig } from './provider-types';
+import type { ChatProvider, ChatProviderConfig, ProviderRunResult } from './provider-types';
 
 type OpenAIContentPart =
   | { type: 'text'; text: string }
@@ -48,33 +49,11 @@ type OpenAITool = {
   };
 };
 
-type OpenAIProviderRunResult = {
-  pendingToolCalls: PendingToolInvocation[];
-  thinkingBlocks: unknown[];
-  assistantText: string;
-};
-
 type OpenAIChatProviderConfig = {
   model: string;
   backendConfig: BackendConfig;
   tools: ChatTool[];
   systemPrompt: string;
-};
-
-const serializeHeaders = (headers: HeadersInit | undefined): Record<string, string> | undefined => {
-  if (!headers) {
-    return undefined;
-  }
-
-  if (headers instanceof Headers) {
-    return Object.fromEntries(headers.entries());
-  }
-
-  if (Array.isArray(headers)) {
-    return Object.fromEntries(headers);
-  }
-
-  return { ...headers };
 };
 
 const createLoggingFetch = (provider: 'openai' | 'openai-responses'): typeof fetch => {
@@ -89,15 +68,22 @@ const createLoggingFetch = (provider: 'openai' | 'openai-responses'): typeof fet
     }
 
     const isStreamingRequest =
-      !!requestBody &&
       typeof requestBody === 'object' &&
-      (requestBody as { stream?: unknown }).stream === true;
+      requestBody !== null &&
+      'stream' in requestBody &&
+      requestBody.stream === true;
 
     if (isStreamingRequest && shouldLogProviderCommunication(provider)) {
+      const headers = init?.headers;
       logProviderCommunication(provider, 'HTTP Request', {
         method: init?.method ?? 'GET',
         url,
-        headers: serializeHeaders(init?.headers),
+        headers:
+          headers instanceof Headers
+            ? Object.fromEntries(headers.entries())
+            : Array.isArray(headers)
+              ? Object.fromEntries(headers)
+              : headers,
         body: requestBody,
       });
     }
@@ -347,13 +333,13 @@ export class OpenAIChatProvider {
   async *run(
     messages: OpenAIMessage[],
     signal?: AbortSignal,
-  ): AsyncGenerator<ChatServerToClientEvent, OpenAIProviderRunResult> {
+  ): AsyncGenerator<ChatServerToClientEvent, ProviderRunResult> {
     const fullMessages: OpenAIMessage[] = [
       ...buildOpenAISystemMessages(this.systemPrompt, this.backendConfig),
       ...messages,
     ];
 
-    const emptyResult: OpenAIProviderRunResult = {
+    const emptyResult: ProviderRunResult = {
       pendingToolCalls: [],
       thinkingBlocks: [],
       assistantText: '',
@@ -378,12 +364,15 @@ export class OpenAIChatProvider {
         streamParams.stream_options = { include_usage: true };
       }
 
-      const streamResponse = await client.chat.completions.create(streamParams, {
+      // streamParams 含 Moonshot 私有扩展（thinking），无法用 SDK 参数类型；
+      // 返回值随之失去类型。delta 里还有各家厂商的私有字段（reasoning_content 等），
+      // 只能按 Record<string, unknown> 声明后逐字段判别。
+      const streamResponse: unknown = await client.chat.completions.create(streamParams, {
         signal,
       });
-
-      const stream = streamResponse as unknown as AsyncIterable<{
+      const stream = streamResponse as AsyncIterable<{
         choices?: Array<{ delta?: Record<string, unknown> }>;
+        usage?: unknown;
       }>;
 
       for await (const chunk of stream) {
@@ -409,7 +398,7 @@ export class OpenAIChatProvider {
           continue;
         }
 
-        const delta = (choice.delta ?? {}) as Record<string, unknown>;
+        const delta = choice.delta ?? {};
         const deltaContent = delta.content;
         if (typeof deltaContent === 'string' && deltaContent.length > 0) {
           assistantText += deltaContent;
@@ -426,8 +415,11 @@ export class OpenAIChatProvider {
           yield { type: 'thinking', content: text };
         }
 
-        const deltaToolCalls = Array.isArray((delta as { tool_calls?: unknown[] }).tool_calls)
-          ? ((delta as { tool_calls: unknown[] }).tool_calls as Array<Record<string, unknown>>)
+        const rawToolCalls = delta.tool_calls;
+        const deltaToolCalls: Record<string, unknown>[] = Array.isArray(rawToolCalls)
+          ? rawToolCalls.filter(
+              (item): item is Record<string, unknown> => typeof item === 'object' && item !== null,
+            )
           : [];
 
         for (const toolCall of deltaToolCalls) {
@@ -466,11 +458,7 @@ export class OpenAIChatProvider {
         }
       }
     } catch (error) {
-      if (
-        (error instanceof DOMException && error.name === 'AbortError') ||
-        (error instanceof Error && error.name === 'AbortError') ||
-        signal?.aborted
-      ) {
+      if (isAbortError(error, signal)) {
         return emptyResult;
       }
 

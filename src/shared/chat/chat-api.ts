@@ -1,4 +1,9 @@
-import type { AssistantMessage, Message, UserContentBlock, UserMessage } from '@/shared/chat/message';
+import type {
+  AssistantMessage,
+  Message,
+  UserContentBlock,
+  UserMessage,
+} from '@/shared/chat/message';
 import type { ChatServerToClientEvent } from './chat-event-types';
 import type {
   AskUserQuestionsAnswer,

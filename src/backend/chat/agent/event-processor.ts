@@ -4,14 +4,12 @@ import type { AssistantAddition } from '@/shared/conversations/block-operations'
 import type { MessageTreeSnapshot, ChatServerToClientEvent } from '@/shared/chat/chat-api';
 import type { AssistantMessage, Message } from '@/shared/chat/message';
 
-type TreeState = MessageTreeSnapshot;
-
 /** 把增量写进指定的 assistant 消息。目标不存在或角色不符时忽略(事件与树不一致属于服务端 bug)。 */
 const appendToAssistant = (
-  state: TreeState,
+  state: MessageTreeSnapshot,
   assistantMessageId: number,
   addition: AssistantAddition,
-): TreeState => {
+): MessageTreeSnapshot => {
   const assistant = state.messages[assistantMessageId - 1];
   if (!assistant || assistant.role !== 'assistant') {
     return state;
@@ -29,30 +27,27 @@ const appendToAssistant = (
   };
 };
 
-const normalizeToolArgs = (args: unknown) =>
-  (args && typeof args === 'object' ? args : {}) as Record<string, unknown>;
-
 /**
  * 事件 → 服务端共享树。所有 run 写同一棵树,事件由信封里的 assistantMessageId 定点路由。
  * tree_operation 不在这里处理:服务端侧它就是 applyOperation 的执行本身,
  * 事件只是发给客户端同步的通知。
  */
 export const processEventToTree = (
-  state: TreeState,
+  state: MessageTreeSnapshot,
   event: ChatServerToClientEvent,
   assistantMessageId: number,
-): TreeState => {
+): MessageTreeSnapshot => {
   if (event.type === 'content') {
     return appendToAssistant(state, assistantMessageId, {
       type: 'content',
-      content: typeof event.content === 'string' ? event.content : String(event.content ?? ''),
+      content: event.content,
     });
   }
 
   if (event.type === 'thinking') {
     return appendToAssistant(state, assistantMessageId, {
       kind: 'thinking',
-      text: typeof event.content === 'string' ? event.content : String(event.content ?? ''),
+      text: event.content,
     });
   }
 
@@ -60,37 +55,23 @@ export const processEventToTree = (
     return appendToAssistant(state, assistantMessageId, {
       kind: 'tool',
       data: {
-        call: {
-          tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
-          args: normalizeToolArgs(event.args),
-        },
+        call: { tool: event.tool, args: event.args },
       },
     });
   }
 
   if (event.type === 'tool_result') {
-    const resultText =
-      typeof event.result === 'string'
-        ? event.result
-        : (() => {
-            try {
-              return JSON.stringify(event.result, null, 2);
-            } catch {
-              return String(event.result ?? '');
-            }
-          })();
-
     return appendToAssistant(state, assistantMessageId, {
       kind: 'tool_result',
-      tool: typeof event.tool === 'string' ? event.tool : 'unknown_tool',
-      result: resultText,
+      tool: event.tool,
+      result: event.result,
     });
   }
 
   if (event.type === 'error') {
     return appendToAssistant(state, assistantMessageId, {
       type: 'error',
-      message: typeof event.message === 'string' ? event.message : String(event.message ?? ''),
+      message: event.message,
     });
   }
 
