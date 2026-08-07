@@ -1,4 +1,4 @@
-import type { ChatOperation, MessageTreeSnapshot } from '@/shared/chat/chat-api';
+import type { Operation, MessageTreeSnapshot } from '@/shared/chat/chat-api';
 import type { AssistantMessage, Message, UserMessage } from '@/shared/chat/message';
 import { cloneMessages } from '@/shared/conversations';
 
@@ -25,10 +25,10 @@ const buildPathToMessage = (messages: Message[], messageId: number) => {
   return path;
 };
 
-export type ChatOperationResult = {
+export type OperationResult = {
   treeSnapshot: MessageTreeSnapshot;
-  /** 本次操作插入的 user 消息;regenerate 时为 null */
-  userMessage: UserMessage | null;
+  /** append 时为新插入的 user 消息;regenerate 时为被重新生成的已有 user 消息(latestChild 已指向新 assistant) */
+  userMessage: UserMessage;
   /** 本次操作追加的 assistant 占位消息,该 run 所有流式事件的写入目标 */
   assistantMessage: AssistantMessage;
   /** 除新增消息外,兄弟/父指针被本次操作改动的已有消息 */
@@ -41,11 +41,11 @@ export type ChatOperationResult = {
  * regenerate:在目标 user 消息下新开 assistant 占位分支。
  * 占位前置分配让每个 run 从接受那一刻就有固定写入目标,多 run 并发不会互相串内容。
  */
-export const applyChatOperation = (
+export const applyOperation = (
   existingMessages: Message[],
-  operation: ChatOperation,
+  operation: Operation,
   createdAt: string,
-): ChatOperationResult | null => {
+): OperationResult | null => {
   if (existingMessages.some((message, index) => message.id !== index + 1)) {
     return null;
   }
@@ -81,9 +81,9 @@ export const applyChatOperation = (
   };
 
   const finishOperation = (
-    userMessage: UserMessage | null,
+    userMessage: UserMessage,
     assistantMessage: AssistantMessage,
-  ): ChatOperationResult | null => {
+  ): OperationResult | null => {
     const currentPath = buildPathToMessage(messages, assistantMessage.id);
     if (!currentPath) {
       return null;
@@ -99,7 +99,7 @@ export const applyChatOperation = (
       userMessage,
       assistantMessage,
       changedMessages: [...changedMessageIds]
-        .filter((id) => id !== userMessage?.id && id !== assistantMessage.id)
+        .filter((id) => id !== userMessage.id && id !== assistantMessage.id)
         .sort((left, right) => left - right)
         .map((id) => messages[id - 1]),
     };
@@ -122,7 +122,8 @@ export const applyChatOperation = (
       }
     }
 
-    return finishOperation(null, appendAssistantPlaceholder(currentMessage.id));
+    const assistantMessage = appendAssistantPlaceholder(currentMessage.id);
+    return finishOperation({ ...currentMessage, latestChild: assistantMessage.id }, assistantMessage);
   }
 
   const parent = operation.parentId === null ? null : messages[operation.parentId - 1];
@@ -184,5 +185,7 @@ export const applyChatOperation = (
 
   messages.push(userMessage);
 
-  return finishOperation(userMessage, appendAssistantPlaceholder(id));
+  /* 占位追加会把 user 消息的 latestChild 指向 assistant,回传的 userMessage 必须带上这个更新 */
+  const assistantMessage = appendAssistantPlaceholder(id);
+  return finishOperation({ ...userMessage, latestChild: assistantMessage.id }, assistantMessage);
 };

@@ -1,4 +1,4 @@
-import type { Message, UserContentBlock } from '@/shared/chat/message';
+import type { AssistantMessage, Message, UserContentBlock, UserMessage } from '@/shared/chat/message';
 import type { ChatServerToClientEvent } from './chat-event-types';
 import type {
   AskUserQuestionsAnswer,
@@ -52,7 +52,7 @@ export type MessageTreeSnapshot = {
   nextId: number;
 };
 
-export type ChatOperation =
+export type Operation =
   | {
       type: 'append';
       message: {
@@ -67,10 +67,12 @@ export type ChatOperation =
       currentMessageId: number;
     };
 
-/** POST /chat 的回执:树变更统一经 tree_operation 事件送达,这里只确认请求已被接受。 */
+/** POST /chat 的回执:发起方据此直接创建 user 消息与 assistant 占位容器。 */
 export type ChatCommandResponse = {
   conversationId: string;
-  assistantMessageId: number;
+  /** append 时为新插入的 user 消息;regenerate 时为被重新生成的已有 user 消息(latestChild 已指向新 assistant) */
+  userMessage: UserMessage;
+  assistantMessage: AssistantMessage;
 };
 
 export type ChatFinishedPayload = {

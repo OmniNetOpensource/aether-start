@@ -16,13 +16,6 @@ export const resetLastEventId = () => {
   resetStreamBuffer();
 };
 
-/** 本客户端刚发起、等待 tree_operation 事件到达后跟随切路径的 assistant id 集合 */
-const pendingFollowAssistantIds = new Set<number>();
-
-export const followTreeOperation = (assistantMessageId: number) => {
-  pendingFollowAssistantIds.add(assistantMessageId);
-};
-
 /**
  * 处理单条 SSE 消息。
  * @param event - SSE 的 event 字段（如 chat_event、chat_finished 等）
@@ -421,10 +414,6 @@ export const applyChatEventToTree = (
     flushStreamBuffer();
     runtime.messageTree.applyTreeOperation(event);
     runtime.messageTree.markAssistantStreaming(event.assistantMessageId);
-    /* 自己发起的操作:视野跟到新分支;其他标签页发起的只合并树内容,不打扰当前视野 */
-    if (pendingFollowAssistantIds.delete(event.assistantMessageId)) {
-      runtime.messageTree.selectMessage(event.assistantMessageId);
-    }
     return;
   }
 

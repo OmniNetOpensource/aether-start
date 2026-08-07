@@ -13,7 +13,7 @@ import type { ChatProvider, ProviderRunResult } from '@/backend/chat/providers/p
 import type { FetchProvider } from '@/shared/chat/tool-types';
 import { generateTitleFromConversation } from '@/backend/chat/chat-title';
 import { processEventToTree, cloneTreeSnapshot } from './event-processor';
-import { applyChatOperation } from '@/backend/conversations/chat-operation';
+import { applyOperation } from '@/backend/conversations/operation';
 import { computeMessagesFromPath } from '@/shared/conversations';
 import {
   buildAskUserQuestionsModelResult,
@@ -35,7 +35,7 @@ import type {
   ChatAgentStatus,
   ChatCommandResponse,
   ChatFinishedPayload,
-  ChatOperation,
+  Operation,
   ChatServerToClientEvent,
   MessageTreeSnapshot,
   PendingToolInvocation,
@@ -137,7 +137,7 @@ type ChatRequestBody = {
   model: string;
   promptId?: string;
   fetchProvider?: FetchProvider;
-  operation: ChatOperation;
+  operation: Operation;
 };
 
 type PreparedChatRequest = Omit<ChatRequestBody, 'conversationId'> & {
@@ -289,7 +289,7 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
       : undefined;
   const rawOperation = body.operation;
 
-  let operation: ChatOperation | null = null;
+  let operation: Operation | null = null;
   if (isObject(rawOperation) && rawOperation.type === 'append' && isObject(rawOperation.message)) {
     const parentId = asMessageId(rawOperation.parentId);
     const previousSiblingId = asMessageId(rawOperation.previousSiblingId);
@@ -520,7 +520,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       baseMessages = existingMessages;
     }
 
-    const operationResult = applyChatOperation(
+    const operationResult = applyOperation(
       baseMessages,
       requestMessage.operation,
       new Date().toISOString(),
@@ -595,9 +595,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     this.persistAndBroadcastEvent(
       {
         type: 'tree_operation',
-        userMessage: operationResult.userMessage,
         assistantMessageId,
-        assistantCreatedAt: operationResult.assistantMessage.createdAt,
         changedMessages: operationResult.changedMessages,
       },
       null,
@@ -625,7 +623,11 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       }),
     );
 
-    const acceptedPayload: ChatCommandResponse = { conversationId, assistantMessageId };
+    const acceptedPayload: ChatCommandResponse = {
+      conversationId,
+      userMessage: operationResult.userMessage,
+      assistantMessage: operationResult.assistantMessage,
+    };
     return Response.json(acceptedPayload);
   }
 

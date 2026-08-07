@@ -13,6 +13,7 @@ import {
 import type { AssistantAddition } from '@/shared/conversations/block-operations';
 import type {
   AssistantContentBlock,
+  AssistantMessage,
   BranchInfo,
   ContentBlock,
   Message,
@@ -298,79 +299,36 @@ export const editMessage = (depth: number, messageId: number, blocks: ContentBlo
   return result;
 };
 
-// tree_operation 事件:服务端树操作的结果,客户端纯合并——放入 user 消息与 assistant 占位,
-// 覆盖被改动指针的已有消息。id 对不上说明本地树与服务端发散,立刻抛错。
-export const applyTreeOperation = (event: {
-  userMessage: UserMessage | null;
-  assistantMessageId: number;
-  assistantCreatedAt: string;
-  changedMessages: Message[];
-}) => {
+// tree_operation 事件:服务端树操作的增量结果,客户端只覆盖被改动指针的已有消息。
+// 新增的 user 消息与 assistant 占位由发起方的 POST /chat 回执创建(applyChatAccepted)。
+// id 对不上说明本地树与服务端发散,立刻抛错。
+export const applyTreeOperation = (event: { changedMessages: Message[] }) => {
   const messages = [...messageTree.messages];
+  for (const changed of event.changedMessages) {
+    if (changed.id > messages.length + 1) {
+      throw new Error('Local message tree diverged from server');
+    }
+    messages[changed.id - 1] = changed;
+  }
+  setMessageTreeState({ messages, nextId: messages.length + 1 });
+};
 
-  const place = (message: Message) => {
+// POST /chat 回执:发起方直接放入 user 消息与 assistant 占位容器
+export const applyChatAccepted = (userMessage: UserMessage, assistantMessage: AssistantMessage) => {
+  const messages = [...messageTree.messages];
+  for (const message of [userMessage, assistantMessage]) {
     if (message.id > messages.length + 1) {
       throw new Error('Local message tree diverged from server');
     }
     messages[message.id - 1] = message;
-  };
-
-  for (const changed of event.changedMessages) {
-    place(changed);
   }
-  if (event.userMessage) {
-    place(event.userMessage);
-  }
-
-  const existingAssistant = messages[event.assistantMessageId - 1];
-  if (!existingAssistant) {
-    const userParentId = event.userMessage?.id ?? null;
-    const parentId =
-      userParentId ??
-      (() => {
-        /* regenerate:占位的 parent 是 changedMessages 里 latestChild 指向它的 user 消息 */
-        const parent = event.changedMessages.find(
-          (message) => message.latestChild === event.assistantMessageId,
-        );
-        return parent?.id ?? null;
-      })();
-    const parent = parentId !== null ? messages[parentId - 1] : null;
-    place({
-      id: event.assistantMessageId,
-      parentId,
-      prevSibling:
-        parent && parent.latestChild === event.assistantMessageId
-          ? findPrevSibling(messages, parentId, event.assistantMessageId)
-          : null,
-      nextSibling: null,
-      latestChild: null,
-      role: 'assistant',
-      blocks: [],
-      createdAt: event.assistantCreatedAt,
-      completedAt: null,
-    });
-  }
-
   setMessageTreeState({ messages, nextId: messages.length + 1 });
-};
-
-const findPrevSibling = (
-  messages: Message[],
-  parentId: number | null,
-  selfId: number,
-): number | null => {
-  if (parentId === null) return null;
-  for (const message of messages) {
-    if (message && message.parentId === parentId && message.nextSibling === selfId) {
-      return message.id;
-    }
-  }
-  return null;
 };
 
 export const messageTreeActions = {
   addMessage,
   appendToAssistant,
+  applyChatAccepted,
   applyTreeOperation,
   clear: clearMessageTree,
   editMessage,

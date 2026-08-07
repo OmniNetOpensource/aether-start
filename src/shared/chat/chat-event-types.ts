@@ -33,9 +33,7 @@ export type ChatServerToClientEvent =
   | { type: 'thinking'; content: string }
   | {
       type: 'tree_operation';
-      userMessage: UserMessage | null;
       assistantMessageId: number;
-      assistantCreatedAt: string;
       changedMessages: Message[];
     }
   | {
@@ -84,4 +82,4 @@ import type {
   AskUserQuestionsAnswer,
   AskUserQuestionsQuestion,
 } from '@/shared/chat/ask-user-questions';
-import type { Message, UserMessage } from '@/shared/chat/message';
+import type { Message } from '@/shared/chat/message';

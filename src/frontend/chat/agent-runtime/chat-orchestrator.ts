@@ -9,14 +9,13 @@
  * - 恢复正在进行的对话流（resumeRunningConversation）
  * - 断线自动重连
  *
- * 与 conversation-runner 服务端配合：/chat 只回回执,树变更经 tree_operation 事件送达;
+ * 与 conversation-runner 服务端配合：/chat 回执带回 user 消息与 assistant 占位,发起方据此建容器;
  * /events 是会话级订阅,一条连接接收所有 run 的 chat_event、chat_finished 等事件。
  */
 import type { AskUserQuestionsAnswer } from '@/shared/chat/ask-user-questions';
 import {
   applyChatEventToTree,
   flushStreamBuffer,
-  followTreeOperation,
   getLastEventId,
   handleSSEMessage,
   resetLastEventId,
@@ -24,7 +23,7 @@ import {
 import type { ChatState } from './chat-state';
 import { readSSEStream } from './sse-stream';
 import { setQueuedMessages } from '@/frontend/chat/composer/composer-request/message-queue';
-import type { ChatAgentStatus, ChatCommandResponse, ChatOperation } from '@/shared/chat/chat-api';
+import type { ChatAgentStatus, ChatCommandResponse, Operation } from '@/shared/chat/chat-api';
 
 /** Agent 路由名，对应 /agents/conversation-runner */
 const AGENT_NAME = 'conversation-runner';
@@ -201,15 +200,15 @@ export const checkAgentStatus = async (
  *
  * 流程：
  * 1. 校验已选模型与会话 ID 规则
- * 2. POST /chat,服务端应用树操作后回执 { conversationId, assistantMessageId }
- * 3. 树变更由 tree_operation 事件送达;若当前没有 /events 订阅则建立一条,有则复用
+ * 2. POST /chat,服务端应用树操作后回执 { conversationId, userMessage, assistantMessage }
+ * 3. 发起方用回执直接创建 user 消息与 assistant 占位容器;若当前没有 /events 订阅则建立一条,有则复用
  *
  * 多 run 并发:流式期间再次调用本函数不会打断已有的流,新 run 的事件走同一条订阅。
  * 异常：AbortError 静默忽略；TypeError（如网络错误）走自动重连；其他恢复状态并提示。
  */
 export const startChatRequest = async (
   runtime: ChatState,
-  operation: ChatOperation,
+  operation: Operation,
   onAccepted?: (response: ChatCommandResponse) => void,
 ) => {
   const modelId = runtime.getCurrentModelId();
@@ -280,8 +279,14 @@ export const startChatRequest = async (
       throw new Error('Conversation ID mismatch');
     }
     runtime.setConversationId(acceptedPayload.conversationId);
-    followTreeOperation(acceptedPayload.assistantMessageId);
-    acceptedAssistantMessageId = acceptedPayload.assistantMessageId;
+    /* 回执即容器:直接放入 user 消息与 assistant 占位,视野跟到新分支 */
+    runtime.messageTree.applyChatAccepted(
+      acceptedPayload.userMessage,
+      acceptedPayload.assistantMessage,
+    );
+    runtime.messageTree.markAssistantStreaming(acceptedPayload.assistantMessage.id);
+    runtime.messageTree.selectMessage(acceptedPayload.assistantMessage.id);
+    acceptedAssistantMessageId = acceptedPayload.assistantMessage.id;
     onAccepted?.(acceptedPayload);
     runtime.setStatus('streaming');
 

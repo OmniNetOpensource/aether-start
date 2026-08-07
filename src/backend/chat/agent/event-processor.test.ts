@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { applyChatOperation } from '@/backend/conversations/chat-operation';
+import { applyOperation } from '@/backend/conversations/operation';
 import { processEventToTree } from './event-processor';
 
 const createdAt = '2026-08-07T00:00:00.000Z';
 
 const setupTwoRuns = () => {
   /* run A: 首条消息 → user 1 + assistant 2 */
-  const first = applyChatOperation(
+  const first = applyOperation(
     [],
     {
       type: 'append',
@@ -19,7 +19,7 @@ const setupTwoRuns = () => {
   if (!first) throw new Error('first operation failed');
 
   /* run B: 编辑同一条 user → user 3 + assistant 4(兄弟分支) */
-  const second = applyChatOperation(
+  const second = applyOperation(
     first.treeSnapshot.messages,
     {
       type: 'append',

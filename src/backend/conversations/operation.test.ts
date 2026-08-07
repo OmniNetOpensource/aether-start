@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { createLinearMessages, editMessage } from '@/shared/conversations/message-tree';
-import { applyChatOperation } from './chat-operation';
+import { applyOperation } from './operation';
 
 const createdAt = '2026-08-05T00:00:00.000Z';
 
-describe('applyChatOperation', () => {
+describe('applyOperation', () => {
   it('assigns the first message id and appends an assistant placeholder', () => {
-    const result = applyChatOperation(
+    const result = applyOperation(
       [],
       {
         type: 'append',
@@ -23,6 +23,7 @@ describe('applyChatOperation', () => {
       id: 1,
       parentId: null,
       prevSibling: null,
+      latestChild: 2,
       role: 'user',
       createdAt,
     });
@@ -41,7 +42,7 @@ describe('applyChatOperation', () => {
       { role: 'user', blocks: [{ type: 'content', content: 'Question' }] },
       { role: 'assistant', blocks: [{ type: 'content', content: 'Answer' }] },
     ]);
-    const result = applyChatOperation(
+    const result = applyOperation(
       existing.messages,
       {
         type: 'append',
@@ -56,6 +57,7 @@ describe('applyChatOperation', () => {
     expect(result?.treeSnapshot.messages[1]?.latestChild).toBe(3);
     expect(result?.assistantMessage.id).toBe(4);
     expect(result?.treeSnapshot.messages[2]?.latestChild).toBe(4);
+    expect(result?.userMessage?.latestChild).toBe(4);
     /* user 3 与 assistant 4 都是新增,changedMessages 只含被改指针的 assistant 2 */
     expect(result?.changedMessages.map((message) => message.id)).toEqual([2]);
   });
@@ -71,7 +73,7 @@ describe('applyChatOperation', () => {
       throw new Error('Expected edit to succeed');
     }
 
-    const result = applyChatOperation(
+    const result = applyOperation(
       alternative.messages,
       {
         type: 'append',
@@ -105,13 +107,13 @@ describe('applyChatOperation', () => {
       throw new Error('Expected edit to succeed');
     }
 
-    const result = applyChatOperation(
+    const result = applyOperation(
       alternative.messages,
       { type: 'regenerate', currentMessageId: 3 },
       createdAt,
     );
 
-    expect(result?.userMessage).toBeNull();
+    expect(result?.userMessage).toMatchObject({ id: 3, role: 'user', latestChild: 5 });
     expect(result?.assistantMessage).toMatchObject({ id: 5, parentId: 3 });
     expect(result?.treeSnapshot.currentPath).toEqual([1, 2, 3, 5]);
     expect(result?.treeSnapshot.messages).toHaveLength(5);
@@ -125,21 +127,23 @@ describe('applyChatOperation', () => {
       { role: 'assistant', blocks: [{ type: 'content', content: 'Answer' }] },
     ]);
 
-    const first = applyChatOperation(
+    const first = applyOperation(
       existing.messages,
       { type: 'regenerate', currentMessageId: 1 },
       createdAt,
     );
     expect(first?.assistantMessage).toMatchObject({ id: 3, prevSibling: 2 });
 
-    const second = applyChatOperation(
+    const second = applyOperation(
       first!.treeSnapshot.messages,
       { type: 'regenerate', currentMessageId: 1 },
       createdAt,
     );
     expect(second?.assistantMessage).toMatchObject({ id: 4, prevSibling: 3 });
     expect(second?.treeSnapshot.messages[2]?.nextSibling).toBe(4);
-    expect(second?.changedMessages.map((message) => message.id)).toEqual([1, 3]);
+    expect(second?.userMessage).toMatchObject({ id: 1, latestChild: 4 });
+    /* user 1 作为 userMessage 回传,不再进 changedMessages */
+    expect(second?.changedMessages.map((message) => message.id)).toEqual([3]);
   });
 
   it('rejects an append without the existing previous sibling', () => {
@@ -150,7 +154,7 @@ describe('applyChatOperation', () => {
     ]);
 
     expect(
-      applyChatOperation(
+      applyOperation(
         existing.messages,
         {
           type: 'append',

@@ -34,7 +34,7 @@ const normalizeToolArgs = (args: unknown) =>
 
 /**
  * 事件 → 服务端共享树。所有 run 写同一棵树,事件由信封里的 assistantMessageId 定点路由。
- * tree_operation 不在这里处理:服务端侧它就是 applyChatOperation 的执行本身,
+ * tree_operation 不在这里处理:服务端侧它就是 applyOperation 的执行本身,
  * 事件只是发给客户端同步的通知。
  */
 export const processEventToTree = (
