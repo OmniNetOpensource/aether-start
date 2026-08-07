@@ -1,4 +1,5 @@
 import type { ArtifactLanguage } from '@/shared/chat/chat-api';
+import { isMessage, type Message } from '@/shared/chat/message';
 import type { ConversationArtifact } from '@/shared/conversations/conversation';
 
 export type ConversationListCursor = {
@@ -766,6 +767,68 @@ export const upsertConversation = async (db: D1Database, payload: ConversationPa
   ]);
 
   return { ok: true };
+};
+
+// 从指定消息沿 parentId 走到根，把这条链重建成线性新树，存为新会话。
+export const branchConversation = async (
+  db: D1Database,
+  input: { userId: string; id: string; messageId: number },
+) => {
+  const row = await db
+    .prepare(
+      `
+      SELECT m.title, m.model, b.messages_json
+      FROM conversation_metas m
+      JOIN conversation_bodies b ON b.user_id = m.user_id AND b.id = m.id
+      WHERE m.id = ?1 AND m.user_id = ?2
+      LIMIT 1
+      `,
+    )
+    .bind(input.id, input.userId)
+    .first();
+
+  if (!isRecord(row) || typeof row.messages_json !== 'string') {
+    throw new Error('Conversation not found');
+  }
+
+  const messages = safeParseMessages(row.messages_json).filter(isMessage);
+
+  const chain: Message[] = [];
+  let currentId: number | null = input.messageId;
+  while (currentId !== null) {
+    const message: Message | undefined = messages[currentId - 1];
+    if (!message || message.id !== currentId || chain.length > messages.length) {
+      throw new Error('Branch point message not found');
+    }
+    chain.unshift(message);
+    currentId = message.parentId;
+  }
+
+  const branchedMessages = chain.map((message, index) => ({
+    ...message,
+    id: index + 1,
+    parentId: index === 0 ? null : index,
+    prevSibling: null,
+    nextSibling: null,
+    latestChild: index === chain.length - 1 ? null : index + 2,
+  }));
+
+  const conversationId = crypto.randomUUID();
+  const title = typeof row.title === 'string' ? row.title : null;
+  const model = typeof row.model === 'string' ? row.model : null;
+  const now = new Date().toISOString();
+  await upsertConversation(db, {
+    user_id: input.userId,
+    id: conversationId,
+    title,
+    model,
+    currentPath: branchedMessages.map((message) => message.id),
+    messages: branchedMessages,
+    created_at: now,
+    updated_at: now,
+  });
+
+  return { conversationId, title, model, created_at: now };
 };
 
 export const deleteConversationById = async (db: D1Database, id: string, userId: string) => {

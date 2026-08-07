@@ -69,6 +69,7 @@ describe('MessageItem', () => {
           onCancelEditing={() => {}}
           onSubmitEdit={async () => {}}
           onRetry={async () => {}}
+          onBranch={async () => {}}
         />
       </ToastProvider>
     ));

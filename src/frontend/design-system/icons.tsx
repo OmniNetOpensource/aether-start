@@ -19,6 +19,7 @@ import {
   Folder as folder,
   FolderOpen as folderOpen,
   Gift as gift,
+  GitBranch as gitBranch,
   Globe as globe,
   Image as image,
   ImagePlus as imagePlus,
@@ -118,6 +119,7 @@ export const FileText = createLucideIcon(fileText);
 export const Folder = createLucideIcon(folder);
 export const FolderOpen = createLucideIcon(folderOpen);
 export const Gift = createLucideIcon(gift);
+export const GitBranch = createLucideIcon(gitBranch);
 export const Globe = createLucideIcon(globe);
 export const Image = createLucideIcon(image);
 export const ImagePlus = createLucideIcon(imagePlus);

@@ -1,5 +1,6 @@
 import { createServerFn } from '@tanstack/solid-start';
 import {
+  branchConversationSchema,
   conversationIdSchema,
   conversationPayloadSchema,
   listConversationsPageSchema,
@@ -86,6 +87,24 @@ export const upsertConversationFn = createServerFn({ method: 'POST' })
     return upsertConversation(DB, {
       ...data,
       user_id: session.user.id,
+    });
+  });
+
+export const branchConversationFn = createServerFn({ method: 'POST' })
+  .validator(branchConversationSchema)
+  .handler(async ({ data }) => {
+    const [{ getServerBindings }, { requireSession }, { branchConversation }] = await Promise.all([
+      import('@/backend/platform/cloudflare/env'),
+      import('@/backend/auth/request'),
+      import('@/backend/conversations/conversations-db'),
+    ]);
+    const { DB } = getServerBindings();
+    const session = await requireSession();
+
+    return branchConversation(DB, {
+      userId: session.user.id,
+      id: data.id,
+      messageId: data.messageId,
     });
   });
 

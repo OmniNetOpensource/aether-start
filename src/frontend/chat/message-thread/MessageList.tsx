@@ -1,4 +1,5 @@
 import { createSignal, For, Show } from 'solid-js';
+import { useNavigate } from '@tanstack/solid-router';
 import { cancelAnswering, startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import {
   composerDocumentFromBlocks,
@@ -12,12 +13,15 @@ import {
   messages,
 } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { conversationId } from '@/frontend/conversations/session/conversation-meta';
+import { branchConversationFn } from '@/rpc/conversations';
+import { upsertConversationInCache } from '@/frontend/conversations/session';
 import type { EditingState } from './editing-state';
 import { MessageItem } from './MessageItem';
 import { SelectionToolbar } from './selection-toolbar';
 
 export function MessageList() {
   let scrollElement: HTMLDivElement | undefined;
+  const navigate = useNavigate();
   const [editing, setEditing] = createSignal<{
     conversationId: string | null;
     state: EditingState;
@@ -108,6 +112,28 @@ export function MessageList() {
     );
   };
 
+  const branchFromMessage = async (messageId: number) => {
+    const sourceConversationId = conversationId();
+    if (!sourceConversationId) return;
+
+    const branched = await branchConversationFn({
+      data: { id: sourceConversationId, messageId },
+    });
+    upsertConversationInCache({
+      id: branched.conversationId,
+      title: branched.title,
+      model: branched.model,
+      is_pinned: false,
+      pinned_at: null,
+      created_at: branched.created_at,
+      updated_at: branched.created_at,
+    });
+    await navigate({
+      to: '/app/$conversationId',
+      params: { conversationId: branched.conversationId },
+    });
+  };
+
   return (
     <>
       {messages().length > 0 && (
@@ -146,6 +172,7 @@ export function MessageList() {
                           onCancelEditing={() => setEditingState(null)}
                           onSubmitEdit={submitEdit}
                           onRetry={retryFromMessage}
+                          onBranch={branchFromMessage}
                         />
                       )}
                     </Show>

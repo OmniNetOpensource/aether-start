@@ -41,6 +41,11 @@ export const conversationPayloadSchema = z.object({
   updated_at: z.string(),
 });
 
+export const branchConversationSchema = z.object({
+  id: z.string().min(1),
+  messageId: z.number().int().positive(),
+});
+
 export const updateConversationTitleSchema = z.object({
   id: z.string().min(1),
   title: z.string().nullable(),

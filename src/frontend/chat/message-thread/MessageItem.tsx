@@ -4,7 +4,14 @@ import type { JSX } from '@solidjs/web';
 import Markdown from '@/frontend/design-system/Markdown';
 import type { Message } from '@/shared/chat/message';
 import { ResearchBlock } from '../research/ResearchBlock';
-import { Copy, Check, AlertCircle, Pencil, RotateCcw } from '@/frontend/design-system/icons';
+import {
+  Copy,
+  Check,
+  AlertCircle,
+  GitBranch,
+  Pencil,
+  RotateCcw,
+} from '@/frontend/design-system/icons';
 import { Button } from '@/frontend/design-system/button';
 import { useToast } from '@/frontend/app-shell/useToast';
 import { submitToolAnswer } from '@/frontend/chat/agent-runtime/chat-orchestrator';
@@ -96,6 +103,7 @@ type MessageItemProps = {
   onCancelEditing: () => void;
   onSubmitEdit: () => Promise<void>;
   onRetry: (messageId: number) => Promise<void>;
+  onBranch: (messageId: number) => Promise<void>;
 };
 
 const formatMessageTime = (iso: string) =>
@@ -121,6 +129,13 @@ export function MessageItem(props: MessageItemProps) {
     void props.onRetry(messageId()).catch((error) => {
       console.error('Failed to retry message:', error);
       toast.error(error instanceof Error ? error.message : '重新生成失败');
+    });
+  };
+
+  const handleBranch = () => {
+    void props.onBranch(messageId()).catch((error) => {
+      console.error('Failed to branch conversation:', error);
+      toast.error(error instanceof Error ? error.message : '创建分支会话失败');
     });
   };
 
@@ -306,11 +321,19 @@ export function MessageItem(props: MessageItemProps) {
               )}
               <CopyButton blocks={props.message.blocks} />
               {!isUser() && (
-                <ActionButton
-                  onClick={handleRetry}
-                  title='重试生成'
-                  icon={<RotateCcw class='h-3.5 w-3.5' />}
-                />
+                <>
+                  <ActionButton
+                    onClick={handleRetry}
+                    title='重试生成'
+                    icon={<RotateCcw class='h-3.5 w-3.5' />}
+                  />
+                  <ActionButton
+                    onClick={handleBranch}
+                    disabled={isBusy()}
+                    title='从这里创建分支会话'
+                    icon={<GitBranch class='h-3.5 w-3.5' />}
+                  />
+                </>
               )}
             </div>
           )}
