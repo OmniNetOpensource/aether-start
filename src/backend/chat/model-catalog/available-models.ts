@@ -1,4 +1,8 @@
-import { z } from 'zod';
+import {
+  availableModelsSchema,
+  geminiModelListSchema,
+  modelListSchema,
+} from '@/schema/model-catalog';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
 import {
   createModelId,
@@ -7,34 +11,6 @@ import {
   IKUN_BASE_URL,
   type ChatBackend,
 } from '@/shared/chat/model-catalog';
-
-const modelListSchema = z.object({
-  data: z.array(
-    z.object({
-      id: z.string(),
-      name: z.string().optional(),
-      display_name: z.string().optional(),
-    }),
-  ),
-});
-
-const geminiModelListSchema = z.object({
-  models: z.array(
-    z.object({
-      name: z.string(),
-      displayName: z.string(),
-      supportedGenerationMethods: z.array(z.string()).nullable(),
-    }),
-  ),
-  nextPageToken: z.string().nullish(),
-});
-
-const availableModelsSchema = z.array(
-  z.object({
-    id: z.string(),
-    name: z.string(),
-  }),
-);
 
 const MODEL_LIST_CACHE_TTL_SECONDS = 60 * 60;
 

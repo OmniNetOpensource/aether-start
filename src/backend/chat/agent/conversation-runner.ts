@@ -17,10 +17,12 @@ import { applyChatOperation, computeMessagesFromPath } from '@/shared/conversati
 import {
   buildAskUserQuestionsModelResult,
   normalizeAskUserQuestionsAnswers,
+} from '@/backend/chat/tools/ask-user-questions';
+import {
   parseAskUserQuestions,
   parseAskUserQuestionsAnswerSubmission,
-  type AskUserQuestionsQuestion,
-} from '@/shared/chat/ask-user-questions';
+} from '@/schema/ask-user-questions';
+import type { AskUserQuestionsQuestion } from '@/shared/chat/ask-user-questions';
 import {
   createConversationArtifact,
   getConversationById,

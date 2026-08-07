@@ -1,8 +1,4 @@
-import type {
-  ChatOperation,
-  MessageTreeUpdatePayload,
-  MessageTreeSnapshot,
-} from '@/shared/chat/chat-api';
+import type { ChatOperation, MessageTreeSnapshot } from '@/shared/chat/chat-api';
 import type { Message, UserMessage } from '@/shared/chat/message';
 import { cloneMessages } from './block-operations';
 
@@ -32,8 +28,7 @@ const buildPathToMessage = (messages: Message[], messageId: number) => {
 const finishOperation = (
   messages: Message[],
   currentMessageId: number,
-  changedMessageIds: Set<number>,
-): { treeSnapshot: MessageTreeSnapshot; startedPayload: MessageTreeUpdatePayload } | null => {
+): { treeSnapshot: MessageTreeSnapshot } | null => {
   const currentPath = buildPathToMessage(messages, currentMessageId);
   if (!currentPath) {
     return null;
@@ -45,13 +40,6 @@ const finishOperation = (
       currentPath,
       latestRootId: currentPath[0] ?? null,
       nextId: messages.length + 1,
-    },
-    startedPayload: {
-      currentPath,
-      changedMessages: [...changedMessageIds]
-        .sort((left, right) => left - right)
-        .map((id) => messages[id - 1])
-        .filter((message): message is Message => Boolean(message)),
     },
   };
 };
@@ -66,7 +54,6 @@ export const applyChatOperation = (
   }
 
   const messages = cloneMessages(existingMessages);
-  const changedMessageIds = new Set<number>();
 
   if (operation.type === 'regenerate') {
     const currentMessage = messages[operation.currentMessageId - 1];
@@ -81,11 +68,10 @@ export const applyChatOperation = (
       }
       if (parent.latestChild !== currentMessage.id) {
         messages[parent.id - 1] = { ...parent, latestChild: currentMessage.id };
-        changedMessageIds.add(parent.id);
       }
     }
 
-    return finishOperation(messages, currentMessage.id, changedMessageIds);
+    return finishOperation(messages, currentMessage.id);
   }
 
   const parent = operation.parentId === null ? null : messages[operation.parentId - 1];
@@ -128,12 +114,10 @@ export const applyChatOperation = (
 
   if (parent) {
     messages[parent.id - 1] = { ...parent, latestChild: id };
-    changedMessageIds.add(parent.id);
   }
 
   if (previousSibling) {
     messages[previousSibling.id - 1] = { ...previousSibling, nextSibling: id };
-    changedMessageIds.add(previousSibling.id);
   }
 
   if (followingSiblingId !== null) {
@@ -142,41 +126,11 @@ export const applyChatOperation = (
       return null;
     }
     messages[followingSibling.id - 1] = { ...followingSibling, prevSibling: id };
-    changedMessageIds.add(followingSibling.id);
   }
 
   messages.push(currentMessage);
-  changedMessageIds.add(id);
 
-  return finishOperation(messages, id, changedMessageIds);
-};
-
-export const mergeChatStartedPayload = (
-  snapshot: MessageTreeSnapshot,
-  payload: MessageTreeUpdatePayload,
-): MessageTreeSnapshot | null => {
-  const messages = cloneMessages(snapshot.messages);
-
-  for (const changedMessage of payload.changedMessages) {
-    if (changedMessage.id > messages.length + 1) {
-      return null;
-    }
-    messages[changedMessage.id - 1] = cloneMessages([changedMessage])[0];
-  }
-
-  if (
-    messages.some((message, index) => !message || message.id !== index + 1) ||
-    payload.currentPath.some((id) => !messages[id - 1])
-  ) {
-    return null;
-  }
-
-  return {
-    messages,
-    currentPath: [...payload.currentPath],
-    latestRootId: payload.currentPath[0] ?? null,
-    nextId: messages.length + 1,
-  };
+  return finishOperation(messages, id);
 };
 
 export const appendConfirmedUserMessage = (

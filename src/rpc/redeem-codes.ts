@@ -1,20 +1,12 @@
 import { createServerFn } from '@tanstack/solid-start';
-import { z } from 'zod';
-
-const cursorSchema = z
-  .object({
-    created_at: z.string(),
-    id: z.string(),
-  })
-  .nullable();
+import {
+  createRedeemCodeSchema,
+  listRedeemCodesSchema,
+  redeemCodeIdSchema,
+} from '@/schema/redeem-codes';
 
 export const adminListRedeemCodesFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      limit: z.number().int().positive().max(100),
-      cursor: cursorSchema,
-    }),
-  )
+  .validator(listRedeemCodesSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireAdminSession }, { adminListRedeemCodes }] =
       await Promise.all([
@@ -31,14 +23,8 @@ export const adminListRedeemCodesFn = createServerFn({ method: 'POST' })
     });
   });
 
-const createCodeSchema = z.object({
-  code: z.string().trim().min(1).max(32),
-  amount: z.number().int().positive().max(1_000_000),
-  expiresAt: z.string().nullable().optional(),
-});
-
 export const adminCreateRedeemCodeFn = createServerFn({ method: 'POST' })
-  .validator(createCodeSchema)
+  .validator(createRedeemCodeSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireAdminSession }, { createRedeemCode }] =
       await Promise.all([
@@ -66,7 +52,7 @@ export const adminCreateRedeemCodeFn = createServerFn({ method: 'POST' })
   });
 
 export const adminDeactivateRedeemCodeFn = createServerFn({ method: 'POST' })
-  .validator(z.object({ id: z.string().min(1) }))
+  .validator(redeemCodeIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireAdminSession }, { updateRedeemCodeStatus }] =
       await Promise.all([

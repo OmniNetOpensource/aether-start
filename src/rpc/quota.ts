@@ -1,5 +1,5 @@
 import { createServerFn } from '@tanstack/solid-start';
-import { z } from 'zod';
+import { redeemInputSchema } from '@/schema/quota';
 
 export const getQuotaFn = createServerFn({ method: 'GET' }).handler(async () => {
   const [{ getServerBindings }, { requireSession }, { getOrCreateUserQuota }] = await Promise.all([
@@ -12,10 +12,6 @@ export const getQuotaFn = createServerFn({ method: 'GET' }).handler(async () => 
 
   const quota = await getOrCreateUserQuota(DB, session.user.id);
   return { balance: quota.balance };
-});
-
-const redeemInputSchema = z.object({
-  code: z.string().trim().min(1).max(64),
 });
 
 export const redeemCodeFn = createServerFn({ method: 'POST' })

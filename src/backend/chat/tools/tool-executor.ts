@@ -1,4 +1,4 @@
-import { askUserQuestionsTool } from '@/shared/chat/ask-user-questions';
+import { askUserQuestionsTool } from './ask-user-questions';
 import { fetchUrlTool } from './fetch-tool';
 import {
   buildFetchClientPayload,

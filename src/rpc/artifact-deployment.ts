@@ -1,13 +1,8 @@
 import { createServerFn } from '@tanstack/solid-start';
-import { z } from 'zod';
+import { deployToNetlifySchema } from '@/schema/artifact-deployment';
 
 export const deployToNetlifyFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      artifactId: z.string().min(1),
-      html: z.string().min(1),
-    }),
-  )
+  .validator(deployToNetlifySchema)
   .handler(async ({ data }) => {
     const [{ requireSession }, { deployArtifactToNetlify }] = await Promise.all([
       import('@/backend/auth/request'),

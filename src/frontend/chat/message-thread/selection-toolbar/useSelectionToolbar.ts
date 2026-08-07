@@ -38,8 +38,7 @@ export function useSelectionToolbar(container: Accessor<HTMLElement | undefined>
       }
       timeout = setTimeout(() => {
         const selection = window.getSelection();
-        if (!selection || selection.isCollapsed || selection.rangeCount === 0)
-          return hideToolbar();
+        if (!selection || selection.isCollapsed || selection.rangeCount === 0) return hideToolbar();
         const selectedText = selection.toString().trim();
         const range = selection.getRangeAt(0);
         const selectionContainer = getSelectionContainer(range);

@@ -67,11 +67,6 @@ export type ChatOperation =
       currentMessageId: number;
     };
 
-export type MessageTreeUpdatePayload = {
-  currentPath: number[];
-  changedMessages: Message[];
-};
-
 export type ChatCommandResponse =
   | {
       type: 'append';

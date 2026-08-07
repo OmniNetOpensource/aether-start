@@ -1,16 +1,11 @@
-import { z } from 'zod';
+import {
+  parseCreateDeployResponse,
+  parseCreateSiteResponse,
+  parseDeployStatusResponse,
+  parseUploadFileResponse,
+} from '@/schema/netlify';
 import { log } from '@/backend/chat/logger';
 import { getServerBindings, getServerEnv } from '@/backend/platform/cloudflare/env';
-
-const createSiteSchema = z.object({ id: z.string() });
-const createDeploySchema = z.object({ id: z.string() });
-const uploadFileSchema = z.object({ mime_type: z.string().optional() });
-const deployStatusSchema = z.object({
-  state: z.string(),
-  url: z.string().optional(),
-  ssl_url: z.string().optional(),
-  error_message: z.string().nullable().optional(),
-});
 
 const NETLIFY_API_BASE_URL = 'https://api.netlify.com/api/v1';
 const NETLIFY_POLL_INTERVAL_MS = 500;
@@ -34,21 +29,6 @@ const getResponseText = async (response: Response, label: string) => {
     throw new Error(`Netlify ${label} failed: ${response.status} ${text}`);
   }
   return text;
-};
-
-const parseJson = <T>(text: string, schema: z.ZodType<T>, label: string) => {
-  let json: unknown;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error(`Netlify ${label}: invalid JSON response`);
-  }
-
-  const parsed = schema.safeParse(json);
-  if (!parsed.success) {
-    throw new Error(`Netlify ${label}: unexpected response`);
-  }
-  return parsed.data;
 };
 
 export async function deployArtifactAndSaveDeployment({
@@ -105,11 +85,7 @@ export async function deployHtmlToNetlify({
     },
     body: '{}',
   });
-  const site = parseJson(
-    await getResponseText(siteResponse, 'create site'),
-    createSiteSchema,
-    'create site',
-  );
+  const site = parseCreateSiteResponse(await getResponseText(siteResponse, 'create site'));
 
   const deployResponse = await fetchImpl(`${NETLIFY_API_BASE_URL}/sites/${site.id}/deploys`, {
     method: 'POST',
@@ -123,11 +99,7 @@ export async function deployHtmlToNetlify({
       },
     }),
   });
-  const deploy = parseJson(
-    await getResponseText(deployResponse, 'create deploy'),
-    createDeploySchema,
-    'create deploy',
-  );
+  const deploy = parseCreateDeployResponse(await getResponseText(deployResponse, 'create deploy'));
 
   const uploadResponse = await fetchImpl(
     `${NETLIFY_API_BASE_URL}/deploys/${deploy.id}/files/index.html`,
@@ -140,7 +112,7 @@ export async function deployHtmlToNetlify({
       body: htmlBytes,
     },
   );
-  parseJson(await getResponseText(uploadResponse, 'upload file'), uploadFileSchema, 'upload file');
+  parseUploadFileResponse(await getResponseText(uploadResponse, 'upload file'));
 
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -152,10 +124,8 @@ export async function deployHtmlToNetlify({
         },
       },
     );
-    const status = parseJson(
+    const status = parseDeployStatusResponse(
       await getResponseText(statusResponse, 'get deploy status'),
-      deployStatusSchema,
-      'get deploy status',
     );
 
     if (status.state === 'ready') {

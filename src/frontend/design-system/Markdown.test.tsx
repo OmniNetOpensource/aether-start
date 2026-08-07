@@ -1,5 +1,6 @@
 import { screen } from '@testing-library/dom';
 import { describe, expect, it } from 'vitest';
+import { createSignal, flush } from 'solid-js';
 import { renderTest } from '@/test/render';
 import Markdown from './Markdown';
 import { ToastProvider } from '@/frontend/app-shell/toast-context';
@@ -35,6 +36,26 @@ describe('Markdown', () => {
     expect(container.querySelector('[data-markdown="code-block"]')?.textContent).toContain(
       'const value = 1',
     );
+  });
+
+  it('keeps existing stream DOM and fades in only appended text', () => {
+    const [content, setContent] = createSignal('你好');
+    const { container } = renderTest(
+      () => <Markdown content={content()} isAnimating />,
+      (children) => <ToastProvider>{children()}</ToastProvider>,
+    );
+
+    const paragraph = container.querySelector('p');
+    const firstSpan = paragraph?.querySelector('.animate-fresh-token');
+    expect(firstSpan?.textContent).toBe('你好');
+
+    setContent('你好,世界');
+    flush();
+
+    expect(container.querySelector('p')).toBe(paragraph);
+    const spans = [...container.querySelectorAll('.animate-fresh-token')];
+    expect(spans[0]).toBe(firstSpan);
+    expect(spans[1]?.textContent).toBe(',世界');
   });
 
   it('does not turn unsafe URLs or raw HTML into executable elements', () => {

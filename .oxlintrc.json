@@ -52,6 +52,17 @@
       "rules": {
         "no-restricted-imports": [
           "error",
+          {
+            "patterns": ["@/frontend/**", "@/backend/**", "@/rpc/**", "@/routes/**", "@/schema/**"]
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/schema/**/*.{ts,tsx}"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
           { "patterns": ["@/frontend/**", "@/backend/**", "@/rpc/**", "@/routes/**"] }
         ]
       }

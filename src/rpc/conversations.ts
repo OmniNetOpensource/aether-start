@@ -1,21 +1,12 @@
 import { createServerFn } from '@tanstack/solid-start';
-import { z } from 'zod';
-
-const listCursorSchema = z
-  .object({
-    is_pinned: z.union([z.literal(0), z.literal(1)]),
-    sort_at: z.string(),
-    updated_at: z.string(),
-    id: z.string(),
-  })
-  .nullable();
-
-const searchCursorSchema = z
-  .object({
-    updated_at: z.string(),
-    id: z.string(),
-  })
-  .nullable();
+import {
+  conversationIdSchema,
+  conversationPayloadSchema,
+  listConversationsPageSchema,
+  searchConversationsSchema,
+  setConversationPinnedSchema,
+  updateConversationTitleSchema,
+} from '@/schema/conversations';
 
 export type ConversationListCursor = {
   is_pinned: 0 | 1;
@@ -29,23 +20,8 @@ export type ConversationSearchCursor = {
   id: string;
 } | null;
 
-const conversationPayloadSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().nullable(),
-  model: z.string().nullable().optional(),
-  currentPath: z.array(z.number().int()),
-  messages: z.array(z.record(z.string(), z.any())),
-  created_at: z.string(),
-  updated_at: z.string(),
-});
-
 export const listConversationsPageFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      limit: z.number().int().positive().max(100),
-      cursor: listCursorSchema,
-    }),
-  )
+  .validator(listConversationsPageSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { listConversationsPage }] =
       await Promise.all([
@@ -64,13 +40,7 @@ export const listConversationsPageFn = createServerFn({ method: 'POST' })
   });
 
 export const searchConversationsFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      query: z.string().trim().min(1).max(200),
-      limit: z.number().int().positive().max(50),
-      cursor: searchCursorSchema,
-    }),
-  )
+  .validator(searchConversationsSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { searchConversations }] = await Promise.all([
       import('@/backend/platform/cloudflare/env'),
@@ -89,11 +59,7 @@ export const searchConversationsFn = createServerFn({ method: 'POST' })
   });
 
 export const getConversationFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      id: z.string().min(1),
-    }),
-  )
+  .validator(conversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { getConversationById }] = await Promise.all([
       import('@/backend/platform/cloudflare/env'),
@@ -124,11 +90,7 @@ export const upsertConversationFn = createServerFn({ method: 'POST' })
   });
 
 export const deleteConversationFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      id: z.string().min(1),
-    }),
-  )
+  .validator(conversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { deleteConversationById }] =
       await Promise.all([
@@ -155,12 +117,7 @@ export const clearConversationsFn = createServerFn({ method: 'POST' }).handler(a
 });
 
 export const updateConversationTitleFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      id: z.string().min(1),
-      title: z.string().nullable(),
-    }),
-  )
+  .validator(updateConversationTitleSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { updateConversationTitle }] =
       await Promise.all([
@@ -179,12 +136,7 @@ export const updateConversationTitleFn = createServerFn({ method: 'POST' })
   });
 
 export const setConversationPinnedFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      id: z.string().min(1),
-      pinned: z.boolean(),
-    }),
-  )
+  .validator(setConversationPinnedSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { setConversationPinned }] =
       await Promise.all([

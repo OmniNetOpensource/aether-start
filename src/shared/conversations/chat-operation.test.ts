@@ -1,11 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ChatOperation } from '@/shared/chat/chat-api';
 import { createLinearMessages, editMessage } from './message-tree';
-import {
-  appendConfirmedUserMessage,
-  applyChatOperation,
-  mergeChatStartedPayload,
-} from './chat-operation';
+import { appendConfirmedUserMessage, applyChatOperation } from './chat-operation';
 
 const createdAt = '2026-08-05T00:00:00.000Z';
 
@@ -51,7 +47,6 @@ describe('applyChatOperation', () => {
 
     expect(result?.treeSnapshot.currentPath).toEqual([1, 2, 3]);
     expect(result?.treeSnapshot.messages[1]?.latestChild).toBe(3);
-    expect(result?.startedPayload.changedMessages.map((message) => message.id)).toEqual([2, 3]);
   });
 
   it('relinks both sides when inserting between existing siblings', () => {
@@ -84,9 +79,6 @@ describe('applyChatOperation', () => {
       prevSibling: 3,
       nextSibling: 4,
     });
-    expect(result?.startedPayload.changedMessages.map((message) => message.id)).toEqual([
-      2, 3, 4, 5,
-    ]);
   });
 
   it('regenerates from an existing user node without creating another user message', () => {
@@ -109,7 +101,6 @@ describe('applyChatOperation', () => {
     expect(result?.treeSnapshot.currentPath).toEqual([1, 2, 3]);
     expect(result?.treeSnapshot.messages).toHaveLength(4);
     expect(result?.treeSnapshot.messages[1]?.latestChild).toBe(3);
-    expect(result?.startedPayload.changedMessages.map((message) => message.id)).toEqual([2]);
   });
 
   it('rejects an append without the existing previous sibling', () => {
@@ -131,32 +122,6 @@ describe('applyChatOperation', () => {
         createdAt,
       ),
     ).toBeNull();
-  });
-});
-
-describe('mergeChatStartedPayload', () => {
-  it('merges server-assigned messages into the client tree', () => {
-    const existing = createLinearMessages([
-      { role: 'user', blocks: [{ type: 'content', content: 'Question' }] },
-      { role: 'assistant', blocks: [{ type: 'content', content: 'Answer' }] },
-    ]);
-    const operationResult = applyChatOperation(
-      existing.messages,
-      {
-        type: 'append',
-        message: { role: 'user', blocks: [{ type: 'content', content: 'Follow-up' }] },
-        parentId: 2,
-        previousSiblingId: null,
-      },
-      createdAt,
-    );
-    if (!operationResult) {
-      throw new Error('Expected append to succeed');
-    }
-
-    const merged = mergeChatStartedPayload(existing, operationResult.startedPayload);
-
-    expect(merged).toEqual(operationResult.treeSnapshot);
   });
 });
 

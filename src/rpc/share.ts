@@ -1,5 +1,9 @@
 import { createServerFn } from '@tanstack/solid-start';
-import { z } from 'zod';
+import {
+  createShareSchema,
+  shareConversationIdSchema,
+  shareTokenPayloadSchema,
+} from '@/schema/share';
 import {
   isSafeShareToken,
   resolveStorageKeyForSharedAttachment,
@@ -14,17 +18,6 @@ type SnapshotSourceConversation = {
   currentPath: number[];
   messages: unknown[];
 };
-
-const shareTokenSchema = z.string().min(1).max(128);
-
-const createShareSchema = z.object({
-  conversationId: z.string().min(1),
-  title: z.string().nullable(),
-});
-
-const conversationIdSchema = z.object({
-  conversationId: z.string().min(1),
-});
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
@@ -225,7 +218,7 @@ const buildPublicSnapshot = (
 };
 
 export const getConversationShareFn = createServerFn({ method: 'POST' })
-  .validator(conversationIdSchema)
+  .validator(shareConversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { getShareByConversation }] =
       await Promise.all([
@@ -280,7 +273,7 @@ export const createConversationShareFn = createServerFn({ method: 'POST' })
   });
 
 export const revokeConversationShareFn = createServerFn({ method: 'POST' })
-  .validator(conversationIdSchema)
+  .validator(shareConversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { revokeShare }] = await Promise.all([
       import('@/backend/platform/cloudflare/env'),
@@ -297,11 +290,7 @@ export const revokeConversationShareFn = createServerFn({ method: 'POST' })
   });
 
 export const getPublicConversationShareFn = createServerFn({ method: 'POST' })
-  .validator(
-    z.object({
-      token: shareTokenSchema,
-    }),
-  )
+  .validator(shareTokenPayloadSchema)
   .handler(async ({ data }) => {
     if (!isSafeShareToken(data.token)) {
       return { status: 'not_found' as const };

@@ -217,12 +217,16 @@ export function MessageItem(props: MessageItemProps) {
                       }
 
                       if (block.type === 'ask_user_questions') {
-                        const isLastBlock = blockIndex() === assistantBlocks().length - 1;
-                        const isUsable = props.isLastInPath && isLastBlock && status() === 'idle';
                         return (
                           <AskUserQuestionsCard
                             block={block}
-                            readonly={!isUsable}
+                            readonly={
+                              !(
+                                props.isLastInPath &&
+                                blockIndex() === assistantBlocks().length - 1 &&
+                                status() === 'idle'
+                              )
+                            }
                             onSubmit={(answers) =>
                               submitToolAnswer(chatState, block.callId, answers)
                             }
