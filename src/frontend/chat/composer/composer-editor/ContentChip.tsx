@@ -32,7 +32,7 @@ export function ContentChip(props: ContentChipProps) {
           name={props.name}
           size={props.size}
           uploading={props.uploading}
-          class='!h-12 !w-12 !rounded-lg ring-1 ring-border'
+          class='!h-7 !w-7 !rounded-md ring-1 ring-border'
         />
         {props.onRemove ? (
           <button
@@ -52,7 +52,7 @@ export function ContentChip(props: ContentChipProps) {
     <span
       data-content-chip={props.kind}
       class={cn(
-        'group/chip inline-flex h-7 min-w-0 max-w-64 items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs align-middle',
+        'group/chip inline-flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs align-middle',
         props.class,
       )}
     >

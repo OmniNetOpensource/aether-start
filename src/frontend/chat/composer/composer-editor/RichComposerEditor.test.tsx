@@ -46,7 +46,8 @@ describe('RichComposerEditor', () => {
 
     await act(() => editor?.insertQuote('quoted text'));
 
-    expect(await screen.findByText('quoted text')).toBeTruthy();
+    const quote = await screen.findByText('quoted text');
+    expect(quote.parentElement?.parentElement?.classList.contains('max-w-full')).toBe(true);
     await waitFor(() =>
       expect(onChange).toHaveBeenCalledWith(
         expect.arrayContaining([

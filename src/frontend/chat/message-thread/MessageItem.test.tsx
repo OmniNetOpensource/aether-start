@@ -74,9 +74,16 @@ describe('MessageItem', () => {
       </ToastProvider>
     ));
 
-    expect(container.querySelector('.text-base')?.textContent).toBe(
-      '开头引用内容图片.png结尾\n\n旧正文',
-    );
+    expect(
+      Array.from(container.querySelector('.text-base')?.children ?? []).map(
+        (element) => element.getAttribute('data-content-chip') ?? element.textContent,
+      ),
+    ).toEqual(['开头', 'quote', 'attachment', '结尾', '\n\n旧正文']);
+    expect(
+      container
+        .querySelector('[data-content-chip="attachment"] button')
+        ?.getAttribute('aria-label'),
+    ).toBe('预览图片 图片.png');
     expect(container.querySelector('.text-2xs')?.textContent).toBe('8/4, 04:00 PM');
   });
 

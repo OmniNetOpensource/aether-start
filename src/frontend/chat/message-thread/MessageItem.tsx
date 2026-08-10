@@ -230,7 +230,11 @@ export function MessageItem(props: MessageItemProps) {
                           return (
                             <For each={block.quotes}>
                               {(quote) => (
-                                <ContentChip kind='quote' text={quote.text} class='mx-1' />
+                                <ContentChip
+                                  kind='quote'
+                                  text={quote.text}
+                                  class='mx-1 max-w-[calc(100%-0.5rem)]'
+                                />
                               )}
                             </For>
                           );
@@ -246,7 +250,7 @@ export function MessageItem(props: MessageItemProps) {
                                 size={attachment.size}
                                 mimeType={attachment.mimeType}
                                 url={attachment.url}
-                                class='mx-1'
+                                class='mx-1 max-w-[calc(100%-0.5rem)]'
                               />
                             )}
                           </For>
