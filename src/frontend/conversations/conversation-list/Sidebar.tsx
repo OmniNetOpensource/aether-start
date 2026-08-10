@@ -1,6 +1,9 @@
 import { onSettled } from 'solid-js';
 import { AetherLogo } from '@/frontend/app-shell/AetherLogo';
-import { NewChatButton } from '@/frontend/conversations/conversation-list/NewChatButton';
+import { Link } from '@tanstack/solid-router';
+import { Pencil } from '@/frontend/design-system/icons';
+import { buttonVariants } from '@/frontend/design-system/button';
+import { cn } from '@/shared/core/utils';
 import { useResponsive } from '@/frontend/app-shell/ResponsiveContext';
 import { ConversationList } from '@/frontend/conversations/conversation-list';
 import { ConversationSearchTrigger } from '@/frontend/conversations/conversation-search';
@@ -106,7 +109,20 @@ export default function Sidebar() {
         </div>
 
         <div class='flex flex-col gap-2 px-6 pt-2'>
-          <NewChatButton />
+          <Link
+            to='/app'
+            class={cn(
+              buttonVariants({ variant: 'ghost', size: 'default' }),
+              'group relative h-10 w-full overflow-hidden transition-all duration-300',
+              'justify-start px-3 rounded-md border border-border bg-muted text-foreground shadow-xs hover:shadow-sm hover:bg-hover',
+            )}
+            aria-label='新对话'
+          >
+            <span class='flex h-10 w-10 shrink-0 items-center justify-center'>
+              <Pencil class='h-5 w-5 transition-transform duration-300 group-hover:rotate-90' />
+            </span>
+            <span class='whitespace-nowrap text-sm font-medium'>新对话</span>
+          </Link>
           <ConversationSearchTrigger variant='sidebar' />
         </div>
 

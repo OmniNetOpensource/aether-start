@@ -1,4 +1,4 @@
-import { Outlet, createFileRoute } from '@tanstack/solid-router';
+import { Link, Outlet, createFileRoute } from '@tanstack/solid-router';
 import { createEffect, onSettled } from 'solid-js';
 import { ArtifactPanel, ArtifactToggleButton } from '@/frontend/chat/artifact';
 import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
@@ -7,7 +7,9 @@ import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat
 import { Composer } from '@/frontend/chat/composer/Composer';
 import { getAvailableModelsFn, getAvailablePromptsFn } from '@/rpc/chat-options';
 import Sidebar from '@/frontend/conversations/conversation-list';
-import { NewChatButton } from '@/frontend/conversations/conversation-list/NewChatButton';
+import { Pencil } from '@/frontend/design-system/icons';
+import { buttonVariants } from '@/frontend/design-system/button';
+import { cn } from '@/shared/core/utils';
 import {
   conversationInfiniteQueryOptions,
   queryClient,
@@ -68,7 +70,19 @@ function AppLayout() {
           <div class='flex-1' />
           <ArtifactToggleButton />
           <ShareButton />
-          <NewChatButton variant='topbar' class='rounded-lg' />
+          <Link
+            to='/app'
+            class={cn(
+              buttonVariants({ variant: 'ghost', size: 'icon-lg' }),
+              'group relative h-10 w-10 overflow-hidden rounded-lg transition-all duration-300 hover:bg-hover hover:text-foreground',
+            )}
+            aria-label='新对话'
+          >
+            <span class='flex h-10 w-10 shrink-0 items-center justify-center'>
+              <Pencil class='h-5 w-5 transition-transform duration-300 group-hover:rotate-90' />
+            </span>
+            <span class='sr-only'>新对话</span>
+          </Link>
         </div>
         <main class='relative flex flex-row flex-1 min-h-0 min-w-0'>
           <div class='@container relative h-full flex-1 min-w-0'>
