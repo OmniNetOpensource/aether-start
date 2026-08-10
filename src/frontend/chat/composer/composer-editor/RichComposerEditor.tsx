@@ -155,7 +155,7 @@ function createComposerChipView(props: NodeViewRendererProps) {
   const [node, setNode] = createSignal(props.node);
   const dom = document.createElement('span');
   dom.contentEditable = 'false';
-  dom.className = 'group inline-flex max-w-full px-1 align-middle';
+  dom.className = 'group mx-1 inline-flex max-w-64 align-middle';
   const deleteNode = () => {
     const position = props.getPos();
     if (typeof position !== 'number') return;
