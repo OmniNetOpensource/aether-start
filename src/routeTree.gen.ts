@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SpaShellRouteImport } from './routes/spa-shell'
 import { Route as R404RouteImport } from './routes/404'
 import { Route as AuthRouteRouteImport } from './routes/auth/route'
 import { Route as AppRouteRouteImport } from './routes/app/route'
@@ -25,6 +26,11 @@ import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiAssetsKeyRouteImport } from './routes/api/assets/$key'
 import { Route as ApiShareAssetsTokenAttachmentIdRouteImport } from './routes/api/share-assets/$token/$attachmentId'
 
+const SpaShellRoute = SpaShellRouteImport.update({
+  id: '/spa-shell',
+  path: '/spa-shell',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const R404Route = R404RouteImport.update({
   id: '/404',
   path: '/404',
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRouteRouteWithChildren
   '/404': typeof R404Route
+  '/spa-shell': typeof SpaShellRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/$conversationId': typeof AppConversationIdRoute
@@ -122,6 +129,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/404': typeof R404Route
+  '/spa-shell': typeof SpaShellRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/$conversationId': typeof AppConversationIdRoute
@@ -140,6 +148,7 @@ export interface FileRoutesById {
   '/app': typeof AppRouteRouteWithChildren
   '/auth': typeof AuthRouteRouteWithChildren
   '/404': typeof R404Route
+  '/spa-shell': typeof SpaShellRoute
   '/api/client-errors': typeof ApiClientErrorsRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/app/$conversationId': typeof AppConversationIdRoute
@@ -159,6 +168,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/404'
+    | '/spa-shell'
     | '/api/client-errors'
     | '/api/upload-attachment'
     | '/app/$conversationId'
@@ -174,6 +184,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/404'
+    | '/spa-shell'
     | '/api/client-errors'
     | '/api/upload-attachment'
     | '/app/$conversationId'
@@ -191,6 +202,7 @@ export interface FileRouteTypes {
     | '/app'
     | '/auth'
     | '/404'
+    | '/spa-shell'
     | '/api/client-errors'
     | '/api/upload-attachment'
     | '/app/$conversationId'
@@ -209,6 +221,7 @@ export interface RootRouteChildren {
   AppRouteRoute: typeof AppRouteRouteWithChildren
   AuthRouteRoute: typeof AuthRouteRouteWithChildren
   R404Route: typeof R404Route
+  SpaShellRoute: typeof SpaShellRoute
   ApiClientErrorsRoute: typeof ApiClientErrorsRoute
   ApiUploadAttachmentRoute: typeof ApiUploadAttachmentRoute
   ShareTokenRoute: typeof ShareTokenRoute
@@ -219,6 +232,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/solid-router' {
   interface FileRoutesByPath {
+    '/spa-shell': {
+      id: '/spa-shell'
+      path: '/spa-shell'
+      fullPath: '/spa-shell'
+      preLoaderRoute: typeof SpaShellRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/404': {
       id: '/404'
       path: '/404'
@@ -362,6 +382,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRouteRoute: AppRouteRouteWithChildren,
   AuthRouteRoute: AuthRouteRouteWithChildren,
   R404Route: R404Route,
+  SpaShellRoute: SpaShellRoute,
   ApiClientErrorsRoute: ApiClientErrorsRoute,
   ApiUploadAttachmentRoute: ApiUploadAttachmentRoute,
   ShareTokenRoute: ShareTokenRoute,
