@@ -16,10 +16,7 @@ import {
 import { useToast } from '@/frontend/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
 import { collectClipboardFiles } from '@/frontend/browser/file';
-import {
-  type ComposerDocument,
-  type PendingAttachment,
-} from './composer-document';
+import { type ComposerDocument, type PendingAttachment } from './composer-document';
 import { ContentChip } from './ContentChip';
 
 const CHIP_NODE = 'composerChip';
