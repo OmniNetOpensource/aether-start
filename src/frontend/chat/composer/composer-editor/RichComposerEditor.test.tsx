@@ -13,14 +13,13 @@ describe('RichComposerEditor', () => {
           document={[]}
           onChange={() => {}}
           onSubmit={() => {}}
-          placeholder='Type here'
+          ariaLabel='Message input'
         />
       ),
       (children) => <ToastProvider>{children()}</ToastProvider>,
     );
 
-    expect(await screen.findByRole('textbox')).toBeTruthy();
-    expect(screen.getByText('Type here')).toBeTruthy();
+    expect(await screen.findByRole('textbox', { name: 'Message input' })).toBeTruthy();
   });
 
   it('inserts and removes an atomic quote chip inside the text editor', async () => {
@@ -37,7 +36,7 @@ describe('RichComposerEditor', () => {
           document={[{ type: 'text', text: 'hello' }]}
           onChange={onChange}
           onSubmit={() => {}}
-          placeholder='Type here'
+          ariaLabel='Message input'
         />
       ),
       (children) => <ToastProvider>{children()}</ToastProvider>,

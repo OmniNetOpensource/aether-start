@@ -210,7 +210,7 @@ export function Composer() {
               onFocus={() => setLastFocusedInput({ type: 'composer' })}
               onSubmit={submit}
               disabled={inputDisabled()}
-              placeholder='Type your message...'
+              ariaLabel='Message input'
               class={inputDisabled() ? 'cursor-not-allowed' : undefined}
             />
           </div>

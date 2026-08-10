@@ -69,7 +69,7 @@ export function MessageEditor(props: MessageEditorProps) {
         onFocus={() => setLastFocusedInput({ type: 'edit', messageId: props.messageId })}
         onSubmit={handleSubmit}
         autoFocus
-        placeholder='Edit your message...'
+        ariaLabel='Edit message'
         class='min-h-10 max-h-[200px] pr-8'
       />
 

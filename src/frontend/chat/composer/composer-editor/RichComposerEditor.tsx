@@ -17,7 +17,6 @@ import { useToast } from '@/frontend/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
 import { collectClipboardFiles } from '@/frontend/browser/file';
 import {
-  isComposerDocumentEmpty,
   type ComposerDocument,
   type PendingAttachment,
 } from './composer-document';
@@ -265,7 +264,7 @@ type RichComposerEditorProps = {
   onSubmit: () => void;
   disabled?: boolean;
   autoFocus?: boolean;
-  placeholder: string;
+  ariaLabel: string;
   class?: string;
 };
 
@@ -447,7 +446,7 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
           attributes: {
             id: props.id,
             role: 'textbox',
-            'aria-label': props.placeholder,
+            'aria-label': props.ariaLabel,
             class: cn(
               'max-h-50 overflow-y-auto whitespace-pre-wrap break-words px-2 py-3 text-sm leading-relaxed outline-none sm:text-base',
               props.class,
@@ -529,11 +528,6 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
 
   return (
     <div class='relative min-h-12 min-w-0 flex-1' onFocusIn={props.onFocus}>
-      {isComposerDocumentEmpty(props.document) ? (
-        <span class='pointer-events-none absolute left-2 top-3 text-sm text-muted-foreground sm:text-base'>
-          {props.placeholder}
-        </span>
-      ) : null}
       <div ref={mountEditor} />
     </div>
   );
