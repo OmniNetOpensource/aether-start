@@ -76,7 +76,9 @@ export function Toast(props: ToastProps) {
           ? 'animate-[toast-exit_0.2s_var(--transition-smooth)_forwards]'
           : 'animate-[toast-enter_0.2s_var(--transition-smooth)]',
       )}
-      onAnimationEnd={props.isExiting ? props.onExited : undefined}
+      onAnimationEnd={() => {
+        if (props.isExiting) props.onExited();
+      }}
     >
       <Dynamic
         component={iconMap[props.toast.variant]}
