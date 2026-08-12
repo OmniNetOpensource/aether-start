@@ -54,7 +54,6 @@ interface ToastProps extends VariantProps<typeof toastVariants> {
   toast: ToastMessage;
   isExiting?: boolean;
   onClose: () => void;
-  onExited: () => void;
 }
 
 export function Toast(props: ToastProps) {
@@ -73,12 +72,9 @@ export function Toast(props: ToastProps) {
       class={cn(
         toastVariants({ variant: props.toast.variant }),
         props.isExiting
-          ? 'animate-[toast-exit_0.2s_var(--transition-smooth)_forwards]'
+          ? 'pointer-events-none animate-[toast-exit_0.2s_var(--transition-smooth)_forwards]'
           : 'animate-[toast-enter_0.2s_var(--transition-smooth)]',
       )}
-      onAnimationEnd={() => {
-        if (props.isExiting) props.onExited();
-      }}
     >
       <Dynamic
         component={iconMap[props.toast.variant]}
