@@ -147,4 +147,4 @@ export const getPromptById = (promptId: string): PromptConfig | null => {
 export const getDefaultPromptId = (): string => 'aether';
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = createModelId('ikun', 'claude-haiku-4-5-20251001');
+export const TITLE_GENERATION_MODEL_ID = createModelId('gemini-aistudio', 'gemma-4-31b-it');

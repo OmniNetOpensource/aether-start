@@ -115,6 +115,42 @@ export const generateTitleFromConversation = async (
       });
     }
 
+    if (modelConfig.format === 'gemini') {
+      log('TITLE', 'Sending title generation request', requestLog);
+
+      const { getGeminiClient } = await import('@/backend/chat/providers/gemini-client');
+      const client = getGeminiClient(backendConfig);
+      const response = await client.models.generateContent({
+        model: modelConfig.model,
+        contents: prompt,
+        config: {
+          abortSignal: signal,
+          maxOutputTokens: 64,
+          temperature: 0.2,
+        },
+      });
+
+      const rawTitle = response.text?.trim() ?? '';
+      const title = sanitizeTitle(rawTitle);
+
+      log('TITLE', 'Received title generation response', {
+        ...requestLog,
+        response: {
+          text: response.text ?? null,
+        },
+        rawTitle,
+        title,
+      });
+
+      const resolvedTitle = title || FALLBACK_TITLE;
+      return completeTitleGeneration(resolvedTitle, {
+        modelId: modelConfig.id,
+        backend: modelConfig.backend,
+        usedFallback: !title,
+        reason: title ? 'success' : 'empty_model_output',
+      });
+    }
+
     log('TITLE', 'Sending title generation request', requestLog);
 
     const { getOpenAIClient } = await import('@/backend/chat/providers/openai');
