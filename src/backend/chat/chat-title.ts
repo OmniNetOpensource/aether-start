@@ -1,3 +1,4 @@
+import { ThinkingLevel } from '@google/genai';
 import { getModelConfig, TITLE_GENERATION_MODEL_ID } from '@/shared/chat/model-catalog';
 import { getBackendConfig } from '@/backend/chat/providers/backend-config';
 import { log } from '@/backend/chat/logger';
@@ -127,6 +128,9 @@ export const generateTitleFromConversation = async (
           abortSignal: signal,
           maxOutputTokens: 64,
           temperature: 0.2,
+          thinkingConfig: {
+            thinkingLevel: ThinkingLevel.MINIMAL,
+          },
         },
       });
 
