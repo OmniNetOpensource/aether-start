@@ -22,7 +22,7 @@ import type { EditingState } from './editing-state';
 import { MessageEditor } from './MessageEditor';
 import { BranchNavigator } from './BranchNavigator';
 import { ContentChip } from '@/frontend/chat/composer/composer-editor/ContentChip';
-import { consumeSendFlipRect } from './send-flip';
+import { consumeNewMessageAnimation } from './message-entry-animation';
 
 type CopyButtonProps = {
   blocks: Message['blocks'];
@@ -145,34 +145,17 @@ export function MessageItem(props: MessageItemProps) {
 
   const isUser = () => props.message.role === 'user';
 
-  /* 刚发送的用户消息挂载时，从 composer 位置 FLIP 到气泡位置，带果冻回弹 */
+  /* 新消息挂载时在最终位置淡入并轻微缩放，避免带动视口产生位移感 */
   let bubbleEl: HTMLDivElement | undefined;
   onSettled(() => {
-    if (!isUser() || !bubbleEl) return;
-    const from = consumeSendFlipRect();
-    if (!from) return;
-    const to = bubbleEl.getBoundingClientRect();
+    if (!isUser() || !bubbleEl || !consumeNewMessageAnimation(messageId())) return;
+    if (typeof bubbleEl.animate !== 'function') return;
     bubbleEl.animate(
       [
-        // 起点：composer 位置，纵向拉伸（赶路中）
-        {
-          transform: `translate(${from.right - to.right}px, ${from.top - to.top}px) scale(0.94, 1.06)`,
-          opacity: 0.7,
-          easing: 'ease-out',
-        },
-        // 冲过目标位置，撞击压扁
-        {
-          transform: 'translate(0, -14px) scale(1.1, 0.85)',
-          opacity: 1,
-          offset: 0.5,
-        },
-        // 弹回，反向拉伸
-        { transform: 'translate(0, 4px) scale(0.95, 1.07)', offset: 0.68 },
-        // 第二次小弹
-        { transform: 'translate(0, -2px) scale(1.03, 0.97)', offset: 0.84 },
-        { transform: 'none' },
+        { transform: 'scale(0.96)', opacity: 0 },
+        { transform: 'scale(1)', opacity: 1 },
       ],
-      { duration: 650, easing: 'ease-in-out' },
+      { duration: 180, easing: 'ease-out' },
     );
   });
 

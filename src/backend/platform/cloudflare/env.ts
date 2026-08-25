@@ -1,6 +1,7 @@
 import { env as workerEnv } from 'cloudflare:workers';
 
 type ServerEnv = {
+  PORT?: string;
   BETTER_AUTH_SECRET?: string;
   BETTER_AUTH_URL?: string;
   /** Comma-separated origins, e.g. `http://127.0.0.1:3010,http://localhost:3010` */
@@ -56,6 +57,7 @@ export const getServerEnv = (): ServerEnv => {
   const bindings = workerEnv as Partial<ServerEnv>;
 
   return {
+    PORT: readStringFromProcess('PORT'),
     BETTER_AUTH_SECRET:
       readString(bindings.BETTER_AUTH_SECRET) ?? readStringFromProcess('BETTER_AUTH_SECRET'),
     BETTER_AUTH_URL:

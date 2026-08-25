@@ -1,5 +1,6 @@
 import { startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import type { ChatState } from '@/frontend/chat/agent-runtime/chat-state';
+import type { ChatCommandResponse } from '@/shared/chat/chat-api';
 import { upsertConversationInCache } from '@/frontend/conversations/session';
 import {
   composerDocumentToBlocks,
@@ -16,6 +17,7 @@ export async function submitMessage(
   document: ComposerDocument,
   navigateToNewChat: (conversationId: string) => Promise<void> | void,
   clearComposer: () => void,
+  onAccepted?: (response: ChatCommandResponse) => void,
 ) {
   const currentModelId = runtime.getCurrentModelId();
   const tree = runtime.getMessageTree();
@@ -61,6 +63,7 @@ export async function submitMessage(
     },
     (response) => {
       clearComposer();
+      onAccepted?.(response);
       if (!isNewConversation) {
         return;
       }

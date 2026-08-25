@@ -23,7 +23,7 @@ import {
 } from './composer-editor/RichComposerEditor';
 import { submitMessage } from './composer-request/submit-chat';
 import { queuedMessages, setQueuedMessages } from './composer-request/message-queue';
-import { setSendFlipRect } from '@/frontend/chat/message-thread/send-flip';
+import { markNewMessageAnimation } from '@/frontend/chat/message-thread/message-entry-animation';
 
 declare global {
   interface Window {
@@ -42,7 +42,6 @@ export function Composer() {
     composerDocumentState() ??
     createComposerDocument(hydrated() ? (window.__preHydrationInput ?? '') : '');
   let editor: RichComposerEditorHandle | null = null;
-  let inputBox: HTMLDivElement | undefined;
   const fileInputId = createUniqueId();
   const uploading = () => isComposerDocumentUploading(composerDocument());
   const action = () => {
@@ -80,7 +79,6 @@ export function Composer() {
   });
 
   const send = (document: ComposerDocument, onAccepted: () => void) => {
-    if (inputBox) setSendFlipRect(inputBox.getBoundingClientRect());
     void submitMessage(
       chatState,
       document,
@@ -91,6 +89,7 @@ export function Composer() {
         });
       },
       onAccepted,
+      (response) => markNewMessageAnimation(response.userMessage.id),
     ).catch((error) => {
       console.error('Failed to submit message:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to send message');
@@ -192,12 +191,7 @@ export function Composer() {
             </div>
           )}
         </For>
-        <div
-          ref={(element) => {
-            inputBox = element;
-          }}
-          class='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md'
-        >
+        <div class='liquid-glass relative z-10 flex w-full flex-col gap-2 rounded-xl border p-2 shadow-sm backdrop-blur-xl backdrop-saturate-150 transition-shadow duration-200 focus-within:shadow-md'>
           <div class='flex w-full items-end gap-2'>
             <RichComposerEditor
               ref={(currentEditor) => {

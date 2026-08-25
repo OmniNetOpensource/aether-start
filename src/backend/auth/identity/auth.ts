@@ -119,11 +119,12 @@ const resolveD1Database = () => {
 
 const createAuth = () => {
   const serverEnv = getServerEnv();
+  const localDevPort = serverEnv.PORT ?? '3101';
 
   const baseURL = requireEnvValue(
     serverEnv.BETTER_AUTH_URL,
     'BETTER_AUTH_URL',
-    'http://localhost:3100',
+    `http://localhost:${localDevPort}`,
   );
   const secret = requireEnvValue(
     serverEnv.BETTER_AUTH_SECRET,
@@ -138,7 +139,9 @@ const createAuth = () => {
     secret,
     trustedOrigins: [
       ...mergeTrustedOrigins(baseURL, serverEnv.BETTER_AUTH_TRUSTED_ORIGINS),
-      ...(import.meta.env.DEV ? ['http://localhost:3100', 'http://127.0.0.1:3100'] : []),
+      ...(import.meta.env.DEV
+        ? [`http://localhost:${localDevPort}`, `http://127.0.0.1:${localDevPort}`]
+        : []),
     ],
     user: {
       additionalFields: {

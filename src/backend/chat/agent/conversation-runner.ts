@@ -647,19 +647,31 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     if (!isObject(rawBody)) return;
 
     const lastEventId = Number(rawBody.lastEventId ?? 0);
+    const activeRuns = [...this.runs.keys()];
+    const finishedRuns = [...this.finishedRuns].map(
+      ([assistantMessageId, assistantCompletedAt]) => ({
+        assistantMessageId,
+        assistantCompletedAt,
+      }),
+    );
+    const latestCachedEventId = this.eventCache.at(-1)?.eventId ?? 0;
+    /*
+     * eventCache 只覆盖当前 DO 实例的一段实时增量。
+     * 生成已结束且缓存已清空时，或者客户端游标来自缓存之前的旧实例时，
+     * 让前端改从 D1 读取最终快照，避免把“没有可回放事件”误当成“没有回复”。
+     */
+    const recoveryRequired =
+      lastEventId > latestCachedEventId ||
+      (this.eventCache.length === 0 && activeRuns.length === 0);
     ws.send(
       JSON.stringify({
         event: 'sync_response',
         data: {
           status: this.runtimeState.status,
           events: this.listEvents(lastEventId),
-          activeRuns: [...this.runs.keys()],
-          finishedRuns: [...this.finishedRuns].map(
-            ([assistantMessageId, assistantCompletedAt]) => ({
-              assistantMessageId,
-              assistantCompletedAt,
-            }),
-          ),
+          activeRuns,
+          finishedRuns,
+          recoveryRequired,
         },
       }),
     );

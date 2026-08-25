@@ -3,16 +3,20 @@ import { updateConversationTitleInCache } from '@/frontend/conversations/session
 import type { ChatState } from './chat-state';
 
 /**
- * 已处理的最大 eventId，用于去重和断点续传。
- * 服务端事件带 eventId，客户端只处理 eventId > lastEventId 的事件。
+ * 每个会话各自记录已处理的最大 eventId，用于去重和断点续传。
+ * 服务端事件带 eventId，客户端只处理 eventId > 当前会话游标的事件。
  */
-let lastEventId = 0;
+const lastEventIds = new Map<string, number>();
 
-export const getLastEventId = () => lastEventId;
+export const getLastEventId = (conversationId: string) => lastEventIds.get(conversationId) ?? 0;
 
-/** 重置 lastEventId 与打字缓冲，切换会话时调用，避免沿用旧会话的状态 */
-export const resetLastEventId = () => {
-  lastEventId = 0;
+/** 重置指定会话的游标与打字缓冲；不传会话时用于切换页面的全量清理 */
+export const resetLastEventId = (conversationId?: string) => {
+  if (conversationId) {
+    lastEventIds.delete(conversationId);
+  } else {
+    lastEventIds.clear();
+  }
   resetStreamBuffer();
 };
 
@@ -27,6 +31,7 @@ type ServerMessagePayload = {
   events?: { eventId: number; event: ChatServerToClientEvent; assistantMessageId?: number }[];
   activeRuns?: number[];
   finishedRuns?: { assistantMessageId: number; assistantCompletedAt?: string }[];
+  recoveryRequired?: boolean;
 };
 
 /** 一条 WebSocket 消息 = { event, data } 信封，event 取值与旧 SSE event name 一致 */
@@ -44,23 +49,28 @@ export const parseServerMessage = (raw: unknown): ServerMessage | null => {
   return null;
 };
 
-/** 处理单条服务端消息（chat_event、chat_finished 等） */
-export const handleServerMessage = (runtime: ChatState, message: ServerMessage) => {
+/** 处理单条服务端消息（chat_event、chat_finished 等）。true 表示需要从持久化快照恢复。 */
+export const handleServerMessage = (
+  runtime: ChatState,
+  message: ServerMessage,
+  conversationId: string,
+) => {
   const payload = message.data ?? {};
 
   switch (message.event) {
     case 'chat_event': {
       /* 单条聊天事件：需有 eventId 且大于 lastEventId 才处理，避免重复 */
-      if (typeof payload.eventId !== 'number') return;
-      if (payload.eventId <= lastEventId) return;
-      lastEventId = payload.eventId;
+      if (typeof payload.eventId !== 'number') return false;
+      const lastEventId = lastEventIds.get(conversationId) ?? 0;
+      if (payload.eventId <= lastEventId) return false;
+      lastEventIds.set(conversationId, payload.eventId);
 
-      if (!payload.event) return;
+      if (!payload.event) return false;
       applyChatEventToTree(runtime, payload.event, payload.assistantMessageId ?? null);
-      return;
+      return false;
     }
     case 'chat_finished': {
-      if (typeof payload.assistantMessageId !== 'number') return;
+      if (typeof payload.assistantMessageId !== 'number') return false;
       flushStreamBuffer();
       runtime.messageTree.unmarkAssistantStreaming(payload.assistantMessageId);
       if (typeof payload.assistantCompletedAt === 'string') {
@@ -70,12 +80,11 @@ export const handleServerMessage = (runtime: ChatState, message: ServerMessage) 
         );
       }
       if (payload.remainingRuns === 0) {
-        /* 最后一个 run 收口时服务端清空 eventCache;DO 若随后休眠重建,eventId 会从 1 重新计数,
-           这里同步归零,否则重连后新事件会被 lastEventId 过滤掉 */
-        lastEventId = 0;
+        /* 最后一个 run 收口后，下一轮事件从当前会话的新游标重新开始。 */
+        lastEventIds.delete(conversationId);
         runtime.setStatus('idle');
       }
-      return;
+      return false;
     }
     case 'chat_paused':
       // 服务端所有 run 都在等 askuserquestions 用户提交。WebSocket 保持打开，
@@ -84,14 +93,16 @@ export const handleServerMessage = (runtime: ChatState, message: ServerMessage) 
       flushStreamBuffer();
       runtime.messageTree.clearStreamingAssistants();
       runtime.setStatus('idle');
-      return;
+      return false;
     case 'sync_response': {
       /* 断点续传：服务端返回已有事件列表，按 eventId 去重后依次应用 */
       flushStreamBuffer();
       runtime.setStatus(payload.status === 'running' ? 'streaming' : 'idle');
+      let lastEventId = lastEventIds.get(conversationId) ?? 0;
       for (const record of payload.events ?? []) {
         if (record.eventId > lastEventId) {
           lastEventId = record.eventId;
+          lastEventIds.set(conversationId, record.eventId);
           applyChatEventToTree(runtime, record.event, record.assistantMessageId ?? null);
         }
       }
@@ -108,9 +119,13 @@ export const handleServerMessage = (runtime: ChatState, message: ServerMessage) 
           );
         }
       }
-      return;
+      /* 回放事件会重新进入打字缓冲；同步结束后立即把它们写入消息树。 */
+      flushStreamBuffer();
+      return payload.recoveryRequired === true;
     }
   }
+
+  return false;
 };
 
 /* ---------- 流式打字缓冲：把服务端一次到达的大段文本按帧逐步渲染 ---------- */

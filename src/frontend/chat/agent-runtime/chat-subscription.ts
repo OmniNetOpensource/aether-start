@@ -1,4 +1,13 @@
 import { setQueuedMessages } from '@/frontend/chat/composer/composer-request/message-queue';
+import { setArtifacts } from '@/frontend/chat/artifact/artifact-state';
+import {
+  getConversationFn,
+  setCurrentModelId,
+  setPageTitle,
+} from '@/frontend/conversations/session';
+import { initializeMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
+import { buildPathToLatestAssistant } from '@/shared/conversations';
+import { isMessage } from '@/shared/chat/message';
 import type { ChatAgentStatus } from '@/shared/chat/chat-api';
 import type { ChatState } from './chat-state';
 import {
@@ -6,6 +15,7 @@ import {
   getLastEventId,
   handleServerMessage,
   parseServerMessage,
+  resetLastEventId,
 } from './event-handlers';
 
 const AGENT_NAME = 'conversation-runner';
@@ -13,7 +23,6 @@ const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY = 1000;
 
 let activeSocket: WebSocket | null = null;
-let probeController: AbortController | null = null;
 let stopFinished: { promise: Promise<void>; resolve: () => void } | null = null;
 let reconnectAttempt = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -49,24 +58,78 @@ const resolveAgentSocketUrl = (conversationId: string) => {
   return `${protocol}://${window.location.host}/agents/${AGENT_NAME}/${conversationId}/events`;
 };
 
-const isAbortError = (error: unknown) =>
-  (error instanceof DOMException && error.name === 'AbortError') ||
-  (error instanceof Error && error.name === 'AbortError');
+const recoverConversationSnapshot = async (
+  runtime: ChatState,
+  conversationId: string,
+  isRunning: boolean,
+) => {
+  const conversation = await getConversationFn({ data: { id: conversationId } });
+  if (!conversation) {
+    throw new Error('Conversation not found');
+  }
+
+  const messages = conversation.messages.filter(isMessage);
+  if (messages.length !== conversation.messages.length) {
+    throw new Error('Invalid persisted message tree');
+  }
+
+  if (runtime.getConversationId() !== conversationId) return;
+
+  initializeMessageTree(messages, buildPathToLatestAssistant(messages));
+  setArtifacts(conversation.artifacts);
+  setPageTitle(conversation.title ?? 'Aether');
+  setCurrentModelId(conversation.model ?? '');
+  resetLastEventId(conversationId);
+  if (!isRunning) {
+    runtime.messageTree.clearStreamingAssistants();
+  }
+  runtime.setStatus(isRunning ? 'streaming' : 'idle');
+};
+
+const reportSnapshotRecoveryFailure = (
+  runtime: ChatState,
+  conversationId: string,
+  error: unknown,
+) => {
+  if (runtime.getConversationId() !== conversationId) return;
+  console.error('Failed to recover conversation snapshot:', error);
+  runtime.messageTree.clearStreamingAssistants();
+  runtime.setStatus('idle');
+  runtime.toast.error(error instanceof Error ? error.message : '会话恢复失败');
+};
 
 export const openEventSubscription = (runtime: ChatState, conversationId: string) => {
+  if (activeSocket) return;
+
   const socket = new WebSocket(resolveAgentSocketUrl(conversationId));
   activeSocket = socket;
-  probeController = null;
 
   socket.onopen = () => {
-    socket.send(JSON.stringify({ lastEventId: getLastEventId() }));
+    if (activeSocket !== socket) return;
+    socket.send(JSON.stringify({ lastEventId: getLastEventId(conversationId) }));
   };
 
   socket.onmessage = (event) => {
+    if (activeSocket !== socket) return;
     const message = parseServerMessage(event.data);
-    if (message) {
-      handleServerMessage(runtime, message);
-    }
+    if (!message) return;
+
+    const recoveryRequired = handleServerMessage(runtime, message, conversationId);
+    if (message.event !== 'sync_response') return;
+
+    clearReconnectState();
+    if (!recoveryRequired) return;
+
+    void recoverConversationSnapshot(
+      runtime,
+      conversationId,
+      message.data.status === 'running',
+    ).catch((error) => reportSnapshotRecoveryFailure(runtime, conversationId, error));
+  };
+
+  socket.onerror = (error) => {
+    if (activeSocket !== socket) return;
+    console.error('[WS] Event subscription failed:', error);
   };
 
   socket.onclose = () => {
@@ -94,10 +157,16 @@ export const resolveAgentBaseUrl = () => {
 export const hasActiveEventSubscription = () => activeSocket !== null;
 
 export const scheduleAutoReconnect = (runtime: ChatState, conversationId: string) => {
+  if (reconnectTimer && reconnectConversationId === conversationId) {
+    return;
+  }
+
   if (reconnectAttempt >= MAX_RECONNECT_ATTEMPTS) {
     clearReconnectState();
-    runtime.toast.error('连接已断开');
-    runtime.setStatus('idle');
+    runtime.toast.error('连接已断开，正在恢复最近一次保存的会话');
+    void recoverConversationSnapshot(runtime, conversationId, false).catch((error) =>
+      reportSnapshotRecoveryFailure(runtime, conversationId, error),
+    );
     return;
   }
 
@@ -105,7 +174,7 @@ export const scheduleAutoReconnect = (runtime: ChatState, conversationId: string
   const delay = BASE_RECONNECT_DELAY * Math.pow(2, reconnectAttempt);
   reconnectAttempt++;
 
-  reconnectTimer = setTimeout(async () => {
+  reconnectTimer = setTimeout(() => {
     reconnectTimer = null;
 
     const currentId = runtime.getConversationId();
@@ -115,7 +184,7 @@ export const scheduleAutoReconnect = (runtime: ChatState, conversationId: string
     }
 
     runtime.toast.info('重新连接中...');
-    await resumeRunningConversation(runtime, conversationId, true);
+    resumeRunningConversation(runtime, conversationId);
   }, delay);
 };
 
@@ -146,8 +215,6 @@ export const cancelSending = async (runtime: ChatState, reason: string) => {
 export const cancelStreamSubscription = (runtime: ChatState, _reason: string) => {
   clearReconnectState();
   flushStreamBuffer();
-  probeController?.abort();
-  probeController = null;
   const socket = activeSocket;
   activeSocket = null;
   socket?.close();
@@ -207,46 +274,9 @@ export const cancelAnswering = async (
   }
 };
 
-export const resumeRunningConversation = async (
-  runtime: ChatState,
-  conversationId: string,
-  replayCompletedEvents = false,
-) => {
-  if (activeSocket && runtime.getStatus() === 'streaming') {
-    return;
-  }
+export const resumeRunningConversation = (runtime: ChatState, conversationId: string) => {
+  if (activeSocket) return;
 
-  const controller = new AbortController();
-  probeController = controller;
   runtime.setStatus('sending');
-
-  let agentStatus: { status: ChatAgentStatus };
-
-  try {
-    agentStatus = await checkAgentStatus(conversationId, controller.signal);
-  } catch (error) {
-    if (isAbortError(error)) return;
-    console.error('Failed to probe agent status:', error);
-    if (reconnectConversationId === conversationId) {
-      scheduleAutoReconnect(runtime, conversationId);
-    } else {
-      runtime.setStatus('idle');
-      runtime.toast.error(error instanceof Error ? error.message : '请求失败');
-    }
-    return;
-  }
-
-  if (controller.signal.aborted) return;
-  probeController = null;
-
-  if (
-    agentStatus.status !== 'running' &&
-    !(replayCompletedEvents && agentStatus.status !== 'idle')
-  ) {
-    clearReconnectState();
-    runtime.setStatus('idle');
-    return;
-  }
-
   openEventSubscription(runtime, conversationId);
 };
