@@ -20,7 +20,7 @@ export const resetLastEventId = (conversationId?: string) => {
   resetStreamBuffer();
 };
 
-/** WebSocket 消息 data 字段的信封结构，由服务端序列化，反序列化后按此结构读取 */
+/** SSE data 字段的信封结构，由服务端序列化，反序列化后按此结构读取 */
 type ServerMessagePayload = {
   eventId?: number;
   event?: ChatServerToClientEvent;
@@ -34,7 +34,7 @@ type ServerMessagePayload = {
   recoveryRequired?: boolean;
 };
 
-/** 一条 WebSocket 消息 = { event, data } 信封，event 取值与旧 SSE event name 一致 */
+/** 一条 SSE 消息 = { event, data } 信封 */
 export type ServerMessage = { event: string; data: ServerMessagePayload };
 
 export const parseServerMessage = (raw: unknown): ServerMessage | null => {
@@ -87,9 +87,8 @@ export const handleServerMessage = (
       return false;
     }
     case 'chat_paused':
-      // 服务端所有 run 都在等 askuserquestions 用户提交。WebSocket 保持打开，
-      // 用户提交答案后 run 继续，后续事件从同一条连接到达
-      // (ask_user_questions_answered 会把状态切回 streaming)。
+      // 服务端所有 run 都在等 askuserquestions 用户提交。当前流会关闭，
+      // 用户提交答案后重新订阅，后续事件从事件游标继续到达。
       flushStreamBuffer();
       runtime.messageTree.clearStreamingAssistants();
       runtime.setStatus('idle');

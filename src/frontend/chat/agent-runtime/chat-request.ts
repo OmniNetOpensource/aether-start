@@ -4,8 +4,8 @@ import type { ChatState } from './chat-state';
 import {
   hasActiveEventSubscription,
   openEventSubscription,
+  restartEventSubscription,
   resolveAgentBaseUrl,
-  resumeRunningConversation,
   scheduleAutoReconnect,
 } from './chat-subscription';
 import { applyChatEventToTree, resetLastEventId } from './event-handlers';
@@ -116,7 +116,7 @@ export const startChatRequest = async (
     runtime.setStatus('streaming');
 
     if (ownsSubscription && !hasActiveEventSubscription()) {
-      openEventSubscription(runtime, acceptedPayload.conversationId);
+      void openEventSubscription(runtime, acceptedPayload.conversationId);
     }
   } catch (error) {
     const reconnectId = runtime.getConversationId();
@@ -171,9 +171,7 @@ export const submitToolAnswer = async (
     });
 
     if (response.ok) {
-      if (!hasActiveEventSubscription()) {
-        void resumeRunningConversation(runtime, conversationId);
-      }
+      restartEventSubscription(runtime, conversationId);
       return;
     }
 

@@ -22,7 +22,7 @@ const AGENT_NAME = 'conversation-runner';
 const MAX_RECONNECT_ATTEMPTS = 5;
 const BASE_RECONNECT_DELAY = 1000;
 
-let activeSocket: WebSocket | null = null;
+let activeSubscription: AbortController | null = null;
 let stopFinished: { promise: Promise<void>; resolve: () => void } | null = null;
 let reconnectAttempt = 0;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -51,11 +51,6 @@ const clearReconnectState = () => {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
-};
-
-const resolveAgentSocketUrl = (conversationId: string) => {
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${protocol}://${window.location.host}/agents/${AGENT_NAME}/${conversationId}/events`;
 };
 
 const recoverConversationSnapshot = async (
@@ -98,63 +93,93 @@ const reportSnapshotRecoveryFailure = (
   runtime.toast.error(error instanceof Error ? error.message : '会话恢复失败');
 };
 
-export const openEventSubscription = (runtime: ChatState, conversationId: string) => {
-  if (activeSocket) return;
-
-  const socket = new WebSocket(resolveAgentSocketUrl(conversationId));
-  activeSocket = socket;
-
-  socket.onopen = () => {
-    if (activeSocket !== socket) return;
-    socket.send(JSON.stringify({ lastEventId: getLastEventId(conversationId) }));
-  };
-
-  socket.onmessage = (event) => {
-    if (activeSocket !== socket) return;
-    const message = parseServerMessage(event.data);
-    if (!message) return;
-
-    const recoveryRequired = handleServerMessage(runtime, message, conversationId);
-    if (message.event !== 'sync_response') return;
-
-    clearReconnectState();
-    if (!recoveryRequired) return;
-
-    void recoverConversationSnapshot(
-      runtime,
-      conversationId,
-      message.data.status === 'running',
-    ).catch((error) => reportSnapshotRecoveryFailure(runtime, conversationId, error));
-  };
-
-  socket.onerror = (error) => {
-    if (activeSocket !== socket) return;
-    console.error('[WS] Event subscription failed:', error);
-  };
-
-  socket.onclose = () => {
-    flushStreamBuffer();
-
-    if (activeSocket !== socket) {
-      return;
-    }
-    activeSocket = null;
-
-    if (runtime.getStatus() !== 'idle') {
-      scheduleAutoReconnect(runtime, conversationId);
-      return;
-    }
-    clearReconnectState();
-    resolveStopFinished();
-  };
-};
-
 export const resolveAgentBaseUrl = () => {
   const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
   return `${protocol}://${window.location.host}/agents/${AGENT_NAME}`;
 };
 
-export const hasActiveEventSubscription = () => activeSocket !== null;
+export const openEventSubscription = async (runtime: ChatState, conversationId: string) => {
+  if (activeSubscription) return;
+
+  const controller = new AbortController();
+  activeSubscription = controller;
+
+  try {
+    const response = await fetch(`${resolveAgentBaseUrl()}/${conversationId}/events`, {
+      headers: {
+        Accept: 'text/event-stream',
+        'Last-Event-ID': String(getLastEventId(conversationId)),
+      },
+      credentials: 'include',
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Event subscription failed: ${response.status}`);
+    }
+    if (!response.body) {
+      throw new Error('Event subscription response has no body');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const frames = buffer.split('\n\n');
+      buffer = frames.pop() ?? '';
+
+      for (const frame of frames) {
+        if (!frame.startsWith('data: ')) continue;
+
+        const message = parseServerMessage(frame.slice('data: '.length));
+        if (!message) continue;
+
+        const recoveryRequired = handleServerMessage(runtime, message, conversationId);
+        if (message.event !== 'sync_response') continue;
+
+        clearReconnectState();
+        if (!recoveryRequired) continue;
+
+        void recoverConversationSnapshot(
+          runtime,
+          conversationId,
+          message.data.status === 'running',
+        ).catch((error) => reportSnapshotRecoveryFailure(runtime, conversationId, error));
+      }
+    }
+  } catch (error) {
+    if (activeSubscription !== controller || controller.signal.aborted) return;
+    console.error('[SSE] Event subscription failed:', error);
+  } finally {
+    flushStreamBuffer();
+
+    if (activeSubscription === controller) {
+      activeSubscription = null;
+
+      if (!controller.signal.aborted) {
+        if (runtime.getStatus() !== 'idle') {
+          scheduleAutoReconnect(runtime, conversationId);
+        } else {
+          clearReconnectState();
+          resolveStopFinished();
+        }
+      }
+    }
+  }
+};
+
+export const hasActiveEventSubscription = () => activeSubscription !== null;
+
+export const restartEventSubscription = (runtime: ChatState, conversationId: string) => {
+  const controller = activeSubscription;
+  activeSubscription = null;
+  controller?.abort();
+  void openEventSubscription(runtime, conversationId);
+};
 
 export const scheduleAutoReconnect = (runtime: ChatState, conversationId: string) => {
   if (reconnectTimer && reconnectConversationId === conversationId) {
@@ -215,9 +240,9 @@ export const cancelSending = async (runtime: ChatState, reason: string) => {
 export const cancelStreamSubscription = (runtime: ChatState, _reason: string) => {
   clearReconnectState();
   flushStreamBuffer();
-  const socket = activeSocket;
-  activeSocket = null;
-  socket?.close();
+  const controller = activeSubscription;
+  activeSubscription = null;
+  controller?.abort();
   resolveStopFinished();
   setQueuedMessages([]);
   runtime.messageTree.clearStreamingAssistants();
@@ -275,8 +300,8 @@ export const cancelAnswering = async (
 };
 
 export const resumeRunningConversation = (runtime: ChatState, conversationId: string) => {
-  if (activeSocket) return;
+  if (activeSubscription) return;
 
   runtime.setStatus('sending');
-  openEventSubscription(runtime, conversationId);
+  void openEventSubscription(runtime, conversationId);
 };

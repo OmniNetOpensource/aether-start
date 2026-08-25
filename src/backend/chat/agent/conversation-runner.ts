@@ -336,8 +336,9 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
 };
 
 // 这个 Durable Object 以 conversation 为粒度串行化整次对话：
-// 接收请求、通过 WebSocket 推送事件、执行工具调用、缓存事件，并在结束后落库快照。
+// 接收请求、通过 SSE 推送事件、执行工具调用、缓存事件，并在结束后落库快照。
 export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
+  private eventStreams = new Set<ReadableStreamDefaultController<Uint8Array>>();
   // instanceName 对应 URL 里的 conversationId。
   // 一个 Durable Object 实例一旦绑定某个会话，后续请求都应该落到同一个实例里。
   private instanceName: string | null = null;
@@ -417,22 +418,31 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     return new Response('Not found', { status: 404 });
   }
 
-  // ── WebSocket broadcast ──────────────────────────────────────────────
+  // ── SSE broadcast ────────────────────────────────────────────────────
 
-  // 连接由 runtime 维护(Hibernation API)，休眠恢复后 getWebSockets() 依然返回存活连接。
-  // 单个连接发送失败只记日志，不影响其他订阅者。
+  private writeEvent(
+    controller: ReadableStreamDefaultController<Uint8Array>,
+    event: string,
+    data: unknown,
+  ) {
+    controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify({ event, data })}\n\n`));
+  }
+
   private broadcast(event: string, data: unknown) {
-    const payload = JSON.stringify({ event, data });
-    for (const ws of this.ctx.getWebSockets()) {
+    for (const controller of this.eventStreams) {
       try {
-        ws.send(payload);
-      } catch (error) {
-        log('AGENT', 'Failed to send WebSocket event', {
-          event,
-          error: getErrorMessage(error),
-        });
+        this.writeEvent(controller, event, data);
+      } catch {
+        this.eventStreams.delete(controller);
       }
     }
+  }
+
+  private closeEventStreams() {
+    for (const controller of this.eventStreams) {
+      controller.close();
+    }
+    this.eventStreams.clear();
   }
 
   // ── POST /chat ───────────────────────────────────────────────────────
@@ -609,15 +619,11 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     return Response.json(acceptedPayload);
   }
 
-  // ── GET /events (WebSocket) ──────────────────────────────────────────
+  // ── GET /events (SSE) ────────────────────────────────────────────────
 
   // assistant 输出、断线重连和页面恢复共用的事件入口。
-  // 握手只做鉴权与升级；补拉在客户端发来第一条 { lastEventId } 消息时进行(webSocketMessage)。
+  // 客户端在请求头传 Last-Event-ID，服务端同步缺失事件后继续推送后续增量。
   private handleEvents(request: Request, userId: string): Response {
-    if (request.headers.get('Upgrade') !== 'websocket') {
-      return new Response('Expected WebSocket upgrade', { status: 426 });
-    }
-
     if (this.runtimeState.ownerUserId && this.runtimeState.ownerUserId !== userId) {
       return new Response('Unauthorized', { status: 401 });
     }
@@ -625,28 +631,9 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       this.runtimeState = { ...this.runtimeState, ownerUserId: userId };
     }
 
-    const pair = new WebSocketPair();
-    // acceptWebSocket 走 Hibernation API:等待期间 DO 可休眠，连接保持打开，
-    // 消息到达时通过 webSocketMessage 唤醒。
-    this.ctx.acceptWebSocket(pair[1]);
-    return new Response(null, { status: 101, webSocket: pair[0] });
-  }
-
-  // 客户端连上后发 { lastEventId }，这里回放缺失事件并附带当前 run 状态。
-  // 之后该连接只被动接收 broadcast，不再有其他上行消息。
-  webSocketMessage(ws: WebSocket, message: string | ArrayBuffer) {
-    if (typeof message !== 'string') return;
-
-    let rawBody: unknown;
-    try {
-      rawBody = JSON.parse(message);
-    } catch (error) {
-      log('AGENT', 'Failed to parse WebSocket message', { error: getErrorMessage(error) });
-      return;
-    }
-    if (!isObject(rawBody)) return;
-
-    const lastEventId = Number(rawBody.lastEventId ?? 0);
+    const requestedEventId = Number(request.headers.get('Last-Event-ID') ?? 0);
+    const lastEventId =
+      Number.isInteger(requestedEventId) && requestedEventId >= 0 ? requestedEventId : 0;
     const activeRuns = [...this.runs.keys()];
     const finishedRuns = [...this.finishedRuns].map(
       ([assistantMessageId, assistantCompletedAt]) => ({
@@ -663,36 +650,51 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     const recoveryRequired =
       lastEventId > latestCachedEventId ||
       (this.eventCache.length === 0 && activeRuns.length === 0);
-    ws.send(
-      JSON.stringify({
-        event: 'sync_response',
-        data: {
-          status: this.runtimeState.status,
-          events: this.listEvents(lastEventId),
-          activeRuns,
-          finishedRuns,
-          recoveryRequired,
-        },
-      }),
-    );
+
+    let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
+    const stream = new ReadableStream<Uint8Array>({
+      start: (nextController) => {
+        controller = nextController;
+        this.eventStreams.add(nextController);
+      },
+      cancel: () => {
+        if (controller) {
+          this.eventStreams.delete(controller);
+        }
+      },
+    });
+
+    if (!controller) {
+      throw new Error('Unable to open event stream');
+    }
+
+    this.writeEvent(controller, 'sync_response', {
+      status: this.runtimeState.status,
+      events: this.listEvents(lastEventId),
+      activeRuns,
+      finishedRuns,
+      recoveryRequired,
+    });
 
     // 刷新后重连时，若所有 run 都卡在 askuserquestions 等用户提交，
-    // 之前广播的 chat_paused 该连接没收到，这里补一次，否则前端会一直卡在 streaming。
+    // 之前广播的 chat_paused 该连接没收到，这里补一次，然后关闭空闲流。
     const isPausedForAskUser =
       this.runtimeState.status === 'running' &&
       this.pendingAskUserQuestions.size > 0 &&
       this.pendingAskUserQuestions.size === this.runs.size;
     if (isPausedForAskUser) {
-      ws.send(JSON.stringify({ event: 'chat_paused', data: {} }));
+      this.writeEvent(controller, 'chat_paused', {});
+      this.closeEventStreams();
+    } else if (this.runtimeState.status !== 'running') {
+      this.closeEventStreams();
     }
-  }
 
-  webSocketClose() {
-    // 连接生命周期归客户端管；runtime 自动把关闭的连接从 getWebSockets() 移除。
-  }
-
-  webSocketError(_ws: WebSocket, error: unknown) {
-    log('AGENT', 'WebSocket error', { error: getErrorMessage(error) });
+    return new Response(stream, {
+      headers: {
+        'Cache-Control': 'no-cache',
+        'Content-Type': 'text/event-stream; charset=utf-8',
+      },
+    });
   }
 
   // ── POST /abort ──────────────────────────────────────────────────────
@@ -958,9 +960,10 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       });
 
       // 所有 run 都在等用户提交时广播 chat_paused,前端据此切换 UI 状态。
-      // WebSocket 连接保持打开(Hibernation),提交答案后事件从同一条连接继续。
+      // 流关闭后，提交答案会建立新订阅并从事件游标补齐。
       if (this.pendingAskUserQuestions.size + 1 === this.runs.size || this.runs.size === 1) {
         this.broadcast('chat_paused', {});
+        this.closeEventStreams();
       }
 
       const modelResult = await this.waitForAskUserQuestionsAnswer(
@@ -1108,6 +1111,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     this.broadcast('chat_finished', finishedPayload);
 
     if (remainingRuns === 0) {
+      this.closeEventStreams();
       this.eventCache = [];
       this.finishedRuns.clear();
       this.activeTree = null;
