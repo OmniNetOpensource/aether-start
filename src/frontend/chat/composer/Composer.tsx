@@ -97,9 +97,11 @@ export function Composer() {
   };
 
   const submit = () => {
+    editor?.blur();
     send(composerDocument(), () => {
       setComposerDocument([]);
       editor?.clear();
+      editor?.focus();
     });
   };
 

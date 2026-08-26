@@ -22,6 +22,42 @@ describe('RichComposerEditor', () => {
     expect(await screen.findByRole('textbox', { name: 'Message input' })).toBeTruthy();
   });
 
+  it('focuses and blurs without moving the surrounding scroll position', async () => {
+    let editor: RichComposerEditorHandle | null = null;
+
+    renderTest(
+      () => (
+        <div data-testid='scroll-container'>
+          <RichComposerEditor
+            ref={(currentEditor) => {
+              editor = currentEditor;
+            }}
+            id='focus-editor'
+            document={[]}
+            onChange={() => {}}
+            onSubmit={() => {}}
+            ariaLabel='Message input'
+          />
+        </div>
+      ),
+      (children) => <ToastProvider>{children()}</ToastProvider>,
+    );
+
+    const textbox = await screen.findByRole('textbox', { name: 'Message input' });
+    const scrollContainer = screen.getByTestId('scroll-container');
+    scrollContainer.scrollTop = 240;
+
+    await act(() => editor?.focus());
+
+    await waitFor(() => expect(document.activeElement).toBe(textbox));
+    expect(scrollContainer.scrollTop).toBe(240);
+
+    await act(() => editor?.blur());
+
+    await waitFor(() => expect(document.activeElement).not.toBe(textbox));
+    expect(scrollContainer.scrollTop).toBe(240);
+  });
+
   it('inserts and removes an atomic quote chip inside the text editor', async () => {
     let editor: RichComposerEditorHandle | null = null;
     const onChange = vi.fn();

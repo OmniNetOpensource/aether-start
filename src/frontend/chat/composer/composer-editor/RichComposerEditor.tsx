@@ -247,6 +247,7 @@ const extensions = [
 
 export type RichComposerEditorHandle = {
   focus: () => void;
+  blur: () => void;
   clear: () => void;
   insertQuote: (text: string) => void;
   insertFiles: (files: File[]) => Promise<void>;
@@ -470,7 +471,8 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
       });
       setEditor(mountedEditor);
       props.ref?.({
-        focus: () => mountedEditor.commands.focus(),
+        focus: () => mountedEditor.commands.focus(undefined, { scrollIntoView: false }),
+        blur: () => mountedEditor.commands.blur(),
         clear: () => {
           mountedEditor.commands.setContent(editorJSONFromComposerDocument([]), {
             emitUpdate: false,
