@@ -72,6 +72,7 @@ export const processEventToTree = (
     return appendToAssistant(state, assistantMessageId, {
       type: 'error',
       message: event.message,
+      error: event.error,
     });
   }
 

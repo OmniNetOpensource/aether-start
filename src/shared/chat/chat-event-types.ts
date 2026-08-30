@@ -1,32 +1,6 @@
-export type ChatErrorCode =
-  | 'invalid_request'
-  | 'authentication_failed'
-  | 'permission_denied'
-  | 'quota_exceeded'
-  | 'not_found'
-  | 'conflict'
-  | 'rate_limit'
-  | 'model_unavailable'
-  | 'service_unavailable'
-  | 'timeout'
-  | 'network_error'
-  | 'server_error'
-  | 'provider_error'
-  | 'unknown';
-
-export type ChatErrorProvider = 'anthropic' | 'openai' | 'openai-responses' | 'gemini' | 'system';
+import type { ChatErrorInfo, Message } from '@/shared/chat/message';
 
 export type ArtifactLanguage = 'html';
-
-export type ChatErrorInfo = {
-  code: ChatErrorCode;
-  provider?: ChatErrorProvider;
-  model?: string;
-  backend?: string;
-  status?: number;
-  retryable?: boolean;
-  details?: string;
-};
 
 export type ChatServerToClientEvent =
   | { type: 'content'; content: string }
@@ -82,4 +56,3 @@ import type {
   AskUserQuestionsAnswer,
   AskUserQuestionsQuestion,
 } from '@/shared/chat/ask-user-questions';
-import type { Message } from '@/shared/chat/message';

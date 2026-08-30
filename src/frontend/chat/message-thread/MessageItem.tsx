@@ -23,6 +23,7 @@ import { MessageEditor } from './MessageEditor';
 import { BranchNavigator } from './BranchNavigator';
 import { ContentChip } from '@/frontend/chat/composer/composer-editor/ContentChip';
 import { consumeNewMessageAnimation } from './message-entry-animation';
+import { enhanceServerErrorMessage } from './error-message';
 
 type CopyButtonProps = {
   blocks: Message['blocks'];
@@ -276,7 +277,9 @@ export function MessageItem(props: MessageItemProps) {
                         return (
                           <div class='flex items-start gap-2 rounded-lg border border-destructive bg-destructive-muted px-3 py-2 text-sm text-destructive not-italic'>
                             <AlertCircle class='mt-0.5 h-4 w-4 shrink-0' />
-                            <div class='flex-1 whitespace-pre-wrap'>{block.message}</div>
+                            <div class='flex-1 whitespace-pre-wrap'>
+                              {enhanceServerErrorMessage(block.message, block.error)}
+                            </div>
                           </div>
                         );
                       }

@@ -57,9 +57,39 @@ describe('processEventToTree', () => {
   it('routes error events to the owning run only', () => {
     let tree = setupTwoRuns();
     tree = processEventToTree(tree, { type: 'content', content: 'Go 是' }, 4);
-    tree = processEventToTree(tree, { type: 'error', message: 'provider down' }, 2);
+    tree = processEventToTree(
+      tree,
+      {
+        type: 'error',
+        message: 'OpenAI request failed',
+        error: {
+          code: 'server_error',
+          provider: 'openai',
+          model: 'gpt-5.4',
+          backend: 'api.example.com/v1',
+          status: 500,
+          retryable: true,
+          details: 'upstream unavailable',
+        },
+      },
+      2,
+    );
 
-    expect(tree.messages[1].blocks).toEqual([{ type: 'error', message: 'provider down' }]);
+    expect(tree.messages[1].blocks).toEqual([
+      {
+        type: 'error',
+        message: 'OpenAI request failed',
+        error: {
+          code: 'server_error',
+          provider: 'openai',
+          model: 'gpt-5.4',
+          backend: 'api.example.com/v1',
+          status: 500,
+          retryable: true,
+          details: 'upstream unavailable',
+        },
+      },
+    ]);
     expect(tree.messages[3].blocks).toEqual([{ type: 'content', content: 'Go 是' }]);
   });
 });

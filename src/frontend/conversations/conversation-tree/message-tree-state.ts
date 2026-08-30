@@ -158,7 +158,11 @@ const applyAdditionInPlace = (blocks: AssistantContentBlock[], addition: Assista
     if (addition.type === 'research') {
       blocks.push({ type: 'research', items: addition.items });
     } else if (addition.type === 'error') {
-      blocks.push({ type: 'error', message: addition.message });
+      blocks.push(
+        addition.error
+          ? { type: 'error', message: addition.message, error: { ...addition.error } }
+          : { type: 'error', message: addition.message },
+      );
     }
     return;
   }

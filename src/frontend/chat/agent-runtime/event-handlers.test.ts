@@ -106,4 +106,52 @@ describe('event handlers', () => {
 
     expect(messages()[0]?.blocks).toEqual([{ type: 'content', content: 'AB' }]);
   });
+
+  it('keeps structured errors in the conversation tree', () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    initializeMessageTree([createAssistantMessage()], [1]);
+    flush();
+
+    handleServerMessage(
+      chatState,
+      {
+        event: 'chat_event',
+        data: {
+          eventId: 1,
+          assistantMessageId: 1,
+          event: {
+            type: 'error',
+            message: 'OpenAI request failed',
+            error: {
+              code: 'server_error',
+              provider: 'openai',
+              model: 'gpt-5.4',
+              backend: 'api.example.com/v1',
+              status: 500,
+              retryable: true,
+              details: 'upstream unavailable',
+            },
+          },
+        },
+      },
+      'conversation-1',
+    );
+    flush();
+
+    expect(messages()[0]?.blocks).toEqual([
+      {
+        type: 'error',
+        message: 'OpenAI request failed',
+        error: {
+          code: 'server_error',
+          provider: 'openai',
+          model: 'gpt-5.4',
+          backend: 'api.example.com/v1',
+          status: 500,
+          retryable: true,
+          details: 'upstream unavailable',
+        },
+      },
+    ]);
+  });
 });

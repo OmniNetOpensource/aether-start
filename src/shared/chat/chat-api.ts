@@ -16,13 +16,8 @@ export type {
   AskUserQuestionsOption,
   AskUserQuestionsQuestion,
 } from '@/shared/chat/ask-user-questions';
-export type {
-  ArtifactLanguage,
-  ChatErrorCode,
-  ChatErrorInfo,
-  ChatErrorProvider,
-  ChatServerToClientEvent,
-} from './chat-event-types';
+export type { ArtifactLanguage, ChatServerToClientEvent } from './chat-event-types';
+export type { ChatErrorCode, ChatErrorInfo, ChatErrorProvider } from '@/shared/chat/message';
 
 // Tool call pending execution
 export type PendingToolInvocation = {
