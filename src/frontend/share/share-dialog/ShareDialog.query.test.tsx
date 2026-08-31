@@ -22,7 +22,6 @@ vi.mock('@/rpc/share', () => ({
 }));
 
 vi.mock('@/frontend/conversations/session', () => ({
-  queryClient: { setQueryData: vi.fn() },
   selectAllConversations: () => [],
   useConversationsQuery: () => ({ data: undefined }),
 }));

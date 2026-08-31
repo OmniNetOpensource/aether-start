@@ -9,16 +9,13 @@ import Sidebar from '@/frontend/conversations/conversation-list';
 import { Pencil } from '@/frontend/design-system/icons';
 import { buttonVariants } from '@/frontend/design-system/button';
 import { cn } from '@/shared/core/utils';
-import {
-  conversationInfiniteQueryOptions,
-  queryClient,
-  usePageTitle,
-} from '@/frontend/conversations/session';
+import { conversationInfiniteQueryOptions, usePageTitle } from '@/frontend/conversations/session';
 import { ShareButton } from '@/frontend/share/share-dialog';
 import { useToast } from '@/frontend/app-shell/useToast';
 
 export const Route = createFileRoute('/app')({
-  loader: async () => {
+  loader: async ({ context }) => {
+    const { queryClient } = context;
     const conversationListPromise = queryClient.prefetchInfiniteQuery({
       ...conversationInfiniteQueryOptions,
       staleTime: Infinity,

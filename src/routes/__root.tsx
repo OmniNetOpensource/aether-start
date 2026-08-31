@@ -1,8 +1,13 @@
 import type { ReactNode } from 'react';
-import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/react-router';
-import { QueryClientProvider } from '@tanstack/react-query';
+import {
+  HeadContent,
+  Outlet,
+  Scripts,
+  createRootRouteWithContext,
+  redirect,
+} from '@tanstack/react-router';
+import type { QueryClient } from '@tanstack/react-query';
 import { AppErrorBoundary } from '@/frontend/app-shell/AppErrorBoundary';
-import { queryClient } from '@/frontend/conversations/session';
 
 import { useViewportHeight } from '@/frontend/app-shell/useViewportHeight';
 import { TooltipProvider } from '@/frontend/design-system/tooltip';
@@ -16,7 +21,7 @@ import appCss from '@/routes/globals.css?url';
 
 const PROTECTED_PREFIXES = ['/app'];
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   beforeLoad: async ({ location }) => {
     const needsAuth = PROTECTED_PREFIXES.some((p) => location.pathname.startsWith(p));
     if (!needsAuth) {
@@ -60,17 +65,15 @@ function RootComponent() {
   useViewportHeight();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <ResponsiveProvider>
-        <TooltipProvider>
-          <ToastProvider>
-            <AppErrorBoundary>
-              <Outlet />
-            </AppErrorBoundary>
-          </ToastProvider>
-        </TooltipProvider>
-      </ResponsiveProvider>
-    </QueryClientProvider>
+    <ResponsiveProvider>
+      <TooltipProvider>
+        <ToastProvider>
+          <AppErrorBoundary>
+            <Outlet />
+          </AppErrorBoundary>
+        </ToastProvider>
+      </TooltipProvider>
+    </ResponsiveProvider>
   );
 }
 

@@ -2,6 +2,7 @@ import {
   infiniteQueryOptions,
   useInfiniteQuery,
   useMutation,
+  useQueryClient,
   type InfiniteData,
 } from '@tanstack/react-query';
 import {
@@ -12,7 +13,7 @@ import {
   clearConversationsFn,
 } from '@/rpc/conversations';
 import type { ConversationListCursor, ConversationMeta } from '@/shared/conversations/conversation';
-import { queryClient } from './query-client';
+import { getQueryClient } from './query-client';
 
 const PAGE_SIZE = 10;
 
@@ -92,6 +93,7 @@ export function useConversationsQuery() {
 // -- Mutations --
 
 export function useDeleteConversation() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => deleteConversationFn({ data: { id } }),
     onMutate: async (id) => {
@@ -118,6 +120,7 @@ export function useDeleteConversation() {
 }
 
 export function useSetConversationPinned() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
       setConversationPinnedFn({ data: { id, pinned } }),
@@ -167,6 +170,7 @@ export function useSetConversationPinned() {
 }
 
 export function useUpdateConversationTitle() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ id, title }: { id: string; title: string | null }) =>
       updateConversationTitleFn({ data: { id, title } }),
@@ -194,6 +198,7 @@ export function useUpdateConversationTitle() {
 }
 
 export function useClearConversations() {
+  const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => clearConversationsFn(),
     onSuccess: () => {
@@ -208,6 +213,7 @@ export function useClearConversations() {
 // -- Imperative cache helper for non-React code --
 
 export function upsertConversationInCache(conversation: ConversationMeta) {
+  const queryClient = getQueryClient();
   queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
     if (!old) {
       return {
@@ -236,6 +242,7 @@ export function upsertConversationInCache(conversation: ConversationMeta) {
 
 /** 只更新缓存里已有条目的标题和 updated_at，保留 pinned 等其余字段；条目不存在时不动缓存 */
 export function updateConversationTitleInCache(id: string, title: string, updatedAt: string) {
+  const queryClient = getQueryClient();
   queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
     if (!old) return old;
     return {
@@ -251,6 +258,7 @@ export function updateConversationTitleInCache(id: string, title: string, update
 }
 
 export function removeConversationFromCache(conversationId: string) {
+  const queryClient = getQueryClient();
   queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
     if (!old) {
       return old;
