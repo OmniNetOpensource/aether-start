@@ -3,8 +3,7 @@
  * golden-box flash on the component's root DOM element.
  */
 
-import { onSettled } from 'solid-js';
-import type { JSX } from '@solidjs/web';
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from 'react';
 
 const FLASH_DURATION_MS = 700;
 const FLASH_CLASS = 'render-monitor-flash';
@@ -35,53 +34,68 @@ export function useRenderMonitor(componentName: string): void {
 
 interface RenderMonitorBoundaryProps {
   name: string;
-  children: JSX.Element;
+  children: ReactNode;
 }
 
-export function RenderMonitorBoundary(props: RenderMonitorBoundaryProps) {
-  let element: HTMLDivElement | undefined;
-  let instanceId: number | undefined;
+export function RenderMonitorBoundary({ name, children }: RenderMonitorBoundaryProps) {
+  const element = useRef<HTMLDivElement>(null);
+  const instanceId = useRef<number | null>(null);
+  const renderCount = useRef(0);
+  const mountTime = useRef(0);
+  const lastCommit = useRef<symbol | null>(null);
+  const commit = Symbol();
 
-  onSettled(() => {
+  useLayoutEffect(() => {
     if (!import.meta.env.DEV) return;
-    const cfg = window.__RENDER_MONITOR__;
-    if (cfg && !cfg.enabled) return;
 
-    if (!element) return;
+    const config = window.__RENDER_MONITOR__;
+    if (config && !config.enabled) return;
+    if (!element.current) return;
 
-    instanceId = getInstanceId();
+    if (instanceId.current === null) {
+      instanceId.current = getInstanceId();
+    }
+    if (lastCommit.current !== commit) {
+      lastCommit.current = commit;
+      renderCount.current += 1;
+      const phase = renderCount.current === 1 ? 'mount' : 'update';
 
-    const logEnabled = cfg?.logEnabled !== false;
-    if (logEnabled) {
-      console.log(`[render-monitor] mount ${props.name}#${instanceId} (render #1)`);
+      const now = performance.now();
+      const elapsed = mountTime.current > 0 ? now - mountTime.current : 0;
+      if (phase === 'mount') {
+        mountTime.current = now;
+      }
+
+      if (config?.logEnabled !== false) {
+        console.log(
+          `[render-monitor] ${phase} ${name}#${instanceId.current} (render #${renderCount.current}${elapsed > 0 ? `, +${elapsed.toFixed(1)}ms` : ''})`,
+        );
+      }
     }
 
-    const duration = cfg?.flashDurationMs ?? FLASH_DURATION_MS;
-    element.classList.add(FLASH_CLASS);
-    const t = setTimeout(() => {
-      element?.classList.remove(FLASH_CLASS);
-    }, duration);
-    return () => clearTimeout(t);
+    const currentElement = element.current;
+    currentElement.classList.add(FLASH_CLASS);
+    const timer = setTimeout(
+      () => currentElement.classList.remove(FLASH_CLASS),
+      config?.flashDurationMs ?? FLASH_DURATION_MS,
+    );
+    return () => clearTimeout(timer);
   });
 
-  if (!import.meta.env.DEV) {
-    return <>{props.children}</>;
-  }
+  if (!import.meta.env.DEV) return <>{children}</>;
 
   return (
     <div
-      ref={(current) => {
-        element = current;
-      }}
-      style={{ display: 'inline-block', position: 'relative', 'min-width': 0, 'min-height': 0 }}
+      ref={element}
+      style={{ display: 'inline-block', position: 'relative', minWidth: 0, minHeight: 0 }}
     >
-      {props.children}
+      {children}
     </div>
   );
 }
 
 export function RenderMonitorController() {
-  onSettled(() => {
+  useEffect(() => {
     if (!import.meta.env.DEV) return;
 
     let enabled = true;
@@ -92,31 +106,31 @@ export function RenderMonitorController() {
       get enabled() {
         return enabled;
       },
-      set enabled(v) {
-        enabled = v;
+      set enabled(value) {
+        enabled = value;
       },
       get logEnabled() {
         return logEnabled;
       },
-      set logEnabled(v) {
-        logEnabled = v;
+      set logEnabled(value) {
+        logEnabled = value;
       },
       get flashDurationMs() {
         return flashDurationMs;
       },
-      set flashDurationMs(v) {
-        flashDurationMs = v;
+      set flashDurationMs(value) {
+        flashDurationMs = value;
       },
-      setEnabled: (v: boolean) => {
-        enabled = v;
+      setEnabled: (value: boolean) => {
+        enabled = value;
       },
-      setLogEnabled: (v: boolean) => {
-        logEnabled = v;
+      setLogEnabled: (value: boolean) => {
+        logEnabled = value;
       },
     };
     return () => {
       delete window.__RENDER_MONITOR__;
     };
-  });
+  }, []);
   return null;
 }

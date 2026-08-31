@@ -1,10 +1,10 @@
-import { createServerFn } from '@tanstack/solid-start';
+import { createServerFn } from '@tanstack/react-start';
 
 export const getSessionStateFn = createServerFn({ method: 'GET' }).handler(async () => {
   const [{ getSessionFromRequest }, { isAdminEmail }, { getRequest }] = await Promise.all([
     import('@/backend/auth/request'),
     import('@/backend/auth/admin-access'),
-    import('@tanstack/solid-start/server'),
+    import('@tanstack/react-start/server'),
   ]);
   const session = await getSessionFromRequest(getRequest());
 

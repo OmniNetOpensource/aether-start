@@ -1,5 +1,4 @@
-import { createContext, createSignal, onSettled, useContext, type Accessor } from 'solid-js';
-import type { JSX } from '@solidjs/web';
+import { createContext, useContext, useSyncExternalStore, type ReactNode } from 'react';
 import { BREAKPOINTS, type DeviceType } from '@/frontend/app-shell/responsive-types';
 
 const MOBILE_QUERY = `(max-width: ${BREAKPOINTS.mobileMax}px)`;
@@ -17,7 +16,9 @@ function getSnapshot(): DeviceType {
   return 'desktop';
 }
 
-const ResponsiveContext = createContext<Accessor<DeviceType>>(() => 'desktop');
+function getServerSnapshot(): DeviceType {
+  return 'desktop';
+}
 
 function subscribe(onStoreChange: () => void) {
   const mobileQuery = window.matchMedia(MOBILE_QUERY);
@@ -35,14 +36,12 @@ function subscribe(onStoreChange: () => void) {
   };
 }
 
-export function ResponsiveProvider(props: { children: JSX.Element }) {
-  const [deviceType, setDeviceType] = createSignal<DeviceType>('desktop');
-  onSettled(() => {
-    setDeviceType(getSnapshot());
-    return subscribe(() => setDeviceType(getSnapshot()));
-  });
+const ResponsiveContext = createContext<DeviceType>('desktop');
 
-  return <ResponsiveContext value={deviceType}>{props.children}</ResponsiveContext>;
+export function ResponsiveProvider({ children }: { children: ReactNode }) {
+  const deviceType = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+
+  return <ResponsiveContext.Provider value={deviceType}>{children}</ResponsiveContext.Provider>;
 }
 
 export function useResponsive() {

@@ -1,5 +1,4 @@
-import { omit } from 'solid-js';
-import type { JSX } from '@solidjs/web';
+import type { ComponentProps } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 
 import { cn } from '@/shared/core/utils';
@@ -33,20 +32,15 @@ const buttonVariants = cva(
   },
 );
 
-type ButtonProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> &
-  VariantProps<typeof buttonVariants>;
+type ButtonProps = ComponentProps<'button'> & VariantProps<typeof buttonVariants>;
 
-function Button(props: ButtonProps) {
+function Button({ className, variant, size, ...props }: ButtonProps) {
   return (
     <button
-      {...omit(props, 'class', 'variant', 'size', 'children')}
+      {...props}
       data-slot='button'
-      class={cn(
-        buttonVariants({ variant: props.variant, size: props.size, className: props.class }),
-      )}
-    >
-      {props.children}
-    </button>
+      className={cn(buttonVariants({ variant, size, className }))}
+    />
   );
 }
 

@@ -1,19 +1,17 @@
-import { createSignal, For, Show } from 'solid-js';
-import { useNavigate } from '@tanstack/solid-router';
+import { useRef, useState } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import {
   composerDocumentFromBlocks,
   composerDocumentToBlocks,
   isComposerDocumentEmpty,
 } from '@/frontend/chat/composer/composer-editor/composer-document';
-import { getBranchInfo } from '@/shared/conversations';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import {
-  currentPath,
   messages,
-  streamingAssistantIds,
+  useCurrentPath,
 } from '@/frontend/conversations/conversation-tree/message-tree-state';
-import { conversationId } from '@/frontend/conversations/session/conversation-meta';
+import { useConversationId } from '@/frontend/conversations/session/conversation-meta';
 import { branchConversationFn } from '@/rpc/conversations';
 import { upsertConversationInCache } from '@/frontend/conversations/session';
 import type { EditingState } from './editing-state';
@@ -21,18 +19,18 @@ import { MessageItem } from './MessageItem';
 import { SelectionToolbar } from './selection-toolbar';
 
 export function MessageList() {
-  let scrollElement: HTMLDivElement | undefined;
+  const scrollElement = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const [editing, setEditing] = createSignal<{
+  const currentPath = useCurrentPath();
+  const currentConversationId = useConversationId();
+  const [editing, setEditing] = useState<{
     conversationId: string | null;
     state: EditingState;
   } | null>(null);
-  const editingState = () => {
-    const current = editing();
-    return current && current.conversationId === conversationId() ? current.state : null;
-  };
+  const editingState =
+    editing && editing.conversationId === currentConversationId ? editing.state : null;
   const setEditingState = (state: EditingState | null) =>
-    setEditing(state ? { conversationId: conversationId(), state } : null);
+    setEditing(state ? { conversationId: currentConversationId, state } : null);
   const widthClass = 'w-[90%] @[921px]:w-[60%]';
 
   const startEditing = (messageId: number) => {
@@ -45,18 +43,17 @@ export function MessageList() {
   };
 
   const submitEdit = async () => {
-    const editing = editingState();
-    if (!editing) return;
+    if (!editingState) return;
     if (!chatState.getCurrentModelId()) {
       chatState.toast.warning('请先选择模型');
       return;
     }
-    if (isComposerDocumentEmpty(editing.editedDocument)) {
+    if (isComposerDocumentEmpty(editingState.editedDocument)) {
       chatState.toast.warning('请输入内容或添加附件');
       return;
     }
 
-    const target = messages()[editing.messageId - 1];
+    const target = messages()[editingState.messageId - 1];
     if (!target || target.role !== 'user') {
       setEditingState(null);
       return;
@@ -68,7 +65,7 @@ export function MessageList() {
         type: 'append',
         message: {
           role: 'user',
-          blocks: composerDocumentToBlocks(editing.editedDocument),
+          blocks: composerDocumentToBlocks(editingState.editedDocument),
         },
         parentId: target.parentId,
         previousSiblingId: target.id,
@@ -107,11 +104,10 @@ export function MessageList() {
   };
 
   const branchFromMessage = async (messageId: number) => {
-    const sourceConversationId = conversationId();
-    if (!sourceConversationId) return;
+    if (!currentConversationId) return;
 
     const branched = await branchConversationFn({
-      data: { id: sourceConversationId, messageId },
+      data: { id: currentConversationId, messageId },
     });
     upsertConversationInCache({
       id: branched.conversationId,
@@ -130,55 +126,42 @@ export function MessageList() {
 
   return (
     <>
-      {messages().length > 0 && (
-        <div class='relative w-full h-full'>
+      {currentPath.length > 0 && (
+        <div className='relative w-full h-full'>
           <div
-            ref={(element) => {
-              scrollElement = element;
-            }}
+            ref={scrollElement}
             data-testid='message-scroll'
-            style={{ 'overflow-anchor': 'none' }}
-            class='w-full h-full overflow-y-auto'
+            style={{ overflowAnchor: 'none' }}
+            className='w-full h-full overflow-y-auto'
           >
             <div
               role='log'
               aria-live='polite'
-              class={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-[80vh] font-serif ${widthClass}`}
+              className={`flex-1 min-h-0 flex flex-col mx-auto px-1 pb-[80vh] font-serif ${widthClass}`}
             >
-              <For each={currentPath()}>
-                {(messageId, index) => {
-                  const message = () => messages()[messageId - 1];
-                  const isLastMessage = () => index() === currentPath().length - 1;
-
-                  return (
-                    <Show when={message()}>
-                      {(currentMessage) => (
-                        <MessageItem
-                          message={currentMessage()}
-                          depth={index() + 1}
-                          isStreaming={streamingAssistantIds().has(messageId)}
-                          isLastInPath={isLastMessage()}
-                          branchInfo={getBranchInfo(messages(), messageId)}
-                          editingState={editingState()}
-                          onStartEditing={startEditing}
-                          onEditDocumentChange={(document) => {
-                            const current = editingState();
-                            if (current) setEditingState({ ...current, editedDocument: document });
-                          }}
-                          onCancelEditing={() => setEditingState(null)}
-                          onSubmitEdit={submitEdit}
-                          onRetry={retryFromMessage}
-                          onBranch={branchFromMessage}
-                        />
-                      )}
-                    </Show>
-                  );
-                }}
-              </For>
+              {currentPath.map((messageId, index) => (
+                <MessageItem
+                  key={messageId}
+                  messageId={messageId}
+                  depth={index + 1}
+                  isLastInPath={index === currentPath.length - 1}
+                  editingState={editingState}
+                  onStartEditing={startEditing}
+                  onEditDocumentChange={(document) => {
+                    if (editingState) {
+                      setEditingState({ ...editingState, editedDocument: document });
+                    }
+                  }}
+                  onCancelEditing={() => setEditingState(null)}
+                  onSubmitEdit={submitEdit}
+                  onRetry={retryFromMessage}
+                  onBranch={branchFromMessage}
+                />
+              ))}
             </div>
           </div>
 
-          <SelectionToolbar container={() => scrollElement} />
+          <SelectionToolbar container={() => scrollElement.current} />
         </div>
       )}
     </>

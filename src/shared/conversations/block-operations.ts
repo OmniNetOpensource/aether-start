@@ -229,7 +229,11 @@ export const applyAssistantAddition = (
     }
 
     if (addition.type === 'error') {
-      nextBlocks.push({ type: 'error', message: addition.message });
+      nextBlocks.push(
+        addition.error
+          ? { type: 'error', message: addition.message, error: { ...addition.error } }
+          : { type: 'error', message: addition.message },
+      );
       return nextBlocks;
     }
   }

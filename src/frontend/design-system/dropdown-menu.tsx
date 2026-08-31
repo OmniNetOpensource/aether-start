@@ -1,5 +1,10 @@
-import { createContext, omit, useContext } from 'solid-js';
-import type { JSX } from '@solidjs/web';
+import {
+  createContext,
+  useContext,
+  type ComponentProps,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
 import {
   Popover,
   PopoverContent,
@@ -9,19 +14,25 @@ import {
 } from '@/frontend/design-system/popover';
 import { cn } from '@/shared/core/utils';
 
-const DropdownMenuContext = createContext<{ close: () => void }>();
+const DropdownMenuContext = createContext<{ close: () => void } | null>(null);
 
-function DropdownMenuProvider(props: { children: JSX.Element }) {
+function DropdownMenuProvider({ children }: { children: ReactNode }) {
   const popover = usePopover();
   return (
     <DropdownMenuContext value={{ close: () => popover.setOpen(false) }}>
-      {props.children}
+      {children}
     </DropdownMenuContext>
   );
 }
 
-function DropdownMenu(props: {
-  children: JSX.Element;
+function DropdownMenu({
+  children,
+  open,
+  defaultOpen,
+  onOpenChange,
+  positioning,
+}: {
+  children: ReactNode;
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -32,12 +43,12 @@ function DropdownMenu(props: {
 }) {
   return (
     <Popover
-      open={props.open}
-      defaultOpen={props.defaultOpen}
-      onOpenChange={props.onOpenChange}
-      positioning={props.positioning}
+      open={open}
+      defaultOpen={defaultOpen}
+      onOpenChange={onOpenChange}
+      positioning={positioning}
     >
-      <DropdownMenuProvider>{props.children}</DropdownMenuProvider>
+      <DropdownMenuProvider>{children}</DropdownMenuProvider>
     </Popover>
   );
 }
@@ -46,24 +57,34 @@ function DropdownMenuTrigger(props: PopoverTriggerProps) {
   return <PopoverTrigger {...props} ariaHasPopup='menu' />;
 }
 
-function DropdownMenuContent(
-  props: Omit<JSX.HTMLAttributes<HTMLDivElement>, 'style'> & {
-    side?: 'top' | 'bottom' | 'left' | 'right';
-    align?: 'start' | 'center' | 'end';
-    style?: JSX.CSSProperties;
-  },
-) {
+type DropdownMenuContentProps = ComponentProps<'div'> & {
+  side?: 'top' | 'bottom' | 'left' | 'right';
+  align?: 'start' | 'center' | 'end';
+  style?: CSSProperties;
+};
+
+function DropdownMenuContent({
+  className,
+  side: _side,
+  align: _align,
+  onKeyDown,
+  ...props
+}: DropdownMenuContentProps) {
+  void _side;
+  void _align;
   return (
     <PopoverContent
-      {...omit(props, 'class', 'side', 'align')}
+      {...props}
       initialFocus
       role='menu'
       data-slot='dropdown-menu-content'
-      class={cn(
+      className={cn(
         'bg-surface text-foreground max-h-[var(--available-height)] min-w-32 overflow-x-hidden overflow-y-auto rounded-md p-1 outline-hidden',
-        props.class,
+        className,
       )}
       onKeyDown={(event) => {
+        onKeyDown?.(event);
+        if (event.defaultPrevented) return;
         if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
         const items = Array.from(
           event.currentTarget.querySelectorAll<HTMLButtonElement>(
@@ -92,29 +113,40 @@ function DropdownMenuContent(
   );
 }
 
-type DropdownMenuItemProps = Omit<JSX.ButtonHTMLAttributes<HTMLButtonElement>, 'onSelect'> & {
+type DropdownMenuItemProps = Omit<ComponentProps<'button'>, 'onSelect'> & {
   value?: string;
   inset?: boolean;
   variant?: 'default' | 'destructive';
-  onSelect?: (event: Event) => void;
+  onSelect?: (event: React.MouseEvent<HTMLButtonElement>) => void;
 };
 
-function DropdownMenuItem(props: DropdownMenuItemProps) {
+function DropdownMenuItem({
+  className,
+  value: _value,
+  inset,
+  variant = 'default',
+  onSelect,
+  onClick,
+  ...props
+}: DropdownMenuItemProps) {
   const menu = useContext(DropdownMenuContext);
+  void _value;
   return (
     <button
-      {...omit(props, 'class', 'inset', 'variant', 'onSelect', 'value')}
+      {...props}
       type='button'
       role='menuitem'
       data-slot='dropdown-menu-item'
-      data-inset={props.inset ? '' : undefined}
-      data-variant={props.variant ?? 'default'}
-      class={cn(
+      data-inset={inset ? '' : undefined}
+      data-variant={variant}
+      className={cn(
         "hover:bg-hover focus:bg-hover data-[variant=destructive]:text-destructive data-[variant=destructive]:hover:bg-destructive-muted data-[variant=destructive]:focus:bg-destructive-muted data-[variant=destructive]:[&_svg]:!text-destructive [&_svg:not([class*='text-'])]:text-muted-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm px-2 py-1.5 text-left text-sm outline-hidden select-none disabled:pointer-events-none disabled:text-muted-foreground data-inset:pl-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        props.class,
+        className,
       )}
       onClick={(event) => {
-        props.onSelect?.(event);
+        onClick?.(event);
+        if (event.defaultPrevented) return;
+        onSelect?.(event);
         if (!event.defaultPrevented) menu?.close();
       }}
     />

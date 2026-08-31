@@ -4,6 +4,34 @@ import type {
   AskUserQuestionsQuestion,
 } from '@/shared/chat/ask-user-questions';
 
+export type ChatErrorCode =
+  | 'invalid_request'
+  | 'authentication_failed'
+  | 'permission_denied'
+  | 'quota_exceeded'
+  | 'not_found'
+  | 'conflict'
+  | 'rate_limit'
+  | 'model_unavailable'
+  | 'service_unavailable'
+  | 'timeout'
+  | 'network_error'
+  | 'server_error'
+  | 'provider_error'
+  | 'unknown';
+
+export type ChatErrorProvider = 'anthropic' | 'openai' | 'openai-responses' | 'gemini' | 'system';
+
+export type ChatErrorInfo = {
+  code: ChatErrorCode;
+  provider?: ChatErrorProvider;
+  model?: string;
+  backend?: string;
+  status?: number;
+  retryable?: boolean;
+  details?: string;
+};
+
 type ToolCall = {
   tool: string;
   args: Record<string, unknown>;
@@ -61,7 +89,7 @@ export type AssistantContentBlock =
   | { type: 'content'; content: string }
   | ResearchBlock
   | AskUserQuestionsBlock
-  | { type: 'error'; message: string };
+  | { type: 'error'; message: string; error?: ChatErrorInfo };
 
 export type ContentBlock = UserContentBlock | AssistantContentBlock;
 

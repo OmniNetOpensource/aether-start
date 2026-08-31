@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/solid-start';
+import { createServerFn } from '@tanstack/react-start';
 import {
   branchConversationSchema,
   conversationIdSchema,
@@ -15,7 +15,7 @@ export type {
 } from '@/shared/conversations/conversation';
 
 export const listConversationsPageFn = createServerFn({ method: 'POST' })
-  .validator(listConversationsPageSchema)
+  .inputValidator(listConversationsPageSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { listConversationsPage }] =
       await Promise.all([
@@ -34,7 +34,7 @@ export const listConversationsPageFn = createServerFn({ method: 'POST' })
   });
 
 export const searchConversationsFn = createServerFn({ method: 'POST' })
-  .validator(searchConversationsSchema)
+  .inputValidator(searchConversationsSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { searchConversations }] = await Promise.all([
       import('@/backend/platform/cloudflare/env'),
@@ -53,7 +53,7 @@ export const searchConversationsFn = createServerFn({ method: 'POST' })
   });
 
 export const getConversationFn = createServerFn({ method: 'POST' })
-  .validator(conversationIdSchema)
+  .inputValidator(conversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { getConversationById }] = await Promise.all([
       import('@/backend/platform/cloudflare/env'),
@@ -67,7 +67,7 @@ export const getConversationFn = createServerFn({ method: 'POST' })
   });
 
 export const upsertConversationFn = createServerFn({ method: 'POST' })
-  .validator(conversationPayloadSchema)
+  .inputValidator(conversationPayloadSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { upsertConversation }] = await Promise.all([
       import('@/backend/platform/cloudflare/env'),
@@ -84,7 +84,7 @@ export const upsertConversationFn = createServerFn({ method: 'POST' })
   });
 
 export const branchConversationFn = createServerFn({ method: 'POST' })
-  .validator(branchConversationSchema)
+  .inputValidator(branchConversationSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { branchConversation }] = await Promise.all([
       import('@/backend/platform/cloudflare/env'),
@@ -102,7 +102,7 @@ export const branchConversationFn = createServerFn({ method: 'POST' })
   });
 
 export const deleteConversationFn = createServerFn({ method: 'POST' })
-  .validator(conversationIdSchema)
+  .inputValidator(conversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { deleteConversationById }] =
       await Promise.all([
@@ -129,7 +129,7 @@ export const clearConversationsFn = createServerFn({ method: 'POST' }).handler(a
 });
 
 export const updateConversationTitleFn = createServerFn({ method: 'POST' })
-  .validator(updateConversationTitleSchema)
+  .inputValidator(updateConversationTitleSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { updateConversationTitle }] =
       await Promise.all([
@@ -148,7 +148,7 @@ export const updateConversationTitleFn = createServerFn({ method: 'POST' })
   });
 
 export const setConversationPinnedFn = createServerFn({ method: 'POST' })
-  .validator(setConversationPinnedSchema)
+  .inputValidator(setConversationPinnedSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { setConversationPinned }] =
       await Promise.all([

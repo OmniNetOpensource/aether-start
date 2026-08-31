@@ -1,11 +1,11 @@
-import { For, onSettled } from 'solid-js';
+import { useEffect, useRef } from 'react';
 import { Loader2 } from '@/frontend/design-system/icons';
 import {
   useConversationsQuery,
   selectAllConversations,
   updateConversationTitleInCache,
 } from '@/frontend/conversations/session';
-import { conversationId } from '@/frontend/conversations/session/conversation-meta';
+import { useConversationId } from '@/frontend/conversations/session/conversation-meta';
 import { ConversationItem } from './ConversationItem';
 
 type ConversationListProps = {
@@ -13,74 +13,71 @@ type ConversationListProps = {
 };
 
 export function ConversationList(props: ConversationListProps) {
-  const query = useConversationsQuery();
-  let historyScroll: HTMLDivElement | undefined;
-  let sentinel: HTMLDivElement | undefined;
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
+    useConversationsQuery();
+  const activeConversationId = useConversationId();
+  const historyScroll = useRef<HTMLDivElement>(null);
+  const sentinel = useRef<HTMLDivElement>(null);
 
-  onSettled(() => {
-    if (!sentinel || !historyScroll) return;
+  useEffect(() => {
+    if (!sentinel.current || !historyScroll.current) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (!entries.some((entry) => entry.isIntersecting)) return;
-        if (query.isFetchingNextPage || !query.hasNextPage) return;
-        void query.fetchNextPage().catch((error) => {
+        if (isFetchingNextPage || !hasNextPage) return;
+        void fetchNextPage().catch((error) => {
           console.error('Failed to fetch more conversations:', error);
         });
       },
-      { root: historyScroll, rootMargin: '120px' },
+      { root: historyScroll.current, rootMargin: '120px' },
     );
 
-    observer.observe(sentinel);
+    observer.observe(sentinel.current);
     return () => observer.disconnect();
-  });
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
-  onSettled(() => {
+  useEffect(() => {
     const ch = new BroadcastChannel('conversation_title');
     ch.onmessage = (event: MessageEvent<{ id: string; title: string; updated_at: string }>) => {
       updateConversationTitleInCache(event.data.id, event.data.title, event.data.updated_at);
     };
     return () => ch.close();
-  });
+  }, []);
 
-  const conversations = () => selectAllConversations(query.data);
+  const conversations = selectAllConversations(data);
   return (
     <>
-      {query.isLoading && conversations().length === 0 ? (
-        <div class='flex items-center justify-center py-6 text-muted-foreground'>
-          <Loader2 class='h-4 w-4 animate-spin' />
-          <span class='ml-2 text-xs'>加载会话中…</span>
+      {isLoading && conversations.length === 0 ? (
+        <div className='flex items-center justify-center py-6 text-muted-foreground'>
+          <Loader2 className='h-4 w-4 animate-spin' />
+          <span className='ml-2 text-xs'>加载会话中…</span>
         </div>
       ) : (
         <div
-          ref={(element) => {
-            historyScroll = element;
-          }}
-          class='flex h-full min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pr-1'
+          ref={historyScroll}
+          className='flex h-full min-h-0 flex-1 flex-col overflow-x-hidden overflow-y-auto pr-1'
         >
-          <div class='flex flex-col gap-1'>
-            <For each={conversations()}>
-              {(conversation) => (
-                <ConversationItem
-                  conversation={conversation}
-                  isActive={conversation.id === conversationId()}
-                  onDropdownOpenChange={props.onDropdownOpenChange}
-                />
-              )}
-            </For>
-            {query.hasNextPage || query.isFetchingNextPage ? (
+          <div className='flex flex-col gap-1'>
+            {conversations.map((conversation) => (
+              <ConversationItem
+                key={conversation.id}
+                conversation={conversation}
+                isActive={conversation.id === activeConversationId}
+                onDropdownOpenChange={props.onDropdownOpenChange}
+              />
+            ))}
+            {hasNextPage || isFetchingNextPage ? (
               <div
-                ref={(element) => {
-                  sentinel = element;
-                }}
-                class='flex items-center justify-center py-3 text-muted-foreground'
+                ref={sentinel}
+                className='flex items-center justify-center py-3 text-muted-foreground'
               >
-                {query.isFetchingNextPage ? (
+                {isFetchingNextPage ? (
                   <>
-                    <Loader2 class='h-4 w-4 animate-spin' />
-                    <span class='ml-2 text-xs'>加载更多...</span>
+                    <Loader2 className='h-4 w-4 animate-spin' />
+                    <span className='ml-2 text-xs'>加载更多...</span>
                   </>
                 ) : (
-                  <span class='text-xs'>滚动加载更多...</span>
+                  <span className='text-xs'>滚动加载更多...</span>
                 )}
               </div>
             ) : null}

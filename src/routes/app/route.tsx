@@ -1,8 +1,7 @@
-import { Link, Outlet, createFileRoute } from '@tanstack/solid-router';
-import { createEffect, onSettled } from 'solid-js';
+import { useEffect, useLayoutEffect } from 'react';
+import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
 import { ArtifactPanel, ArtifactToggleButton } from '@/frontend/chat/artifact';
 import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
-import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
 import { Composer } from '@/frontend/chat/composer/Composer';
 import { getAvailableModelsFn, getAvailablePromptsFn } from '@/rpc/chat-options';
@@ -13,7 +12,7 @@ import { cn } from '@/shared/core/utils';
 import {
   conversationInfiniteQueryOptions,
   queryClient,
-  pageTitle,
+  usePageTitle,
 } from '@/frontend/conversations/session';
 import { ShareButton } from '@/frontend/share/share-dialog';
 import { useToast } from '@/frontend/app-shell/useToast';
@@ -45,47 +44,48 @@ export const Route = createFileRoute('/app')({
       availablePrompts,
     };
   },
+  onLeave: () => {
+    cancelStreamSubscription(chatState, 'app/unmount');
+  },
   component: AppLayout,
 });
 
 function AppLayout() {
-  registerChatToast(useToast());
+  const toast = useToast();
+  const pageTitle = usePageTitle();
 
-  createEffect(pageTitle, (title) => {
-    document.title = title;
-  });
+  useLayoutEffect(() => {
+    registerChatToast(toast);
+  }, [toast]);
 
-  onSettled(() => {
-    return () => {
-      cancelStreamSubscription(chatState, 'app/unmount');
-      resetLastEventId();
-    };
-  });
+  useEffect(() => {
+    document.title = pageTitle;
+  }, [pageTitle]);
 
   return (
-    <div class='relative flex h-screen w-screen overflow-hidden text-foreground'>
+    <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>
       <Sidebar />
-      <div class='relative flex-1 z-0 min-w-0 flex flex-col gap-2 min-h-0'>
-        <div class='flex shrink-0 h-16 items-center gap-3 px-4 bg-transparent'>
-          <div class='flex-1' />
+      <div className='relative flex-1 z-0 min-w-0 flex flex-col gap-2 min-h-0'>
+        <div className='flex shrink-0 h-16 items-center gap-3 px-4 bg-transparent'>
+          <div className='flex-1' />
           <ArtifactToggleButton />
           <ShareButton />
           <Link
             to='/app'
-            class={cn(
+            className={cn(
               buttonVariants({ variant: 'ghost', size: 'icon-lg' }),
               'group relative h-10 w-10 overflow-hidden rounded-lg transition-all duration-300 hover:bg-hover hover:text-foreground',
             )}
             aria-label='新对话'
           >
-            <span class='flex h-10 w-10 shrink-0 items-center justify-center'>
-              <Pencil class='h-5 w-5 transition-transform duration-300 group-hover:rotate-90' />
+            <span className='flex h-10 w-10 shrink-0 items-center justify-center'>
+              <Pencil className='h-5 w-5 transition-transform duration-300 group-hover:rotate-90' />
             </span>
-            <span class='sr-only'>新对话</span>
+            <span className='sr-only'>新对话</span>
           </Link>
         </div>
-        <main class='relative flex flex-row flex-1 min-h-0 min-w-0'>
-          <div class='@container relative h-full flex-1 min-w-0'>
+        <main className='relative flex flex-row flex-1 min-h-0 min-w-0'>
+          <div className='@container relative h-full flex-1 min-w-0'>
             <Outlet />
             <Composer />
           </div>

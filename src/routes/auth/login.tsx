@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from '@tanstack/solid-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 
 export const Route = createFileRoute('/auth/login')({
   validateSearch: (search: Record<string, unknown>) => ({

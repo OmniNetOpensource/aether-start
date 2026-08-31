@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { flush } from 'solid-js';
 import { chatState, registerChatToast } from './chat-state';
 import { cancelStreamSubscription, openEventSubscription } from './chat-subscription';
 import { resetLastEventId } from './event-handlers';
@@ -36,7 +35,6 @@ describe('chat subscription', () => {
   it('reads split SSE frames and keeps the replay cursor in the request header', async () => {
     registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
     initializeMessageTree([createAssistantMessage()], [1]);
-    flush();
 
     const encoder = new TextEncoder();
     const response = new Response(
@@ -73,7 +71,6 @@ describe('chat subscription', () => {
     vi.stubGlobal('fetch', fetchMock);
 
     await openEventSubscription(chatState, 'conversation-1');
-    flush();
 
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/agents/conversation-runner/conversation-1/events'),

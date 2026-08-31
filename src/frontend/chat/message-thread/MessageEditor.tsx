@@ -1,8 +1,9 @@
+import { useRef } from 'react';
 import { ArrowUp, ImagePlus, X } from '@/frontend/design-system/icons';
 import { Button } from '@/frontend/design-system/button';
 import { useToast } from '@/frontend/app-shell/useToast';
 import { cn } from '@/shared/core/utils';
-import { currentModelId } from '@/frontend/conversations/session/chat-selection';
+import { useCurrentModelId } from '@/frontend/conversations/session/chat-selection';
 import {
   registerActiveInput,
   setLastFocusedInput,
@@ -27,15 +28,15 @@ type MessageEditorProps = {
 
 export function MessageEditor(props: MessageEditorProps) {
   const toast = useToast();
-  let editor: RichComposerEditorHandle | null = null;
-  let fileInput: HTMLInputElement | undefined;
+  const editor = useRef<RichComposerEditorHandle | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const currentModelId = useCurrentModelId();
 
-  const uploading = () => isComposerDocumentUploading(props.document);
-  const sendDisabled = () =>
-    uploading() || isComposerDocumentEmpty(props.document) || !currentModelId();
+  const uploading = isComposerDocumentUploading(props.document);
+  const sendDisabled = uploading || isComposerDocumentEmpty(props.document) || !currentModelId;
 
   const handleSubmit = () => {
-    if (sendDisabled()) {
+    if (sendDisabled) {
       return;
     }
 
@@ -46,21 +47,21 @@ export function MessageEditor(props: MessageEditorProps) {
   };
 
   return (
-    <div class='relative flex w-full flex-col gap-2 rounded-xl border bg-muted p-3 shadow-sm'>
+    <div className='relative flex w-full flex-col gap-2 rounded-xl border bg-muted p-3 shadow-sm'>
       <Button
         type='button'
         variant='ghost'
         size='icon'
         aria-label='Cancel editing'
         onClick={props.onCancel}
-        class='absolute right-2 top-2 z-10 h-7 w-7 text-secondary transition-colors hover:text-foreground'
+        className='absolute right-2 top-2 z-10 h-7 w-7 text-secondary transition-colors hover:text-foreground'
       >
-        <X class='h-4 w-4' />
+        <X className='h-4 w-4' />
       </Button>
 
       <RichComposerEditor
         ref={(currentEditor) => {
-          editor = currentEditor;
+          editor.current = currentEditor;
           registerActiveInput({ type: 'edit', messageId: props.messageId }, currentEditor);
         }}
         id={`message-editor-${props.messageId}`}
@@ -70,49 +71,47 @@ export function MessageEditor(props: MessageEditorProps) {
         onSubmit={handleSubmit}
         autoFocus
         ariaLabel='Edit message'
-        class='min-h-10 max-h-[200px] pr-8'
+        className='min-h-10 max-h-[200px] pr-8'
       />
 
-      <div class='flex items-center justify-between gap-2 pt-1'>
+      <div className='flex items-center justify-between gap-2 pt-1'>
         <input
-          ref={(element) => {
-            fileInput = element;
-          }}
+          ref={fileInput}
           type='file'
           multiple
           accept='image/*'
-          class='hidden'
+          className='hidden'
           onChange={(event) => {
             const files = Array.from(event.currentTarget.files ?? []);
             event.currentTarget.value = '';
-            void editor?.insertFiles(files);
+            void editor.current?.insertFiles(files);
           }}
         />
         <Button
           type='button'
           variant='ghost'
           size='sm'
-          class='h-8 gap-1.5 px-2 text-xs'
-          onClick={() => fileInput?.click()}
-          disabled={uploading()}
+          className='h-8 gap-1.5 px-2 text-xs'
+          onClick={() => fileInput.current?.click()}
+          disabled={uploading}
         >
-          <ImagePlus class='h-3.5 w-3.5' />
+          <ImagePlus className='h-3.5 w-3.5' />
           Add image
         </Button>
         <Button
           type='button'
           onClick={handleSubmit}
-          disabled={sendDisabled()}
+          disabled={sendDisabled}
           size='icon'
           aria-label='Submit edit'
-          class={cn(
+          className={cn(
             'h-8 w-8 rounded-full transition-all duration-200',
-            sendDisabled()
+            sendDisabled
               ? 'cursor-not-allowed bg-muted text-muted-foreground'
               : 'hover:scale-105 active:scale-95',
           )}
         >
-          <ArrowUp class='h-4 w-4' />
+          <ArrowUp className='h-4 w-4' />
         </Button>
       </div>
     </div>

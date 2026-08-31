@@ -1,4 +1,4 @@
-import { createMemo, For, Loading } from 'solid-js';
+import { useEffect, useState, type CSSProperties } from 'react';
 import type { TokensResult } from '@shikijs/core';
 import { bundledLanguages, codeToTokens } from '@/frontend/design-system/shiki-bundle';
 
@@ -10,77 +10,96 @@ const tokenClass =
 
 const highlightCache = new Map<string, TokensResult>();
 
-export function HighlightedCode(props: { code: string; isCompleted: boolean; language: string }) {
-  const highlightKey = () => `${props.language}\0${props.code}`;
-  const canHighlight = () => !props.language || props.language in bundledLanguages;
+type HighlightResult = {
+  key: string;
+  tokens: TokensResult;
+};
 
-  const result = createMemo(async (): Promise<TokensResult | undefined> => {
-    const key = highlightKey();
-    const cached = highlightCache.get(key);
-    if (cached) return cached;
-    if (!canHighlight() || !props.isCompleted) return undefined;
+type HighlightStyle = CSSProperties & {
+  '--markdown-code-bg'?: string;
+  '--markdown-code-text'?: string;
+  '--markdown-light'?: string;
+  '--markdown-token-bg'?: string;
+};
 
-    try {
-      const tokens = await codeToTokens(props.code, {
-        lang: props.language || 'text',
-        themes: { light: 'github-light', dark: 'github-dark' },
-      });
-      highlightCache.set(key, tokens);
-      return tokens;
-    } catch (error) {
-      console.error(`Failed to highlight ${props.language || 'plain text'} code:`, error);
-      return undefined;
-    }
-  });
+export function HighlightedCode({
+  code,
+  isCompleted,
+  language,
+}: {
+  code: string;
+  isCompleted: boolean;
+  language: string;
+}) {
+  const highlightKey = `${language}\0${code}`;
+  const [highlight, setHighlight] = useState<HighlightResult>();
+  const cached = highlightCache.get(highlightKey);
+  const result = cached ?? (highlight?.key === highlightKey ? highlight.tokens : undefined);
 
-  const containerStyle = () => {
-    const style: Record<string, string> = {};
-    if (result()?.bg) style['--markdown-code-bg'] = result()?.bg ?? '';
-    if (result()?.fg) style['--markdown-code-text'] = result()?.fg ?? '';
-    return style;
-  };
+  useEffect(() => {
+    if (!isCompleted || (language && !(language in bundledLanguages)) || cached) return;
 
-  const plainPre = () => (
-    <pre data-markdown='code-block-body'>
-      <code>{props.code}</code>
-    </pre>
-  );
+    let active = true;
+    void codeToTokens(code, {
+      lang: language || 'text',
+      themes: { light: 'github-light', dark: 'github-dark' },
+    }).then(
+      (tokens) => {
+        highlightCache.set(highlightKey, tokens);
+        if (active) setHighlight({ key: highlightKey, tokens });
+      },
+      (error) => {
+        console.error(`Failed to highlight ${language || 'plain text'} code:`, error);
+      },
+    );
+
+    return () => {
+      active = false;
+    };
+  }, [cached, code, highlightKey, isCompleted, language]);
+
+  if (!result) {
+    return (
+      <pre data-markdown='code-block-body'>
+        <code>{code}</code>
+      </pre>
+    );
+  }
+
+  const containerStyle: HighlightStyle = {};
+  if (result.bg) containerStyle['--markdown-code-bg'] = result.bg;
+  if (result.fg) containerStyle['--markdown-code-text'] = result.fg;
 
   return (
-    <Loading fallback={plainPre()}>
-      {result() ? (
-        <pre data-markdown='code-block-body' style={containerStyle()}>
-          <code class='[counter-increment:line_0] [counter-reset:line]'>
-            <For each={result()?.tokens ?? []}>
-              {(line) => (
-                <span class={lineClass}>
-                  <For each={line}>
-                    {(token) => {
-                      const style: Record<string, string> = {};
-                      if (token.color) style['--markdown-light'] = token.color;
-                      if (token.bgColor) style['--markdown-token-bg'] = token.bgColor;
+    <pre data-markdown='code-block-body' style={containerStyle}>
+      <code className='[counter-increment:line_0] [counter-reset:line]'>
+        {result.tokens.map((line, lineIndex) => (
+          <span className={lineClass} key={lineIndex}>
+            {line.map((token, tokenIndex) => {
+              const style: HighlightStyle = {};
+              if (token.color) style['--markdown-light'] = token.color;
+              if (token.bgColor) style['--markdown-token-bg'] = token.bgColor;
 
-                      for (const [name, value] of Object.entries(token.htmlStyle ?? {})) {
-                        if (name === 'color') style['--markdown-light'] = value;
-                        else if (name === 'background-color') style['--markdown-token-bg'] = value;
-                        else style[name] = value;
-                      }
+              for (const [name, value] of Object.entries(token.htmlStyle ?? {})) {
+                if (name === 'color') style['--markdown-light'] = value;
+                else if (name === 'background-color') style['--markdown-token-bg'] = value;
+                else Object.assign(style, { [name]: value });
+              }
 
-                      return (
-                        <span class={tokenClass} style={style} {...token.htmlAttrs}>
-                          {token.content}
-                        </span>
-                      );
-                    }}
-                  </For>
+              return (
+                <span
+                  {...token.htmlAttrs}
+                  className={tokenClass}
+                  key={`${tokenIndex}-${token.content}`}
+                  style={style}
+                >
+                  {token.content}
                 </span>
-              )}
-            </For>
-          </code>
-        </pre>
-      ) : (
-        plainPre()
-      )}
-    </Loading>
+              );
+            })}
+          </span>
+        ))}
+      </code>
+    </pre>
   );
 }

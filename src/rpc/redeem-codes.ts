@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/solid-start';
+import { createServerFn } from '@tanstack/react-start';
 import {
   createRedeemCodeSchema,
   listRedeemCodesSchema,
@@ -6,7 +6,7 @@ import {
 } from '@/schema/redeem-codes';
 
 export const adminListRedeemCodesFn = createServerFn({ method: 'POST' })
-  .validator(listRedeemCodesSchema)
+  .inputValidator(listRedeemCodesSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireAdminSession }, { adminListRedeemCodes }] =
       await Promise.all([
@@ -24,7 +24,7 @@ export const adminListRedeemCodesFn = createServerFn({ method: 'POST' })
   });
 
 export const adminCreateRedeemCodeFn = createServerFn({ method: 'POST' })
-  .validator(createRedeemCodeSchema)
+  .inputValidator(createRedeemCodeSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireAdminSession }, { createRedeemCode }] =
       await Promise.all([
@@ -50,7 +50,7 @@ export const adminCreateRedeemCodeFn = createServerFn({ method: 'POST' })
   });
 
 export const adminDeactivateRedeemCodeFn = createServerFn({ method: 'POST' })
-  .validator(redeemCodeIdSchema)
+  .inputValidator(redeemCodeIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireAdminSession }, { updateRedeemCodeStatus }] =
       await Promise.all([

@@ -1,5 +1,4 @@
-import { createFileRoute } from '@tanstack/solid-router';
-import { Show, onSettled } from 'solid-js';
+import { createFileRoute } from '@tanstack/react-router';
 import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
@@ -13,14 +12,11 @@ import {
 import {
   clearMessageTree,
   messages,
+  useMessages,
 } from '@/frontend/conversations/conversation-tree/message-tree-state';
 
 export const Route = createFileRoute('/app/')({
-  component: NewChatPage,
-});
-
-function NewChatPage() {
-  onSettled(() => {
+  onEnter: () => {
     if (conversationId() === null && messages().length === 0 && artifacts().length === 0) return;
 
     cancelStreamSubscription(chatState, 'conversation/new');
@@ -28,13 +24,14 @@ function NewChatPage() {
     clearConversationMeta();
     clearMessageTree();
     clearArtifacts();
-  });
+  },
+  component: NewChatPage,
+});
+
+function NewChatPage() {
+  const visibleMessages = useMessages();
 
   /* 新会话发出第一条消息后，消息已进树但路由还没跳到 /app/:id，
      先渲染 MessageList 避免跳转前出现空白 */
-  return (
-    <Show when={messages().length > 0} fallback={<NewChatGreeting />}>
-      <MessageList />
-    </Show>
-  );
+  return visibleMessages.length > 0 ? <MessageList /> : <NewChatGreeting />;
 }

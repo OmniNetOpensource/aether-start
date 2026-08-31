@@ -1,5 +1,4 @@
-import { createSignal, onSettled } from 'solid-js';
-import { createAuthClient } from 'better-auth/client';
+import { createAuthClient } from 'better-auth/react';
 import { emailOTPClient } from 'better-auth/client/plugins';
 
 export const authClient = createAuthClient({
@@ -7,7 +6,5 @@ export const authClient = createAuthClient({
 });
 
 export function useAuthSession() {
-  const [session, setSession] = createSignal(authClient.useSession.get());
-  onSettled(() => authClient.useSession.subscribe((value) => setSession(value)));
-  return session;
+  return authClient.useSession();
 }

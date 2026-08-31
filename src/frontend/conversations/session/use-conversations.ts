@@ -1,13 +1,17 @@
-import { useInfiniteQuery, useMutation } from '@tanstack/solid-query';
+import {
+  infiniteQueryOptions,
+  useInfiniteQuery,
+  useMutation,
+  type InfiniteData,
+} from '@tanstack/react-query';
 import {
   listConversationsPageFn,
   deleteConversationFn,
   setConversationPinnedFn,
   updateConversationTitleFn,
   clearConversationsFn,
-  type ConversationListCursor,
-} from '@/frontend/conversations/session';
-import type { ConversationDetail, ConversationMeta } from '@/frontend/conversations/session';
+} from '@/rpc/conversations';
+import type { ConversationListCursor, ConversationMeta } from '@/shared/conversations/conversation';
 import { queryClient } from './query-client';
 
 const PAGE_SIZE = 10;
@@ -18,6 +22,8 @@ type ConversationPage = {
   items: ConversationMeta[];
   nextCursor: ConversationListCursor;
 };
+
+type ConversationListData = InfiniteData<ConversationPage, ConversationListCursor>;
 
 const sortConversations = (conversations: ConversationMeta[]): ConversationMeta[] => {
   const sorted = [...conversations];
@@ -45,17 +51,6 @@ const sortConversations = (conversations: ConversationMeta[]): ConversationMeta[
   return sorted;
 };
 
-const mapDetailToMeta = (detail: ConversationDetail): ConversationMeta => ({
-  id: detail.id,
-  title: detail.title,
-  model: detail.model,
-  is_pinned: detail.is_pinned,
-  pinned_at: detail.pinned_at,
-  created_at: detail.created_at,
-  updated_at: detail.updated_at,
-  user_id: detail.user_id,
-});
-
 export const selectAllConversations = (
   data: { pages: ConversationPage[] } | undefined,
 ): ConversationMeta[] => {
@@ -64,48 +59,54 @@ export const selectAllConversations = (
   return sortConversations(all);
 };
 
-export const conversationInfiniteQueryOptions = {
+export const conversationInfiniteQueryOptions = infiniteQueryOptions({
   queryKey: conversationListQueryKey,
   queryFn: async ({ pageParam }: { pageParam: ConversationListCursor }) => {
     const page = await listConversationsPageFn({
       data: { limit: PAGE_SIZE, cursor: pageParam },
     });
     return {
-      items: (page.items as ConversationDetail[]).map(mapDetailToMeta),
+      items: page.items.map(
+        (conversation): ConversationMeta => ({
+          id: conversation.id,
+          title: conversation.title,
+          model: conversation.model,
+          is_pinned: conversation.is_pinned,
+          pinned_at: conversation.pinned_at,
+          created_at: conversation.created_at,
+          updated_at: conversation.updated_at,
+          user_id: conversation.user_id,
+        }),
+      ),
       nextCursor: page.nextCursor,
     } satisfies ConversationPage;
   },
-  initialPageParam: null as ConversationListCursor,
+  initialPageParam: null,
   getNextPageParam: (lastPage: ConversationPage) => lastPage.nextCursor,
-};
+});
 
 export function useConversationsQuery() {
-  return useInfiniteQuery(() => conversationInfiniteQueryOptions);
+  return useInfiniteQuery(conversationInfiniteQueryOptions);
 }
 
 // -- Mutations --
 
 export function useDeleteConversation() {
-  return useMutation(() => ({
+  return useMutation({
     mutationFn: (id: string) => deleteConversationFn({ data: { id } }),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: conversationListQueryKey });
-      const previous = queryClient.getQueryData<{ pages: ConversationPage[] }>(
-        conversationListQueryKey,
-      );
-      queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
-        conversationListQueryKey,
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.filter((item) => item.id !== id),
-            })),
-          };
-        },
-      );
+      const previous = queryClient.getQueryData<ConversationListData>(conversationListQueryKey);
+      queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((item) => item.id !== id),
+          })),
+        };
+      });
       return { previous };
     },
     onError: (_error, _id, context) => {
@@ -113,88 +114,75 @@ export function useDeleteConversation() {
         queryClient.setQueryData(conversationListQueryKey, context.previous);
       }
     },
-  }));
+  });
 }
 
 export function useSetConversationPinned() {
-  return useMutation(() => ({
+  return useMutation({
     mutationFn: ({ id, pinned }: { id: string; pinned: boolean }) =>
       setConversationPinnedFn({ data: { id, pinned } }),
     onMutate: async ({ id, pinned }) => {
       await queryClient.cancelQueries({ queryKey: conversationListQueryKey });
-      const previous = queryClient.getQueryData<{ pages: ConversationPage[] }>(
-        conversationListQueryKey,
-      );
-      queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
-        conversationListQueryKey,
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((item) =>
-                item.id === id
-                  ? {
-                      ...item,
-                      is_pinned: pinned,
-                      pinned_at: pinned ? new Date().toISOString() : null,
-                    }
-                  : item,
-              ),
-            })),
-          };
-        },
-      );
+      const previous = queryClient.getQueryData<ConversationListData>(conversationListQueryKey);
+      queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) =>
+              item.id === id
+                ? {
+                    ...item,
+                    is_pinned: pinned,
+                    pinned_at: pinned ? new Date().toISOString() : null,
+                  }
+                : item,
+            ),
+          })),
+        };
+      });
       return { previous };
     },
     onSuccess: (result, { id, pinned }) => {
-      queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
-        conversationListQueryKey,
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((item) =>
-                item.id === id ? { ...item, pinned_at: pinned ? result.pinned_at : null } : item,
-              ),
-            })),
-          };
-        },
-      );
+      queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) =>
+              item.id === id ? { ...item, pinned_at: pinned ? result.pinned_at : null } : item,
+            ),
+          })),
+        };
+      });
     },
     onError: (_error, _vars, context) => {
       if (context?.previous) {
         queryClient.setQueryData(conversationListQueryKey, context.previous);
       }
     },
-  }));
+  });
 }
 
 export function useUpdateConversationTitle() {
-  return useMutation(() => ({
+  return useMutation({
     mutationFn: ({ id, title }: { id: string; title: string | null }) =>
       updateConversationTitleFn({ data: { id, title } }),
     onMutate: async ({ id, title }) => {
       await queryClient.cancelQueries({ queryKey: conversationListQueryKey });
-      const previous = queryClient.getQueryData<{ pages: ConversationPage[] }>(
-        conversationListQueryKey,
-      );
-      queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
-        conversationListQueryKey,
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            pages: old.pages.map((page) => ({
-              ...page,
-              items: page.items.map((item) => (item.id === id ? { ...item, title } : item)),
-            })),
-          };
-        },
-      );
+      const previous = queryClient.getQueryData<ConversationListData>(conversationListQueryKey);
+      queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          pages: old.pages.map((page) => ({
+            ...page,
+            items: page.items.map((item) => (item.id === id ? { ...item, title } : item)),
+          })),
+        };
+      });
       return { previous };
     },
     onError: (_error, _vars, context) => {
@@ -202,90 +190,78 @@ export function useUpdateConversationTitle() {
         queryClient.setQueryData(conversationListQueryKey, context.previous);
       }
     },
-  }));
+  });
 }
 
 export function useClearConversations() {
-  return useMutation(() => ({
+  return useMutation({
     mutationFn: () => clearConversationsFn(),
     onSuccess: () => {
-      queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
-        conversationListQueryKey,
-        {
-          pages: [{ items: [], nextCursor: null }],
-          pageParams: [null],
-        },
-      );
+      queryClient.setQueryData<ConversationListData>(conversationListQueryKey, {
+        pages: [{ items: [], nextCursor: null }],
+        pageParams: [null],
+      });
     },
-  }));
+  });
 }
 
 // -- Imperative cache helper for non-React code --
 
 export function upsertConversationInCache(conversation: ConversationMeta) {
-  queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
-    conversationListQueryKey,
-    (old) => {
-      if (!old) {
-        return {
-          pages: [{ items: [conversation], nextCursor: null }],
-          pageParams: [null],
-        };
-      }
-
-      // Remove existing entry from all pages
-      const withoutExisting = old.pages.map((page) => ({
-        ...page,
-        items: page.items.filter((item) => item.id !== conversation.id),
-      }));
-
-      // Insert/update into page 0
-      const firstPage = withoutExisting[0];
+  queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
+    if (!old) {
       return {
-        ...old,
-        pages: [
-          { ...firstPage, items: [conversation, ...firstPage.items] },
-          ...withoutExisting.slice(1),
-        ],
+        pages: [{ items: [conversation], nextCursor: null }],
+        pageParams: [null],
       };
-    },
-  );
+    }
+
+    // Remove existing entry from all pages
+    const withoutExisting = old.pages.map((page) => ({
+      ...page,
+      items: page.items.filter((item) => item.id !== conversation.id),
+    }));
+
+    // Insert/update into page 0
+    const firstPage = withoutExisting[0];
+    return {
+      ...old,
+      pages: [
+        { ...firstPage, items: [conversation, ...firstPage.items] },
+        ...withoutExisting.slice(1),
+      ],
+    };
+  });
 }
 
 /** 只更新缓存里已有条目的标题和 updated_at，保留 pinned 等其余字段；条目不存在时不动缓存 */
 export function updateConversationTitleInCache(id: string, title: string, updatedAt: string) {
-  queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
-    conversationListQueryKey,
-    (old) => {
-      if (!old) return old;
-      return {
-        ...old,
-        pages: old.pages.map((page) => ({
-          ...page,
-          items: page.items.map((item) =>
-            item.id === id ? { ...item, title, updated_at: updatedAt } : item,
-          ),
-        })),
-      };
-    },
-  );
+  queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
+    if (!old) return old;
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        items: page.items.map((item) =>
+          item.id === id ? { ...item, title, updated_at: updatedAt } : item,
+        ),
+      })),
+    };
+  });
 }
 
 export function removeConversationFromCache(conversationId: string) {
-  queryClient.setQueryData<{ pages: ConversationPage[]; pageParams: ConversationListCursor[] }>(
-    conversationListQueryKey,
-    (old) => {
-      if (!old) {
-        return old;
-      }
+  queryClient.setQueryData<ConversationListData>(conversationListQueryKey, (old) => {
+    if (!old) {
+      return old;
+    }
 
-      return {
-        ...old,
-        pages: old.pages.map((page) => ({
-          ...page,
-          items: page.items.filter((item) => item.id !== conversationId),
-        })),
-      };
-    },
-  );
+    return {
+      ...old,
+      pages: old.pages.map((page) => ({
+        ...page,
+        items: page.items.filter((item) => item.id !== conversationId),
+      })),
+    };
+  });
 }

@@ -1,4 +1,4 @@
-import { createSignal } from 'solid-js';
+import { useSyncExternalStore } from 'react';
 import { artifactActions, type ArtifactActions } from '@/frontend/chat/artifact/artifact-state';
 import {
   getMessageTreeState,
@@ -36,8 +36,21 @@ export type ChatState = {
   toast: ToastApi;
 };
 
-const [status, setStatus] = createSignal<ChatStatus>('idle');
-export { status };
+let chatStatus: ChatStatus = 'idle';
+const listeners = new Set<() => void>();
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
+export const status = () => chatStatus;
+export const useChatStatus = () => useSyncExternalStore(subscribe, status, status);
+export const setStatus = (nextStatus: ChatStatus) => {
+  if (chatStatus === nextStatus) return;
+  chatStatus = nextStatus;
+  for (const listener of listeners) listener();
+};
 
 let toastApi: ToastApi;
 

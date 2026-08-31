@@ -1,11 +1,7 @@
-import { createMemo, createSignal, For, omit, onCleanup, type Component } from 'solid-js';
-import { createComponent, Dynamic, type JSX } from '@solidjs/web';
+import { useEffect, useLayoutEffect, useRef, useState, type ComponentProps } from 'react';
+import { Fragment, jsx, jsxs } from 'react/jsx-runtime';
 import { Check, Copy } from '@/frontend/design-system/icons';
-import {
-  toJsxRuntime,
-  type Components,
-  type Props as RuntimeProps,
-} from 'hast-util-to-jsx-runtime';
+import { toJsxRuntime, type Components } from 'hast-util-to-jsx-runtime';
 import { harden as rehypeHarden } from 'rehype-harden';
 import rehypeKatex from 'rehype-katex';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
@@ -89,47 +85,51 @@ const markdownProcessor = unified()
   .use(rehypeKatex);
 
 const copyResetDelayMs = 2000;
-const Fragment = (props: RuntimeProps) => props.children;
-const isComponent = (type: unknown): type is Component<RuntimeProps> => typeof type === 'function';
-const jsx = (type: unknown, props: RuntimeProps) => {
-  if (isComponent(type)) return createComponent(type, props);
-  if (typeof type === 'string') return createComponent(Dynamic, { component: type, ...props });
-  throw new TypeError('Unsupported Markdown element');
-};
 
-function MarkdownLink(props: JSX.AnchorHTMLAttributes<HTMLAnchorElement>) {
+function MarkdownLink({
+  children,
+  node: _node,
+  ...props
+}: ComponentProps<'a'> & { node?: unknown }) {
   return (
-    <a {...omit(props, 'children')} data-markdown='link' rel='noopener noreferrer' target='_blank'>
-      {props.children}
+    <a {...props} data-markdown='link' rel='noopener noreferrer' target='_blank'>
+      {children}
     </a>
   );
 }
 
-function MarkdownTable(props: JSX.HTMLAttributes<HTMLTableElement>) {
+function MarkdownTable({
+  children,
+  node: _node,
+  ...props
+}: ComponentProps<'table'> & { node?: unknown }) {
   return (
-    <div class='my-4 max-w-full overflow-x-auto' data-markdown='table-container'>
-      <table {...omit(props, 'children')}>{props.children}</table>
+    <div className='my-4 max-w-full overflow-x-auto' data-markdown='table-container'>
+      <table {...props}>{children}</table>
     </div>
   );
 }
 
-function MarkdownCodeBlock(props: { code: string; language: string }) {
+function MarkdownCodeBlock({ code, language }: { code: string; language: string }) {
   const toast = useToast();
-  const [copied, setCopied] = createSignal(false);
-  let copyTimer: number | undefined;
+  const [copied, setCopied] = useState(false);
+  const copyTimer = useRef<number | undefined>(undefined);
 
-  onCleanup(() => {
-    if (copyTimer !== undefined) window.clearTimeout(copyTimer);
-  });
+  useEffect(
+    () => () => {
+      if (copyTimer.current !== undefined) window.clearTimeout(copyTimer.current);
+    },
+    [],
+  );
 
   const handleCopy = () => {
-    void navigator.clipboard.writeText(props.code).then(
+    void navigator.clipboard.writeText(code).then(
       () => {
         setCopied(true);
-        if (copyTimer !== undefined) window.clearTimeout(copyTimer);
-        copyTimer = window.setTimeout(() => {
+        if (copyTimer.current !== undefined) window.clearTimeout(copyTimer.current);
+        copyTimer.current = window.setTimeout(() => {
           setCopied(false);
-          copyTimer = undefined;
+          copyTimer.current = undefined;
         }, copyResetDelayMs);
       },
       (error) => {
@@ -140,33 +140,32 @@ function MarkdownCodeBlock(props: { code: string; language: string }) {
   };
 
   return (
-    <section data-language={props.language} data-markdown='code-block'>
+    <section data-language={language} data-markdown='code-block'>
       <header>
-        <span>{props.language || 'text'}</span>
+        <span>{language || 'text'}</span>
         <button onClick={handleCopy} title='Copy code' type='button'>
-          {copied() ? <Check /> : <Copy />}
+          {copied ? <Check /> : <Copy />}
         </button>
       </header>
-      <HighlightedCode code={props.code} isCompleted language={props.language} />
+      <HighlightedCode code={code} isCompleted language={language} />
     </section>
   );
 }
 
-function MarkdownPre(props: JSX.HTMLAttributes<HTMLPreElement> & { node?: unknown }) {
-  if (!props.node || typeof props.node !== 'object' || !('children' in props.node)) {
-    return <pre {...omit(props, 'children', 'node')}>{props.children}</pre>;
+function MarkdownPre({ children, node, ...props }: ComponentProps<'pre'> & { node?: unknown }) {
+  if (!node || typeof node !== 'object' || !('children' in node)) {
+    return <pre {...props}>{children}</pre>;
   }
-  const children = props.node.children;
-  if (!Array.isArray(children))
-    return <pre {...omit(props, 'children', 'node')}>{props.children}</pre>;
-  const codeNode = children[0];
+  const nodeChildren = node.children;
+  if (!Array.isArray(nodeChildren)) return <pre {...props}>{children}</pre>;
+  const codeNode = nodeChildren[0];
   if (
     !codeNode ||
     typeof codeNode !== 'object' ||
     !('properties' in codeNode) ||
     !('children' in codeNode)
   ) {
-    return <pre {...omit(props, 'children', 'node')}>{props.children}</pre>;
+    return <pre {...props}>{children}</pre>;
   }
   const properties = codeNode.properties;
   const codeChildren = codeNode.children;
@@ -196,16 +195,16 @@ function MarkdownPre(props: JSX.HTMLAttributes<HTMLPreElement> & { node?: unknow
 
 const markdownComponents: Partial<Components> = {
   a: MarkdownLink,
-  img: ({ alt, ...props }) => <img {...props} alt={alt ?? ''} data-markdown='image' />,
+  img: ({ alt, node: _node, ...props }) => <img {...props} alt={alt ?? ''} data-markdown='image' />,
   pre: MarkdownPre,
   table: MarkdownTable,
 };
 
 /*
- * 流式渲染:不走 Solid,而是把每帧的 hast 树 diff-patch 进一个自持的 DOM 容器。
+ * 流式渲染不走 React reconciliation，而是把每帧的 hast 树 diff-patch 进一个自持的 DOM 容器。
  * 流式输出几乎总是尾部追加,所以已有 DOM 原地保留,只把新增文字包进带淡入
  * 动画的 span 追加进去——span 之后不再被触碰,动画能完整播完。remend 修补
- * 或语法闭合导致结构变化时,替换对不上的子树兜底。流结束后整体切回 Solid
+ * 或语法闭合导致结构变化时,替换对不上的子树兜底。流结束后整体切回 React
  * 渲染的最终版,流式 DOM 连同动画 span 一起丢弃。
  *
  * 文本映射规则:hast 文本节点(非纯空白)对应一个 <span data-stream-text>
@@ -379,55 +378,46 @@ function patchStreamChildren(parent: HTMLElement, children: HastChild[]) {
   }
 }
 
-function MarkdownBlock(props: { isAnimating: boolean; markdown: string }) {
-  let streamHost: HTMLDivElement | undefined;
+function MarkdownBlock({ isAnimating, markdown }: { isAnimating: boolean; markdown: string }) {
+  const streamHost = useRef<HTMLDivElement>(null);
+  const source = isAnimating ? remend(markdown) : markdown;
+  const tree = markdownProcessor.runSync(markdownProcessor.parse(source));
 
-  const tree = createMemo(() => {
-    const source = props.isAnimating ? remend(props.markdown) : props.markdown;
-    return markdownProcessor.runSync(markdownProcessor.parse(source));
-  });
-
-  const streamed = () => {
-    streamHost ??= document.createElement('div');
-    patchStreamChildren(streamHost, tree().children);
-    return streamHost;
-  };
+  useLayoutEffect(() => {
+    if (isAnimating && streamHost.current) {
+      patchStreamChildren(streamHost.current, tree.children);
+    }
+  }, [isAnimating, tree]);
 
   return (
-    <div style={{ 'content-visibility': 'auto', 'contain-intrinsic-block-size': 'auto 0px' }}>
-      {props.isAnimating
-        ? streamed()
-        : toJsxRuntime(tree(), {
-            Fragment,
-            components: markdownComponents,
-            jsx,
-            jsxs: jsx,
-            passNode: true,
-            passKeys: false,
-            elementAttributeNameCase: 'html',
-          })}
+    <div style={{ contentVisibility: 'auto', containIntrinsicBlockSize: 'auto 0px' }}>
+      {isAnimating ? (
+        <div ref={streamHost} />
+      ) : (
+        toJsxRuntime(tree, {
+          Fragment,
+          components: markdownComponents,
+          jsx,
+          jsxs,
+          passNode: true,
+        })
+      )}
     </div>
   );
 }
 
-function Markdown(props: Props) {
-  const paragraphs = createMemo(() => splitMarkdownParagraphs(props.content));
-  // For 按值 keyed,直接遍历段落文字会在流式追加时销毁重建整块。
-  // 改成遍历稳定的数字下标,段落内容变化只更新对应 MarkdownBlock 的 props。
-  const indexes = createMemo(() => paragraphs().map((_, index) => index));
+function Markdown({ content, isAnimating = false }: Props) {
+  const paragraphs = splitMarkdownParagraphs(content);
 
   return (
-    <div class='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
-      <For each={indexes()}>
-        {(index) => {
-          const markdown = createMemo(() => paragraphs()[index] ?? '');
-          const isAnimating = createMemo(
-            () => (props.isAnimating ?? false) && index === paragraphs().length - 1,
-          );
-
-          return <MarkdownBlock isAnimating={isAnimating()} markdown={markdown()} />;
-        }}
-      </For>
+    <div className='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
+      {paragraphs.map((markdown, index) => (
+        <MarkdownBlock
+          isAnimating={isAnimating && index === paragraphs.length - 1}
+          key={index}
+          markdown={markdown}
+        />
+      ))}
     </div>
   );
 }

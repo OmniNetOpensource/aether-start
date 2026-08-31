@@ -1,17 +1,17 @@
 interface AetherLogoProps {
-  class?: string;
+  className?: string;
 }
 
-export function AetherLogo(props: AetherLogoProps) {
+export function AetherLogo({ className = '' }: AetherLogoProps) {
   return (
     <svg
       viewBox='0 0 100 40'
       fill='none'
       stroke='currentColor'
-      stroke-width='2.2'
-      stroke-linecap='round'
-      stroke-linejoin='round'
-      class={props.class ?? ''}
+      strokeWidth='2.2'
+      strokeLinecap='round'
+      strokeLinejoin='round'
+      className={className}
     >
       {/* A */}
       <path d='M 2 28 C 3 10 7 4 9 4 C 11 4 15 10 14 28' />

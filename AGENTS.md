@@ -28,7 +28,7 @@ The repo is split by runtime. The only app alias in `tsconfig.json` is `@/* -> s
 
 Runtime boundaries:
 
-- `src/frontend/` contains Solid components, signals, browser state, browser networking, the design system, and themes.
+- `src/frontend/` contains React components, external stores, hooks, browser state, browser networking, the design system, and themes.
 - `src/rpc/` contains `createServerFn` boundaries. RPC files validate input, authenticate, and call backend code.
 - `src/backend/` contains Cloudflare Worker, D1, R2, Better Auth, Durable Object, model-provider, and tool execution code.
 - `src/shared/` contains only runtime-independent types, schemas, and pure functions.
@@ -284,7 +284,7 @@ Never commit real secrets.
 
 ## Coding Style And Expectations
 
-- TypeScript + Solid
+- TypeScript + React
 - follow the existing local style in the file you are editing
 - keep code simple and readable
 - prefer existing feature boundaries over adding a new abstraction layer

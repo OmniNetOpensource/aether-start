@@ -1,5 +1,4 @@
-import { onSettled } from 'solid-js';
-import { Dynamic } from '@solidjs/web';
+import { useEffect, useEffectEvent } from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
 import {
   XIcon,
@@ -56,37 +55,34 @@ interface ToastProps extends VariantProps<typeof toastVariants> {
   onClose: () => void;
 }
 
-export function Toast(props: ToastProps) {
-  onSettled(() => {
-    if (props.toast.duration && props.toast.duration > 0) {
-      const timer = setTimeout(() => {
-        props.onClose();
-      }, props.toast.duration);
+export function Toast({ toast, isExiting, onClose }: ToastProps) {
+  const closeToast = useEffectEvent(onClose);
+  const Icon = iconMap[toast.variant];
 
-      return () => clearTimeout(timer);
-    }
-  });
+  useEffect(() => {
+    if (!toast.duration || toast.duration <= 0) return;
+
+    const timer = setTimeout(closeToast, toast.duration);
+    return () => clearTimeout(timer);
+  }, [toast.duration]);
 
   return (
     <div
-      class={cn(
-        toastVariants({ variant: props.toast.variant }),
-        props.isExiting
+      className={cn(
+        toastVariants({ variant: toast.variant }),
+        isExiting
           ? 'pointer-events-none animate-[toast-exit_0.2s_var(--transition-smooth)_forwards]'
           : 'animate-[toast-enter_0.2s_var(--transition-smooth)]',
       )}
     >
-      <Dynamic
-        component={iconMap[props.toast.variant]}
-        class={cn(iconVariants({ variant: props.toast.variant }), 'size-5')}
-      />
-      <div class='flex-1 text-sm leading-relaxed'>{props.toast.message}</div>
+      <Icon className={cn(iconVariants({ variant: toast.variant }), 'size-5')} />
+      <div className='flex-1 text-sm leading-relaxed'>{toast.message}</div>
       <button
-        onClick={props.onClose}
-        class='shrink-0 rounded-sm text-secondary transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
+        onClick={onClose}
+        className='shrink-0 rounded-sm text-secondary transition-colors hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2'
         aria-label='Close'
       >
-        <XIcon class='size-4' />
+        <XIcon className='size-4' />
       </button>
     </div>
   );

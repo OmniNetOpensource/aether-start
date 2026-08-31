@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/solid-start';
+import { createServerFn } from '@tanstack/react-start';
 import { getAvailablePrompts } from '@/shared/chat/model-catalog';
 
 export const getAvailableModelsFn = createServerFn({ method: 'GET' }).handler(async () => {

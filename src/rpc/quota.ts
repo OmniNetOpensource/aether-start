@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/solid-start';
+import { createServerFn } from '@tanstack/react-start';
 import { redeemInputSchema } from '@/schema/quota';
 
 export const getQuotaFn = createServerFn({ method: 'GET' }).handler(async () => {
@@ -15,7 +15,7 @@ export const getQuotaFn = createServerFn({ method: 'GET' }).handler(async () => 
 });
 
 export const redeemCodeFn = createServerFn({ method: 'POST' })
-  .validator(redeemInputSchema)
+  .inputValidator(redeemInputSchema)
   .handler(async ({ data }) => {
     const [
       { getServerBindings },

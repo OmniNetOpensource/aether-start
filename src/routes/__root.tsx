@@ -1,6 +1,6 @@
-import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/solid-router';
-import type { JSX } from '@solidjs/web';
-import { QueryClientProvider } from '@tanstack/solid-query';
+import type { ReactNode } from 'react';
+import { HeadContent, Outlet, Scripts, createRootRoute, redirect } from '@tanstack/react-router';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AppErrorBoundary } from '@/frontend/app-shell/AppErrorBoundary';
 import { queryClient } from '@/frontend/conversations/session';
 
@@ -78,18 +78,19 @@ const globalErrorScript = `(function(){var shown=false;function esc(s){var d=doc
 
 const preHydrationInputScript = `(function(){var v=localStorage.getItem('aether_composer_draft');window.__preHydrationInput=v===null?'':v;})();`;
 
-function RootDocument(props: { children: JSX.Element }) {
+function RootDocument({ children }: { children: ReactNode }) {
   return (
     <html
       lang='en'
       data-theme={defaultTheme.light.id}
       data-color-scheme={defaultTheme.light.colorScheme}
+      suppressHydrationWarning
     >
       <head>
-        <meta charset='utf-8' />
+        <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <link rel='preconnect' href='https://fonts.googleapis.com' />
-        <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin='' />
+        <link rel='preconnect' href='https://fonts.gstatic.com' crossOrigin='' />
         <link
           rel='stylesheet'
           href='https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&display=optional'
@@ -97,13 +98,13 @@ function RootDocument(props: { children: JSX.Element }) {
         <link rel='stylesheet' href={appCss} />
         <link rel='manifest' href='/manifest.webmanifest' />
         <link rel='icon' type='image/png' href='/aether-sf-icon-32.png' />
-        <script innerHTML={themeInitScript} />
-        <script innerHTML={globalErrorScript} />
-        <script innerHTML={preHydrationInputScript} />
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+        <script dangerouslySetInnerHTML={{ __html: globalErrorScript }} />
+        <script dangerouslySetInnerHTML={{ __html: preHydrationInputScript }} />
         <HeadContent />
       </head>
       <body>
-        {props.children}
+        {children}
         <Scripts />
       </body>
     </html>

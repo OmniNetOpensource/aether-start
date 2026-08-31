@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/solid-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { getSessionFromRequest } from '@/backend/auth/request';
 import { getServerBindings } from '@/backend/platform/cloudflare/env';
 
