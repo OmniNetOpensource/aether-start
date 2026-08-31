@@ -1,5 +1,5 @@
-import { createFileRoute, redirect } from '@tanstack/solid-router';
-import { createEffect } from 'solid-js';
+import { useLayoutEffect } from 'react';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import {
   cancelStreamSubscription,
   resumeRunningConversation,
@@ -11,7 +11,6 @@ import { isMessage } from '@/shared/chat/message';
 import { MessageList } from '@/frontend/chat/message-thread/MessageList';
 import { buildPathToLatestAssistant } from '@/shared/conversations';
 import {
-  type ConversationDetail,
   conversationId,
   getConversationFn,
   setConversationId,
@@ -19,6 +18,23 @@ import {
   setPageTitle,
 } from '@/frontend/conversations/session';
 import { initializeMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
+import type { ConversationArtifact } from '@/shared/conversations/conversation';
+
+type ActivatableConversation = {
+  id: string;
+  title: string | null;
+  model?: string | null;
+  messages: unknown[];
+  artifacts: ConversationArtifact[];
+};
+
+function validateMessages(persistedMessages: unknown[]) {
+  const messages = persistedMessages.flatMap((message) => (isMessage(message) ? [message] : []));
+  if (messages.length !== persistedMessages.length) {
+    throw new Error('Invalid persisted message tree');
+  }
+  return messages;
+}
 
 export const Route = createFileRoute('/app/$conversationId')({
   loader: async ({ params }) => {
@@ -28,40 +44,44 @@ export const Route = createFileRoute('/app/$conversationId')({
     const conversation = await getConversationFn({ data: { id: params.conversationId } });
     if (!conversation) throw redirect({ href: '/404' });
 
-    const messages = conversation.messages.flatMap((message) =>
-      isMessage(message) ? [message] : [],
-    );
-    if (messages.length !== conversation.messages.length) {
-      throw new Error('Invalid persisted message tree');
-    }
-    const detail: ConversationDetail = { ...conversation, messages };
-    return { conversation: detail };
+    validateMessages(conversation.messages);
+    return { conversation };
   },
   component: ConversationPage,
 });
 
+function activateConversation(
+  conversation: ActivatableConversation | null,
+  routeConversationId: string,
+) {
+  if (!conversation) {
+    resumeRunningConversation(chatState, routeConversationId);
+    return;
+  }
+
+  if (conversationId() === conversation.id) {
+    resumeRunningConversation(chatState, conversation.id);
+    return;
+  }
+
+  cancelStreamSubscription(chatState, 'conversation/change');
+  resetLastEventId();
+  const messages = validateMessages(conversation.messages);
+  initializeMessageTree(messages, buildPathToLatestAssistant(messages));
+  setArtifacts(conversation.artifacts);
+  setPageTitle(conversation.title ?? 'Aether');
+  setCurrentModelId(conversation.model ?? '');
+  setConversationId(conversation.id);
+  resumeRunningConversation(chatState, conversation.id);
+}
+
 function ConversationPage() {
-  const loaderData = Route.useLoaderData();
+  const { conversation } = Route.useLoaderData();
+  const { conversationId: routeConversationId } = Route.useParams();
 
-  createEffect(
-    () => loaderData().conversation,
-    (conversation) => {
-      if (!conversation) return;
-      if (conversationId() === conversation.id) return;
-
-      cancelStreamSubscription(chatState, 'conversation/change');
-      resetLastEventId();
-      initializeMessageTree(
-        conversation.messages,
-        buildPathToLatestAssistant(conversation.messages),
-      );
-      setArtifacts(conversation.artifacts);
-      setPageTitle(conversation.title ?? 'Aether');
-      setCurrentModelId(conversation.model ?? '');
-      setConversationId(conversation.id);
-      void resumeRunningConversation(chatState, conversation.id);
-    },
-  );
+  useLayoutEffect(() => {
+    activateConversation(conversation, routeConversationId);
+  }, [conversation, routeConversationId]);
 
   return <MessageList />;
 }

@@ -1,5 +1,6 @@
-import { createMemo, createSignal, For, Loading, refresh } from 'solid-js';
-import { useNavigate } from '@tanstack/solid-router';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from '@tanstack/react-router';
 import { Ban, Gift, Loader2, LogOut, Plus } from '@/frontend/design-system/icons';
 import { authClient } from '@/frontend/auth/client';
 import { getSessionStateFn } from '@/rpc/auth';
@@ -25,38 +26,54 @@ type SettingsModalProps = {
   onOpenChange: (open: boolean) => void;
 };
 
-type AdminCode = {
-  id: string;
-  code: string;
-  amount: number;
-  is_active: boolean;
-  used_at: string | null;
-  created_at: string;
-};
-
 export function SettingsModal(props: SettingsModalProps) {
   const toast = useToast();
   const navigate = useNavigate();
-  const [isSigningOut, setIsSigningOut] = createSignal(false);
-  const [redeemCode, setRedeemCode] = createSignal('');
-  const [redeemLoading, setRedeemLoading] = createSignal(false);
-  const [newCode, setNewCode] = createSignal('');
-  const [newAmount, setNewAmount] = createSignal(50);
-  const [createLoading, setCreateLoading] = createSignal(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
+  const [redeemCode, setRedeemCode] = useState('');
+  const [redeemLoading, setRedeemLoading] = useState(false);
+  const [newCode, setNewCode] = useState('');
+  const [newAmount, setNewAmount] = useState(50);
+  const [createLoading, setCreateLoading] = useState(false);
 
-  const [balance, setBalance] = createSignal(async () =>
-    props.open ? (await getQuotaFn()).balance : null,
-  );
-  const isAdmin = createMemo(
-    async () => props.open && ((await getSessionStateFn()).isAdmin ?? false),
-  );
-  const adminCodes = createMemo(
-    async (): Promise<AdminCode[]> =>
-      isAdmin() ? (await adminListRedeemCodesFn({ data: { limit: 20, cursor: null } })).items : [],
-  );
+  const balanceQuery = useQuery({
+    queryKey: ['settings', 'quota'],
+    queryFn: () => getQuotaFn(),
+    enabled: props.open,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const sessionQuery = useQuery({
+    queryKey: ['settings', 'session'],
+    queryFn: () => getSessionStateFn(),
+    enabled: props.open,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const isAdmin = sessionQuery.data?.isAdmin ?? false;
+  const adminCodesQuery = useQuery({
+    queryKey: ['settings', 'redeem-codes'],
+    queryFn: () => adminListRedeemCodesFn({ data: { limit: 20, cursor: null } }),
+    enabled: props.open && isAdmin,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 0,
+    gcTime: 0,
+  });
+
+  if (balanceQuery.error) throw balanceQuery.error;
+  if (sessionQuery.error) throw sessionQuery.error;
+  if (adminCodesQuery.error) throw adminCodesQuery.error;
 
   const handleSignOut = async () => {
-    if (isSigningOut()) {
+    if (isSigningOut) {
       return;
     }
 
@@ -70,25 +87,29 @@ export function SettingsModal(props: SettingsModalProps) {
       clearArtifacts();
       queryClient.removeQueries({ queryKey: conversationListQueryKey });
       resetLastEventId();
-      await navigate({ href: '/auth/login', replace: true });
+      await navigate({
+        to: '/auth/login',
+        search: { redirect: undefined, email: undefined, reset: undefined },
+        replace: true,
+      });
       setIsSigningOut(false);
     }
   };
 
   const handleRedeem = async () => {
-    const code = redeemCode().trim();
-    if (!code || redeemLoading()) {
+    const code = redeemCode.trim();
+    if (!code || redeemLoading) {
       return;
     }
 
     setRedeemLoading(true);
     try {
       const res = await redeemCodeFn({ data: { code } });
-      setBalance(res.balance);
+      queryClient.setQueryData(['settings', 'quota'], { balance: res.balance });
       setRedeemCode('');
       toast.success(`Redeemed successfully. Added ${res.added} credits.`);
-      if (isAdmin()) {
-        refresh(adminCodes);
+      if (isAdmin) {
+        await queryClient.invalidateQueries({ queryKey: ['settings', 'redeem-codes'] });
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Redeem failed');
@@ -98,9 +119,9 @@ export function SettingsModal(props: SettingsModalProps) {
   };
 
   const handleCreateCode = async () => {
-    const code = newCode();
-    const amount = newAmount();
-    if (!code.trim() || amount < 1 || createLoading()) {
+    const code = newCode;
+    const amount = newAmount;
+    if (!code.trim() || amount < 1 || createLoading) {
       return;
     }
 
@@ -112,7 +133,7 @@ export function SettingsModal(props: SettingsModalProps) {
       setNewCode('');
       setNewAmount(50);
       toast.success('Redeem code created');
-      refresh(adminCodes);
+      await queryClient.invalidateQueries({ queryKey: ['settings', 'redeem-codes'] });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Create failed');
     } finally {
@@ -124,7 +145,7 @@ export function SettingsModal(props: SettingsModalProps) {
     try {
       await adminDeactivateRedeemCodeFn({ data: { id } });
       toast.success('Code deactivated');
-      refresh(adminCodes);
+      await queryClient.invalidateQueries({ queryKey: ['settings', 'redeem-codes'] });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Action failed');
     }
@@ -132,41 +153,43 @@ export function SettingsModal(props: SettingsModalProps) {
 
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent class='max-h-[85vh] w-[50vw] min-w-[320px] max-w-4xl overflow-y-auto'>
+      <DialogContent className='max-h-[85vh] w-[50vw] min-w-[320px] max-w-4xl overflow-y-auto'>
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
-        <div class='flex flex-col gap-6'>
-          <div class='space-y-3'>
-            <h3 class='text-sm font-medium text-muted-foreground'>Quota</h3>
-            <div class='space-y-3 rounded-lg border bg-muted p-3'>
-              <div class='flex items-center justify-between'>
-                <span class='text-sm text-muted-foreground'>Remaining credits</span>
-                <span class='text-lg font-semibold'>
-                  <Loading fallback={<Loader2 class='h-5 w-5 animate-spin' />}>
-                    {`${balance() ?? 0} credits`}
-                  </Loading>
+        <div className='flex flex-col gap-6'>
+          <div className='space-y-3'>
+            <h3 className='text-sm font-medium text-muted-foreground'>Quota</h3>
+            <div className='space-y-3 rounded-lg border bg-muted p-3'>
+              <div className='flex items-center justify-between'>
+                <span className='text-sm text-muted-foreground'>Remaining credits</span>
+                <span className='text-lg font-semibold'>
+                  {balanceQuery.isLoading ? (
+                    <Loader2 className='h-5 w-5 animate-spin' />
+                  ) : balanceQuery.data ? (
+                    `${balanceQuery.data.balance} credits`
+                  ) : null}
                 </span>
               </div>
-              <div class='flex gap-2'>
+              <div className='flex gap-2'>
                 <Input
                   placeholder='Enter redeem code'
-                  value={redeemCode()}
+                  value={redeemCode}
                   onChange={(event) => setRedeemCode(event.currentTarget.value)}
-                  disabled={redeemLoading()}
-                  class='flex-1'
+                  disabled={redeemLoading}
+                  className='flex-1'
                 />
                 <Button
                   size='sm'
                   onClick={handleRedeem}
-                  disabled={!redeemCode().trim() || redeemLoading()}
+                  disabled={!redeemCode.trim() || redeemLoading}
                 >
-                  {redeemLoading() ? (
-                    <Loader2 class='h-4 w-4 animate-spin' />
+                  {redeemLoading ? (
+                    <Loader2 className='h-4 w-4 animate-spin' />
                   ) : (
                     <>
-                      <Gift class='mr-1 h-4 w-4' />
+                      <Gift className='mr-1 h-4 w-4' />
                       Redeem
                     </>
                   )}
@@ -175,107 +198,105 @@ export function SettingsModal(props: SettingsModalProps) {
             </div>
           </div>
 
-          <div class='space-y-3'>
-            <h3 class='text-sm font-medium text-muted-foreground'>Account</h3>
-            <div class='rounded-lg border bg-muted p-3'>
+          <div className='space-y-3'>
+            <h3 className='text-sm font-medium text-muted-foreground'>Account</h3>
+            <div className='rounded-lg border bg-muted p-3'>
               <Button
                 variant='outline'
-                class='w-full justify-start gap-2 text-destructive hover:bg-destructive-muted hover:text-destructive'
+                className='w-full justify-start gap-2 text-destructive hover:bg-destructive-muted hover:text-destructive'
                 onClick={handleSignOut}
-                disabled={isSigningOut()}
+                disabled={isSigningOut}
               >
-                {isSigningOut() ? (
-                  <Loader2 class='h-4 w-4 animate-spin' />
+                {isSigningOut ? (
+                  <Loader2 className='h-4 w-4 animate-spin' />
                 ) : (
-                  <LogOut class='h-4 w-4' />
+                  <LogOut className='h-4 w-4' />
                 )}
-                {isSigningOut() ? 'Signing out...' : 'Sign out'}
+                {isSigningOut ? 'Signing out...' : 'Sign out'}
               </Button>
             </div>
           </div>
 
-          <Loading fallback={null}>
-            {isAdmin() ? (
-              <div class='space-y-3'>
-                <h3 class='text-sm font-medium text-muted-foreground'>Redeem Codes</h3>
-                <div class='space-y-3 rounded-lg border bg-muted p-3'>
-                  <div class='flex gap-2'>
-                    <Input
-                      placeholder='Code'
-                      value={newCode()}
-                      onChange={(event) => setNewCode(event.currentTarget.value)}
-                      disabled={createLoading()}
-                      class='w-32'
-                    />
-                    <Input
-                      type='number'
-                      min={1}
-                      placeholder='Amount'
-                      value={newAmount() || ''}
-                      onChange={(event) =>
-                        setNewAmount(parseInt(event.currentTarget.value, 10) || 0)
-                      }
-                      disabled={createLoading()}
-                      class='w-20'
-                    />
-                    <Button
-                      size='sm'
-                      onClick={handleCreateCode}
-                      disabled={!newCode().trim() || newAmount() < 1 || createLoading()}
-                    >
-                      {createLoading() ? (
-                        <Loader2 class='h-4 w-4 animate-spin' />
-                      ) : (
-                        <>
-                          <Plus class='mr-1 h-4 w-4' />
-                          Create
-                        </>
-                      )}
-                    </Button>
-                  </div>
+          {isAdmin ? (
+            <div className='space-y-3'>
+              <h3 className='text-sm font-medium text-muted-foreground'>Redeem Codes</h3>
+              <div className='space-y-3 rounded-lg border bg-muted p-3'>
+                <div className='flex gap-2'>
+                  <Input
+                    placeholder='Code'
+                    value={newCode}
+                    onChange={(event) => setNewCode(event.currentTarget.value)}
+                    disabled={createLoading}
+                    className='w-32'
+                  />
+                  <Input
+                    type='number'
+                    min={1}
+                    placeholder='Amount'
+                    value={newAmount || ''}
+                    onChange={(event) => setNewAmount(parseInt(event.currentTarget.value, 10) || 0)}
+                    disabled={createLoading}
+                    className='w-20'
+                  />
+                  <Button
+                    size='sm'
+                    onClick={handleCreateCode}
+                    disabled={!newCode.trim() || newAmount < 1 || createLoading}
+                  >
+                    {createLoading ? (
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                    ) : (
+                      <>
+                        <Plus className='mr-1 h-4 w-4' />
+                        Create
+                      </>
+                    )}
+                  </Button>
+                </div>
 
-                  <div class='max-h-32 space-y-1 overflow-y-auto text-xs text-muted-foreground'>
-                    <Loading fallback={<span>Loading...</span>}>
-                      {adminCodes().length === 0 ? (
-                        <span>No redeem codes yet.</span>
-                      ) : (
-                        <For each={adminCodes()}>
-                          {(code) => (
-                            <div class='flex items-center justify-between gap-2 py-1'>
-                              <span>
-                                <code class='rounded bg-muted px-1'>{code.code}</code> +
-                                {code.amount} credits
-                                {code.used_at ? (
-                                  <span class='ml-1 text-muted-foreground'>used</span>
-                                ) : code.is_active ? (
-                                  <span class='ml-1 text-success'>active</span>
-                                ) : (
-                                  <span class='ml-1 text-muted-foreground'>inactive</span>
-                                )}
-                              </span>
-                              {!code.used_at && code.is_active ? (
-                                <Button
-                                  variant='ghost'
-                                  size='sm'
-                                  class='h-6 px-1 text-destructive'
-                                  onClick={() => handleDeactivate(code.id)}
-                                >
-                                  <Ban class='h-3 w-3' />
-                                </Button>
-                              ) : null}
-                            </div>
+                <div className='max-h-32 space-y-1 overflow-y-auto text-xs text-muted-foreground'>
+                  {adminCodesQuery.isLoading ? (
+                    <span>Loading...</span>
+                  ) : adminCodesQuery.data?.items.length === 0 ? (
+                    <span>No redeem codes yet.</span>
+                  ) : (
+                    adminCodesQuery.data?.items.map((code) => (
+                      <div key={code.id} className='flex items-center justify-between gap-2 py-1'>
+                        <span>
+                          <code className='rounded bg-muted px-1'>{code.code}</code> +{code.amount}{' '}
+                          credits
+                          {code.used_at ? (
+                            <span className='ml-1 text-muted-foreground'>used</span>
+                          ) : code.is_active ? (
+                            <span className='ml-1 text-success'>active</span>
+                          ) : (
+                            <span className='ml-1 text-muted-foreground'>inactive</span>
                           )}
-                        </For>
-                      )}
-                    </Loading>
-                  </div>
+                        </span>
+                        {!code.used_at && code.is_active ? (
+                          <Button
+                            variant='ghost'
+                            size='sm'
+                            className='h-6 px-1 text-destructive'
+                            onClick={() => handleDeactivate(code.id)}
+                          >
+                            <Ban className='h-3 w-3' />
+                          </Button>
+                        ) : null}
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
-            ) : null}
-          </Loading>
+            </div>
+          ) : null}
 
-          <div class='flex gap-3'>
-            <Button variant='outline' onClick={() => props.onOpenChange(false)} class='self-start'>
+          <div className='flex gap-3'>
+            <Button
+              variant='outline'
+              onClick={() => props.onOpenChange(false)}
+              className='self-start'
+            >
               Close
             </Button>
           </div>

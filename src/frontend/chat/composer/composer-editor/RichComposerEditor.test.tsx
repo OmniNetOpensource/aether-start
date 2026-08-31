@@ -1,8 +1,12 @@
-import { fireEvent, screen, waitFor } from '@testing-library/dom';
-import { describe, expect, it, vi } from 'vitest';
-import { act, renderTest } from '@/test/render';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { renderTest } from '@/test/render';
 import { RichComposerEditor, type RichComposerEditorHandle } from './RichComposerEditor';
 import { ToastProvider } from '@/frontend/app-shell/toast-context';
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('RichComposerEditor', () => {
   it('keeps an empty document stable', async () => {
@@ -16,7 +20,7 @@ describe('RichComposerEditor', () => {
           ariaLabel='Message input'
         />
       ),
-      (children) => <ToastProvider>{children()}</ToastProvider>,
+      (children) => <ToastProvider>{children}</ToastProvider>,
     );
 
     expect(await screen.findByRole('textbox', { name: 'Message input' })).toBeTruthy();
@@ -40,19 +44,26 @@ describe('RichComposerEditor', () => {
           />
         </div>
       ),
-      (children) => <ToastProvider>{children()}</ToastProvider>,
+      (children) => <ToastProvider>{children}</ToastProvider>,
     );
 
     const textbox = await screen.findByRole('textbox', { name: 'Message input' });
     const scrollContainer = screen.getByTestId('scroll-container');
     scrollContainer.scrollTop = 240;
 
-    await act(() => editor?.focus());
+    await waitFor(() => expect(editor).not.toBeNull());
+    await act(() => {
+      if (!editor) throw new Error('Editor ref is not ready');
+      editor.focus();
+    });
 
     await waitFor(() => expect(document.activeElement).toBe(textbox));
     expect(scrollContainer.scrollTop).toBe(240);
 
-    await act(() => editor?.blur());
+    await act(() => {
+      if (!editor) throw new Error('Editor ref is not ready');
+      editor.blur();
+    });
 
     await waitFor(() => expect(document.activeElement).not.toBe(textbox));
     expect(scrollContainer.scrollTop).toBe(240);
@@ -75,12 +86,16 @@ describe('RichComposerEditor', () => {
           ariaLabel='Message input'
         />
       ),
-      (children) => <ToastProvider>{children()}</ToastProvider>,
+      (children) => <ToastProvider>{children}</ToastProvider>,
     );
 
     expect((await screen.findByRole('textbox')).textContent).toContain('hello');
 
-    await act(() => editor?.insertQuote('quoted text'));
+    await waitFor(() => expect(editor).not.toBeNull());
+    await act(() => {
+      if (!editor) throw new Error('Editor ref is not ready');
+      editor.insertQuote('quoted text');
+    });
 
     const quote = await screen.findByText('quoted text');
     expect(quote.parentElement?.parentElement?.classList.contains('max-w-64')).toBe(true);
@@ -95,5 +110,30 @@ describe('RichComposerEditor', () => {
     fireEvent.click(screen.getByRole('button', { name: '删除引用' }));
 
     await waitFor(() => expect(screen.queryByText('quoted text')).toBeNull());
+  });
+
+  it('unmounts a mounted chip without nesting a React root cleanup', async () => {
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const view = renderTest(
+      () => (
+        <RichComposerEditor
+          id='chip-cleanup-editor'
+          document={[{ type: 'quote', quote: { id: 'quote-1', text: 'quoted text' } }]}
+          onChange={() => {}}
+          onSubmit={() => {}}
+          ariaLabel='Message input'
+        />
+      ),
+      (children) => <ToastProvider>{children}</ToastProvider>,
+    );
+
+    expect(await screen.findByText('quoted text')).toBeTruthy();
+
+    view.unmount();
+    await act(() => Promise.resolve());
+
+    expect(consoleError.mock.calls.flat().join(' ')).not.toContain(
+      'Attempted to synchronously unmount a root while React was already rendering',
+    );
   });
 });

@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/dom';
+import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { renderTest } from '@/test/render';
 import { ContentChip } from './ContentChip';

@@ -1,5 +1,6 @@
-import { afterEach, describe, expect, it } from 'vitest';
-import { act, renderTest } from '@/test/render';
+import { act } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { renderTest } from '@/test/render';
 import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
 import {
@@ -12,6 +13,10 @@ import { ToastProvider } from '@/frontend/app-shell/toast-context';
 import type { Message } from '@/shared/chat/message';
 import { MessageItem } from './MessageItem';
 import { MessageList } from './MessageList';
+
+vi.mock('@tanstack/react-router', () => ({
+  useNavigate: () => async () => {},
+}));
 
 const notify = () => '';
 

@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from '@tanstack/solid-router';
+import { createFileRoute, redirect } from '@tanstack/react-router';
 import { getSessionStateFn } from '@/rpc/auth';
 
 export const Route = createFileRoute('/')({

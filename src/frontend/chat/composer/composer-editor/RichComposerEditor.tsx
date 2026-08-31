@@ -1,5 +1,5 @@
-import { createEffect, createSignal, onCleanup } from 'solid-js';
-import { render } from '@solidjs/web';
+import { useEffect, useRef, useState } from 'react';
+import { createRoot } from 'react-dom/client';
 import {
   Editor,
   Node,
@@ -149,41 +149,43 @@ const composerDocumentFromEditorJSON = (json: JSONContent): ComposerDocument => 
 };
 
 function createComposerChipView(props: NodeViewRendererProps) {
-  const [node, setNode] = createSignal(props.node);
+  let currentNode = props.node;
   const dom = document.createElement('span');
   dom.contentEditable = 'false';
   dom.className = 'group mx-1 inline-flex max-w-64 align-middle';
   const deleteNode = () => {
     const position = props.getPos();
     if (typeof position !== 'number') return;
-    props.view.dispatch(props.view.state.tr.delete(position, position + node().nodeSize));
+    props.view.dispatch(props.view.state.tr.delete(position, position + currentNode.nodeSize));
   };
-  const dispose = render(
-    () =>
-      node().attrs.kind === 'quote' ? (
-        <ContentChip kind='quote' text={readString(node().attrs.text)} onRemove={deleteNode} />
+  const root = createRoot(dom);
+  const renderChip = () =>
+    root.render(
+      currentNode.attrs.kind === 'quote' ? (
+        <ContentChip kind='quote' text={readString(currentNode.attrs.text)} onRemove={deleteNode} />
       ) : (
         <ContentChip
           kind='attachment'
-          name={readString(node().attrs.name)}
-          size={typeof node().attrs.size === 'number' ? node().attrs.size : 0}
-          mimeType={readString(node().attrs.mimeType)}
-          url={readString(node().attrs.localUrl) || readString(node().attrs.url)}
-          uploading={!!readString(node().attrs.localUrl)}
+          name={readString(currentNode.attrs.name)}
+          size={typeof currentNode.attrs.size === 'number' ? currentNode.attrs.size : 0}
+          mimeType={readString(currentNode.attrs.mimeType)}
+          url={readString(currentNode.attrs.localUrl) || readString(currentNode.attrs.url)}
+          uploading={Boolean(readString(currentNode.attrs.localUrl))}
           onRemove={deleteNode}
         />
       ),
-    dom,
-  );
+    );
+  renderChip();
 
   return {
     dom,
     update(updatedNode: typeof props.node) {
       if (updatedNode.type !== props.node.type) return false;
-      setNode(updatedNode);
+      currentNode = updatedNode;
+      renderChip();
       return true;
     },
-    destroy: dispose,
+    destroy: () => queueMicrotask(() => root.unmount()),
   };
 }
 
@@ -263,17 +265,23 @@ type RichComposerEditorProps = {
   disabled?: boolean;
   autoFocus?: boolean;
   ariaLabel: string;
-  class?: string;
+  className?: string;
 };
 
 export function RichComposerEditor(props: RichComposerEditorProps) {
   const toast = useToast();
-  const [editor, setEditor] = createSignal<Editor>();
-  let editorElement: HTMLDivElement | undefined;
-  let disposeEditor: (() => void) | undefined;
+  const [editor, setEditor] = useState<Editor>();
+  const editorRef = useRef<Editor | null>(null);
+  const editorElement = useRef<HTMLDivElement>(null);
+  const propsRef = useRef(props);
+  const toastRef = useRef(toast);
+  const insertQuoteRef = useRef<(text: string) => void>(() => {});
+  const insertFilesRef = useRef<(files: File[]) => Promise<void>>(async () => {});
+  propsRef.current = props;
+  toastRef.current = toast;
 
   const updateAttachment = (id: string, attachment: PendingAttachment) => {
-    const currentEditor = editor();
+    const currentEditor = editorRef.current;
     if (!currentEditor || currentEditor.isDestroyed) {
       return;
     }
@@ -306,7 +314,7 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
   };
 
   const removeAttachment = (id: string) => {
-    const currentEditor = editor();
+    const currentEditor = editorRef.current;
     if (!currentEditor || currentEditor.isDestroyed) {
       return;
     }
@@ -331,7 +339,7 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
 
   const insertQuote = (text: string) => {
     const trimmed = text.trim();
-    const currentEditor = editor();
+    const currentEditor = editorRef.current;
     if (!currentEditor || !trimmed) {
       return;
     }
@@ -351,25 +359,25 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
   };
 
   async function insertFiles(files: File[]) {
-    const currentEditor = editor();
-    if (!currentEditor || props.disabled || files.length === 0) {
+    const currentEditor = editorRef.current;
+    if (!currentEditor || propsRef.current.disabled || files.length === 0) {
       return;
     }
 
     const queued: { file: File; attachment: PendingAttachment }[] = [];
-    let totalSize = props.document.reduce(
+    let totalSize = propsRef.current.document.reduce(
       (sum, item) => sum + (item.type === 'attachment' ? item.attachment.size : 0),
       0,
     );
     for (const file of files) {
       const validationMessage = getBase64ImageValidationMessage(file);
       if (validationMessage) {
-        toast.warning(validationMessage);
+        toastRef.current.warning(validationMessage);
         continue;
       }
 
       if (totalSize + file.size > BASE64_MESSAGE_MAX_SIZE) {
-        toast.warning('每条消息的图片总大小不能超过 8MB。');
+        toastRef.current.warning('每条消息的图片总大小不能超过 8MB。');
         continue;
       }
 
@@ -419,7 +427,7 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
         } catch (error) {
           const detail = error instanceof Error ? error.message : String(error);
           console.error(`Failed to upload image "${file.name}"`, error);
-          toast.error(`上传图片「${file.name}」失败：${detail}`);
+          toastRef.current.error(`上传图片「${file.name}」失败：${detail}`);
           removeAttachment(attachment.id);
         } finally {
           if (attachment.localUrl) {
@@ -430,30 +438,38 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
     );
   }
 
-  const mountEditor = (element: HTMLDivElement) => {
-    editorElement = element;
-    queueMicrotask(() => {
-      if (editorElement !== element || editor()) return;
+  insertQuoteRef.current = insertQuote;
+  insertFilesRef.current = insertFiles;
 
-      const mountedEditor = new Editor({
+  useEffect(() => {
+    const element = editorElement.current;
+    if (!element) return;
+    let cancelled = false;
+    let mountedEditor: Editor | null = null;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      const initialProps = propsRef.current;
+
+      const nextEditor = new Editor({
         element,
         extensions,
-        content: editorJSONFromComposerDocument(props.document),
-        editable: !props.disabled,
+        content: editorJSONFromComposerDocument(initialProps.document),
+        editable: !initialProps.disabled,
         editorProps: {
           attributes: {
-            id: props.id,
+            id: initialProps.id,
             role: 'textbox',
-            'aria-label': props.ariaLabel,
+            'aria-label': initialProps.ariaLabel,
             class: cn(
               'max-h-50 overflow-y-auto whitespace-pre-wrap break-words px-2 py-3 text-sm leading-relaxed outline-none sm:text-base',
-              props.class,
+              initialProps.className,
             ),
           },
           handleKeyDown: (_, event) => {
             if (event.key !== 'Enter' || !event.ctrlKey || event.shiftKey) return false;
             event.preventDefault();
-            props.onSubmit();
+            propsRef.current.onSubmit();
             return true;
           },
           handlePaste: (_, event) => {
@@ -461,73 +477,63 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
             const files = collectClipboardFiles(event.clipboardData);
             if (files.length === 0) return false;
             event.preventDefault();
-            void insertFiles(files);
+            void insertFilesRef.current(files);
             return true;
           },
         },
         onUpdate: ({ editor: updatedEditor }) => {
-          props.onChange(composerDocumentFromEditorJSON(updatedEditor.getJSON()));
+          propsRef.current.onChange(composerDocumentFromEditorJSON(updatedEditor.getJSON()));
         },
       });
-      setEditor(mountedEditor);
-      props.ref?.({
-        focus: () => mountedEditor.commands.focus(undefined, { scrollIntoView: false }),
-        blur: () => mountedEditor.commands.blur(),
+      mountedEditor = nextEditor;
+      editorRef.current = nextEditor;
+      setEditor(nextEditor);
+      initialProps.ref?.({
+        focus: () => nextEditor.commands.focus(undefined, { scrollIntoView: false }),
+        blur: () => nextEditor.commands.blur(),
         clear: () => {
-          mountedEditor.commands.setContent(editorJSONFromComposerDocument([]), {
+          nextEditor.commands.setContent(editorJSONFromComposerDocument([]), {
             emitUpdate: false,
           });
         },
-        insertQuote,
-        insertFiles,
+        insertQuote: (text) => insertQuoteRef.current(text),
+        insertFiles: (files) => insertFilesRef.current(files),
       });
-      if (props.autoFocus) mountedEditor.commands.focus('end');
-      disposeEditor = () => {
-        setEditor();
-        props.ref?.(null);
-        mountedEditor.destroy();
-      };
+      if (initialProps.autoFocus) nextEditor.commands.focus('end');
     });
-  };
 
-  onCleanup(() => {
-    editorElement = undefined;
-    disposeEditor?.();
-  });
+    return () => {
+      cancelled = true;
+      editorRef.current = null;
+      propsRef.current.ref?.(null);
+      mountedEditor?.destroy();
+    };
+  }, []);
 
-  createEffect(
-    () => ({ currentEditor: editor(), disabled: props.disabled ?? false }),
-    ({ currentEditor, disabled }) => {
-      if (currentEditor && currentEditor.isEditable === disabled)
-        currentEditor.setEditable(!disabled);
-    },
-  );
+  useEffect(() => {
+    const disabled = props.disabled ?? false;
+    if (editor && editor.isEditable === disabled) editor.setEditable(!disabled);
+  }, [editor, props.disabled]);
 
-  createEffect(
-    () => ({ currentEditor: editor(), document: props.document }),
-    ({ currentEditor, document }) => {
-      if (!currentEditor) return;
-      if (
-        JSON.stringify(composerDocumentFromEditorJSON(currentEditor.getJSON())) !==
-        JSON.stringify(document)
-      ) {
-        currentEditor.commands.setContent(editorJSONFromComposerDocument(document), {
-          emitUpdate: false,
-        });
-      }
-    },
-  );
+  useEffect(() => {
+    if (!editor) return;
+    if (
+      JSON.stringify(composerDocumentFromEditorJSON(editor.getJSON())) !==
+      JSON.stringify(props.document)
+    ) {
+      editor.commands.setContent(editorJSONFromComposerDocument(props.document), {
+        emitUpdate: false,
+      });
+    }
+  }, [editor, props.document]);
 
-  createEffect(
-    () => ({ currentEditor: editor(), autoFocus: props.autoFocus ?? false }),
-    ({ currentEditor, autoFocus }) => {
-      if (autoFocus) currentEditor?.commands.focus('end');
-    },
-  );
+  useEffect(() => {
+    if (props.autoFocus) editor?.commands.focus('end');
+  }, [editor, props.autoFocus]);
 
   return (
-    <div class='relative min-h-12 min-w-0 flex-1' onFocusIn={props.onFocus}>
-      <div ref={mountEditor} />
+    <div className='relative min-h-12 min-w-0 flex-1' onFocus={props.onFocus}>
+      <div ref={editorElement} />
     </div>
   );
 }

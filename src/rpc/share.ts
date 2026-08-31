@@ -1,4 +1,4 @@
-import { createServerFn } from '@tanstack/solid-start';
+import { createServerFn } from '@tanstack/react-start';
 import {
   createShareSchema,
   shareConversationIdSchema,
@@ -237,7 +237,7 @@ const buildPublicSnapshot = (
 };
 
 export const getConversationShareFn = createServerFn({ method: 'POST' })
-  .validator(shareConversationIdSchema)
+  .inputValidator(shareConversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { getShareByConversation }] =
       await Promise.all([
@@ -255,7 +255,7 @@ export const getConversationShareFn = createServerFn({ method: 'POST' })
   });
 
 export const createConversationShareFn = createServerFn({ method: 'POST' })
-  .validator(createShareSchema)
+  .inputValidator(createShareSchema)
   .handler(async ({ data }) => {
     const [
       { getServerBindings },
@@ -292,7 +292,7 @@ export const createConversationShareFn = createServerFn({ method: 'POST' })
   });
 
 export const revokeConversationShareFn = createServerFn({ method: 'POST' })
-  .validator(shareConversationIdSchema)
+  .inputValidator(shareConversationIdSchema)
   .handler(async ({ data }) => {
     const [{ getServerBindings }, { requireSession }, { revokeShare }] = await Promise.all([
       import('@/backend/platform/cloudflare/env'),
@@ -309,7 +309,7 @@ export const revokeConversationShareFn = createServerFn({ method: 'POST' })
   });
 
 export const getPublicConversationShareFn = createServerFn({ method: 'POST' })
-  .validator(shareTokenPayloadSchema)
+  .inputValidator(shareTokenPayloadSchema)
   .handler(async ({ data }) => {
     if (!isSafeShareToken(data.token)) {
       return { status: 'not_found' as const };

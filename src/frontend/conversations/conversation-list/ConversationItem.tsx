@@ -1,5 +1,5 @@
-import { createSignal, onSettled } from 'solid-js';
-import { useNavigate } from '@tanstack/solid-router';
+import { useEffect, useRef, useState, type MouseEvent } from 'react';
+import { useNavigate } from '@tanstack/react-router';
 import { MoreHorizontal, Pin, PinOff, Trash2 } from '@/frontend/design-system/icons';
 import { Shimmer } from '@/frontend/design-system/shimmer';
 import {
@@ -29,15 +29,18 @@ type ConversationItemProps = {
 };
 
 export function ConversationItem(props: ConversationItemProps) {
-  const title = () => props.conversation.title || 'Untitled Chat';
-  const displayTitle = () => truncateMiddle(title(), 32);
-  const useShimmer = () => isPlaceholderTitle(props.conversation.title);
-  const [menuOpen, setMenuOpen] = createSignal(false);
+  const onDropdownOpenChange = useRef(props.onDropdownOpenChange);
+  const menuOpenRef = useRef(false);
+  onDropdownOpenChange.current = props.onDropdownOpenChange;
+  const title = props.conversation.title || 'Untitled Chat';
+  const displayTitle = truncateMiddle(title, 32);
+  const useShimmer = isPlaceholderTitle(props.conversation.title);
+  const [menuOpen, setMenuOpen] = useState(false);
   const navigate = useNavigate();
   const deleteMutation = useDeleteConversation();
   const pinMutation = useSetConversationPinned();
 
-  const handleClick = (event: MouseEvent) => {
+  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey || event.button !== 0) {
       return;
     }
@@ -70,43 +73,49 @@ export function ConversationItem(props: ConversationItemProps) {
   };
 
   const handleMenuOpenChange = (open: boolean) => {
+    menuOpenRef.current = open;
     setMenuOpen(open);
     props.onDropdownOpenChange(open);
   };
 
-  onSettled(() => () => props.onDropdownOpenChange(false));
+  useEffect(
+    () => () => {
+      if (menuOpenRef.current) onDropdownOpenChange.current(false);
+    },
+    [],
+  );
 
   return (
     <div
-      class={`group relative flex-col w-full items-start justify-center gap-3 rounded-sm p-0.5 text-left transition-all  ${
+      className={`group relative flex-col w-full items-start justify-center gap-3 rounded-sm p-0.5 text-left transition-all  ${
         props.isActive ? 'bg-active' : 'bg-transparent hover:bg-hover'
       }`}
     >
-      <div class='flex w-full items-center justify-between gap-3 px-1'>
+      <div className='flex w-full items-center justify-between gap-3 px-1'>
         <a
           href={`/app/${props.conversation.id}`}
           onClick={handleClick}
-          class='min-w-0 flex-1'
-          aria-label={title()}
+          className='min-w-0 flex-1'
+          aria-label={title}
         >
-          <div class='flex min-w-0 items-center gap-2'>
+          <div className='flex min-w-0 items-center gap-2'>
             {props.conversation.is_pinned ? (
-              <Pin class='size-3.5 shrink-0 text-muted-foreground' />
+              <Pin className='size-3.5 shrink-0 text-muted-foreground' />
             ) : null}
-            <span class='min-w-0 flex-1' title={title()}>
-              {useShimmer() ? (
-                <Shimmer as='span' class='block text-sm font-medium text-secondary'>
-                  {displayTitle()}
+            <span className='min-w-0 flex-1' title={title}>
+              {useShimmer ? (
+                <Shimmer as='span' className='block text-sm font-medium text-secondary'>
+                  {displayTitle}
                 </Shimmer>
               ) : (
-                <span class='block text-sm font-medium text-secondary'>{displayTitle()}</span>
+                <span className='block text-sm font-medium text-secondary'>{displayTitle}</span>
               )}
             </span>
           </div>
         </a>
-        <div class='relative z-20'>
+        <div className='relative z-20'>
           <DropdownMenu
-            open={menuOpen()}
+            open={menuOpen}
             onOpenChange={handleMenuOpenChange}
             positioning={{ placement: 'right-end', gutter: 4 }}
           >
@@ -121,20 +130,24 @@ export function ConversationItem(props: ConversationItemProps) {
                     if (typeof triggerProps.onClick === 'function') triggerProps.onClick(event);
                   }}
                   aria-label='Conversation actions'
-                  class='flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-100 transition-opacity hover:bg-hover hover:text-foreground md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100'
+                  className='flex size-7 items-center justify-center rounded-md text-muted-foreground opacity-100 transition-opacity hover:bg-hover hover:text-foreground md:opacity-0 md:group-hover:opacity-100 data-[state=open]:opacity-100'
                 >
-                  <MoreHorizontal class='size-4' />
+                  <MoreHorizontal className='size-4' />
                 </button>
               )}
             />
-            <DropdownMenuContent class='min-w-34' onClick={(event) => event.stopPropagation()}>
+            <DropdownMenuContent className='min-w-34' onClick={(event) => event.stopPropagation()}>
               <DropdownMenuItem
                 value='toggle-pin'
                 onSelect={() => {
                   handleSetPinned(!props.conversation.is_pinned);
                 }}
               >
-                {props.conversation.is_pinned ? <PinOff class='size-4' /> : <Pin class='size-4' />}
+                {props.conversation.is_pinned ? (
+                  <PinOff className='size-4' />
+                ) : (
+                  <Pin className='size-4' />
+                )}
                 {props.conversation.is_pinned ? 'Unpin' : 'Pin'}
               </DropdownMenuItem>
               <DropdownMenuItem
@@ -144,7 +157,7 @@ export function ConversationItem(props: ConversationItemProps) {
                 }}
                 variant='destructive'
               >
-                <Trash2 class='size-4' />
+                <Trash2 className='size-4' />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>

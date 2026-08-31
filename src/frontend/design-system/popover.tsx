@@ -1,27 +1,31 @@
 import {
   createContext,
-  createEffect,
-  createSignal,
-  createUniqueId,
-  omit,
   useContext,
-  type Accessor,
-} from 'solid-js';
-import { Portal, type JSX } from '@solidjs/web';
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  type ComponentPropsWithRef,
+  type CSSProperties,
+  type ReactNode,
+} from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/shared/core/utils';
 
 type Placement = 'bottom-start' | 'bottom-end' | 'top-start' | 'top-end' | 'right-end';
 type Positioning = { placement?: Placement; gutter?: number };
 type PopoverContextValue = {
   contentId: string;
-  open: Accessor<boolean>;
+  dismiss: () => void;
+  open: boolean;
   setOpen: (open: boolean) => void;
-  trigger: Accessor<HTMLElement | undefined>;
-  setTrigger: (element: HTMLElement) => void;
+  trigger: HTMLElement | null;
+  setTrigger: (element: HTMLElement | null) => void;
   positioning: Positioning;
 };
 
-const PopoverContext = createContext<PopoverContextValue>();
+const PopoverContext = createContext<PopoverContextValue | null>(null);
 
 function usePopover() {
   const context = useContext(PopoverContext);
@@ -29,79 +33,108 @@ function usePopover() {
   return context;
 }
 
-function Popover(props: {
-  children: JSX.Element;
+function Popover({
+  children,
+  open: controlledOpen,
+  defaultOpen = false,
+  onOpenChange,
+  positioning = {},
+}: {
+  children: ReactNode;
   open?: boolean;
   defaultOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   positioning?: Positioning;
 }) {
-  const [internalOpen, setInternalOpen] = createSignal(props.defaultOpen ?? false);
-  const [trigger, setTrigger] = createSignal<HTMLElement>();
-  const open = () => props.open ?? internalOpen();
-  const setOpen = (nextOpen: boolean) => {
-    if (props.open === undefined) setInternalOpen(nextOpen);
-    props.onOpenChange?.(nextOpen);
-    if (!nextOpen) setTimeout(() => trigger()?.focus());
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const [trigger, setTrigger] = useState<HTMLElement | null>(null);
+  const focusRestoreTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const contentId = useId();
+  const open = controlledOpen ?? internalOpen;
+  const cancelFocusRestore = () => {
+    if (focusRestoreTimeout.current === null) return;
+    clearTimeout(focusRestoreTimeout.current);
+    focusRestoreTimeout.current = null;
   };
+  const updateOpen = (nextOpen: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(nextOpen);
+    onOpenChange?.(nextOpen);
+  };
+  const setOpen = (nextOpen: boolean) => {
+    cancelFocusRestore();
+    updateOpen(nextOpen);
+    if (!nextOpen) {
+      focusRestoreTimeout.current = setTimeout(() => {
+        focusRestoreTimeout.current = null;
+        trigger?.focus();
+      });
+    }
+  };
+  const dismiss = () => {
+    cancelFocusRestore();
+    updateOpen(false);
+  };
+
+  useEffect(() => {
+    if (!open || focusRestoreTimeout.current === null) return;
+    clearTimeout(focusRestoreTimeout.current);
+    focusRestoreTimeout.current = null;
+  }, [open]);
+
+  useEffect(
+    () => () => {
+      if (focusRestoreTimeout.current !== null) clearTimeout(focusRestoreTimeout.current);
+    },
+    [],
+  );
+
   return (
-    <PopoverContext
-      value={{
-        contentId: createUniqueId(),
-        open,
-        setOpen,
-        trigger,
-        setTrigger,
-        positioning: props.positioning ?? {},
-      }}
-    >
-      {props.children}
+    <PopoverContext value={{ contentId, dismiss, open, setOpen, trigger, setTrigger, positioning }}>
+      {children}
     </PopoverContext>
   );
 }
 
+type PopoverTriggerAttributes = ComponentPropsWithRef<'button'> & {
+  'data-state': 'open' | 'closed';
+};
+
 type PopoverTriggerProps = {
-  children?: JSX.Element;
-  asChild?: (props: PopoverTriggerAttributes) => JSX.Element;
+  children?: ReactNode;
+  asChild?: (props: PopoverTriggerAttributes) => ReactNode;
   ariaHasPopup?: 'dialog' | 'menu';
 };
 
-function PopoverTrigger(props: PopoverTriggerProps) {
+function PopoverTrigger({ children, asChild, ariaHasPopup }: PopoverTriggerProps) {
   const popover = usePopover();
   const triggerProps: PopoverTriggerAttributes = {
     ref: popover.setTrigger,
     'aria-controls': popover.contentId,
-    get 'aria-expanded'() {
-      return popover.open() ? 'true' : 'false';
-    },
-    'aria-haspopup': props.ariaHasPopup ?? 'dialog',
-    get 'data-state'() {
-      return popover.open() ? 'open' : 'closed';
-    },
-    onClick: () => popover.setOpen(!popover.open()),
+    'aria-expanded': popover.open,
+    'aria-haspopup': ariaHasPopup ?? 'dialog',
+    'data-state': popover.open ? 'open' : 'closed',
+    onClick: () => popover.setOpen(!popover.open),
   };
-  if (typeof props.asChild === 'function') return props.asChild(triggerProps);
-  return <button {...triggerProps}>{props.children}</button>;
+  if (asChild) return asChild(triggerProps);
+  return <button {...triggerProps}>{children}</button>;
 }
 
-type PopoverTriggerAttributes = JSX.ButtonHTMLAttributes<HTMLButtonElement> & {
-  'data-state': 'open' | 'closed';
-};
-
-function PopoverClose(props: JSX.ButtonHTMLAttributes<HTMLButtonElement>) {
+function PopoverClose({ onClick, ...props }: ComponentPropsWithRef<'button'>) {
   const popover = usePopover();
   return (
-    <button {...omit(props, 'children')} onClick={() => popover.setOpen(false)}>
-      {props.children}
-    </button>
+    <button
+      {...props}
+      onClick={(event) => {
+        onClick?.(event);
+        if (!event.defaultPrevented) popover.setOpen(false);
+      }}
+    />
   );
 }
 
-function getPosition(
-  trigger: DOMRect,
-  content: DOMRect,
-  positioning: Positioning,
-): JSX.CSSProperties {
+type PopoverStyle = CSSProperties & { '--available-height'?: string };
+
+function getPosition(trigger: DOMRect, content: DOMRect, positioning: Positioning): PopoverStyle {
   const gutter = positioning.gutter ?? 4;
   const viewportPadding = 8;
   const placement = positioning.placement ?? 'bottom-start';
@@ -162,82 +195,101 @@ function getPosition(
   };
 }
 
-function PopoverContent(
-  props: Omit<JSX.HTMLAttributes<HTMLDivElement>, 'style'> & {
-    initialFocus?: boolean;
-    style?: JSX.CSSProperties;
-  },
-) {
+type PopoverContentProps = Omit<ComponentPropsWithRef<'div'>, 'style'> & {
+  initialFocus?: boolean;
+  style?: PopoverStyle;
+};
+
+function PopoverContent(props: PopoverContentProps) {
   const popover = usePopover();
-  const [position, setPosition] = createSignal<JSX.CSSProperties>({ visibility: 'hidden' });
-  let content: HTMLDivElement | undefined;
+  if (!popover.open) return null;
+  return <OpenPopoverContent {...props} popoverState={popover} />;
+}
 
-  createEffect(
-    () => ({ open: popover.open(), trigger: popover.trigger() }),
-    ({ open, trigger }) => {
-      if (!open) return;
-      if (!trigger) return;
-      const updatePosition = () => {
-        if (!content) return;
-        setPosition(
-          getPosition(
-            trigger.getBoundingClientRect(),
-            content.getBoundingClientRect(),
-            popover.positioning,
-          ),
-        );
-      };
-      const closeOutside = (event: PointerEvent) => {
-        if (!(event.target instanceof Node)) return;
-        if (!content?.contains(event.target) && !trigger.contains(event.target))
-          popover.setOpen(false);
-      };
-      const closeOnEscape = (event: KeyboardEvent) => {
-        if (event.key === 'Escape') popover.setOpen(false);
-      };
-      document.addEventListener('pointerdown', closeOutside);
-      document.addEventListener('keydown', closeOnEscape);
-      window.addEventListener('resize', updatePosition);
-      window.addEventListener('scroll', updatePosition, true);
-      queueMicrotask(() => {
-        updatePosition();
-        if (props.initialFocus) {
-          content?.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus();
-        }
-      });
-      return () => {
-        document.removeEventListener('pointerdown', closeOutside);
-        document.removeEventListener('keydown', closeOnEscape);
-        window.removeEventListener('resize', updatePosition);
-        window.removeEventListener('scroll', updatePosition, true);
-      };
-    },
-  );
+function OpenPopoverContent({
+  initialFocus,
+  className,
+  style,
+  ref,
+  popoverState,
+  ...props
+}: PopoverContentProps & { popoverState: PopoverContextValue }) {
+  const [position, setPosition] = useState<PopoverStyle>({ visibility: 'hidden' });
+  const content = useRef<HTMLDivElement>(null);
+  const placement = popoverState.positioning.placement;
+  const gutter = popoverState.positioning.gutter;
+  const trigger = popoverState.trigger;
+  const close = useEffectEvent(() => popoverState.setOpen(false));
+  const dismiss = useEffectEvent(() => popoverState.dismiss());
 
-  return (
-    <>
-      {popover.open() && (
-        <Portal>
-          <div
-            {...omit(props, 'class', 'style', 'initialFocus')}
-            ref={(element) => {
-              content = element;
-            }}
-            id={popover.contentId}
-            role={props.role ?? 'dialog'}
-            class={cn(
-              'bg-surface text-foreground fixed z-(--z-popover) w-72 p-4 outline-hidden',
-              props.class,
-            )}
-            style={{
-              'border-radius': '8px 2px 12px 4px / 4px 12px 2px 8px',
-              ...props.style,
-              ...position(),
-            }}
-          />
-        </Portal>
+  useEffect(() => {
+    if (!trigger || !content.current) return;
+    const element = content.current;
+    let active = true;
+    const updatePosition = () => {
+      setPosition(
+        getPosition(trigger.getBoundingClientRect(), element.getBoundingClientRect(), {
+          placement,
+          gutter,
+        }),
+      );
+    };
+    const closeOutside = (event: PointerEvent) => {
+      if (!(event.target instanceof Node)) return;
+      if (!element.contains(event.target) && !trigger.contains(event.target)) {
+        dismiss();
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close();
+    };
+    const resizeObserver = new ResizeObserver(updatePosition);
+
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition, true);
+    resizeObserver.observe(trigger);
+    resizeObserver.observe(element);
+    queueMicrotask(() => {
+      if (!active) return;
+      updatePosition();
+      if (initialFocus) {
+        element.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus();
+      }
+    });
+
+    return () => {
+      active = false;
+      document.removeEventListener('pointerdown', closeOutside);
+      document.removeEventListener('keydown', closeOnEscape);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
+      resizeObserver.disconnect();
+    };
+  }, [gutter, initialFocus, placement, trigger]);
+
+  return createPortal(
+    <div
+      {...props}
+      ref={(element) => {
+        content.current = element;
+        if (typeof ref === 'function') ref(element);
+        else if (ref) ref.current = element;
+      }}
+      id={popoverState.contentId}
+      role={props.role ?? 'dialog'}
+      className={cn(
+        'bg-surface text-foreground fixed z-(--z-popover) w-72 p-4 outline-hidden',
+        className,
       )}
-    </>
+      style={{
+        borderRadius: '8px 2px 12px 4px / 4px 12px 2px 8px',
+        ...style,
+        ...position,
+      }}
+    />,
+    document.body,
   );
 }
 

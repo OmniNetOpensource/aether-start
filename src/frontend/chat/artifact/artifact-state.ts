@@ -1,4 +1,4 @@
-import { createStore } from 'solid-js';
+import { useSyncExternalStore } from 'react';
 import type { ArtifactLanguage } from '@/shared/chat/chat-api';
 import type { ConversationArtifact } from '@/shared/conversations/conversation';
 import { conversationId } from '@/frontend/conversations/session/conversation-meta';
@@ -27,57 +27,101 @@ const createInitialArtifactState = (): ArtifactState => ({
   artifactView: 'code',
 });
 
-const [artifactState, setArtifactState] = createStore(createInitialArtifactState());
+let artifactState = createInitialArtifactState();
+const listeners = new Set<() => void>();
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
+const replaceArtifactState = (next: ArtifactState) => {
+  if (next === artifactState) return;
+  artifactState = next;
+  for (const listener of listeners) listener();
+};
 
 export const artifacts = () => artifactState.artifacts;
 export const selectedArtifactId = () => artifactState.selectedArtifactId;
 export const artifactPanelOpen = () => artifactState.artifactPanelOpen;
 export const activeStreamingArtifactId = () => artifactState.activeStreamingArtifactId;
 export const artifactView = () => artifactState.artifactView;
+export const selectedArtifact = () =>
+  artifactState.artifacts.find((artifact) => artifact.id === artifactState.selectedArtifactId);
 
-export const clearArtifacts = () => setArtifactState(() => createInitialArtifactState());
+export const useArtifacts = () => useSyncExternalStore(subscribe, artifacts, artifacts);
+export const useArtifact = (artifactId: string | null) =>
+  useSyncExternalStore(
+    subscribe,
+    () => artifactState.artifacts.find((artifact) => artifact.id === artifactId),
+    () => artifactState.artifacts.find((artifact) => artifact.id === artifactId),
+  );
+export const useSelectedArtifactId = () =>
+  useSyncExternalStore(subscribe, selectedArtifactId, selectedArtifactId);
+export const useSelectedArtifact = () =>
+  useSyncExternalStore(subscribe, selectedArtifact, selectedArtifact);
+export const useArtifactPanelOpen = () =>
+  useSyncExternalStore(subscribe, artifactPanelOpen, artifactPanelOpen);
+export const useActiveStreamingArtifactId = () =>
+  useSyncExternalStore(subscribe, activeStreamingArtifactId, activeStreamingArtifactId);
+export const useArtifactView = () => useSyncExternalStore(subscribe, artifactView, artifactView);
+
+export const clearArtifacts = () => replaceArtifactState(createInitialArtifactState());
 
 export const setArtifacts = (nextArtifacts: ConversationArtifact[]) => {
-  setArtifactState(() => ({
-    artifacts: nextArtifacts.map((artifact) => ({
-      ...artifact,
-      status: 'completed' as const,
-      errorMessage: null,
-    })),
+  replaceArtifactState({
+    artifacts: nextArtifacts.map(
+      (artifact): ArtifactRecord => ({
+        ...artifact,
+        status: 'completed',
+        errorMessage: null,
+      }),
+    ),
     selectedArtifactId: nextArtifacts[0]?.id ?? null,
     artifactPanelOpen: false,
     activeStreamingArtifactId: null,
-    artifactView: nextArtifacts.length > 0 ? ('preview' as const) : ('code' as const),
-  }));
+    artifactView: nextArtifacts.length > 0 ? 'preview' : 'code',
+  });
 };
 
 export const selectArtifact = (nextSelectedArtifactId: string | null) => {
-  setArtifactState((state) => {
-    state.selectedArtifactId = nextSelectedArtifactId;
-    state.artifactView =
-      state.artifacts.find((artifact) => artifact.id === nextSelectedArtifactId)?.status ===
-      'completed'
-        ? 'preview'
-        : 'code';
+  const nextView =
+    artifactState.artifacts.find((artifact) => artifact.id === nextSelectedArtifactId)?.status ===
+    'completed'
+      ? 'preview'
+      : 'code';
+  if (
+    artifactState.selectedArtifactId === nextSelectedArtifactId &&
+    artifactState.artifactView === nextView
+  ) {
+    return;
+  }
+
+  replaceArtifactState({
+    ...artifactState,
+    selectedArtifactId: nextSelectedArtifactId,
+    artifactView: nextView,
   });
 };
 
-export const setArtifactPanelOpen = (open: boolean) =>
-  setArtifactState((state) => {
-    state.artifactPanelOpen = open;
-  });
+export const setArtifactPanelOpen = (open: boolean) => {
+  if (artifactState.artifactPanelOpen === open) return;
+  replaceArtifactState({ ...artifactState, artifactPanelOpen: open });
+};
 
-export const setArtifactView = (view: ArtifactView) =>
-  setArtifactState((state) => {
-    state.artifactView = view;
-  });
+export const setArtifactView = (view: ArtifactView) => {
+  if (artifactState.artifactView === view) return;
+  replaceArtifactState({ ...artifactState, artifactView: view });
+};
 
 export const startArtifact = (artifactId: string) => {
-  setArtifactState((state) => {
-    const now = new Date().toISOString();
-    const existingIndex = state.artifacts.findIndex((artifact) => artifact.id === artifactId);
-    if (existingIndex === -1) {
-      state.artifacts.unshift({
+  const now = new Date().toISOString();
+  const existingIndex = artifactState.artifacts.findIndex((artifact) => artifact.id === artifactId);
+  let nextArtifacts: ArtifactRecord[];
+
+  if (existingIndex === -1) {
+    nextArtifacts = [
+      {
         id: artifactId,
         conversation_id: conversationId() ?? '',
         title: 'Untitled Artifact',
@@ -89,89 +133,139 @@ export const startArtifact = (artifactId: string) => {
         updated_at: now,
         status: 'streaming',
         errorMessage: null,
-      });
-    } else {
-      const existing = state.artifacts[existingIndex];
-      existing.status = 'streaming';
-      existing.errorMessage = null;
-      existing.updated_at = now;
-      if (existingIndex > 0) {
-        state.artifacts.splice(existingIndex, 1);
-        state.artifacts.unshift(existing);
-      }
-    }
-    state.selectedArtifactId = artifactId;
-    state.activeStreamingArtifactId = artifactId;
-    state.artifactView = 'code';
+      },
+      ...artifactState.artifacts,
+    ];
+  } else {
+    const existing = artifactState.artifacts[existingIndex];
+    nextArtifacts = [
+      {
+        ...existing,
+        status: 'streaming',
+        errorMessage: null,
+        updated_at: now,
+      },
+      ...artifactState.artifacts.filter((_, index) => index !== existingIndex),
+    ];
+  }
+
+  replaceArtifactState({
+    ...artifactState,
+    artifacts: nextArtifacts,
+    selectedArtifactId: artifactId,
+    activeStreamingArtifactId: artifactId,
+    artifactView: 'code',
   });
 };
 
-const updateArtifact = (artifactId: string, apply: (artifact: ArtifactRecord) => void) => {
-  setArtifactState((state) => {
-    const artifact = state.artifacts.find((candidate) => candidate.id === artifactId);
-    if (artifact) apply(artifact);
-  });
+const updateArtifact = (
+  artifactId: string,
+  apply: (artifact: ArtifactRecord) => ArtifactRecord,
+) => {
+  const index = artifactState.artifacts.findIndex((artifact) => artifact.id === artifactId);
+  if (index === -1) return;
+
+  const nextArtifacts = [...artifactState.artifacts];
+  nextArtifacts[index] = apply(nextArtifacts[index]);
+  replaceArtifactState({ ...artifactState, artifacts: nextArtifacts });
 };
 
 export const updateArtifactTitle = (artifactId: string, title: string) => {
-  updateArtifact(artifactId, (artifact) => {
-    artifact.title = title;
-    artifact.updated_at = new Date().toISOString();
-  });
+  updateArtifact(artifactId, (artifact) => ({
+    ...artifact,
+    title,
+    updated_at: new Date().toISOString(),
+  }));
 };
 
 export const updateArtifactLanguage = (artifactId: string, language: ArtifactLanguage) => {
-  updateArtifact(artifactId, (artifact) => {
-    artifact.language = language;
-    artifact.updated_at = new Date().toISOString();
-  });
+  updateArtifact(artifactId, (artifact) => ({
+    ...artifact,
+    language,
+    updated_at: new Date().toISOString(),
+  }));
 };
 
 // 流式热路径:只写正在增长的 code 字段,不触碰其他 artifact 与面板状态
 export const appendArtifactCode = (artifactId: string, delta: string) => {
-  setArtifactState((state) => {
-    const artifact = state.artifacts.find((candidate) => candidate.id === artifactId);
-    if (artifact) {
-      artifact.code += delta;
-      artifact.updated_at = new Date().toISOString();
-    }
-    if (delta.length > 0) state.artifactPanelOpen = true;
+  const index = artifactState.artifacts.findIndex((artifact) => artifact.id === artifactId);
+  const nextArtifacts = [...artifactState.artifacts];
+
+  if (index !== -1) {
+    const artifact = nextArtifacts[index];
+    nextArtifacts[index] = {
+      ...artifact,
+      code: artifact.code + delta,
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  const nextPanelOpen = delta.length > 0 || artifactState.artifactPanelOpen;
+  if (index === -1 && nextPanelOpen === artifactState.artifactPanelOpen) return;
+
+  replaceArtifactState({
+    ...artifactState,
+    artifacts: nextArtifacts,
+    artifactPanelOpen: nextPanelOpen,
   });
 };
 
 export const updateArtifactDeployment = (artifactId: string, url: string, deployedAt: string) => {
-  updateArtifact(artifactId, (artifact) => {
-    artifact.deploy_url = url;
-    artifact.deployed_at = deployedAt;
-    artifact.updated_at = deployedAt;
-  });
+  updateArtifact(artifactId, (artifact) => ({
+    ...artifact,
+    deploy_url: url,
+    deployed_at: deployedAt,
+    updated_at: deployedAt,
+  }));
 };
 
 export const completeArtifact = (artifactId: string) => {
-  setArtifactState((state) => {
-    const artifact = state.artifacts.find((candidate) => candidate.id === artifactId);
-    if (artifact) {
-      artifact.status = 'completed';
-      artifact.errorMessage = null;
-      artifact.updated_at = new Date().toISOString();
-    }
-    state.selectedArtifactId = artifactId;
-    if (state.activeStreamingArtifactId === artifactId) state.activeStreamingArtifactId = null;
-    state.artifactView = 'preview';
+  const index = artifactState.artifacts.findIndex((artifact) => artifact.id === artifactId);
+  const nextArtifacts = [...artifactState.artifacts];
+
+  if (index !== -1) {
+    nextArtifacts[index] = {
+      ...nextArtifacts[index],
+      status: 'completed',
+      errorMessage: null,
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  replaceArtifactState({
+    ...artifactState,
+    artifacts: nextArtifacts,
+    selectedArtifactId: artifactId,
+    activeStreamingArtifactId:
+      artifactState.activeStreamingArtifactId === artifactId
+        ? null
+        : artifactState.activeStreamingArtifactId,
+    artifactView: 'preview',
   });
 };
 
 export const failArtifact = (artifactId: string, message: string) => {
-  setArtifactState((state) => {
-    const artifact = state.artifacts.find((candidate) => candidate.id === artifactId);
-    if (artifact) {
-      artifact.status = 'failed';
-      artifact.errorMessage = message;
-      artifact.updated_at = new Date().toISOString();
-    }
-    state.selectedArtifactId = artifactId;
-    if (state.activeStreamingArtifactId === artifactId) state.activeStreamingArtifactId = null;
-    state.artifactView = 'code';
+  const index = artifactState.artifacts.findIndex((artifact) => artifact.id === artifactId);
+  const nextArtifacts = [...artifactState.artifacts];
+
+  if (index !== -1) {
+    nextArtifacts[index] = {
+      ...nextArtifacts[index],
+      status: 'failed',
+      errorMessage: message,
+      updated_at: new Date().toISOString(),
+    };
+  }
+
+  replaceArtifactState({
+    ...artifactState,
+    artifacts: nextArtifacts,
+    selectedArtifactId: artifactId,
+    activeStreamingArtifactId:
+      artifactState.activeStreamingArtifactId === artifactId
+        ? null
+        : artifactState.activeStreamingArtifactId,
+    artifactView: 'code',
   });
 };
 

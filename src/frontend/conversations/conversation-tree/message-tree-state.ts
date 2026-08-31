@@ -1,4 +1,4 @@
-import { createSignal, createStore } from 'solid-js';
+import { useSyncExternalStore } from 'react';
 import {
   addMessage as addMessageToTree,
   buildCurrentPath,
@@ -10,36 +10,79 @@ import {
   normalizeMessageParentIds,
   switchBranch,
 } from '@/shared/conversations/message-tree';
-import type { AssistantAddition } from '@/shared/conversations/block-operations';
+import {
+  applyAssistantAddition,
+  type AssistantAddition,
+} from '@/shared/conversations/block-operations';
 import type {
-  AssistantContentBlock,
   AssistantMessage,
   BranchInfo,
   ContentBlock,
   Message,
-  ResearchItem,
   UserMessage,
 } from '@/shared/chat/message';
 
 export type MessageTreeState = ReturnType<typeof createEmptyMessageState>;
 
-const [messageTree, setMessageTree] = createStore<MessageTreeState>(createEmptyMessageState());
+let messageTree = createEmptyMessageState();
+let streamingAssistantIdSet: ReadonlySet<number> = new Set<number>();
+const listeners = new Set<() => void>();
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
+const notify = () => {
+  for (const listener of listeners) listener();
+};
 
 export const messages = () => messageTree.messages;
 export const currentPath = () => messageTree.currentPath;
 export const latestRootId = () => messageTree.latestRootId;
 export const nextMessageId = () => messageTree.nextId;
 export const getMessageTreeState = () => messageTree;
+export const streamingAssistantIds = () => streamingAssistantIdSet;
 
-// 用纯函数计算出的完整状态整体覆盖 store。顶层 4 个 key 逐一写入,
-// messages 按下标替换——未变化的元素引用相同,不会触发订阅者。
-const replaceTree = (next: MessageTreeState) =>
-  setMessageTree(() => ({
-    messages: next.messages,
-    currentPath: next.currentPath,
-    latestRootId: next.latestRootId,
-    nextId: next.nextId,
-  }));
+export const useMessages = () => useSyncExternalStore(subscribe, messages, messages);
+export const useCurrentPath = () => useSyncExternalStore(subscribe, currentPath, currentPath);
+export const useLatestRootId = () => useSyncExternalStore(subscribe, latestRootId, latestRootId);
+export const useNextMessageId = () => useSyncExternalStore(subscribe, nextMessageId, nextMessageId);
+export const useMessage = (messageId: number) =>
+  useSyncExternalStore(
+    subscribe,
+    () => messageTree.messages[messageId - 1],
+    () => messageTree.messages[messageId - 1],
+  );
+export const useStreamingAssistantIds = () =>
+  useSyncExternalStore(subscribe, streamingAssistantIds, streamingAssistantIds);
+export const useIsAssistantStreaming = (messageId: number) =>
+  useSyncExternalStore(
+    subscribe,
+    () => streamingAssistantIdSet.has(messageId),
+    () => streamingAssistantIdSet.has(messageId),
+  );
+
+const getMessageBranchSignature = (messageId: number) => {
+  const info = getBranchInfo(messageTree.messages, messageId);
+  return info ? `${info.currentIndex}:${info.siblingIds.join(',')}` : '';
+};
+
+export const useMessageBranchInfo = (messageId: number): BranchInfo | null => {
+  const branchSignature = useSyncExternalStore(
+    subscribe,
+    () => getMessageBranchSignature(messageId),
+    () => getMessageBranchSignature(messageId),
+  );
+  return branchSignature ? getBranchInfo(messageTree.messages, messageId) : null;
+};
+
+// 所有字段先完整提交，再统一通知订阅者，避免观察到半更新状态。
+const replaceTree = (next: MessageTreeState) => {
+  if (next === messageTree) return;
+  messageTree = next;
+  notify();
+};
 
 export const clearMessageTree = () => replaceTree(createEmptyMessageState());
 
@@ -104,160 +147,76 @@ export const selectMessage = (messageId: number) =>
 
 // 正在流式输出的 assistant 消息集合:tree_operation 加入,chat_finished 移除。
 // UI 用它判断某条消息是否在生成中(替代全局 status 闸门)。
-const [streamingAssistantIds, setStreamingAssistantIds] = createSignal<ReadonlySet<number>>(
-  new Set<number>(),
-);
-export { streamingAssistantIds };
-
 export const markAssistantStreaming = (assistantMessageId: number) => {
-  setStreamingAssistantIds((prev) => new Set(prev).add(assistantMessageId));
+  if (streamingAssistantIdSet.has(assistantMessageId)) return;
+  streamingAssistantIdSet = new Set(streamingAssistantIdSet).add(assistantMessageId);
+  notify();
 };
 
 export const unmarkAssistantStreaming = (assistantMessageId: number) => {
-  setStreamingAssistantIds((prev) => {
-    const next = new Set(prev);
-    next.delete(assistantMessageId);
-    return next;
-  });
+  if (!streamingAssistantIdSet.has(assistantMessageId)) return;
+  const next = new Set(streamingAssistantIdSet);
+  next.delete(assistantMessageId);
+  streamingAssistantIdSet = next;
+  notify();
 };
 
-export const clearStreamingAssistants = () => setStreamingAssistantIds(new Set<number>());
+export const clearStreamingAssistants = () => {
+  if (streamingAssistantIdSet.size === 0) return;
+  streamingAssistantIdSet = new Set<number>();
+  notify();
+};
 
-// 流式热路径:按 id 定点写,直接在 store draft 上做细粒度原地修改,
-// 只让依赖具体字段(如正在增长的 content)的订阅者失效。
+// 流式热路径只替换目标消息，其他消息与 currentPath 保持引用不变。
 export const appendToAssistant = (targetId: number, addition: AssistantAddition) => {
-  setMessageTree((state) => {
-    const target = state.messages[targetId - 1];
-    if (!target || target.role !== 'assistant') return;
-    applyAdditionInPlace(target.blocks, addition);
-  });
-};
-
-// 返回末尾 research 块的 items,没有就补一个
-const researchItems = (blocks: AssistantContentBlock[]): ResearchItem[] => {
-  const last = blocks.at(-1);
-  if (last?.type === 'research') return last.items;
-  const items: ResearchItem[] = [];
-  blocks.push({ type: 'research', items });
-  return items;
-};
-
-const applyAdditionInPlace = (blocks: AssistantContentBlock[], addition: AssistantAddition) => {
-  if (!('kind' in addition)) {
-    if (addition.type === 'content') {
-      if (!addition.content) return;
-      const last = blocks.at(-1);
-      if (last?.type === 'content') {
-        last.content += addition.content;
-      } else {
-        blocks.push({ type: 'content', content: addition.content });
-      }
-      return;
-    }
-
-    if (addition.type === 'research') {
-      blocks.push({ type: 'research', items: addition.items });
-    } else if (addition.type === 'error') {
-      blocks.push(
-        addition.error
-          ? { type: 'error', message: addition.message, error: { ...addition.error } }
-          : { type: 'error', message: addition.message },
-      );
-    }
+  const target = messageTree.messages[targetId - 1];
+  if (!target || target.role !== 'assistant') return;
+  if (
+    'kind' in addition &&
+    (addition.kind === 'ask_user_questions_status' ||
+      addition.kind === 'ask_user_questions_answered') &&
+    !target.blocks.some(
+      (block) => block.type === 'ask_user_questions' && block.callId === addition.callId,
+    )
+  ) {
     return;
   }
 
-  if (addition.kind === 'thinking') {
-    const items = researchItems(blocks);
-    const last = items.at(-1);
-    if (last?.kind === 'thinking') {
-      last.text += addition.text;
-    } else {
-      items.push({ kind: 'thinking', text: addition.text });
-    }
-    return;
-  }
+  const blocks = applyAssistantAddition(target.blocks, addition);
+  if (blocks === target.blocks) return;
 
-  if (addition.kind === 'tool') {
-    researchItems(blocks).push(addition);
-    return;
-  }
-
-  if (addition.kind === 'tool_result') {
-    const items = researchItems(blocks);
-    let pendingIndex = -1;
-    let fallbackIndex = -1;
-    for (let i = items.length - 1; i >= 0; i -= 1) {
-      const item = items[i];
-      if (item.kind !== 'tool' || item.data.call.tool !== addition.tool) continue;
-      if (!item.data.result) {
-        pendingIndex = i;
-        break;
-      }
-      if (fallbackIndex === -1) fallbackIndex = i;
-    }
-
-    const targetIndex = pendingIndex === -1 ? fallbackIndex : pendingIndex;
-    if (targetIndex === -1) {
-      items.push({
-        kind: 'tool',
-        data: { call: { tool: addition.tool, args: {} }, result: { result: addition.result } },
-      });
-      return;
-    }
-    const item = items[targetIndex];
-    if (item.kind === 'tool') {
-      item.data.result = { result: addition.result };
-    }
-    return;
-  }
-
-  const questionsIndex = blocks.findIndex(
-    (block) => block.type === 'ask_user_questions' && block.callId === addition.callId,
-  );
-
-  if (addition.kind === 'ask_user_questions_requested') {
-    const nextBlock: AssistantContentBlock = {
-      type: 'ask_user_questions',
-      callId: addition.callId,
-      questions: addition.questions,
-      status: 'pending',
-      answers: [],
-    };
-    if (questionsIndex === -1) {
-      blocks.push(nextBlock);
-    } else {
-      blocks[questionsIndex] = nextBlock;
-    }
-    return;
-  }
-
-  const questionsBlock = blocks[questionsIndex];
-  if (questionsBlock?.type !== 'ask_user_questions') return;
-
-  if (addition.kind === 'ask_user_questions_status') {
-    questionsBlock.status = addition.status;
-    return;
-  }
-
-  questionsBlock.status = 'answered';
-  questionsBlock.answers = addition.answers;
+  const nextMessages = [...messageTree.messages];
+  nextMessages[targetId - 1] = { ...target, blocks };
+  replaceTree({ ...messageTree, messages: nextMessages });
 };
 
 export const setAskUserQuestionsBlockStatus = (
   callId: string,
   status: 'pending' | 'submitting',
 ) => {
-  setMessageTree((state) => {
-    for (const message of state.messages) {
-      if (message.role !== 'assistant') continue;
-      for (const block of message.blocks) {
-        if (block.type === 'ask_user_questions' && block.callId === callId) {
-          block.status = status;
-        }
-      }
+  let changed = false;
+  const nextMessages = messageTree.messages.map((message) => {
+    if (
+      message.role !== 'assistant' ||
+      !message.blocks.some(
+        (block) => block.type === 'ask_user_questions' && block.callId === callId,
+      )
+    ) {
+      return message;
     }
+
+    changed = true;
+    return {
+      ...message,
+      blocks: applyAssistantAddition(message.blocks, {
+        kind: 'ask_user_questions_status',
+        callId,
+        status,
+      }),
+    };
   });
+
+  if (changed) replaceTree({ ...messageTree, messages: nextMessages });
 };
 
 export const getMessageBranchInfo = (messageId: number): BranchInfo | null =>
@@ -277,20 +236,25 @@ export const navigateMessageBranch = (
 };
 
 export const setMessageTreeState = (partial: Partial<MessageTreeState>) => {
-  setMessageTree((state) => {
-    if (partial.messages) state.messages = normalizeMessageParentIds(partial.messages);
-    if (partial.currentPath) state.currentPath = partial.currentPath;
-    if (partial.latestRootId !== undefined) state.latestRootId = partial.latestRootId;
-    if (partial.nextId !== undefined) state.nextId = partial.nextId;
+  replaceTree({
+    messages:
+      partial.messages === undefined
+        ? messageTree.messages
+        : normalizeMessageParentIds(partial.messages),
+    currentPath: partial.currentPath ?? messageTree.currentPath,
+    latestRootId:
+      partial.latestRootId === undefined ? messageTree.latestRootId : partial.latestRootId,
+    nextId: partial.nextId ?? messageTree.nextId,
   });
 };
 
 export const stampAssistantCompletedAt = (assistantMessageId: number, completedAt: string) => {
-  setMessageTree((state) => {
-    const target = state.messages[assistantMessageId - 1];
-    if (!target || target.role !== 'assistant') return;
-    target.completedAt = completedAt;
-  });
+  const target = messageTree.messages[assistantMessageId - 1];
+  if (!target || target.role !== 'assistant' || target.completedAt === completedAt) return;
+
+  const nextMessages = [...messageTree.messages];
+  nextMessages[assistantMessageId - 1] = { ...target, completedAt };
+  replaceTree({ ...messageTree, messages: nextMessages });
 };
 
 export const addMessage = (role: Message['role'], blocks: ContentBlock[], createdAt?: string) => {
@@ -317,7 +281,7 @@ export const applyTreeOperation = (event: { changedMessages: Message[] }) => {
     }
     messages[changed.id - 1] = changed;
   }
-  setMessageTreeState({ messages, nextId: messages.length + 1 });
+  replaceTree({ ...messageTree, messages, nextId: messages.length + 1 });
 };
 
 // POST /chat 回执:发起方直接放入 user 消息与 assistant 占位容器

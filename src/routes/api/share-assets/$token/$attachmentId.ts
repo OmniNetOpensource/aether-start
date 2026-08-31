@@ -1,4 +1,4 @@
-import { createFileRoute } from '@tanstack/solid-router';
+import { createFileRoute } from '@tanstack/react-router';
 import { getPublicShareByToken } from '@/backend/share/conversation-shares-db';
 import { isSafeShareToken } from '@/shared/share/share-assets';
 import { getServerBindings } from '@/backend/platform/cloudflare/env';

@@ -1,5 +1,5 @@
-import type { JSX } from '@solidjs/web';
+import type { ReactNode } from 'react';
 
-export function TooltipProvider(props: { children: JSX.Element }) {
-  return props.children;
+export function TooltipProvider({ children }: { children: ReactNode }) {
+  return children;
 }

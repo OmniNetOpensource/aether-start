@@ -7,7 +7,7 @@ type ContentChipProps =
       kind: 'quote';
       text: string;
       onRemove?: () => void;
-      class?: string;
+      className?: string;
     }
   | {
       kind: 'attachment';
@@ -17,7 +17,7 @@ type ContentChipProps =
       url: string;
       uploading?: boolean;
       onRemove?: () => void;
-      class?: string;
+      className?: string;
     };
 
 export function ContentChip(props: ContentChipProps) {
@@ -25,23 +25,23 @@ export function ContentChip(props: ContentChipProps) {
     return (
       <span
         data-content-chip='attachment'
-        class={cn('group/chip relative inline-block align-middle', props.class)}
+        className={cn('group/chip relative inline-block align-middle', props.className)}
       >
         <ImagePreview
           url={props.url}
           name={props.name}
           size={props.size}
           uploading={props.uploading}
-          class='!h-7 !w-7 !rounded-md ring-1 ring-border'
+          className='!h-7 !w-7 !rounded-md ring-1 ring-border'
         />
         {props.onRemove ? (
           <button
             type='button'
             aria-label='删除图片'
             onClick={props.onRemove}
-            class='absolute -right-1.5 -top-1.5 grid h-4.5 w-4.5 place-items-center rounded-full bg-foreground text-background opacity-0 shadow-sm transition-opacity group-hover/chip:opacity-100'
+            className='absolute -right-1.5 -top-1.5 grid h-4.5 w-4.5 place-items-center rounded-full bg-foreground text-background opacity-0 shadow-sm transition-opacity group-hover/chip:opacity-100'
           >
-            <X class='h-3 w-3' />
+            <X className='h-3 w-3' />
           </button>
         ) : null}
       </span>
@@ -51,27 +51,27 @@ export function ContentChip(props: ContentChipProps) {
   return (
     <span
       data-content-chip={props.kind}
-      class={cn(
+      className={cn(
         'group/chip inline-flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs align-middle',
-        props.class,
+        props.className,
       )}
     >
       {props.kind === 'quote' ? (
-        <Quote class='h-3 w-3 shrink-0 text-muted-foreground' />
+        <Quote className='h-3 w-3 shrink-0 text-muted-foreground' />
       ) : props.mimeType.startsWith('image/') ? (
-        <Image class='h-3 w-3 shrink-0 text-muted-foreground' />
+        <Image className='h-3 w-3 shrink-0 text-muted-foreground' />
       ) : (
-        <FileText class='h-3 w-3 shrink-0 text-muted-foreground' />
+        <FileText className='h-3 w-3 shrink-0 text-muted-foreground' />
       )}
-      <span class='truncate'>{props.kind === 'quote' ? props.text : props.name}</span>
+      <span className='truncate'>{props.kind === 'quote' ? props.text : props.name}</span>
       {props.onRemove ? (
         <button
           type='button'
           aria-label={props.kind === 'quote' ? '删除引用' : '删除附件'}
           onClick={props.onRemove}
-          class='-mr-1 grid h-4 w-4 shrink-0 place-items-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground'
+          className='-mr-1 grid h-4 w-4 shrink-0 place-items-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground'
         >
-          <X class='h-3 w-3' />
+          <X className='h-3 w-3' />
         </button>
       ) : null}
     </span>

@@ -1,8 +1,8 @@
-import { createServerFn } from '@tanstack/solid-start';
+import { createServerFn } from '@tanstack/react-start';
 import { deployToNetlifySchema } from '@/schema/artifact-deployment';
 
 export const deployToNetlifyFn = createServerFn({ method: 'POST' })
-  .validator(deployToNetlifySchema)
+  .inputValidator(deployToNetlifySchema)
   .handler(async ({ data }) => {
     const [{ requireSession }, { deployArtifactToNetlify }] = await Promise.all([
       import('@/backend/auth/request'),

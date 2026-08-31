@@ -1,15 +1,15 @@
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig } from 'vite';
 import { devtools } from '@tanstack/devtools-vite';
-import { tanstackStart } from '@tanstack/solid-start/plugin/vite';
-import viteSolid from 'vite-plugin-solid';
+import { tanstackStart } from '@tanstack/react-start/plugin/vite';
+import viteReact from '@vitejs/plugin-react';
 import { cloudflare } from '@cloudflare/vite-plugin';
 import tailwindcss from '@tailwindcss/vite';
 import viteTsConfigPaths from 'vite-tsconfig-paths';
 import { resolve } from 'path';
 
 const createManualChunk = (id: string) => {
-  if (id.includes('node_modules/solid-js') || id.includes('node_modules/@solidjs/web')) {
-    return 'vendor-solid';
+  if (id.includes('node_modules/react-dom') || id.includes('node_modules/react')) {
+    return 'vendor-react';
   }
 
   if (
@@ -23,19 +23,6 @@ const createManualChunk = (id: string) => {
 
   return undefined;
 };
-
-const skipUnusedReactStartOptimization = (): Plugin => ({
-  name: 'skip-unused-react-start-optimization',
-  enforce: 'post',
-  configEnvironment(name) {
-    if (name !== 'ssr') return;
-    return {
-      optimizeDeps: {
-        exclude: ['@tanstack/react-start', '@tanstack/start-server-core'],
-      },
-    };
-  },
-});
 
 export default defineConfig(({ command }) => {
   const enableBuildSourcemap = process.env.VITE_BUILD_SOURCEMAP === 'true';
@@ -56,6 +43,7 @@ export default defineConfig(({ command }) => {
       },
     },
     resolve: {
+      dedupe: ['react', 'react-dom'],
       alias: [
         {
           find: /^shiki$/,
@@ -81,8 +69,7 @@ export default defineConfig(({ command }) => {
           maskPath: '/spa-shell',
         },
       }),
-      viteSolid({ ssr: true }),
-      skipUnusedReactStartOptimization(),
+      viteReact(),
     ],
   };
 });

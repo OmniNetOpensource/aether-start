@@ -1,22 +1,22 @@
 export function AppLoading() {
   return (
     <main
-      class='flex h-screen w-screen items-center justify-center bg-background text-foreground'
+      className='flex h-screen w-screen items-center justify-center bg-background text-foreground'
       role='status'
       aria-label='正在加载'
     >
       <svg
-        class='size-20'
+        className='size-20'
         viewBox='0 0 72 72'
         fill='none'
         stroke='currentColor'
-        stroke-width='3'
-        stroke-linecap='round'
-        stroke-linejoin='round'
+        strokeWidth='3'
+        strokeLinecap='round'
+        strokeLinejoin='round'
         aria-hidden='true'
       >
         <path
-          class='aether-loading-a'
+          className='aether-loading-a'
           pathLength='1'
           d='M10 62 C18 47 28 23 36 10 C43 24 53 47 62 62 C57 51 53 43 50 38 C41 39 32 39 23 41'
         />

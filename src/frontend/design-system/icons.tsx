@@ -1,5 +1,4 @@
-import { omit } from 'solid-js';
-import type { JSX } from '@solidjs/web';
+import { createElement, type SVGProps } from 'react';
 import {
   AlertCircle as alertCircle,
   AlertTriangle as alertTriangle,
@@ -48,7 +47,7 @@ import {
   type IconNode,
 } from 'lucide';
 
-export type LucideIconProps = JSX.SvgSVGAttributes<SVGSVGElement> & {
+export type LucideIconProps = SVGProps<SVGSVGElement> & {
   size?: number | string;
   strokeWidth?: number | string;
   absoluteStrokeWidth?: boolean;
@@ -57,47 +56,49 @@ export type LucideIconProps = JSX.SvgSVGAttributes<SVGSVGElement> & {
 function IconElement(props: { node: IconNode[number] }) {
   switch (props.node[0]) {
     case 'circle':
-      return <circle {...props.node[1]} />;
     case 'line':
-      return <line {...props.node[1]} />;
     case 'path':
-      return <path {...props.node[1]} />;
     case 'rect':
-      return <rect {...props.node[1]} />;
+      return createElement(props.node[0], props.node[1]);
     default:
       throw new Error(`Unsupported Lucide SVG element: ${props.node[0]}`);
   }
 }
 
-const createLucideIcon = (iconNode: IconNode) => (props: LucideIconProps) => {
-  const size = () => props.size ?? 24;
-  const strokeWidth = () => {
-    const width = props.strokeWidth ?? 2;
-    const currentSize = size();
-    return props.absoluteStrokeWidth && typeof width === 'number' && typeof currentSize === 'number'
-      ? (width * 24) / currentSize
-      : width;
-  };
+const createLucideIcon = (iconNode: IconNode) =>
+  function LucideIcon({
+    size = 24,
+    strokeWidth = 2,
+    absoluteStrokeWidth,
+    className,
+    ...props
+  }: LucideIconProps) {
+    const resolvedStrokeWidth =
+      absoluteStrokeWidth && typeof strokeWidth === 'number' && typeof size === 'number'
+        ? (strokeWidth * 24) / size
+        : strokeWidth;
 
-  return (
-    <svg
-      {...omit(props, 'size', 'strokeWidth', 'absoluteStrokeWidth', 'class')}
-      xmlns='http://www.w3.org/2000/svg'
-      width={size()}
-      height={size()}
-      viewBox='0 0 24 24'
-      fill='none'
-      stroke='currentColor'
-      stroke-width={strokeWidth()}
-      stroke-linecap='round'
-      stroke-linejoin='round'
-      class={props.class}
-      aria-hidden='true'
-    >
-      {iconNode.map((node) => IconElement({ node }))}
-    </svg>
-  );
-};
+    return (
+      <svg
+        {...props}
+        xmlns='http://www.w3.org/2000/svg'
+        width={size}
+        height={size}
+        viewBox='0 0 24 24'
+        fill='none'
+        stroke='currentColor'
+        strokeWidth={resolvedStrokeWidth}
+        strokeLinecap='round'
+        strokeLinejoin='round'
+        className={className}
+        aria-hidden='true'
+      >
+        {iconNode.map((node, index) => (
+          <IconElement key={`${node[0]}-${index}`} node={node} />
+        ))}
+      </svg>
+    );
+  };
 
 export const AlertCircle = createLucideIcon(alertCircle);
 export const AlertCircleIcon = AlertCircle;

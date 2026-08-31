@@ -1,5 +1,5 @@
-import { For, createSignal } from 'solid-js';
-import { getRouteApi } from '@tanstack/solid-router';
+import { useRef, useState } from 'react';
+import { getRouteApi } from '@tanstack/react-router';
 import { Check } from '@/frontend/design-system/icons';
 import {
   Command,
@@ -12,38 +12,42 @@ import {
 import { Button } from '@/frontend/design-system/button';
 import { cn } from '@/shared/core/utils';
 import { useResponsive } from '@/frontend/app-shell/ResponsiveContext';
-import { currentModelId, setCurrentModelId } from '@/frontend/conversations/session/chat-selection';
+import {
+  setCurrentModelId,
+  useCurrentModelId,
+} from '@/frontend/conversations/session/chat-selection';
 
 const appRoute = getRouteApi('/app');
 
 export function ModelSelector() {
   const loaderData = appRoute.useLoaderData();
-  const availableModels = () => loaderData().availableModels;
-  const [open, setOpen] = createSignal(false);
-  const [search, setSearch] = createSignal('');
-  const [highlightedModelId, setHighlightedModelId] = createSignal('');
+  const availableModels: { id: string; name: string }[] = loaderData.availableModels;
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [highlightedModelId, setHighlightedModelId] = useState('');
   const deviceType = useResponsive();
-  let modelList: HTMLDivElement | undefined;
+  const currentModelId = useCurrentModelId();
+  const modelList = useRef<HTMLDivElement>(null);
 
-  const selectedModelId = () =>
-    availableModels().some((model) => model.id === currentModelId())
-      ? currentModelId()
-      : availableModels()[0]?.id;
-  const currentModelName = () =>
-    availableModels().find((model) => model.id === selectedModelId())?.name ?? '';
-  const filteredModels = () => {
-    const normalizedQuery = search().trim().toLowerCase();
-    if (!normalizedQuery) return availableModels();
-    return availableModels().filter(
+  const selectedModelId = availableModels.some((model) => model.id === currentModelId)
+    ? currentModelId
+    : availableModels[0]?.id;
+  const currentModelName =
+    availableModels.find((model) => model.id === selectedModelId)?.name ?? '';
+  const filterModels = (query: string) => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) return availableModels;
+    return availableModels.filter(
       (model) =>
         model.id.toLowerCase().includes(normalizedQuery) ||
         model.name.toLowerCase().includes(normalizedQuery),
     );
   };
+  const filteredModels = filterModels(search);
   const highlight = (modelId: string) => {
     setHighlightedModelId(modelId);
     queueMicrotask(() => {
-      modelList
+      modelList.current
         ?.querySelector<HTMLElement>(`[data-value="${CSS.escape(modelId)}"]`)
         ?.scrollIntoView({ block: 'nearest' });
     });
@@ -61,27 +65,27 @@ export function ModelSelector() {
         variant='ghost'
         size='sm'
         onClick={() => {
-          setHighlightedModelId(selectedModelId());
+          setHighlightedModelId(selectedModelId ?? '');
           setOpen(true);
         }}
-        aria-label={currentModelName() ? `选择模型，当前为 ${currentModelName()}` : '选择模型'}
-        title={currentModelName() || '选择模型'}
+        aria-label={currentModelName ? `选择模型，当前为 ${currentModelName}` : '选择模型'}
+        title={currentModelName || '选择模型'}
         data-testid='model-selector'
-        class={cn(
+        className={cn(
           'h-7 gap-1.5 rounded-full px-2.5 text-xs font-medium text-foreground hover:!text-foreground',
           'w-8 px-0 @[921px]:w-auto @[921px]:px-2.5 group data-[state=open]:bg-hover data-[state=open]:text-foreground',
         )}
       >
-        <span class='flex @[921px]:hidden'>
+        <span className='flex @[921px]:hidden'>
           <svg
             xmlns='http://www.w3.org/2000/svg'
             viewBox='0 0 24 24'
             fill='none'
             stroke='currentColor'
-            stroke-width='2'
-            stroke-linecap='round'
-            stroke-linejoin='round'
-            class='h-3.5 w-3.5'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            className='h-3.5 w-3.5'
             aria-hidden='true'
           >
             <path d='M12 8V4H8' />
@@ -92,17 +96,17 @@ export function ModelSelector() {
             <path d='M9 13v2' />
           </svg>
         </span>
-        <span class='hidden @[921px]:flex items-center gap-1.5'>
-          <span class='max-w-40 truncate'>{currentModelName()}</span>
+        <span className='hidden @[921px]:flex items-center gap-1.5'>
+          <span className='max-w-40 truncate'>{currentModelName}</span>
           <svg
             xmlns='http://www.w3.org/2000/svg'
             viewBox='0 0 24 24'
             fill='none'
             stroke='currentColor'
-            stroke-width='2'
-            stroke-linecap='round'
-            stroke-linejoin='round'
-            class='h-3 w-3 transition-transform duration-300'
+            strokeWidth='2'
+            strokeLinecap='round'
+            strokeLinejoin='round'
+            className='h-3 w-3 transition-transform duration-300'
             aria-hidden='true'
           >
             <path d='m6 9 6 6 6-6' />
@@ -110,7 +114,7 @@ export function ModelSelector() {
         </span>
       </Button>
       <CommandDialog
-        open={open()}
+        open={open}
         onOpenChange={(nextOpen) => {
           setOpen(nextOpen);
           if (!nextOpen) setSearch('');
@@ -118,24 +122,24 @@ export function ModelSelector() {
         label='选择模型'
       >
         <Command
-          class='rounded-lg border-0'
+          className='rounded-lg border-0'
           shouldFilter={false}
-          value={highlightedModelId()}
+          value={highlightedModelId}
           onValueChange={setHighlightedModelId}
         >
           <CommandInput
             placeholder='搜索模型...'
-            autofocus={deviceType() !== 'mobile'}
-            value={search()}
+            autoFocus={deviceType !== 'mobile'}
+            value={search}
             onValueChange={(query) => {
               setSearch(query);
-              setHighlightedModelId(filteredModels()[0]?.id ?? '');
-              modelList?.scrollTo({ top: 0 });
+              setHighlightedModelId(filterModels(query)[0]?.id ?? '');
+              modelList.current?.scrollTo({ top: 0 });
             }}
             onKeyDown={(event) => {
-              const models = filteredModels();
+              const models = filteredModels;
               if (!models.length) return;
-              const currentIndex = models.findIndex((model) => model.id === highlightedModelId());
+              const currentIndex = models.findIndex((model) => model.id === highlightedModelId);
               let nextIndex = currentIndex;
 
               if (event.key === 'ArrowDown') {
@@ -159,28 +163,25 @@ export function ModelSelector() {
             }}
           />
           <CommandList
-            ref={(element) => {
-              modelList = element;
-            }}
+            ref={modelList}
             style={{
-              height: filteredModels().length
-                ? `${Math.min(filteredModels().length * 40, 288)}px`
+              height: filteredModels.length
+                ? `${Math.min(filteredModels.length * 40, 288)}px`
                 : '72px',
             }}
           >
-            {!filteredModels().length && <CommandEmpty>未找到匹配的模型</CommandEmpty>}
-            <For each={filteredModels()}>
-              {(model) => (
-                <CommandItem
-                  value={model.id}
-                  data-value={model.id}
-                  onSelect={() => selectModel(model.id)}
-                >
-                  <span class='flex-1 truncate'>{model.name}</span>
-                  {selectedModelId() === model.id && <Check class='h-4 w-4 shrink-0' />}
-                </CommandItem>
-              )}
-            </For>
+            {!filteredModels.length && <CommandEmpty>未找到匹配的模型</CommandEmpty>}
+            {filteredModels.map((model) => (
+              <CommandItem
+                key={model.id}
+                value={model.id}
+                data-value={model.id}
+                onSelect={() => selectModel(model.id)}
+              >
+                <span className='flex-1 truncate'>{model.name}</span>
+                {selectedModelId === model.id && <Check className='h-4 w-4 shrink-0' />}
+              </CommandItem>
+            ))}
           </CommandList>
         </Command>
       </CommandDialog>

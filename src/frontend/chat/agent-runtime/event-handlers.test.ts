@@ -1,5 +1,4 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { flush } from 'solid-js';
 import { chatState, registerChatToast } from './chat-state';
 import { handleServerMessage, resetLastEventId, flushStreamBuffer } from './event-handlers';
 import {
@@ -34,7 +33,6 @@ describe('event handlers', () => {
   it('flushes replayed content and requests snapshot recovery when the cache is gone', () => {
     registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
     initializeMessageTree([createAssistantMessage()], [1]);
-    flush();
 
     const recoveryRequired = handleServerMessage(
       chatState,
@@ -55,7 +53,6 @@ describe('event handlers', () => {
       'conversation-1',
     );
 
-    flush();
     expect(recoveryRequired).toBe(true);
     expect(messages()[0]?.blocks).toEqual([{ type: 'content', content: '完整回复' }]);
   });
@@ -63,7 +60,6 @@ describe('event handlers', () => {
   it('keeps event cursors isolated between conversations', () => {
     registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
     initializeMessageTree([createAssistantMessage()], [1]);
-    flush();
 
     handleServerMessage(
       chatState,
@@ -102,7 +98,6 @@ describe('event handlers', () => {
       'conversation-b',
     );
     flushStreamBuffer();
-    flush();
 
     expect(messages()[0]?.blocks).toEqual([{ type: 'content', content: 'AB' }]);
   });
@@ -110,7 +105,6 @@ describe('event handlers', () => {
   it('keeps structured errors in the conversation tree', () => {
     registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
     initializeMessageTree([createAssistantMessage()], [1]);
-    flush();
 
     handleServerMessage(
       chatState,
@@ -136,7 +130,6 @@ describe('event handlers', () => {
       },
       'conversation-1',
     );
-    flush();
 
     expect(messages()[0]?.blocks).toEqual([
       {

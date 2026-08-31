@@ -1,4 +1,4 @@
-import { createSignal, For } from 'solid-js';
+import { useState } from 'react';
 import { Search, Globe, Wrench } from '@/frontend/design-system/icons';
 import { cn } from '@/shared/core/utils';
 import Markdown from '@/frontend/design-system/Markdown';
@@ -35,15 +35,17 @@ type SearchResultBadge = SearchClientResult;
 
 function getSearchResultCount(rawResult: string): number | null {
   try {
-    const data = JSON.parse(rawResult) as {
-      results?: unknown;
-      rawResults?: unknown;
-      web?: { results?: unknown };
-    };
+    const data: unknown = JSON.parse(rawResult);
+    if (typeof data !== 'object' || data === null) return null;
     const rawResults =
-      (Array.isArray(data?.results) && data.results) ||
-      (Array.isArray(data?.rawResults) && data.rawResults) ||
-      (Array.isArray(data?.web?.results) && data.web.results) ||
+      ('results' in data && Array.isArray(data.results) && data.results) ||
+      ('rawResults' in data && Array.isArray(data.rawResults) && data.rawResults) ||
+      ('web' in data &&
+        typeof data.web === 'object' &&
+        data.web !== null &&
+        'results' in data.web &&
+        Array.isArray(data.web.results) &&
+        data.web.results) ||
       [];
 
     if (!Array.isArray(rawResults)) {
@@ -119,10 +121,10 @@ function getStatusText(tool: Tool, isActive: boolean, toolName: string): string 
 function ThinkingStep(props: { text: string; hideConnector: boolean }) {
   return (
     <ChainOfThoughtStep
-      icon={<div class='h-2 w-2 rounded-full bg-current' />}
+      icon={<div className='h-2 w-2 rounded-full bg-current' />}
       hideConnector={props.hideConnector}
     >
-      <div class='text-xs text-secondary [&_p]:m-0'>
+      <div className='text-xs text-secondary [&_p]:m-0'>
         <Markdown content={props.text} />
       </div>
     </ChainOfThoughtStep>
@@ -131,31 +133,32 @@ function ThinkingStep(props: { text: string; hideConnector: boolean }) {
 
 // Render a search tool step
 function SearchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolean }) {
-  const query = () =>
-    typeof props.tool.call.args.query === 'string' ? props.tool.call.args.query : '';
-  const description = () => (query() ? `Reading the web · ${query()}` : 'Reading the web');
-  const searchResults = () => {
-    const result = props.tool.result;
-    if (!result) return [];
-    return parseSearchResults(typeof result.result === 'string' ? result.result : '');
-  };
+  const query = typeof props.tool.call.args.query === 'string' ? props.tool.call.args.query : '';
+  const description = query ? `Reading the web · ${query}` : 'Reading the web';
+  const searchResults = props.tool.result
+    ? parseSearchResults(
+        typeof props.tool.result.result === 'string' ? props.tool.result.result : '',
+      )
+    : [];
 
   return (
     <ChainOfThoughtStep
-      icon={<Search class='h-full w-full' />}
-      description={description()}
+      icon={<Search className='h-full w-full' />}
+      description={description}
       status={getStepStatus(props.tool, props.isActive)}
       hideConnector={props.hideConnector}
     >
-      {searchResults().length > 0 && (
+      {searchResults.length > 0 && (
         <ChainOfThoughtSearchResults>
-          <For each={searchResults()}>
-            {(r) => (
-              <ChainOfThoughtSearchResult href={r.url} url={r.url}>
-                {r.title}
-              </ChainOfThoughtSearchResult>
-            )}
-          </For>
+          {searchResults.map((result, index) => (
+            <ChainOfThoughtSearchResult
+              key={`${result.url}-${index}`}
+              href={result.url}
+              url={result.url}
+            >
+              {result.title}
+            </ChainOfThoughtSearchResult>
+          ))}
         </ChainOfThoughtSearchResults>
       )}
     </ChainOfThoughtStep>
@@ -179,16 +182,18 @@ function FetchResultDialogBody(props: { payload: FetchClientPayload }) {
       <img
         src={props.payload.data_url}
         alt={props.payload.url}
-        class='max-h-[70vh] w-full object-contain'
+        className='max-h-[70vh] w-full object-contain'
       />
     );
   }
 
   if (props.payload.type === 'markdown' || props.payload.type === 'youtube') {
     return (
-      <div class='max-h-[70vh] overflow-y-auto text-sm text-secondary'>
+      <div className='max-h-[70vh] overflow-y-auto text-sm text-secondary'>
         <Markdown content={props.payload.content} />
-        {props.payload.truncated && <p class='mt-3 text-xs text-muted-foreground'>内容已截断</p>}
+        {props.payload.truncated && (
+          <p className='mt-3 text-xs text-muted-foreground'>内容已截断</p>
+        )}
       </div>
     );
   }
@@ -197,66 +202,61 @@ function FetchResultDialogBody(props: { payload: FetchClientPayload }) {
 }
 
 function FetchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolean }) {
-  const [dialogOpen, setDialogOpen] = createSignal(false);
-  const url = () => (typeof props.tool.call.args.url === 'string' ? props.tool.call.args.url : '');
-  const stepStatus = () => getStepStatus(props.tool, props.isActive);
-  const result = () => props.tool.result;
-  const resultText = () => {
-    const value = result();
-    return value && typeof value.result === 'string' ? value.result : '';
-  };
-  const payload = () => (resultText() ? parseFetchClientPayload(resultText()) : null);
-  const isError = () => {
-    const text = resultText();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const url = typeof props.tool.call.args.url === 'string' ? props.tool.call.args.url : '';
+  const stepStatus = getStepStatus(props.tool, props.isActive);
+  const result = props.tool.result;
+  const resultText = result && typeof result.result === 'string' ? result.result : '';
+  const payload = resultText ? parseFetchClientPayload(resultText) : null;
+  const isError = (() => {
+    const text = resultText;
     const isLegacyError =
       text.startsWith('Error') ||
       (text.startsWith('[系统提示:') &&
         (text.includes('内容过长') || text.includes('已省略不返回')));
-    return payload()?.type === 'error' || Boolean(result() && isLegacyError);
-  };
-  const canOpen = () =>
-    stepStatus() === 'complete' && payload()?.type !== 'error' && payload() !== null;
-  const descriptionText = () =>
-    `Take a closer look${stepStatus() === 'complete' ? (isError() ? '...failed.' : '...done!') : ''}`;
+    return payload?.type === 'error' || Boolean(result && isLegacyError);
+  })();
+  const canOpen = stepStatus === 'complete' && payload?.type !== 'error' && payload !== null;
+  const descriptionText = `Take a closer look${stepStatus === 'complete' ? (isError ? '...failed.' : '...done!') : ''}`;
   const renderImage = () => {
-    const value = payload();
+    const value = payload;
     if (value?.type !== 'image') return null;
-    return <ChainOfThoughtImage src={value.data_url} alt={url()} />;
+    return <ChainOfThoughtImage src={value.data_url} alt={url} />;
   };
   const renderDialog = () => {
-    const value = payload();
-    if (!canOpen() || !value) return null;
+    const value = payload;
+    if (!canOpen || !value) return null;
 
     return (
-      <Dialog open={dialogOpen()} onOpenChange={setDialogOpen}>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogTrigger
           asChild={(triggerProps) => (
             <button
               {...triggerProps}
               type='button'
-              class='text-xs text-secondary leading-relaxed hover:text-foreground cursor-pointer text-left'
+              className='text-xs text-secondary leading-relaxed hover:text-foreground cursor-pointer text-left'
             >
-              {descriptionText()} · 查看
+              {descriptionText} · 查看
             </button>
           )}
         />
-        <DialogContent class='w-[min(94vw,48rem)] gap-3 p-4 sm:max-w-3xl' showCloseButton>
+        <DialogContent className='w-[min(94vw,48rem)] gap-3 p-4 sm:max-w-3xl' showCloseButton>
           <DialogHeader>
-            <DialogTitle>{fetchDialogTitle(url() || value.url)}</DialogTitle>
-            {(url() || value.url) && (
+            <DialogTitle>{fetchDialogTitle(url || value.url)}</DialogTitle>
+            {(url || value.url) && (
               <DialogDescription
                 asChild={(descriptionProps) => (
                   <a
                     {...descriptionProps}
-                    href={url() || value.url}
+                    href={url || value.url}
                     target='_blank'
                     rel='noopener noreferrer'
-                    class={cn(
-                      descriptionProps.class,
+                    className={cn(
+                      descriptionProps.className,
                       'break-all text-left hover:text-primary-hover',
                     )}
                   >
-                    {url() || value.url}
+                    {url || value.url}
                   </a>
                 )}
               />
@@ -270,20 +270,20 @@ function FetchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolea
 
   return (
     <ChainOfThoughtStep
-      icon={<Globe class='h-full w-full' />}
-      description={canOpen() ? undefined : descriptionText()}
-      status={stepStatus()}
+      icon={<Globe className='h-full w-full' />}
+      description={canOpen ? undefined : descriptionText}
+      status={stepStatus}
       hideConnector={props.hideConnector}
     >
       {renderDialog()}
-      {url() && (
+      {url && (
         <a
-          href={url()}
+          href={url}
           target='_blank'
           rel='noopener noreferrer'
-          class='text-xs text-muted-foreground hover:text-primary-hover transition-colors break-all'
+          className='text-xs text-muted-foreground hover:text-primary-hover transition-colors break-all'
         >
-          {url()}
+          {url}
         </a>
       )}
       {renderImage()}
@@ -292,7 +292,7 @@ function FetchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolea
 }
 
 function RenderStep(props: { tool: Tool; isActive: boolean; hideConnector: boolean }) {
-  const description = () => `render · ${getStatusText(props.tool, props.isActive, 'render')}`;
+  const description = `render · ${getStatusText(props.tool, props.isActive, 'render')}`;
 
   return (
     <ChainOfThoughtStep
@@ -301,10 +301,10 @@ function RenderStep(props: { tool: Tool; isActive: boolean; hideConnector: boole
           viewBox='0 0 24 24'
           fill='none'
           stroke='currentColor'
-          stroke-width='2'
-          stroke-linecap='round'
-          stroke-linejoin='round'
-          class='h-full w-full'
+          strokeWidth='2'
+          strokeLinecap='round'
+          strokeLinejoin='round'
+          className='h-full w-full'
           aria-hidden='true'
         >
           <rect x='3' y='3' width='18' height='18' rx='2' />
@@ -313,7 +313,7 @@ function RenderStep(props: { tool: Tool; isActive: boolean; hideConnector: boole
           <path d='M7 17h6' />
         </svg>
       }
-      description={description()}
+      description={description}
       status={getStepStatus(props.tool, props.isActive)}
       hideConnector={props.hideConnector}
     />
@@ -322,13 +322,12 @@ function RenderStep(props: { tool: Tool; isActive: boolean; hideConnector: boole
 
 // Render a generic tool step
 function GenericToolStep(props: { tool: Tool; isActive: boolean; hideConnector: boolean }) {
-  const description = () =>
-    `${props.tool.call.tool} · ${getStatusText(props.tool, props.isActive, props.tool.call.tool)}`;
+  const description = `${props.tool.call.tool} · ${getStatusText(props.tool, props.isActive, props.tool.call.tool)}`;
 
   return (
     <ChainOfThoughtStep
-      icon={<Wrench class='h-full w-full' />}
-      description={description()}
+      icon={<Wrench className='h-full w-full' />}
+      description={description}
       status={getStepStatus(props.tool, props.isActive)}
       hideConnector={props.hideConnector}
     />
@@ -345,41 +344,59 @@ export function ResearchBlock(props: ResearchBlockProps) {
     <ChainOfThought>
       <ChainOfThoughtHeader>思考过程</ChainOfThoughtHeader>
       <ChainOfThoughtContent>
-        <For each={props.items}>
-          {(item, index) => {
-            const isLastStep = () => index() === props.items.length - 1;
+        {props.items.map((item, index) => {
+          const isLastStep = index === props.items.length - 1;
 
-            if (item.kind === 'thinking') {
-              return <ThinkingStep text={item.text} hideConnector={isLastStep()} />;
-            }
+          if (item.kind === 'thinking') {
+            return <ThinkingStep key={index} text={item.text} hideConnector={isLastStep} />;
+          }
 
-            const tool = item.data;
-            const toolName = tool.call.tool;
-            const itemIsActive = () => (props.isActive ?? false) && isLastStep();
+          const tool = item.data;
+          const toolName = tool.call.tool;
+          const itemIsActive = (props.isActive ?? false) && isLastStep;
 
-            if (SEARCH_TOOL_NAMES.has(toolName)) {
-              return (
-                <SearchStep tool={tool} isActive={itemIsActive()} hideConnector={isLastStep()} />
-              );
-            }
-
-            if (toolName === 'fetch_url') {
-              return (
-                <FetchStep tool={tool} isActive={itemIsActive()} hideConnector={isLastStep()} />
-              );
-            }
-
-            if (toolName === 'render') {
-              return (
-                <RenderStep tool={tool} isActive={itemIsActive()} hideConnector={isLastStep()} />
-              );
-            }
-
+          if (SEARCH_TOOL_NAMES.has(toolName)) {
             return (
-              <GenericToolStep tool={tool} isActive={itemIsActive()} hideConnector={isLastStep()} />
+              <SearchStep
+                key={index}
+                tool={tool}
+                isActive={itemIsActive}
+                hideConnector={isLastStep}
+              />
             );
-          }}
-        </For>
+          }
+
+          if (toolName === 'fetch_url') {
+            return (
+              <FetchStep
+                key={index}
+                tool={tool}
+                isActive={itemIsActive}
+                hideConnector={isLastStep}
+              />
+            );
+          }
+
+          if (toolName === 'render') {
+            return (
+              <RenderStep
+                key={index}
+                tool={tool}
+                isActive={itemIsActive}
+                hideConnector={isLastStep}
+              />
+            );
+          }
+
+          return (
+            <GenericToolStep
+              key={index}
+              tool={tool}
+              isActive={itemIsActive}
+              hideConnector={isLastStep}
+            />
+          );
+        })}
       </ChainOfThoughtContent>
     </ChainOfThought>
   );

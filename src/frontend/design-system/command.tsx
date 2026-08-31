@@ -1,39 +1,42 @@
-import { createContext, omit, useContext } from 'solid-js';
-import type { Accessor } from 'solid-js';
-import type { JSX } from '@solidjs/web';
+import { createContext, useContext, type ComponentProps, type ReactNode } from 'react';
 import { Search } from '@/frontend/design-system/icons';
 import { Dialog, DialogContent, DialogTitle } from '@/frontend/design-system/dialog';
 import { cn } from '@/shared/core/utils';
 
 const CommandContext = createContext<{
-  value: Accessor<string>;
+  value: string;
   onValueChange?: (value: string) => void;
-}>({ value: () => '' });
+}>({ value: '' });
 
-type CommandProps = JSX.HTMLAttributes<HTMLDivElement> & {
+type CommandProps = ComponentProps<'div'> & {
   shouldFilter?: boolean;
   value?: string;
   onValueChange?: (value: string) => void;
 };
 
-function Command(props: CommandProps) {
+function Command({
+  className,
+  shouldFilter: _shouldFilter,
+  value = '',
+  onValueChange,
+  ...props
+}: CommandProps) {
+  void _shouldFilter;
   return (
-    <CommandContext value={{ value: () => props.value ?? '', onValueChange: props.onValueChange }}>
+    <CommandContext value={{ value, onValueChange }}>
       <div
-        {...omit(props, 'class', 'shouldFilter', 'value', 'onValueChange', 'children')}
-        class={cn(
+        {...props}
+        className={cn(
           'flex h-full w-full flex-col overflow-hidden rounded-md bg-background text-foreground',
-          props.class,
+          className,
         )}
-      >
-        {props.children}
-      </div>
+      />
     </CommandContext>
   );
 }
 
 function CommandDialog(props: {
-  children?: JSX.Element;
+  children?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   label?: string;
@@ -42,7 +45,7 @@ function CommandDialog(props: {
   return (
     <Dialog open={props.open} onOpenChange={props.onOpenChange}>
       <DialogContent
-        class={cn(
+        className={cn(
           'fixed top-[50%] left-[50%] w-full max-w-[calc(100vw-2rem)] max-h-[85vh] -translate-x-1/2 -translate-y-1/2',
           'overflow-hidden p-0 gap-0 rounded-lg border bg-background shadow-lg sm:max-w-md',
           props.contentClassName,
@@ -50,102 +53,82 @@ function CommandDialog(props: {
         showCloseButton={false}
         animated={false}
       >
-        <DialogTitle class='sr-only'>{props.label ?? 'Command menu'}</DialogTitle>
+        <DialogTitle className='sr-only'>{props.label ?? 'Command menu'}</DialogTitle>
         {props.children}
       </DialogContent>
     </Dialog>
   );
 }
 
-type CommandInputProps = Omit<JSX.InputHTMLAttributes<HTMLInputElement>, 'onInput'> & {
+type CommandInputProps = ComponentProps<'input'> & {
   onValueChange?: (value: string) => void;
 };
 
-function CommandInput(props: CommandInputProps) {
+function CommandInput({ className, onInput, onValueChange, ...props }: CommandInputProps) {
   return (
-    <div class='flex items-center border-b border-border px-3' cmdk-input-wrapper=''>
-      <Search class='mr-2 h-4 w-4 shrink-0 text-secondary' />
+    <div className='flex items-center border-b border-border px-3' cmdk-input-wrapper=''>
+      <Search className='mr-2 h-4 w-4 shrink-0 text-secondary' />
       <input
-        {...omit(props, 'class', 'onValueChange')}
-        class={cn(
+        {...props}
+        className={cn(
           'flex h-11 w-full rounded-md bg-transparent py-3 text-sm outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed',
-          props.class,
+          className,
         )}
-        onInput={(event) => props.onValueChange?.(event.currentTarget.value)}
+        onInput={(event) => {
+          onInput?.(event);
+          onValueChange?.(event.currentTarget.value);
+        }}
       />
     </div>
   );
 }
 
-function CommandList(props: JSX.HTMLAttributes<HTMLDivElement>) {
+function CommandList({ className, ...props }: ComponentProps<'div'>) {
+  return <div {...props} className={cn('max-h-72 overflow-y-auto overflow-x-hidden', className)} />;
+}
+
+function CommandEmpty({ className, ...props }: ComponentProps<'div'>) {
   return (
-    <div
-      {...omit(props, 'class', 'children')}
-      class={cn('max-h-72 overflow-y-auto overflow-x-hidden', props.class)}
-    >
-      {props.children}
-    </div>
+    <div {...props} className={cn('py-6 text-center text-sm text-muted-foreground', className)} />
   );
 }
 
-function CommandEmpty(props: JSX.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      {...omit(props, 'class', 'children')}
-      class={cn('py-6 text-center text-sm text-muted-foreground', props.class)}
-    >
-      {props.children}
-    </div>
-  );
+function CommandGroup({ className, ...props }: ComponentProps<'div'>) {
+  return <div {...props} className={cn('overflow-hidden p-1 text-foreground', className)} />;
 }
 
-function CommandGroup(props: JSX.HTMLAttributes<HTMLDivElement>) {
-  return (
-    <div
-      {...omit(props, 'class', 'children')}
-      class={cn('overflow-hidden p-1 text-foreground', props.class)}
-    >
-      {props.children}
-    </div>
-  );
+function CommandSeparator({ className, ...props }: ComponentProps<'hr'>) {
+  return <hr {...props} className={cn('-mx-1 h-px bg-border', className)} />;
 }
 
-function CommandSeparator(props: JSX.HTMLAttributes<HTMLHRElement>) {
-  return <hr {...props} class={cn('-mx-1 h-px bg-border', props.class)} />;
-}
-
-type CommandItemProps = JSX.ButtonHTMLAttributes<HTMLButtonElement> & {
+type CommandItemProps = Omit<ComponentProps<'button'>, 'onSelect' | 'value'> & {
   value: string;
   onSelect?: () => void;
 };
 
-function CommandItem(props: CommandItemProps) {
+function CommandItem({ className, value, onSelect, ...props }: CommandItemProps) {
   const command = useContext(CommandContext);
   return (
     <button
-      {...omit(props, 'class', 'value', 'onSelect', 'children')}
+      {...props}
       type='button'
-      data-selected={command.value() === props.value}
-      class={cn(
+      data-selected={command.value === value}
+      className={cn(
         "relative flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2.5 text-sm outline-none data-[disabled=true]:pointer-events-none data-[selected=true]:bg-hover data-[selected=true]:text-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        props.class,
+        className,
       )}
-      onPointerMove={() => command.onValueChange?.(props.value)}
-      onClick={props.onSelect}
-    >
-      {props.children}
-    </button>
+      onPointerMove={() => command.onValueChange?.(value)}
+      onClick={onSelect}
+    />
   );
 }
 
-function CommandShortcut(props: JSX.HTMLAttributes<HTMLSpanElement>) {
+function CommandShortcut({ className, ...props }: ComponentProps<'span'>) {
   return (
     <span
-      {...omit(props, 'class', 'children')}
-      class={cn('ml-auto text-xs tracking-widest text-muted-foreground', props.class)}
-    >
-      {props.children}
-    </span>
+      {...props}
+      className={cn('ml-auto text-xs tracking-widest text-muted-foreground', className)}
+    />
   );
 }
 

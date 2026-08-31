@@ -1,5 +1,6 @@
 import { Check, Copy, Link2, Loader2, XCircle } from '@/frontend/design-system/icons';
-import { createSignal, Loading } from 'solid-js';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/frontend/design-system/button';
 import { Dialog, DialogContent, DialogFooter } from '@/frontend/design-system/dialog';
 import { useToast } from '@/frontend/app-shell/useToast';
@@ -8,13 +9,17 @@ import {
   getConversationShareFn,
   revokeConversationShareFn,
 } from '@/rpc/share';
-import { useConversationsQuery, selectAllConversations } from '@/frontend/conversations/session';
-import { status } from '@/frontend/chat/agent-runtime/chat-state';
 import {
-  currentPath,
-  messages,
+  queryClient,
+  selectAllConversations,
+  useConversationsQuery,
+} from '@/frontend/conversations/session';
+import { useChatStatus } from '@/frontend/chat/agent-runtime/chat-state';
+import {
+  useCurrentPath,
+  useMessages,
 } from '@/frontend/conversations/conversation-tree/message-tree-state';
-import { conversationId } from '@/frontend/conversations/session/conversation-meta';
+import { useConversationId } from '@/frontend/conversations/session/conversation-meta';
 import type { ConversationShareStatus } from '@/shared/share/share';
 
 export type ShareDialogProps = {
@@ -25,41 +30,54 @@ export type ShareDialogProps = {
 const buildShareUrl = (token: string) =>
   `${window.location.origin}/share/${encodeURIComponent(token)}`;
 
+type ShareState = {
+  status: ConversationShareStatus;
+  token: string | null;
+};
+
+const notShared: ShareState = { status: 'not_shared', token: null };
+
 export function ShareDialog(props: ShareDialogProps) {
   const toast = useToast();
   const conversations = useConversationsQuery();
-  const isBusy = () => status() !== 'idle';
-
-  const [share, setShare] = createSignal(
-    async (): Promise<{ status: ConversationShareStatus; token: string | null }> => {
-      const currentConversationId = conversationId();
-      if (!props.open || !currentConversationId) return { status: 'not_shared', token: null };
+  const status = useChatStatus();
+  const currentConversationId = useConversationId();
+  const currentPath = useCurrentPath();
+  const messages = useMessages();
+  const shareQuery = useQuery({
+    queryKey: ['conversation-share', currentConversationId],
+    queryFn: async (): Promise<ShareState> => {
+      if (!currentConversationId) throw new Error('Cannot load a share without a conversation');
       const result = await getConversationShareFn({
         data: { conversationId: currentConversationId },
       });
       return { status: result.status, token: result.token ?? null };
     },
-  );
-  const [shareActionLoading, setShareActionLoading] = createSignal<'create' | 'revoke' | null>(
-    null,
-  );
-  const [copied, setCopied] = createSignal(false);
+    enabled: props.open && currentConversationId !== null,
+    retry: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    staleTime: 0,
+    gcTime: 0,
+  });
+  const [shareActionLoading, setShareActionLoading] = useState<'create' | 'revoke' | null>(null);
+  const [copied, setCopied] = useState(false);
 
-  const pathMessageCount = () =>
-    currentPath().filter((id) => messages()[id - 1] !== undefined).length;
+  if (shareQuery.error) throw shareQuery.error;
 
-  const conversationTitle = () => {
-    if (!conversationId()) return 'Aether';
+  const share = shareQuery.data ?? notShared;
+  const isBusy = status !== 'idle';
+  const pathMessageCount = currentPath.filter((id) => messages[id - 1] !== undefined).length;
+
+  const conversationTitle = (() => {
+    if (!currentConversationId) return 'Aether';
     const conversation = selectAllConversations(conversations.data).find(
-      (item) => item.id === conversationId(),
+      (item) => item.id === currentConversationId,
     );
     return conversation?.title?.trim() || 'Aether';
-  };
+  })();
 
-  const shareUrl = () => {
-    const token = share().token;
-    return token ? buildShareUrl(token) : null;
-  };
+  const shareUrl = share.token ? buildShareUrl(share.token) : null;
 
   const handleOpenChange = (nextOpen: boolean) => {
     if (!nextOpen) {
@@ -70,12 +88,11 @@ export function ShareDialog(props: ShareDialogProps) {
   };
 
   const handleCreateShare = async () => {
-    const currentConversationId = conversationId();
     if (!currentConversationId) {
       toast.error('No conversation selected');
       return;
     }
-    if (pathMessageCount() === 0) {
+    if (pathMessageCount === 0) {
       toast.warning('There are no messages to share');
       return;
     }
@@ -85,11 +102,14 @@ export function ShareDialog(props: ShareDialogProps) {
       const result = await createConversationShareFn({
         data: {
           conversationId: currentConversationId,
-          title: conversationTitle(),
-          currentPath: [...currentPath()],
+          title: conversationTitle,
+          currentPath: [...currentPath],
         },
       });
-      setShare({ status: 'active', token: result.token });
+      queryClient.setQueryData<ShareState>(['conversation-share', currentConversationId], {
+        status: 'active',
+        token: result.token,
+      });
       toast.success('Share URL created');
     } catch (error) {
       console.error('Failed to create share', error);
@@ -100,13 +120,15 @@ export function ShareDialog(props: ShareDialogProps) {
   };
 
   const handleRevokeShare = async () => {
-    const currentConversationId = conversationId();
     if (!currentConversationId) return;
 
     setShareActionLoading('revoke');
     try {
       await revokeConversationShareFn({ data: { conversationId: currentConversationId } });
-      setShare((prev) => ({ status: 'revoked', token: prev.token }));
+      queryClient.setQueryData<ShareState>(
+        ['conversation-share', currentConversationId],
+        (previous) => ({ status: 'revoked', token: previous?.token ?? null }),
+      );
       toast.success('Share URL revoked');
     } catch (error) {
       console.error('Failed to revoke share', error);
@@ -117,11 +139,10 @@ export function ShareDialog(props: ShareDialogProps) {
   };
 
   const handleCopyUrl = async () => {
-    const url = shareUrl();
-    if (!url) return;
+    if (!shareUrl) return;
 
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       toast.success('Share URL copied');
       setTimeout(() => setCopied(false), 1200);
@@ -131,119 +152,115 @@ export function ShareDialog(props: ShareDialogProps) {
     }
   };
 
-  const isLoading = () => shareActionLoading() !== null;
+  const isLoading = shareActionLoading !== null;
 
   return (
     <Dialog open={props.open} onOpenChange={handleOpenChange}>
       <DialogContent
-        class='flex max-h-[90vh] flex-col overflow-hidden px-6 py-6 sm:max-w-2xl'
+        className='flex max-h-[90vh] flex-col overflow-hidden px-6 py-6 sm:max-w-2xl'
         aria-describedby='share-dialog-description'
       >
-        <div class='flex min-h-0 flex-1 flex-col gap-6 overflow-hidden'>
+        <div className='flex min-h-0 flex-1 flex-col gap-6 overflow-hidden'>
           {/* Share URL section */}
-          <section class='shrink-0 space-y-3' aria-labelledby='share-url-heading'>
+          <section className='shrink-0 space-y-3' aria-labelledby='share-url-heading'>
             <h3
               id='share-url-heading'
-              class='flex items-center gap-2 text-sm font-medium text-foreground'
+              className='flex items-center gap-2 text-sm font-medium text-foreground'
             >
-              <Link2 class='h-4 w-4 shrink-0 text-muted-foreground' />
+              <Link2 className='h-4 w-4 shrink-0 text-muted-foreground' />
               Share link
             </h3>
 
-            <Loading
-              fallback={
-                <div
-                  class='flex h-20 items-center gap-2 rounded-lg border border-border bg-muted px-4'
-                  aria-live='polite'
-                >
-                  <Loader2 class='h-4 w-4 shrink-0 animate-spin text-muted-foreground' />
-                  <span class='text-sm text-muted-foreground'>Loading…</span>
-                </div>
-              }
-            >
-              {share().status === 'active' && shareUrl() ? (
-                <div class='space-y-3'>
-                  <div class='flex gap-2'>
-                    <div class='min-w-0 flex-1 break-all rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-secondary'>
-                      {shareUrl()}
-                    </div>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='outline'
-                      onClick={handleCopyUrl}
-                      disabled={isLoading()}
-                      aria-label={copied() ? 'Copied' : 'Copy URL'}
-                      class='shrink-0'
-                    >
-                      {copied() ? (
-                        <Check class='h-4 w-4 text-green-600' />
-                      ) : (
-                        <Copy class='h-4 w-4' />
-                      )}
-                      {copied() ? 'Copied' : 'Copy'}
-                    </Button>
+            {shareQuery.isLoading ? (
+              <div
+                className='flex h-20 items-center gap-2 rounded-lg border border-border bg-muted px-4'
+                aria-live='polite'
+              >
+                <Loader2 className='h-4 w-4 shrink-0 animate-spin text-muted-foreground' />
+                <span className='text-sm text-muted-foreground'>Loading…</span>
+              </div>
+            ) : share.status === 'active' && shareUrl ? (
+              <div className='space-y-3'>
+                <div className='flex gap-2'>
+                  <div className='min-w-0 flex-1 break-all rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-secondary'>
+                    {shareUrl}
                   </div>
-                  <div class='flex items-center gap-2'>
-                    <Button
-                      type='button'
-                      size='sm'
-                      variant='ghost'
-                      onClick={handleRevokeShare}
-                      disabled={isLoading()}
-                      class='text-muted-foreground hover:text-destructive hover:bg-destructive-muted'
-                    >
-                      {shareActionLoading() === 'revoke' ? (
-                        <>
-                          <Loader2 class='h-4 w-4 animate-spin' />
-                          Revoking…
-                        </>
-                      ) : (
-                        <>
-                          <XCircle class='h-4 w-4' />
-                          Revoke link
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <div class='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                  <p class='text-sm text-muted-foreground'>
-                    {share().status === 'revoked'
-                      ? 'Link was revoked. Create a new one to share again.'
-                      : 'Anyone with the link can view this conversation.'}
-                  </p>
                   <Button
                     type='button'
                     size='sm'
-                    onClick={handleCreateShare}
-                    disabled={isLoading() || isBusy() || pathMessageCount() === 0}
-                    class='shrink-0'
+                    variant='outline'
+                    onClick={handleCopyUrl}
+                    disabled={isLoading}
+                    aria-label={copied ? 'Copied' : 'Copy URL'}
+                    className='shrink-0'
                   >
-                    {shareActionLoading() === 'create' ? (
-                      <>
-                        <Loader2 class='h-4 w-4 animate-spin' />
-                        Creating…
-                      </>
-                    ) : share().status === 'revoked' ? (
-                      'Create new link'
+                    {copied ? (
+                      <Check className='h-4 w-4 text-green-600' />
                     ) : (
-                      'Create link'
+                      <Copy className='h-4 w-4' />
+                    )}
+                    {copied ? 'Copied' : 'Copy'}
+                  </Button>
+                </div>
+                <div className='flex items-center gap-2'>
+                  <Button
+                    type='button'
+                    size='sm'
+                    variant='ghost'
+                    onClick={handleRevokeShare}
+                    disabled={isLoading}
+                    className='text-muted-foreground hover:text-destructive hover:bg-destructive-muted'
+                  >
+                    {shareActionLoading === 'revoke' ? (
+                      <>
+                        <Loader2 className='h-4 w-4 animate-spin' />
+                        Revoking…
+                      </>
+                    ) : (
+                      <>
+                        <XCircle className='h-4 w-4' />
+                        Revoke link
+                      </>
                     )}
                   </Button>
                 </div>
-              )}
-            </Loading>
+              </div>
+            ) : (
+              <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+                <p className='text-sm text-muted-foreground'>
+                  {share.status === 'revoked'
+                    ? 'Link was revoked. Create a new one to share again.'
+                    : 'Anyone with the link can view this conversation.'}
+                </p>
+                <Button
+                  type='button'
+                  size='sm'
+                  onClick={handleCreateShare}
+                  disabled={isLoading || isBusy || pathMessageCount === 0}
+                  className='shrink-0'
+                >
+                  {shareActionLoading === 'create' ? (
+                    <>
+                      <Loader2 className='h-4 w-4 animate-spin' />
+                      Creating…
+                    </>
+                  ) : share.status === 'revoked' ? (
+                    'Create new link'
+                  ) : (
+                    'Create link'
+                  )}
+                </Button>
+              </div>
+            )}
           </section>
         </div>
 
-        <DialogFooter class='flex shrink-0 flex-row justify-end gap-2 border-t border-border pt-4'>
+        <DialogFooter className='flex shrink-0 flex-row justify-end gap-2 border-t border-border pt-4'>
           <Button
             type='button'
             variant='ghost'
             onClick={() => handleOpenChange(false)}
-            class='text-secondary'
+            className='text-secondary'
           >
             Close
           </Button>

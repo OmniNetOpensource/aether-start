@@ -1,13 +1,12 @@
-import { fireEvent, screen } from '@testing-library/dom';
+import { act, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { flush } from 'solid-js';
 import { renderTest } from '@/test/render';
 import { ToastProvider, useToast } from './toast-context';
 
 afterEach(() => vi.useRealTimers());
 
 describe('Toast', () => {
-  it('stops intercepting clicks while exiting and is removed after the exit duration', () => {
+  it('stops intercepting clicks while exiting and is removed after the exit duration', async () => {
     vi.useFakeTimers();
 
     const Trigger = () => {
@@ -22,9 +21,7 @@ describe('Toast', () => {
     ));
 
     fireEvent.click(screen.getByRole('button', { name: 'Show toast' }));
-    flush();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
-    flush();
 
     expect(
       screen
@@ -32,8 +29,9 @@ describe('Toast', () => {
         .parentElement?.parentElement?.classList.contains('pointer-events-none'),
     ).toBe(true);
 
-    vi.advanceTimersByTime(200);
-    flush();
+    await act(() => {
+      vi.advanceTimersByTime(200);
+    });
 
     expect(screen.queryByText('重新连接中...')).toBeNull();
   });

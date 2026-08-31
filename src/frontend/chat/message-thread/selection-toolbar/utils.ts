@@ -12,7 +12,7 @@
  */
 export function getSelectionContainer(range: Range) {
   const node = range.commonAncestorContainer;
-  return node.nodeType === Node.ELEMENT_NODE ? (node as Element) : node.parentElement;
+  return node instanceof Element ? node : node.parentElement;
 }
 
 /**
