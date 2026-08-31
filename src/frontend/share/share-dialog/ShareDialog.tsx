@@ -1,6 +1,6 @@
 import { Check, Copy, Link2, Loader2, XCircle } from '@/frontend/design-system/icons';
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/frontend/design-system/button';
 import { Dialog, DialogContent, DialogFooter } from '@/frontend/design-system/dialog';
 import { useToast } from '@/frontend/app-shell/useToast';
@@ -9,11 +9,7 @@ import {
   getConversationShareFn,
   revokeConversationShareFn,
 } from '@/rpc/share';
-import {
-  queryClient,
-  selectAllConversations,
-  useConversationsQuery,
-} from '@/frontend/conversations/session';
+import { selectAllConversations, useConversationsQuery } from '@/frontend/conversations/session';
 import { useChatStatus } from '@/frontend/chat/agent-runtime/chat-state';
 import {
   useCurrentPath,
@@ -39,6 +35,7 @@ const notShared: ShareState = { status: 'not_shared', token: null };
 
 export function ShareDialog(props: ShareDialogProps) {
   const toast = useToast();
+  const queryClient = useQueryClient();
   const conversations = useConversationsQuery();
   const status = useChatStatus();
   const currentConversationId = useConversationId();

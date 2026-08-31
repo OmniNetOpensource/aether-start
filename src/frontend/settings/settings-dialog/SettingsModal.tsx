@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
 import { Ban, Gift, Loader2, LogOut, Plus } from '@/frontend/design-system/icons';
 import { authClient } from '@/frontend/auth/client';
@@ -9,7 +9,7 @@ import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { clearMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { clearConversationMeta } from '@/frontend/conversations/session/conversation-meta';
-import { conversationListQueryKey, queryClient } from '@/frontend/conversations/session';
+import { conversationListQueryKey } from '@/frontend/conversations/session';
 import { Button } from '@/frontend/design-system/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/frontend/design-system/dialog';
 import { Input } from '@/frontend/design-system/input';
@@ -29,6 +29,7 @@ type SettingsModalProps = {
 export function SettingsModal(props: SettingsModalProps) {
   const toast = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [redeemCode, setRedeemCode] = useState('');
   const [redeemLoading, setRedeemLoading] = useState(false);
