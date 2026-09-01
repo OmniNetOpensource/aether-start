@@ -2,7 +2,11 @@ import { act } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderTest } from '@/test/render';
 import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
-import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
+import {
+  chatState,
+  registerChatToast,
+  type ChatStatus,
+} from '@/frontend/chat/agent-runtime/chat-state';
 import {
   clearMessageTree,
   initializeMessageTree,
@@ -124,6 +128,61 @@ describe('MessageItem', () => {
 
     expect(container.textContent).toContain('完整回复');
     expect(container.textContent).not.toContain('部分回复');
+  });
+
+  it('disables edit and retry actions while chat is busy', () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    initializeMessageTree(
+      [
+        {
+          id: 1,
+          parentId: null,
+          prevSibling: null,
+          nextSibling: null,
+          latestChild: 2,
+          role: 'user',
+          blocks: [{ type: 'content', content: '问题' }],
+          createdAt: '2026-08-04T08:00:00.000Z',
+          completedAt: '2026-08-04T08:00:00.000Z',
+        },
+        {
+          id: 2,
+          parentId: 1,
+          prevSibling: null,
+          nextSibling: null,
+          latestChild: null,
+          role: 'assistant',
+          blocks: [{ type: 'content', content: '回答' }],
+          createdAt: '2026-08-04T08:00:01.000Z',
+          completedAt: '2026-08-04T08:00:02.000Z',
+        },
+      ],
+      [1, 2],
+    );
+
+    const { container } = renderTest(() => (
+      <ToastProvider>
+        <MessageList />
+      </ToastProvider>
+    ));
+    const expectActionsDisabled = (disabled: boolean) => {
+      expect(container.querySelector('button[title="编辑消息"]')?.hasAttribute('disabled')).toBe(
+        disabled,
+      );
+      const retryButtons = container.querySelectorAll('button[title="重试生成"]');
+      expect(retryButtons).toHaveLength(2);
+      expect(Array.from(retryButtons).every((button) => button.hasAttribute('disabled'))).toBe(
+        disabled,
+      );
+    };
+
+    expectActionsDisabled(false);
+    for (const status of ['sending', 'streaming', 'stopping'] satisfies ChatStatus[]) {
+      act(() => chatState.setStatus(status));
+      expectActionsDisabled(true);
+    }
+    act(() => chatState.setStatus('idle'));
+    expectActionsDisabled(false);
   });
 
   it('renders persisted structured error details', () => {

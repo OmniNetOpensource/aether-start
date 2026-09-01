@@ -4,7 +4,7 @@ import { ArtifactPanel, ArtifactToggleButton } from '@/frontend/chat/artifact';
 import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
 import { Composer } from '@/frontend/chat/composer/Composer';
-import { getAvailableModelsFn, getAvailablePromptsFn } from '@/rpc/chat-options';
+import { getAvailableModelsFn } from '@/rpc/chat-options';
 import Sidebar from '@/frontend/conversations/conversation-list';
 import { Pencil } from '@/frontend/design-system/icons';
 import { buttonVariants } from '@/frontend/design-system/button';
@@ -16,30 +16,20 @@ import { useToast } from '@/frontend/app-shell/useToast';
 export const Route = createFileRoute('/app')({
   loader: async ({ context }) => {
     const { queryClient } = context;
-    const conversationListPromise = queryClient.prefetchInfiniteQuery({
-      ...conversationInfiniteQueryOptions,
-      staleTime: Infinity,
-    });
-    const [availableModels, availablePrompts] = await Promise.all([
+    const [availableModels] = await Promise.all([
       queryClient.ensureQueryData({
         queryKey: ['chat-options', 'models'],
         queryFn: () => getAvailableModelsFn(),
         staleTime: Infinity,
         gcTime: Infinity,
       }),
-      queryClient.ensureQueryData({
-        queryKey: ['chat-options', 'prompts'],
-        queryFn: () => getAvailablePromptsFn(),
+      queryClient.prefetchInfiniteQuery({
+        ...conversationInfiniteQueryOptions,
         staleTime: Infinity,
-        gcTime: Infinity,
       }),
-      conversationListPromise,
     ]);
 
-    return {
-      availableModels,
-      availablePrompts,
-    };
+    return { availableModels };
   },
   onLeave: () => {
     cancelStreamSubscription(chatState, 'app/unmount');

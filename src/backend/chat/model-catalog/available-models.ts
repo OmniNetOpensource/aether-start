@@ -12,7 +12,7 @@ import {
   type ChatBackend,
 } from '@/shared/chat/model-catalog';
 
-const MODEL_LIST_CACHE_TTL_SECONDS = 60 * 60;
+const MODEL_LIST_CACHE_TTL_SECONDS = 24 * 60 * 60;
 
 const toModelInfo = (backend: ChatBackend, provider: string, model: string, name?: string) => {
   if (backend === 'ikun' && model === 'claude-opus-4-6') {

@@ -1,10 +1,5 @@
 import { isAbortError } from '@/backend/chat/abort';
-import type {
-  ChatTool,
-  FetchProvider,
-  ToolDefinition,
-  ToolHandler,
-} from '@/shared/chat/tool-types';
+import type { ChatTool, ToolDefinition, ToolHandler } from '@/shared/chat/tool-types';
 import { log } from '@/backend/chat/logger';
 import { Supadata } from '@supadata/js';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
@@ -172,180 +167,6 @@ export const fetchMarkdownWithJina = async (url: string, signal?: AbortSignal): 
   }
 };
 
-const fetchMarkdownWithFirecrawl = async (url: string, signal?: AbortSignal): Promise<string> => {
-  const { FIRECRAWL_API_KEY } = getServerEnv();
-  if (!FIRECRAWL_API_KEY) {
-    log('FETCH', 'Missing FIRECRAWL_API_KEY');
-    return 'Error: FIRECRAWL_API_KEY is not set';
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 80_000);
-  const linkedAbort = () => controller.abort();
-  signal?.addEventListener('abort', linkedAbort);
-
-  try {
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${FIRECRAWL_API_KEY}`,
-      },
-      body: JSON.stringify({ url, formats: ['markdown'] }),
-      signal: controller.signal,
-    });
-
-    let raw: unknown;
-    try {
-      raw = await response.json();
-    } catch {
-      log('FETCH', 'Firecrawl: response was not JSON');
-      return `Error: HTTP ${response.status} ${response.statusText}`;
-    }
-
-    if (!response.ok) {
-      const errText =
-        typeof raw === 'object' && raw !== null && 'error' in raw && typeof raw.error === 'string'
-          ? raw.error
-          : `${response.status} ${response.statusText}`;
-      log('FETCH', `Firecrawl HTTP error: ${errText}`);
-      return `Error: ${errText}`;
-    }
-
-    if (typeof raw !== 'object' || raw === null) {
-      log('FETCH', 'Firecrawl: invalid JSON body');
-      return 'Error: Invalid Firecrawl response';
-    }
-
-    if ('success' in raw && raw.success === false) {
-      const errMsg =
-        'error' in raw && typeof raw.error === 'string' ? raw.error : 'Firecrawl scrape failed';
-      log('FETCH', `Firecrawl: ${errMsg}`);
-      return `Error: ${errMsg}`;
-    }
-
-    if (!('data' in raw) || typeof raw.data !== 'object' || raw.data === null) {
-      log('FETCH', 'Firecrawl: missing data');
-      return 'Error: Invalid Firecrawl response';
-    }
-
-    const data = raw.data;
-    if (!('markdown' in data) || typeof data.markdown !== 'string') {
-      log('FETCH', 'Firecrawl: missing markdown');
-      return 'Error: Invalid Firecrawl response';
-    }
-
-    return data.markdown;
-  } catch (error) {
-    const message = isAbortError(error)
-      ? 'Request timed out'
-      : typeof error === 'object' && error !== null
-        ? (error as Error).message
-        : String(error);
-    log('FETCH', `Firecrawl error: ${message}`);
-    return `Error: ${message}`;
-  } finally {
-    signal?.removeEventListener('abort', linkedAbort);
-    clearTimeout(timeoutId);
-  }
-};
-
-const fetchMarkdownWithExa = async (url: string, signal?: AbortSignal): Promise<string> => {
-  const { EXA_API_KEY } = getServerEnv();
-  if (!EXA_API_KEY) {
-    log('FETCH', 'Missing EXA_API_KEY');
-    return 'Error: EXA_API_KEY is not set';
-  }
-
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 80_000);
-  const linkedAbort = () => controller.abort();
-  signal?.addEventListener('abort', linkedAbort);
-
-  try {
-    const response = await fetch('https://api.exa.ai/contents', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': EXA_API_KEY,
-      },
-      body: JSON.stringify({
-        urls: [url],
-        text: true,
-        livecrawlTimeout: 15000,
-      }),
-      signal: controller.signal,
-    });
-
-    let raw: unknown;
-    try {
-      raw = await response.json();
-    } catch {
-      log('FETCH', 'Exa: response was not JSON');
-      return `Error: HTTP ${response.status} ${response.statusText}`;
-    }
-
-    if (!response.ok) {
-      const errMsg =
-        typeof raw === 'object' &&
-        raw !== null &&
-        'error' in raw &&
-        typeof (raw as { error?: unknown }).error === 'string'
-          ? (raw as { error: string }).error
-          : `${response.status} ${response.statusText}`;
-      log('FETCH', `Exa HTTP error: ${errMsg}`);
-      return `Error: ${errMsg}`;
-    }
-
-    if (typeof raw !== 'object' || raw === null) {
-      return 'Error: Invalid Exa response';
-    }
-
-    const statuses = (raw as { statuses?: unknown }).statuses;
-    if (Array.isArray(statuses)) {
-      const failed = statuses.find(
-        (item) =>
-          typeof item === 'object' &&
-          item !== null &&
-          (item as { status?: unknown }).status === 'error',
-      ) as { error?: { tag?: string } } | undefined;
-      if (failed) {
-        const tag = failed.error?.tag ?? 'unknown';
-        log('FETCH', `Exa per-URL error: ${tag}`);
-        return `Error: ${tag}`;
-      }
-    }
-
-    const results = (raw as { results?: unknown }).results;
-    if (!Array.isArray(results) || results.length === 0) {
-      return 'Error: Exa returned no results';
-    }
-
-    const first = results[0];
-    if (typeof first !== 'object' || first === null) {
-      return 'Error: Invalid Exa result';
-    }
-
-    const text = (first as { text?: unknown }).text;
-    if (typeof text !== 'string' || !text) {
-      return 'Error: Exa result missing text';
-    }
-
-    return text;
-  } catch (error) {
-    const message = isAbortError(error)
-      ? 'Request timed out'
-      : typeof error === 'object' && error !== null
-        ? (error as Error).message
-        : String(error);
-    log('FETCH', `Exa error: ${message}`);
-    return `Error: ${message}`;
-  } finally {
-    signal?.removeEventListener('abort', linkedAbort);
-    clearTimeout(timeoutId);
-  }
-};
-
 const YOUTUBE_POLL_INTERVAL_MS = 3_000;
 const YOUTUBE_MAX_POLLS = 60;
 
@@ -407,7 +228,7 @@ const fetchYoutubeTranscript = async (url: string, signal?: AbortSignal): Promis
   }
 };
 
-const fetchUrl: ToolHandler = async (args, signal, context) => {
+const fetchUrl: ToolHandler = async (args, signal) => {
   const { url, response_type } = parseFetchUrlArgs(args);
 
   if (signal?.aborted) {
@@ -425,16 +246,7 @@ const fetchUrl: ToolHandler = async (args, signal, context) => {
     return enqueueFetchUrlCall(() => fetchDirectImage(url, signal));
   }
 
-  const provider: FetchProvider = context?.fetchProvider ?? 'jina';
-  return enqueueFetchUrlCall(() => {
-    if (provider === 'firecrawl') {
-      return fetchMarkdownWithFirecrawl(url, signal);
-    }
-    if (provider === 'exa') {
-      return fetchMarkdownWithExa(url, signal);
-    }
-    return fetchMarkdownWithJina(url, signal);
-  });
+  return enqueueFetchUrlCall(() => fetchMarkdownWithJina(url, signal));
 };
 
 const fetchUrlSpec: ChatTool = {

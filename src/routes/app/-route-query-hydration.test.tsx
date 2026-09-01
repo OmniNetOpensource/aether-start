@@ -10,7 +10,6 @@ import { Route } from './route';
 const rpc = vi.hoisted(() => ({
   listConversations: vi.fn(),
   getAvailableModels: vi.fn(),
-  getAvailablePrompts: vi.fn(),
 }));
 
 vi.mock('@/rpc/conversations', async () => ({
@@ -20,7 +19,6 @@ vi.mock('@/rpc/conversations', async () => ({
 
 vi.mock('@/rpc/chat-options', () => ({
   getAvailableModelsFn: rpc.getAvailableModels,
-  getAvailablePromptsFn: rpc.getAvailablePrompts,
 }));
 
 const title = '服务端预取的会话';
@@ -48,7 +46,6 @@ beforeEach(() => {
     nextCursor: null,
   });
   rpc.getAvailableModels.mockResolvedValue([]);
-  rpc.getAvailablePrompts.mockResolvedValue([]);
 });
 
 afterEach(() => {

@@ -18,29 +18,7 @@ type ModelDefinition = {
   backend: ChatBackend;
 };
 
-export type PromptConfig = {
-  id: string;
-  name: string;
-  content: string;
-};
-
-const englishTeacherSystemPrompt = `你是一位英语教学助手。我会给你发送一段英文内容（可能较长）。你需要逐句分析，不得省略任何句子。
-对于每一句话，按照以下结构进行讲解：
-
-1. **整句意思**：解释这句话的整体含义
-2. **重点词汇与表达**：挑出并解释重要的单词、短语或习惯用法，包括：
-   - 词义和用法
-   - 语义细微差别
-   - 常见搭配
-
-关键要求：
-- 必须分析每一句话，不要跳过或概括
-- 如果文本有多个段落，系统性地逐段处理
-- 讲解要清晰易懂，必要时提供例句
-
-请等待我提供英文文本。`;
-
-const aetherSystemPrompt = `
+export const AETHER_SYSTEM_PROMPT = `
 如果需要搜索，非必要情况下不要用中文搜索；在没有足够上下文之前不要回答；如果没有搞清楚，就不断调研直到搞清楚；如果需要搜索，则尽可能引用一手资料；确保清楚理解我的意图之后再开始行动；你要确保你讲的东西我能听得懂；
 
 请用朴实、平静、耐心的语言回答我的问题，就像一个有经验的朋友在认真地帮我理解一个话题。语气要温和、鼓励，让人感到你愿意花时间把事情讲清楚。不要使用夸张的形容词和营销式的表达，比如"非常棒"、"超级强大"这类词，而是具体说明实际情况就好。
@@ -54,19 +32,6 @@ const aetherSystemPrompt = `
 默认使用完整句子与成段表述；少使用要点式列表。
 
 用地道的中文表达，注意不要有翻译味道`;
-
-const PROMPT_CONFIGS: Record<string, PromptConfig> = {
-  aether: {
-    id: 'aether',
-    name: 'aether',
-    content: aetherSystemPrompt,
-  },
-  englishTeacher: {
-    id: 'englishTeacher',
-    name: '英语教学助手',
-    content: englishTeacherSystemPrompt,
-  },
-};
 
 export const DEFAULT_MODEL_ID = 'claudeOpus46Ikun';
 export const DEFAULT_MODEL_INFO = {
@@ -131,20 +96,6 @@ export const getDefaultModelConfig = (): ModelConfig => ({
   ...DEFAULT_MODEL,
   format: 'anthropic',
 });
-
-export const getAvailablePrompts = (): { id: string; name: string }[] =>
-  Object.values(PROMPT_CONFIGS).map(({ id, name }) => ({ id, name }));
-
-export const getPromptById = (promptId: string): PromptConfig | null => {
-  const id = promptId.trim();
-  return (
-    PROMPT_CONFIGS[id] ??
-    Object.values(PROMPT_CONFIGS).find((p) => p.id === id || p.name === id) ??
-    null
-  );
-};
-
-export const getDefaultPromptId = (): string => 'aether';
 
 /** Model ID used for conversation title generation. */
 export const TITLE_GENERATION_MODEL_ID = createModelId('gemini-aistudio', 'gemma-4-31b-it');

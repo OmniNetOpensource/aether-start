@@ -11,13 +11,8 @@ import {
   setConversationId,
   setPageTitle,
 } from '@/frontend/conversations/session/conversation-meta';
-import {
-  currentFetchProvider,
-  currentModelId,
-  currentPromptId,
-} from '@/frontend/conversations/session/chat-selection';
+import { currentModelId } from '@/frontend/conversations/session/chat-selection';
 import type { ToastApi } from '@/frontend/app-shell/useToast';
-import type { FetchProvider } from '@/shared/chat/tool-types';
 
 export type ChatStatus = 'idle' | 'sending' | 'streaming' | 'stopping';
 
@@ -25,8 +20,6 @@ export type ChatState = {
   getConversationId: () => string | null;
   setConversationId: (conversationId: string | null) => void;
   getCurrentModelId: () => string;
-  getCurrentPromptId: () => string;
-  getCurrentFetchProvider: () => FetchProvider;
   getMessageTree: () => MessageTreeState;
   messageTree: MessageTreeActions;
   artifacts: ArtifactActions;
@@ -62,8 +55,6 @@ export const chatState: ChatState = {
   getConversationId: conversationId,
   setConversationId,
   getCurrentModelId: currentModelId,
-  getCurrentPromptId: currentPromptId,
-  getCurrentFetchProvider: currentFetchProvider,
   getMessageTree: getMessageTreeState,
   messageTree: messageTreeActions,
   artifacts: artifactActions,

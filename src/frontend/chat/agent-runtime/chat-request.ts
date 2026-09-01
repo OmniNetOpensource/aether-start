@@ -65,8 +65,6 @@ export const startChatRequest = async (
   const body = {
     idempotencyKey,
     model: modelId,
-    promptId: runtime.getCurrentPromptId() || undefined,
-    fetchProvider: runtime.getCurrentFetchProvider(),
     conversationId,
     operation,
   };

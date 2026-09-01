@@ -21,8 +21,6 @@ type ServerEnv = {
   SERP_API_KEY?: string;
   SUPADATA_API_KEY?: string;
   JINA_API_KEY?: string;
-  FIRECRAWL_API_KEY?: string;
-  EXA_API_KEY?: string;
   RESEND_API_KEY?: string;
   NETIFY_TOKEN?: string;
   DB?: D1Database;
@@ -101,12 +99,6 @@ export const getServerEnv = (): ServerEnv => {
     JINA_API_KEY:
       readString((bindings as Record<string, unknown>).JINA_API_KEY) ??
       readStringFromProcess('JINA_API_KEY'),
-    FIRECRAWL_API_KEY:
-      readString((bindings as Record<string, unknown>).FIRECRAWL_API_KEY) ??
-      readStringFromProcess('FIRECRAWL_API_KEY'),
-    EXA_API_KEY:
-      readString((bindings as Record<string, unknown>).EXA_API_KEY) ??
-      readStringFromProcess('EXA_API_KEY'),
     RESEND_API_KEY: readString(bindings.RESEND_API_KEY) ?? readStringFromProcess('RESEND_API_KEY'),
     NETIFY_TOKEN: readString(bindings.NETIFY_TOKEN) ?? readStringFromProcess('NETIFY_TOKEN'),
     NODE_ENV: readString(bindings.NODE_ENV) ?? readStringFromProcess('NODE_ENV') ?? 'production',

@@ -318,11 +318,13 @@ export function MessageItem(props: MessageItemProps) {
                 <>
                   <ActionButton
                     onClick={handleStartEditing}
+                    disabled={isBusy}
                     title='编辑消息'
                     icon={<Pencil className='h-3.5 w-3.5' strokeWidth={2.5} />}
                   />
                   <ActionButton
                     onClick={handleRetry}
+                    disabled={isBusy}
                     title='重试生成'
                     icon={<RotateCcw className='h-3.5 w-3.5' strokeWidth={2.5} />}
                   />
@@ -333,6 +335,7 @@ export function MessageItem(props: MessageItemProps) {
                 <>
                   <ActionButton
                     onClick={handleRetry}
+                    disabled={isBusy}
                     title='重试生成'
                     icon={<RotateCcw className='h-3.5 w-3.5' />}
                   />

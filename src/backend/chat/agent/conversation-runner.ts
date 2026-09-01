@@ -2,16 +2,14 @@ import { isAbortError } from '@/backend/chat/abort';
 import { DurableObject } from 'cloudflare:workers';
 import { executeToolCall, getAvailableTools } from '@/backend/chat/agent/tool-executor';
 import {
+  AETHER_SYSTEM_PROMPT,
   getDefaultModelConfig,
   getModelConfig,
-  getPromptById,
-  getDefaultPromptId,
 } from '@/shared/chat/model-catalog';
 import { log } from '@/backend/chat/logger';
 import { getBackendConfig } from '@/backend/chat/providers/backend-config';
 import { createChatProvider } from '@/backend/chat/providers/provider-factory';
 import type { ChatProvider, ProviderRunResult } from '@/backend/chat/providers/provider-types';
-import type { FetchProvider } from '@/shared/chat/tool-types';
 import { generateTitleFromConversation } from '@/backend/chat/chat-title';
 import { processEventToTree, cloneTreeSnapshot } from './event-processor';
 import { applyOperation } from '@/backend/conversations/operation';
@@ -136,8 +134,6 @@ type ChatRequestBody = {
   idempotencyKey: string;
   conversationId: string | null;
   model: string;
-  promptId?: string;
-  fetchProvider?: FetchProvider;
   operation: Operation;
 };
 
@@ -282,12 +278,6 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   const idempotencyKey = asString(body.idempotencyKey);
   const conversationId = asString(body.conversationId);
   const model = asString(body.model);
-  const promptId = asString(body.promptId) ?? undefined;
-  const rawFetchProvider = asString(body.fetchProvider);
-  const fetchProvider: FetchProvider | undefined =
-    rawFetchProvider === 'jina' || rawFetchProvider === 'firecrawl' || rawFetchProvider === 'exa'
-      ? rawFetchProvider
-      : undefined;
   const rawOperation = body.operation;
 
   let operation: Operation | null = null;
@@ -329,8 +319,6 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
     idempotencyKey,
     conversationId,
     model,
-    promptId,
-    fetchProvider,
     operation,
   };
 };
@@ -847,7 +835,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   // conversationHistory 由服务端从当前分支生成，这里只做业务级校验（非空、有有效用户消息）。
 
   /**
-   * 从 HTTP 已解析的 body 构造「可跑模型」所需的一切：校验、选模型与 prompt、创建统一 ChatProvider、
+   * 从 HTTP 已解析的 body 构造「可跑模型」所需的一切：校验、选模型、创建统一 ChatProvider、
    * 把 SerializedMessage[] 转成供应商内部消息格式（workingMessages）。
    * 任一步失败都会 emit error 事件并返回 null，调用方将 finalStatus 置为 error，不再进入主循环。
    */
@@ -858,7 +846,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     provider: ChatProvider;
     workingMessages: Awaited<ReturnType<ChatProvider['convertMessages']>>;
   } | null> {
-    const { conversationHistory, model, promptId } = message;
+    const { conversationHistory, model } = message;
 
     if (conversationHistory.length === 0) {
       await emitEvent(toEventError('Invalid conversation history: expected non-empty array.'));
@@ -885,16 +873,13 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       return null;
     }
 
-    const promptConfig = promptId ? getPromptById(promptId) : getPromptById(getDefaultPromptId());
-    const systemPrompt = promptConfig?.content ?? '';
-
     const backendConfig = getBackendConfig(modelConfig);
 
     const provider = await createChatProvider(modelConfig.format, {
       model: modelConfig.model,
       backendConfig,
       tools: getAvailableTools(),
-      systemPrompt,
+      systemPrompt: AETHER_SYSTEM_PROMPT,
     });
 
     const workingMessages = await provider.convertMessages(conversationHistory);
@@ -1022,9 +1007,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         continue;
       }
 
-      const executedToolCall = await executeToolCall(toolCall, signal, {
-        fetchProvider: message.fetchProvider,
-      });
+      const executedToolCall = await executeToolCall(toolCall, signal);
       for (const event of executedToolCall.events) {
         await emitEvent(event);
         throwIfAborted(signal);
