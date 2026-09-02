@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { Loader2, Search } from '@/frontend/design-system/icons';
 import type { ConversationSearchItem } from '@/frontend/conversations/session';
 import {
@@ -40,7 +40,6 @@ export type ConversationSearchDialogProps = {
 };
 
 function ConversationSearchContent(props: { onClose: () => void }) {
-  const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
   const [loadingMore, setLoadingMore] = useState(false);
@@ -104,16 +103,6 @@ function ConversationSearchContent(props: { onClose: () => void }) {
     }
   };
 
-  const handleSelect = (item: ConversationSearchItem) => {
-    props.onClose();
-    void navigate({
-      to: '/app/$conversationId',
-      params: { conversationId: item.id },
-    }).catch((error) => {
-      console.error('Failed to navigate to conversation:', error);
-    });
-  };
-
   return (
     <>
       <DialogHeader className='sr-only'>
@@ -160,11 +149,12 @@ function ConversationSearchContent(props: { onClose: () => void }) {
               const displayTitle = truncateMiddle(title, 48);
 
               return (
-                <button
+                <Link
                   key={item.id}
-                  type='button'
+                  to='/app/$conversationId'
+                  params={{ conversationId: item.id }}
                   className='group flex w-full flex-col rounded-xl px-4 py-3 text-left transition-all duration-200 hover:bg-muted active:scale-[0.98]'
-                  onClick={() => handleSelect(item)}
+                  onClick={props.onClose}
                 >
                   <div className='flex w-full items-baseline justify-between'>
                     <span className='min-w-0 text-base font-medium text-foreground' title={title}>
@@ -177,7 +167,7 @@ function ConversationSearchContent(props: { onClose: () => void }) {
                   <span className='mt-0.5 truncate text-sm text-muted-foreground'>
                     {item.excerpt || '暂无可展示内容'}
                   </span>
-                </button>
+                </Link>
               );
             })}
           </div>
