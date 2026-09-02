@@ -8,7 +8,7 @@
 - multi-provider model selection and prompt presets
 - conversation persistence in Cloudflare D1
 - attachment storage in Cloudflare R2
-- artifact generation and preview for HTML output
+- inline rendering of complete HTML tool output
 - notes, sharing, settings, quota, and Better Auth flows
 - client error logging persisted to D1
 
@@ -100,21 +100,11 @@ Important files:
 - `src/shared/conversations/` contains pure message-tree operations.
 - `src/routes/app/$conversationId.tsx` loads a historical conversation with `getConversationFn`.
 
-### Artifacts
+### HTML Rendering
 
-Artifact support is part of the main chat experience.
+The `render` tool accepts one complete, self-contained HTML document in `code`. Its ordinary `tool_call` is persisted in the message tree, and `src/frontend/chat/message-thread/MessageItem.tsx` renders that exact HTML directly in a sandboxed iframe inside the conversation flow.
 
-Important files:
-
-- `src/frontend/chat/artifact/ArtifactPanel.tsx`
-- `src/frontend/chat/artifact/ArtifactToggleButton.tsx`
-- `src/backend/chat/tools/render-tool.ts`
-- `src/shared/chat/render-artifact-stream.ts`
-- `src/backend/chat/agent/tool-executor.ts`
-- `src/backend/conversations/conversations-db.ts`
-- `migrations/0015_conversation_artifacts.sql`
-
-Artifact stream events are defined in `src/shared/chat/chat-event-types.ts` and applied in `src/frontend/chat/agent-runtime/event-handlers.ts`.
+There is no separate artifact workspace, title, streaming protocol, client store, deployment flow, or runtime artifact-table read/write path. `migrations/0015_conversation_artifacts.sql` and `migrations/0018_artifact_last_deploy.sql` remain only as migration history.
 
 ### Models, Providers, And Backends
 
@@ -225,12 +215,14 @@ Vitest tests are colocated with their owning frontend, backend, or shared module
 
 ## 强制真实验收
 
-在 Aether 完成任何代码修改后，lint、type-check、自动测试、构建和只读页面检查都不能替代真实端到端测试。必须在用户已经启动的本地服务上完成：
+在 Aether 完成任何代码修改后，lint、type-check、自动测试、构建和只读页面检查都不能替代真实端到端测试：
 
 - 发送一条新的测试消息，验证创建会话、请求状态、服务端接收、SSE 流式响应、消息落库和最终收口的完整链路。
 - 访问一个历史会话，验证路由切换、历史数据加载、消息树、模型等会话状态和页面交互链路。
 
 如果受认证、额度、服务不可用或其他外部条件阻塞，必须明确报告具体阻塞，不能把静态验证表述成完整验收。
+
+Aether 本地服务的生命周期由代理自行决定。需要开发或验收时，禁止询问或要求用户启动、重启、停止本地服务；代理应自行检查服务状态，并按任务需要决定启动、重启、停止、保持运行或改用空闲端口。操作前必须确认端口和进程归属，不得干扰不属于本仓库的服务；只能停止能够确认属于本仓库的进程。测试需要本地服务时直接启动并测试，不再向用户询问是否启动或是否测试。本规则取代其他要求用户启动本地服务或禁止代理管理本地服务的仓库内说明。
 
 ## Migrations
 
@@ -238,11 +230,11 @@ Migrations live in `migrations/`.
 
 The latest migrations currently include:
 
-- `0015_conversation_artifacts.sql`
 - `0016_client_error_logs.sql`
 - `0017_conversation_meta_model.sql`
+- `0018_artifact_last_deploy.sql`
 
-`0011_arena.sql` and `0012_drop_arena.sql` are historical only.
+`0011_arena.sql`, `0012_drop_arena.sql`, `0015_conversation_artifacts.sql`, and `0018_artifact_last_deploy.sql` are historical only.
 
 ## Environment And Secrets
 
@@ -265,7 +257,6 @@ Important env keys include:
 - `GEMINI_BASE_URL_IKUNCODE`
 - `GEMINI_API_KEY_AISTUDIO`
 - `OPENROUTER_API_KEY`
-- `NETIFY_TOKEN`
 
 Never commit real secrets.
 

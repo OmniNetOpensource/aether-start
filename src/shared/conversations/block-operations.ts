@@ -133,7 +133,43 @@ export const applyAssistantAddition = (
     }
 
     if (addition.kind === 'tool') {
-      return updateResearchItems((items) => [...items, { ...addition }]);
+      const callId = addition.data.call.callId;
+      if (!callId) {
+        return updateResearchItems((items) => [...items, cloneResearchItem(addition)]);
+      }
+
+      const target = findToolLocation(nextBlocks, callId);
+      if (!target) {
+        return updateResearchItems((items) => [...items, cloneResearchItem(addition)]);
+      }
+
+      const targetBlock = nextBlocks[target.blockIndex];
+      if (targetBlock.type !== 'research') {
+        return nextBlocks;
+      }
+
+      const targetItem = targetBlock.items[target.itemIndex];
+      if (targetItem.kind !== 'tool') {
+        return nextBlocks;
+      }
+
+      const items = [...targetBlock.items];
+      items[target.itemIndex] = {
+        kind: 'tool',
+        data: {
+          ...targetItem.data,
+          ...addition.data,
+          call: {
+            ...addition.data.call,
+            args: {
+              ...targetItem.data.call.args,
+              ...addition.data.call.args,
+            },
+          },
+        },
+      };
+      nextBlocks[target.blockIndex] = { ...targetBlock, items };
+      return nextBlocks;
     }
 
     if (addition.kind === 'tool_result') {

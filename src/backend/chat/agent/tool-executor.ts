@@ -117,21 +117,6 @@ export const executeToolCall = async (
     toolResult = { client: clientResult, model: rawResult };
   }
 
-  if (toolcall.name === 'render') {
-    events.push(
-      toolResult.model.startsWith('Error:')
-        ? {
-            type: 'artifact_failed',
-            artifactId: toolcall.id,
-            message: toolResult.model,
-          }
-        : {
-            type: 'artifact_completed',
-            artifactId: toolcall.id,
-          },
-    );
-  }
-
   events.push({
     type: 'tool_result',
     tool: toolcall.name,

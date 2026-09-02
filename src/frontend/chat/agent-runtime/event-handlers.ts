@@ -134,8 +134,7 @@ const CHARS_PER_FRAME = 14;
 
 type Segment =
   | { kind: 'content'; targetId: number; text: string; runtime: ChatState }
-  | { kind: 'thinking'; targetId: number; text: string; runtime: ChatState }
-  | { kind: 'artifact'; artifactId: string; text: string; runtime: ChatState };
+  | { kind: 'thinking'; targetId: number; text: string; runtime: ChatState };
 
 let queue: Segment[] = [];
 let rafId: number | null = null;
@@ -164,10 +163,8 @@ const tick = () => {
 
   if (head.kind === 'content') {
     head.runtime.messageTree.appendToAssistant(head.targetId, { type: 'content', content: chunk });
-  } else if (head.kind === 'thinking') {
-    head.runtime.messageTree.appendToAssistant(head.targetId, { kind: 'thinking', text: chunk });
   } else {
-    head.runtime.artifacts.appendCode(head.artifactId, chunk);
+    head.runtime.messageTree.appendToAssistant(head.targetId, { kind: 'thinking', text: chunk });
   }
 
   if (!head.text) {
@@ -213,17 +210,6 @@ const enqueueStreamThinking = (runtime: ChatState, targetId: number, text: strin
   schedulePump();
 };
 
-const enqueueStreamArtifactCode = (runtime: ChatState, artifactId: string, delta: string) => {
-  if (!delta) return;
-  const last = queue[queue.length - 1];
-  if (last?.kind === 'artifact' && last.artifactId === artifactId && last.runtime === runtime) {
-    last.text += delta;
-  } else {
-    queue.push({ kind: 'artifact', artifactId, text: delta, runtime });
-  }
-  schedulePump();
-};
-
 /** 立即把缓冲中剩余的文本全部渲染出来（流结束或遇到非文本事件时调用） */
 export const flushStreamBuffer = () => {
   if (rafId !== null) {
@@ -241,13 +227,11 @@ export const flushStreamBuffer = () => {
         type: 'content',
         content: seg.text,
       });
-    } else if (seg.kind === 'thinking') {
+    } else {
       seg.runtime.messageTree.appendToAssistant(seg.targetId, {
         kind: 'thinking',
         text: seg.text,
       });
-    } else {
-      seg.runtime.artifacts.appendCode(seg.artifactId, seg.text);
     }
   }
   queue = [];
@@ -288,37 +272,7 @@ export const applyChatEventToTree = (
     return;
   }
 
-  if (event.type === 'artifact_code_delta') {
-    enqueueStreamArtifactCode(runtime, event.artifactId, event.delta);
-    return;
-  }
-
   flushStreamBuffer();
-
-  if (event.type === 'artifact_started') {
-    runtime.artifacts.start(event.artifactId);
-    return;
-  }
-
-  if (event.type === 'artifact_title') {
-    runtime.artifacts.setTitle(event.artifactId, event.title);
-    return;
-  }
-
-  if (event.type === 'artifact_language') {
-    runtime.artifacts.setLanguage(event.artifactId, event.language);
-    return;
-  }
-
-  if (event.type === 'artifact_completed') {
-    runtime.artifacts.complete(event.artifactId);
-    return;
-  }
-
-  if (event.type === 'artifact_failed') {
-    runtime.artifacts.fail(event.artifactId, event.message);
-    return;
-  }
 
   if (event.type === 'conversation_updated') {
     if (runtime.getConversationId() === event.conversationId && typeof event.title === 'string') {

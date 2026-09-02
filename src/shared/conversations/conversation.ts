@@ -1,17 +1,4 @@
 import type { Message } from '@/shared/chat/message';
-import type { ArtifactLanguage } from '@/shared/chat/chat-api';
-
-export type ConversationArtifact = {
-  id: string;
-  conversation_id: string;
-  title: string;
-  language: ArtifactLanguage;
-  code: string;
-  deploy_url: string | null;
-  deployed_at: string | null;
-  created_at: string;
-  updated_at: string;
-};
 
 export type ConversationMeta = {
   id: string;
@@ -32,7 +19,6 @@ export type ConversationDetail = {
   is_pinned: boolean;
   pinned_at: string | null;
   messages: Message[];
-  artifacts: ConversationArtifact[];
   created_at: string;
   updated_at: string;
 };

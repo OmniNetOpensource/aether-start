@@ -1,7 +1,5 @@
 import type { ChatErrorInfo, Message } from '@/shared/chat/message';
 
-export type ArtifactLanguage = 'html';
-
 export type ChatServerToClientEvent =
   | { type: 'content'; content: string }
   | { type: 'thinking'; content: string }
@@ -17,16 +15,6 @@ export type ChatServerToClientEvent =
       callId: string;
     }
   | { type: 'tool_result'; tool: string; result: string; callId: string }
-  | { type: 'artifact_started'; artifactId: string; callId?: string }
-  | { type: 'artifact_title'; artifactId: string; title: string }
-  | {
-      type: 'artifact_language';
-      artifactId: string;
-      language: ArtifactLanguage;
-    }
-  | { type: 'artifact_code_delta'; artifactId: string; delta: string }
-  | { type: 'artifact_completed'; artifactId: string }
-  | { type: 'artifact_failed'; artifactId: string; message: string }
   | {
       type: 'ask_user_questions_requested';
       callId: string;

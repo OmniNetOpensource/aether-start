@@ -23,7 +23,6 @@ type ServerEnv = {
   SUPADATA_API_KEY?: string;
   JINA_API_KEY?: string;
   RESEND_API_KEY?: string;
-  NETIFY_TOKEN?: string;
   DB?: D1Database;
   CHAT_ASSETS?: R2Bucket;
   NODE_ENV?: string;
@@ -103,7 +102,6 @@ export const getServerEnv = (): ServerEnv => {
       readString((bindings as Record<string, unknown>).JINA_API_KEY) ??
       readStringFromProcess('JINA_API_KEY'),
     RESEND_API_KEY: readString(bindings.RESEND_API_KEY) ?? readStringFromProcess('RESEND_API_KEY'),
-    NETIFY_TOKEN: readString(bindings.NETIFY_TOKEN) ?? readStringFromProcess('NETIFY_TOKEN'),
     NODE_ENV: readString(bindings.NODE_ENV) ?? readStringFromProcess('NODE_ENV') ?? 'production',
     DB: bindings.DB,
     CHAT_ASSETS: bindings.CHAT_ASSETS,

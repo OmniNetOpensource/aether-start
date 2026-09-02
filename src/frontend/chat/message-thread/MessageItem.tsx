@@ -260,9 +260,39 @@ export function MessageItem(props: MessageItemProps) {
                   {assistantBlocks.map((block, blockIndex) => {
                     if (block.type === 'research') {
                       return (
-                        <div key={blockIndex} className='not-italic'>
-                          <ResearchBlock items={block.items} />
-                        </div>
+                        <Fragment key={blockIndex}>
+                          <div className='not-italic'>
+                            <ResearchBlock
+                              items={block.items}
+                              isActive={isStreaming && blockIndex === assistantBlocks.length - 1}
+                            />
+                          </div>
+                          {block.items.map((item, itemIndex) => {
+                            if (
+                              item.kind !== 'tool' ||
+                              item.data.call.tool !== 'render' ||
+                              !item.data.result ||
+                              item.data.result.result.startsWith('Error') ||
+                              typeof item.data.call.args.code !== 'string' ||
+                              !item.data.call.args.code.trim()
+                            ) {
+                              return null;
+                            }
+
+                            return (
+                              <iframe
+                                key={
+                                  item.data.call.callId ?? `${messageId}-${blockIndex}-${itemIndex}`
+                                }
+                                title='HTML preview'
+                                srcDoc={item.data.call.args.code}
+                                sandbox='allow-scripts'
+                                loading='lazy'
+                                className='h-80 w-full rounded-lg border border-border bg-background sm:h-96'
+                              />
+                            );
+                          })}
+                        </Fragment>
                       );
                     }
 
@@ -341,7 +371,6 @@ export function MessageItem(props: MessageItemProps) {
                   />
                   <ActionButton
                     onClick={handleBranch}
-                    disabled={isBusy}
                     title='从这里创建分支会话'
                     icon={<GitBranch className='h-3.5 w-3.5' />}
                   />

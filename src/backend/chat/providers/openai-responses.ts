@@ -6,7 +6,6 @@ import { quotesToModelText } from '@/shared/conversations';
 import { buildProviderErrorEvent } from './provider-error';
 import { resolveAttachmentToBase64 } from '../attachment-utils';
 import { parseToolResultImage } from '../tool-result-images';
-import { RenderArtifactStreamParser } from '@/shared/chat/render-artifact-stream';
 import { getOpenAIClient } from './openai';
 import type {
   PendingToolInvocation,
@@ -256,7 +255,6 @@ export class OpenAIResponsesChatProvider {
       assistantText: '',
     };
     const toolCallsByOutputIndex = new Map<number, AccumulatedToolCall>();
-    const renderParsers = new Map<number, RenderArtifactStreamParser>();
     let assistantText = '';
 
     try {
@@ -293,31 +291,12 @@ export class OpenAIResponsesChatProvider {
           event.type === 'response.output_item.done'
         ) {
           applyFunctionCallItem(toolCallsByOutputIndex, event.output_index, event.item);
-          const toolCall = toolCallsByOutputIndex.get(event.output_index);
-          if (toolCall?.name === 'render' && !renderParsers.has(event.output_index)) {
-            const parser = new RenderArtifactStreamParser(
-              toolCall.callId || `tool_${event.output_index + 1}`,
-            );
-            renderParsers.set(event.output_index, parser);
-            for (const artifactEvent of parser.append(toolCall.argsJson)) {
-              yield artifactEvent;
-            }
-          }
           continue;
         }
 
         if (event.type === 'response.function_call_arguments.delta') {
           const toolCall = upsertToolCall(toolCallsByOutputIndex, event.output_index);
           toolCall.argsJson += event.delta;
-          if (toolCall.name === 'render') {
-            const parser =
-              renderParsers.get(event.output_index) ??
-              new RenderArtifactStreamParser(toolCall.callId || `tool_${event.output_index + 1}`);
-            renderParsers.set(event.output_index, parser);
-            for (const artifactEvent of parser.append(event.delta)) {
-              yield artifactEvent;
-            }
-          }
           continue;
         }
 
@@ -385,24 +364,6 @@ export class OpenAIResponsesChatProvider {
 
     for (const tc of pendingToolCalls) {
       yield { type: 'tool_call', tool: tc.name, args: tc.args, callId: tc.id };
-    }
-
-    for (const [index, toolCall] of [...toolCallsByOutputIndex.entries()].sort(
-      ([a], [b]) => a - b,
-    )) {
-      if (toolCall.name !== 'render') {
-        continue;
-      }
-
-      const parser =
-        renderParsers.get(index) ??
-        new RenderArtifactStreamParser(toolCall.callId || `tool_${index + 1}`);
-      for (const artifactEvent of parser.finalize(
-        pendingToolCalls.find((item) => item.id === (toolCall.callId || `tool_${index + 1}`))
-          ?.args ?? {},
-      )) {
-        yield artifactEvent;
-      }
     }
 
     return { pendingToolCalls, thinkingBlocks: [], assistantText };

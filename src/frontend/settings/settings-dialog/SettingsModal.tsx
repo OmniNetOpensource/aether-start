@@ -6,7 +6,6 @@ import { authClient } from '@/frontend/auth/client';
 import { getSessionStateFn } from '@/rpc/auth';
 import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
-import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { clearMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { clearConversationMeta } from '@/frontend/conversations/session/conversation-meta';
 import { conversationListQueryKey } from '@/frontend/conversations/session';
@@ -86,7 +85,6 @@ export function SettingsModal(props: SettingsModalProps) {
       chatState.setStatus('idle');
       clearConversationMeta();
       clearMessageTree();
-      clearArtifacts();
       queryClient.removeQueries({ queryKey: conversationListQueryKey });
       resetLastEventId();
       await navigate({

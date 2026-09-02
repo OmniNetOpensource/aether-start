@@ -1,5 +1,4 @@
 import { setQueuedMessages } from '@/frontend/chat/composer/composer-request/message-queue';
-import { setArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import {
   getConversationFn,
   setCurrentModelId,
@@ -71,7 +70,6 @@ const recoverConversationSnapshot = async (
   if (runtime.getConversationId() !== conversationId) return;
 
   initializeMessageTree(messages, buildPathToLatestAssistant(messages));
-  setArtifacts(conversation.artifacts);
   setPageTitle(conversation.title ?? 'Aether');
   setCurrentModelId(conversation.model ?? '');
   resetLastEventId(conversationId);

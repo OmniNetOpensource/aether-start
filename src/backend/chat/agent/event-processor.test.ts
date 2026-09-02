@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { applyOperation } from '@/backend/conversations/operation';
+import type { ChatServerToClientEvent } from '@/shared/chat/chat-api';
 import { cloneTreeSnapshot, processEventToTree } from './event-processor';
 
 const createdAt = '2026-08-07T00:00:00.000Z';
@@ -171,6 +172,61 @@ describe('processEventToTree', () => {
           },
         ],
       },
+    ]);
+  });
+
+  it('keeps one render item when a tool call and result are replayed', () => {
+    let tree = setupTwoRuns();
+    const events: ChatServerToClientEvent[] = [
+      {
+        type: 'tool_call',
+        tool: 'render',
+        args: { code: '<main>Demo</main>' },
+        callId: 'render-1',
+      },
+      { type: 'content', content: 'Rendered above.' },
+      {
+        type: 'tool_call',
+        tool: 'render',
+        args: { code: '<main>Demo</main>' },
+        callId: 'render-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'render',
+        result: 'HTML rendered successfully.',
+        callId: 'render-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'render',
+        result: 'HTML rendered successfully.',
+        callId: 'render-1',
+      },
+    ];
+
+    for (const event of events) {
+      tree = processEventToTree(tree, event, 2);
+    }
+
+    expect(tree.messages[1].blocks).toEqual([
+      {
+        type: 'research',
+        items: [
+          {
+            kind: 'tool',
+            data: {
+              call: {
+                tool: 'render',
+                args: { code: '<main>Demo</main>' },
+                callId: 'render-1',
+              },
+              result: { result: 'HTML rendered successfully.' },
+            },
+          },
+        ],
+      },
+      { type: 'content', content: 'Rendered above.' },
     ]);
   });
 });

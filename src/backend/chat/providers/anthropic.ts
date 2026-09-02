@@ -5,7 +5,6 @@ import { log, logProviderCommunication } from '../logger';
 import { buildProviderErrorEvent } from './provider-error';
 import { quotesToModelText } from '@/shared/conversations';
 import { resolveAttachmentToBase64 } from '../attachment-utils';
-import { RenderArtifactStreamParser } from '@/shared/chat/render-artifact-stream';
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
@@ -506,7 +505,6 @@ export class AnthropicChatProvider {
     let currentToolId = '';
     let currentToolName = '';
     let currentToolJson = '';
-    let currentRenderParser: RenderArtifactStreamParser | null = null;
     let assistantText = '';
 
     const emptyResult: ProviderRunResult = {
@@ -539,20 +537,8 @@ export class AnthropicChatProvider {
           currentToolId = chunk.id;
           currentToolName = chunk.name;
           currentToolJson = '';
-          currentRenderParser =
-            chunk.name === 'render' ? new RenderArtifactStreamParser(chunk.id) : null;
-          if (currentRenderParser) {
-            for (const event of currentRenderParser.start()) {
-              yield event;
-            }
-          }
         } else if (chunk.type === 'tool_use_delta') {
           currentToolJson += chunk.partial_json;
-          if (currentRenderParser) {
-            for (const event of currentRenderParser.append(chunk.partial_json)) {
-              yield event;
-            }
-          }
         } else if (chunk.type === 'stop') {
           if (chunk.stop_reason === 'tool_use') {
             if (!currentToolId || !currentToolName) {
@@ -568,11 +554,6 @@ export class AnthropicChatProvider {
               throw new Error('Anthropic returned invalid tool arguments');
             }
             const toolArguments = { ...parsedToolArguments };
-            if (currentRenderParser) {
-              for (const event of currentRenderParser.finalize(toolArguments)) {
-                yield event;
-              }
-            }
             pendingToolCalls.push({
               id: currentToolId,
               name: currentToolName,

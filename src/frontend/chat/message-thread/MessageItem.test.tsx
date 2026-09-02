@@ -1,7 +1,6 @@
 import { act } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderTest } from '@/test/render';
-import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import {
   chatState,
   registerChatToast,
@@ -27,7 +26,6 @@ const notify = () => '';
 afterEach(() => {
   clearConversationMeta();
   clearMessageTree();
-  clearArtifacts();
   chatState.setStatus('idle');
 });
 
@@ -130,7 +128,221 @@ describe('MessageItem', () => {
     expect(container.textContent).not.toContain('部分回复');
   });
 
-  it('disables edit and retry actions while chat is busy', () => {
+  it('renders persisted render HTML between its surrounding assistant content', () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    const message: Message = {
+      id: 1,
+      parentId: null,
+      prevSibling: null,
+      nextSibling: null,
+      latestChild: null,
+      role: 'assistant',
+      blocks: [
+        { type: 'content', content: '产物之前' },
+        {
+          type: 'research',
+          items: [
+            {
+              kind: 'tool',
+              data: {
+                call: {
+                  tool: 'render',
+                  args: {
+                    title: '会话内产物',
+                    code: '<!doctype html><main>Inline preview</main>',
+                  },
+                },
+                result: { result: 'HTML rendered successfully.' },
+              },
+            },
+          ],
+        },
+        { type: 'content', content: '产物之后' },
+      ],
+      createdAt: '2026-08-04T08:00:00.000Z',
+      completedAt: '2026-08-04T08:00:01.000Z',
+    };
+
+    const { container, getByText } = renderTest(() => (
+      <ToastProvider>
+        <MessageItem
+          message={message}
+          depth={1}
+          isStreaming={false}
+          isLastInPath
+          branchInfo={null}
+          editingState={null}
+          onStartEditing={() => {}}
+          onEditDocumentChange={() => {}}
+          onCancelEditing={() => {}}
+          onSubmitEdit={async () => {}}
+          onRetry={async () => {}}
+          onBranch={async () => {}}
+        />
+      </ToastProvider>
+    ));
+    const preview = container.querySelector('iframe');
+    const before = getByText('产物之前');
+    const after = getByText('产物之后');
+
+    expect(preview).not.toBeNull();
+    if (!preview) {
+      throw new Error('HTML preview was not rendered');
+    }
+    expect(container.textContent).not.toContain('会话内产物');
+    expect(container.querySelector('iframe')?.getAttribute('title')).toBe('HTML preview');
+    expect(container.querySelector('iframe')?.getAttribute('sandbox')).toBe('allow-scripts');
+    expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe(
+      '<!doctype html><main>Inline preview</main>',
+    );
+    expect(before.compareDocumentPosition(preview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(preview.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('shows only the HTML preview on the selected assistant branch', async () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    initializeMessageTree(
+      [
+        {
+          id: 1,
+          parentId: null,
+          prevSibling: null,
+          nextSibling: null,
+          latestChild: 2,
+          role: 'user',
+          blocks: [{ type: 'content', content: '生成一个页面' }],
+          createdAt: '2026-08-04T08:00:00.000Z',
+          completedAt: '2026-08-04T08:00:00.000Z',
+        },
+        {
+          id: 2,
+          parentId: 1,
+          prevSibling: null,
+          nextSibling: 3,
+          latestChild: null,
+          role: 'assistant',
+          blocks: [
+            {
+              type: 'research',
+              items: [
+                {
+                  kind: 'tool',
+                  data: {
+                    call: {
+                      tool: 'render',
+                      args: { code: '<main>Branch A</main>' },
+                    },
+                    result: { result: 'HTML rendered successfully.' },
+                  },
+                },
+              ],
+            },
+          ],
+          createdAt: '2026-08-04T08:00:01.000Z',
+          completedAt: '2026-08-04T08:00:02.000Z',
+        },
+        {
+          id: 3,
+          parentId: 1,
+          prevSibling: 2,
+          nextSibling: null,
+          latestChild: null,
+          role: 'assistant',
+          blocks: [
+            {
+              type: 'research',
+              items: [
+                {
+                  kind: 'tool',
+                  data: {
+                    call: {
+                      tool: 'render',
+                      args: { code: '<main>Branch B</main>' },
+                    },
+                    result: { result: 'HTML rendered successfully.' },
+                  },
+                },
+              ],
+            },
+          ],
+          createdAt: '2026-08-04T08:00:03.000Z',
+          completedAt: '2026-08-04T08:00:04.000Z',
+        },
+      ],
+      [1, 2],
+    );
+
+    const { container } = renderTest(() => (
+      <ToastProvider>
+        <MessageList />
+      </ToastProvider>
+    ));
+
+    expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe('<main>Branch A</main>');
+
+    await act(() => {
+      setMessageTreeState({ currentPath: [1, 3] });
+    });
+
+    expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe('<main>Branch B</main>');
+  });
+
+  it('does not render HTML before a successful render result', () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    const message: Message = {
+      id: 1,
+      parentId: null,
+      prevSibling: null,
+      nextSibling: null,
+      latestChild: null,
+      role: 'assistant',
+      blocks: [
+        {
+          type: 'research',
+          items: [
+            {
+              kind: 'tool',
+              data: {
+                call: { tool: 'render', args: { code: '<main>Pending</main>' } },
+              },
+            },
+            {
+              kind: 'tool',
+              data: {
+                call: { tool: 'render', args: { code: '<main>Failed</main>' } },
+                result: { result: 'Error: Render failed' },
+              },
+            },
+          ],
+        },
+      ],
+      createdAt: '2026-08-04T08:00:00.000Z',
+      completedAt: '2026-08-04T08:00:01.000Z',
+    };
+
+    const { container } = renderTest(() => (
+      <ToastProvider>
+        <MessageItem
+          message={message}
+          depth={1}
+          isStreaming={false}
+          isLastInPath
+          branchInfo={null}
+          editingState={null}
+          onStartEditing={() => {}}
+          onEditDocumentChange={() => {}}
+          onCancelEditing={() => {}}
+          onSubmitEdit={async () => {}}
+          onRetry={async () => {}}
+          onBranch={async () => {}}
+        />
+      </ToastProvider>
+    ));
+
+    expect(container.querySelector('iframe')).toBeNull();
+  });
+
+  it('disables edit and retry while keeping branch enabled when chat is busy', () => {
     registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
     initializeMessageTree(
       [
@@ -165,24 +377,27 @@ describe('MessageItem', () => {
         <MessageList />
       </ToastProvider>
     ));
-    const expectActionsDisabled = (disabled: boolean) => {
+    const expectMessageActions = (busy: boolean) => {
       expect(container.querySelector('button[title="编辑消息"]')?.hasAttribute('disabled')).toBe(
-        disabled,
+        busy,
       );
       const retryButtons = container.querySelectorAll('button[title="重试生成"]');
       expect(retryButtons).toHaveLength(2);
       expect(Array.from(retryButtons).every((button) => button.hasAttribute('disabled'))).toBe(
-        disabled,
+        busy,
       );
+      expect(
+        container.querySelector('button[title="从这里创建分支会话"]')?.hasAttribute('disabled'),
+      ).toBe(false);
     };
 
-    expectActionsDisabled(false);
+    expectMessageActions(false);
     for (const status of ['sending', 'streaming', 'stopping'] satisfies ChatStatus[]) {
       act(() => chatState.setStatus(status));
-      expectActionsDisabled(true);
+      expectMessageActions(true);
     }
     act(() => chatState.setStatus('idle'));
-    expectActionsDisabled(false);
+    expectMessageActions(false);
   });
 
   it('renders persisted structured error details', () => {

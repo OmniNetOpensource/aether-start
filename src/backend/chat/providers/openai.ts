@@ -11,7 +11,6 @@ import { quotesToModelText } from '@/shared/conversations';
 import { buildProviderErrorEvent } from './provider-error';
 import { resolveAttachmentToBase64 } from '../attachment-utils';
 import { parseToolResultImage } from '../tool-result-images';
-import { RenderArtifactStreamParser } from '@/shared/chat/render-artifact-stream';
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
@@ -345,7 +344,6 @@ export class OpenAIChatProvider {
       assistantText: '',
     };
     const toolCallsByIndex = new Map<number, { id: string; name: string; argsJson: string }>();
-    const renderParsers = new Map<number, RenderArtifactStreamParser>();
     let assistantText = '';
     let reasoningContent = '';
 
@@ -442,15 +440,6 @@ export class OpenAIChatProvider {
             }
             if (typeof fn.arguments === 'string' && fn.arguments.length > 0) {
               existing.argsJson += fn.arguments;
-              if (existing.name === 'render') {
-                const parser =
-                  renderParsers.get(index) ??
-                  new RenderArtifactStreamParser(existing.id || `tool_${index + 1}`);
-                renderParsers.set(index, parser);
-                for (const event of parser.append(fn.arguments)) {
-                  yield event;
-                }
-              }
             }
           }
 
@@ -505,22 +494,6 @@ export class OpenAIChatProvider {
 
     for (const tc of pendingToolCalls) {
       yield { type: 'tool_call', tool: tc.name, args: tc.args, callId: tc.id };
-    }
-
-    for (const [index, toolCall] of [...toolCallsByIndex.entries()].sort(([a], [b]) => a - b)) {
-      if (toolCall.name !== 'render') {
-        continue;
-      }
-
-      const parser =
-        renderParsers.get(index) ??
-        new RenderArtifactStreamParser(toolCall.id || `tool_${index + 1}`);
-      for (const event of parser.finalize(
-        pendingToolCalls.find((item) => item.id === (toolCall.id || `tool_${index + 1}`))?.args ??
-          {},
-      )) {
-        yield event;
-      }
     }
 
     return {

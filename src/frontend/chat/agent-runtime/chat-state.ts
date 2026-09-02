@@ -1,5 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import { artifactActions, type ArtifactActions } from '@/frontend/chat/artifact/artifact-state';
 import {
   getMessageTreeState,
   messageTreeActions,
@@ -22,7 +21,6 @@ export type ChatState = {
   getCurrentModelId: () => string;
   getMessageTree: () => MessageTreeState;
   messageTree: MessageTreeActions;
-  artifacts: ArtifactActions;
   setPageTitle: (title: string) => void;
   getStatus: () => ChatStatus;
   setStatus: (status: ChatStatus) => void;
@@ -57,7 +55,6 @@ export const chatState: ChatState = {
   getCurrentModelId: currentModelId,
   getMessageTree: getMessageTreeState,
   messageTree: messageTreeActions,
-  artifacts: artifactActions,
   setPageTitle,
   getStatus: status,
   setStatus,

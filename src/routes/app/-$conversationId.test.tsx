@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import { renderTest } from '@/test/render';
-import { artifacts, clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import {
   clearMessageTree,
   currentPath,
@@ -14,7 +13,6 @@ import {
 } from '@/frontend/conversations/session/conversation-meta';
 import { currentModelId, setCurrentModelId } from '@/frontend/conversations/session/chat-selection';
 import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
-import type { ConversationArtifact } from '@/shared/conversations/conversation';
 
 vi.mock('@/frontend/chat/agent-runtime/chat-orchestrator', () => ({
   cancelStreamSubscription: vi.fn(),
@@ -38,23 +36,11 @@ afterEach(() => {
   vi.restoreAllMocks();
   clearConversationMeta();
   clearMessageTree();
-  clearArtifacts();
   setCurrentModelId(DEFAULT_MODEL_ID);
 });
 
 describe('conversation route direct hydration', () => {
   it('restores persisted messages when the route component mounts from loader data', () => {
-    const artifact: ConversationArtifact = {
-      id: 'artifact-1',
-      conversation_id: 'conversation-1',
-      title: 'Artifact',
-      language: 'html',
-      code: '<main>History</main>',
-      deploy_url: null,
-      deployed_at: null,
-      created_at: '2026-08-31T00:00:03.000Z',
-      updated_at: '2026-08-31T00:00:03.000Z',
-    };
     const conversation = {
       id: 'conversation-1',
       title: 'History',
@@ -83,7 +69,6 @@ describe('conversation route direct hydration', () => {
           completedAt: '2026-08-31T00:00:02.000Z',
         },
       ],
-      artifacts: [artifact],
     };
 
     vi.spyOn(Route, 'useLoaderData').mockReturnValue({ conversation });
@@ -97,7 +82,6 @@ describe('conversation route direct hydration', () => {
     expect(pageTitle()).toBe(conversation.title);
     expect(currentModelId()).toBe(conversation.model);
     expect(currentPath()).toEqual([1, 2]);
-    expect(artifacts()[0]).toMatchObject({ ...artifact, status: 'completed', errorMessage: null });
     expect(screen.getByText('历史问题')).toBeTruthy();
     expect(screen.getByText('历史回答')).toBeTruthy();
   });

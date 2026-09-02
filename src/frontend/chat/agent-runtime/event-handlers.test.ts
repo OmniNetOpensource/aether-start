@@ -221,4 +221,68 @@ describe('event handlers', () => {
       },
     ]);
   });
+
+  it('keeps one render item when generic tool events are replayed', () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    initializeMessageTree([createAssistantMessage()], [1]);
+
+    const events: ChatServerToClientEvent[] = [
+      {
+        type: 'tool_call',
+        tool: 'render',
+        args: { code: '<main>Demo</main>' },
+        callId: 'render-1',
+      },
+      { type: 'content', content: 'Rendered above.' },
+      {
+        type: 'tool_call',
+        tool: 'render',
+        args: { code: '<main>Demo</main>' },
+        callId: 'render-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'render',
+        result: 'HTML rendered successfully.',
+        callId: 'render-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'render',
+        result: 'HTML rendered successfully.',
+        callId: 'render-1',
+      },
+    ];
+
+    for (const [index, event] of events.entries()) {
+      handleServerMessage(
+        chatState,
+        {
+          event: 'chat_event',
+          data: { eventId: index + 1, assistantMessageId: 1, event },
+        },
+        'conversation-1',
+      );
+    }
+
+    expect(messages()[0]?.blocks).toEqual([
+      {
+        type: 'research',
+        items: [
+          {
+            kind: 'tool',
+            data: {
+              call: {
+                tool: 'render',
+                args: { code: '<main>Demo</main>' },
+                callId: 'render-1',
+              },
+              result: { result: 'HTML rendered successfully.' },
+            },
+          },
+        ],
+      },
+      { type: 'content', content: 'Rendered above.' },
+    ]);
+  });
 });

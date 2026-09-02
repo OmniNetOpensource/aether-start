@@ -1,7 +1,5 @@
-import type { ArtifactLanguage } from '@/shared/chat/chat-api';
 import { isMessage, type Message } from '@/shared/chat/message';
 import type {
-  ConversationArtifact,
   ConversationListCursor,
   ConversationSearchCursor,
 } from '@/shared/conversations/conversation';
@@ -14,7 +12,6 @@ export type ConversationRecord = {
   is_pinned: boolean;
   pinned_at: string | null;
   messages: object[];
-  artifacts: ConversationArtifact[];
   created_at: string;
   updated_at: string;
 };
@@ -25,17 +22,6 @@ export type ConversationPayload = {
   title: string | null;
   model?: string | null;
   messages: object[];
-  created_at: string;
-  updated_at: string;
-};
-
-export type ConversationArtifactPayload = {
-  user_id: string;
-  id: string;
-  conversation_id: string;
-  title: string;
-  language: ArtifactLanguage;
-  code: string;
   created_at: string;
   updated_at: string;
 };
@@ -69,37 +55,6 @@ const safeParseMessages = (value: string): object[] => {
   } catch {
     return [];
   }
-};
-
-const toArtifactLanguage = (value: unknown): ArtifactLanguage | null =>
-  value === 'html' ? value : null;
-
-const toConversationArtifact = (row: unknown): ConversationArtifact | null => {
-  if (!isRecord(row) || typeof row.id !== 'string' || typeof row.conversation_id !== 'string') {
-    return null;
-  }
-
-  const language = toArtifactLanguage(row.language);
-  if (!language || typeof row.title !== 'string' || typeof row.code !== 'string') {
-    return null;
-  }
-
-  const createdAt = typeof row.created_at === 'string' ? row.created_at : new Date().toISOString();
-  const updatedAt = typeof row.updated_at === 'string' ? row.updated_at : createdAt;
-  const deployUrl = typeof row.deploy_url === 'string' ? row.deploy_url : null;
-  const deployedAt = typeof row.deployed_at === 'string' ? row.deployed_at : null;
-
-  return {
-    id: row.id,
-    conversation_id: row.conversation_id,
-    title: row.title,
-    language,
-    code: row.code,
-    deploy_url: deployUrl,
-    deployed_at: deployedAt,
-    created_at: createdAt,
-    updated_at: updatedAt,
-  };
 };
 
 const toPinnedBoolean = (value: unknown) => value === 1 || value === '1';
@@ -264,7 +219,6 @@ const toConversationRecord = (row: unknown): ConversationRecord | null => {
     is_pinned: isPinned,
     pinned_at: pinnedAt,
     messages: safeParseMessages(messagesJson),
-    artifacts: [],
     created_at: createdAt,
     updated_at: updatedAt,
   };
@@ -291,7 +245,6 @@ const toConversationSummaryRecord = (row: unknown): ConversationRecord | null =>
     is_pinned: isPinned,
     pinned_at: pinnedAt,
     messages: [],
-    artifacts: [],
     created_at: createdAt,
     updated_at: updatedAt,
   };
@@ -600,94 +553,20 @@ export const searchConversations = async (
 };
 
 export const getConversationById = async (db: D1Database, id: string, userId: string) => {
-  const [row, artifactRows] = await Promise.all([
-    db
-      .prepare(
-        `
+  const row = await db
+    .prepare(
+      `
       SELECT m.user_id, m.id, m.title, m.model, m.is_pinned, m.pinned_at, m.created_at, m.updated_at, b.messages_json
       FROM conversation_metas m
       JOIN conversation_bodies b ON b.user_id = m.user_id AND b.id = m.id
       WHERE m.id = ?1 AND m.user_id = ?2
       LIMIT 1
       `,
-      )
-      .bind(id, userId)
-      .first(),
-    db
-      .prepare(
-        `
-        SELECT id, conversation_id, title, language, code, deploy_url, deployed_at, created_at, updated_at
-        FROM conversation_artifacts
-        WHERE user_id = ?1 AND conversation_id = ?2
-        ORDER BY created_at DESC, id DESC
-        `,
-      )
-      .bind(userId, id)
-      .all(),
-  ]);
-
-  const conversation = toConversationRecord(row);
-  if (!conversation) {
-    return null;
-  }
-
-  return {
-    ...conversation,
-    artifacts: Array.isArray(artifactRows.results)
-      ? artifactRows.results
-          .map((artifact) => toConversationArtifact(artifact))
-          .filter((artifact): artifact is ConversationArtifact => !!artifact)
-      : [],
-  };
-};
-
-export const listConversationArtifacts = async (
-  db: D1Database,
-  input: { userId: string; conversationId: string },
-) => {
-  const rows = await db
-    .prepare(
-      `
-      SELECT id, conversation_id, title, language, code, deploy_url, deployed_at, created_at, updated_at
-      FROM conversation_artifacts
-      WHERE user_id = ?1 AND conversation_id = ?2
-      ORDER BY created_at DESC, id DESC
-      `,
     )
-    .bind(input.userId, input.conversationId)
-    .all();
+    .bind(id, userId)
+    .first();
 
-  return Array.isArray(rows.results)
-    ? rows.results
-        .map((artifact) => toConversationArtifact(artifact))
-        .filter((artifact): artifact is ConversationArtifact => !!artifact)
-    : [];
-};
-
-export const createConversationArtifact = async (
-  db: D1Database,
-  payload: ConversationArtifactPayload,
-) => {
-  await db
-    .prepare(
-      `
-      INSERT INTO conversation_artifacts(user_id, id, conversation_id, title, language, code, created_at, updated_at)
-      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
-      `,
-    )
-    .bind(
-      payload.user_id,
-      payload.id,
-      payload.conversation_id,
-      payload.title,
-      payload.language,
-      payload.code,
-      payload.created_at,
-      payload.updated_at,
-    )
-    .run();
-
-  return { ok: true };
+  return toConversationRecord(row);
 };
 
 export const upsertConversation = async (db: D1Database, payload: ConversationPayload) => {
@@ -801,9 +680,6 @@ export const branchConversation = async (
 export const deleteConversationById = async (db: D1Database, id: string, userId: string) => {
   await db.batch([
     db
-      .prepare('DELETE FROM conversation_artifacts WHERE user_id = ?1 AND conversation_id = ?2')
-      .bind(userId, id),
-    db
       .prepare('DELETE FROM conversation_search_fts WHERE user_id = ?1 AND conversation_id = ?2')
       .bind(userId, id),
     db.prepare('DELETE FROM conversation_bodies WHERE user_id = ?1 AND id = ?2').bind(userId, id),
@@ -815,7 +691,6 @@ export const deleteConversationById = async (db: D1Database, id: string, userId:
 
 export const clearConversations = async (db: D1Database, userId: string) => {
   await db.batch([
-    db.prepare('DELETE FROM conversation_artifacts WHERE user_id = ?1').bind(userId),
     db.prepare('DELETE FROM conversation_search_fts WHERE user_id = ?1').bind(userId),
     db.prepare('DELETE FROM conversation_bodies WHERE user_id = ?1').bind(userId),
     db.prepare('DELETE FROM conversation_metas WHERE user_id = ?1').bind(userId),
