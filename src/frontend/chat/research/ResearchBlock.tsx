@@ -134,7 +134,19 @@ function ThinkingStep(props: { text: string; hideConnector: boolean }) {
 // Render a search tool step
 function SearchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolean }) {
   const query = typeof props.tool.call.args.query === 'string' ? props.tool.call.args.query : '';
-  const description = query ? `Reading the web · ${query}` : 'Reading the web';
+  const platform = props.tool.call.args.platform;
+  const description =
+    props.tool.call.tool === 'search'
+      ? `${
+          platform === 'weixin'
+            ? '搜索微信公众号'
+            : platform === 'rednote'
+              ? '搜索小红书'
+              : '搜索 Google'
+        }${query ? ` · ${query}` : ''}`
+      : query
+        ? `Reading the web · ${query}`
+        : 'Reading the web';
   const searchResults = props.tool.result
     ? parseSearchResults(
         typeof props.tool.result.result === 'string' ? props.tool.result.result : '',
