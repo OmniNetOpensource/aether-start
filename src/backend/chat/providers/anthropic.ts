@@ -72,6 +72,30 @@ type AnthropicStreamChunk =
   | { type: 'stop'; stop_reason: string }
   | { type: 'thinking_blocks'; blocks: ThinkingBlockData[] };
 
+class AnthropicStreamError extends Error {
+  readonly status: number | undefined;
+
+  constructor(
+    error: unknown,
+    readonly stream: {
+      requestId: string | null | undefined;
+      phase: string;
+      stopReason: string | null;
+      eventCount: number;
+      openContentBlockCount: number;
+      durationMs: number;
+      msSinceLastEvent: number | null;
+    },
+  ) {
+    super(error instanceof Error ? error.message : 'Anthropic stream failed', { cause: error });
+    this.name = error instanceof Error ? error.name : 'AnthropicStreamError';
+    this.status =
+      error && typeof error === 'object' && 'status' in error && typeof error.status === 'number'
+        ? error.status
+        : undefined;
+  }
+}
+
 const THINKING_BUDGET_RATIO = 0.8;
 const THINKING_MIN_BUDGET_TOKENS = 1024;
 const ADAPTIVE_THINKING_MODELS = new Set(['claude-opus-4-6', 'claude-opus-4-7', 'claude-opus-4-8']);
@@ -242,64 +266,117 @@ async function* streamAnthropicCompletion(requestParams: {
     signal: requestParams.signal,
   });
 
-  for await (const event of stream) {
-    if (requestParams.signal?.aborted) {
-      throw new DOMException('Aborted', 'AbortError');
+  const startedAt = Date.now();
+  const openContentBlocks = new Set<number>();
+  let eventCount = 0;
+  let lastEventAt: number | undefined;
+  let stopReason: string | null = null;
+  let completedMessage: Anthropic.Message | undefined;
+
+  try {
+    for await (const event of stream) {
+      if (requestParams.signal?.aborted) {
+        throw new DOMException('Aborted', 'AbortError');
+      }
+
+      eventCount += 1;
+      lastEventAt = Date.now();
+
+      logProviderCommunication('anthropic', 'Stream event', {
+        model: requestParams.model,
+        event,
+      });
+
+      if (event.type === 'content_block_start') {
+        openContentBlocks.add(event.index);
+        if (event.content_block.type === 'tool_use') {
+          yield {
+            type: 'tool_use_start',
+            id: event.content_block.id,
+            name: event.content_block.name,
+          };
+        }
+      } else if (event.type === 'content_block_delta') {
+        if (event.delta.type === 'text_delta') {
+          yield { type: 'text', text: event.delta.text };
+        } else if (event.delta.type === 'input_json_delta') {
+          yield {
+            type: 'tool_use_delta',
+            partial_json: event.delta.partial_json,
+          };
+        } else if (event.delta.type === 'thinking_delta') {
+          yield {
+            type: 'thinking',
+            thinking: event.delta.thinking,
+          };
+        }
+      } else if (event.type === 'content_block_stop') {
+        openContentBlocks.delete(event.index);
+      } else if (event.type === 'message_delta') {
+        if (event.delta.stop_reason) {
+          stopReason = event.delta.stop_reason;
+          yield { type: 'stop', stop_reason: event.delta.stop_reason };
+        }
+      } else if (event.type === 'message_stop') {
+        if (!stopReason || openContentBlocks.size > 0 || !stream.currentMessage) {
+          throw new Error('Anthropic stream ended before all content blocks were complete');
+        }
+
+        completedMessage = stream.currentMessage;
+        break;
+      }
     }
 
-    logProviderCommunication('anthropic', 'Stream event', {
-      model: requestParams.model,
-      event,
-    });
+    if (!completedMessage) {
+      completedMessage = await stream.finalMessage();
+    }
+  } catch (error) {
+    const now = Date.now();
+    const streamState = {
+      requestId: stream.request_id,
+      phase: stopReason ? 'after_stop_reason' : eventCount > 0 ? 'streaming' : 'before_first_event',
+      stopReason,
+      eventCount,
+      openContentBlockCount: openContentBlocks.size,
+      durationMs: now - startedAt,
+      msSinceLastEvent: lastEventAt === undefined ? null : now - lastEventAt,
+    };
+    const message = stream.currentMessage;
+    const networkConnectionLost =
+      error instanceof Error &&
+      (error.message === 'Network connection lost.' ||
+        (error.cause instanceof Error && error.cause.message === 'Network connection lost.'));
 
-    if (event.type === 'content_block_start') {
-      if (event.content_block.type === 'tool_use') {
-        yield {
-          type: 'tool_use_start',
-          id: event.content_block.id,
-          name: event.content_block.name,
-        };
-      }
-    } else if (event.type === 'content_block_delta') {
-      if (event.delta.type === 'text_delta') {
-        yield { type: 'text', text: event.delta.text };
-      } else if (event.delta.type === 'input_json_delta') {
-        yield {
-          type: 'tool_use_delta',
-          partial_json: event.delta.partial_json,
-        };
-      } else if (event.delta.type === 'thinking_delta') {
-        yield {
-          type: 'thinking',
-          thinking: event.delta.thinking,
-        };
-      }
-    } else if (event.type === 'message_delta') {
-      if (event.delta.stop_reason) {
-        yield { type: 'stop', stop_reason: event.delta.stop_reason };
-      }
+    if (networkConnectionLost && stopReason && openContentBlocks.size === 0 && message) {
+      completedMessage = message;
+      log('ANTHROPIC', 'Recovered completed Anthropic stream after connection loss', {
+        error,
+        model: requestParams.model,
+        stream: streamState,
+      });
+    } else {
+      throw new AnthropicStreamError(error, streamState);
     }
   }
 
-  try {
-    const finalMessage = await stream.finalMessage();
-    const thinkingBlocks: ThinkingBlockData[] = [];
-    for (const block of finalMessage.content) {
-      if (block.type === 'thinking') {
-        thinkingBlocks.push({
-          type: 'thinking',
-          thinking: block.thinking,
-          signature: block.signature,
-        });
-      } else if (block.type === 'redacted_thinking') {
-        thinkingBlocks.push({ type: 'redacted_thinking', data: block.data });
-      }
+  if (!completedMessage) {
+    throw new Error('Anthropic stream completed without a message');
+  }
+
+  const thinkingBlocks: ThinkingBlockData[] = [];
+  for (const block of completedMessage.content) {
+    if (block.type === 'thinking') {
+      thinkingBlocks.push({
+        type: 'thinking',
+        thinking: block.thinking,
+        signature: block.signature,
+      });
+    } else if (block.type === 'redacted_thinking') {
+      thinkingBlocks.push({ type: 'redacted_thinking', data: block.data });
     }
-    if (thinkingBlocks.length > 0) {
-      yield { type: 'thinking_blocks', blocks: thinkingBlocks };
-    }
-  } catch {
-    // finalMessage may fail if stream was aborted
+  }
+  if (thinkingBlocks.length > 0) {
+    yield { type: 'thinking_blocks', blocks: thinkingBlocks };
   }
 }
 
@@ -469,18 +546,20 @@ export class AnthropicChatProvider {
             }
           }
         } else if (chunk.type === 'stop') {
-          if (currentToolId && currentToolName) {
-            let toolArguments: Record<string, unknown> = {};
-            try {
-              toolArguments = JSON.parse(currentToolJson || '{}');
-            } catch (error) {
-              log('ANTHROPIC', 'Failed to parse tool arguments on stop chunk', {
-                error,
-                currentToolId,
-                currentToolName,
-                currentToolJson,
-              });
+          if (chunk.stop_reason === 'tool_use') {
+            if (!currentToolId || !currentToolName) {
+              throw new Error('Anthropic stopped for tool use without a complete tool call');
             }
+
+            const parsedToolArguments: unknown = JSON.parse(currentToolJson || '{}');
+            if (
+              !parsedToolArguments ||
+              typeof parsedToolArguments !== 'object' ||
+              Array.isArray(parsedToolArguments)
+            ) {
+              throw new Error('Anthropic returned invalid tool arguments');
+            }
+            const toolArguments = { ...parsedToolArguments };
             if (currentRenderParser) {
               for (const event of currentRenderParser.finalize(toolArguments)) {
                 yield event;
@@ -499,8 +578,8 @@ export class AnthropicChatProvider {
             };
           }
           log('ANTHROPIC', 'Received stop chunk', {
-            chunk,
-            pendingTools: pendingToolCalls,
+            stopReason: chunk.stop_reason,
+            pendingToolCount: pendingToolCalls.length,
           });
         }
       }
@@ -512,6 +591,8 @@ export class AnthropicChatProvider {
       log('ANTHROPIC', 'Anthropic provider run failed', {
         error,
         model: this.model,
+        backend: this.backendConfig.baseURL,
+        stream: error instanceof AnthropicStreamError ? error.stream : undefined,
       });
 
       yield buildProviderErrorEvent({

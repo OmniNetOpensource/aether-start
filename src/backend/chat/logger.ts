@@ -1,25 +1,80 @@
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
 
-const toJsonSafe = (value: unknown): unknown => {
-  if (value instanceof Error) {
-    return {
-      name: value.name,
-      message: value.message,
-      stack: value.stack,
-      cause: (value as { cause?: unknown }).cause,
-    };
-  }
+const shouldRedactKey = (key: string): boolean => {
+  return /authorization|api[-_]?key|token|secret/i.test(key);
+};
 
-  try {
-    JSON.stringify(value);
-    return value;
-  } catch {
-    try {
-      return String(value);
-    } catch {
-      return '[Unserializable]';
+const toJsonSafe = (value: unknown): unknown => {
+  const ancestors = new WeakSet<object>();
+
+  const serialize = (item: unknown): unknown => {
+    if (typeof item === 'bigint') {
+      return item.toString();
     }
-  }
+
+    if (typeof item === 'function') {
+      return `[Function${item.name ? `: ${item.name}` : ''}]`;
+    }
+
+    if (typeof item === 'symbol') {
+      return item.toString();
+    }
+
+    if (!item || typeof item !== 'object') {
+      return item;
+    }
+
+    if (ancestors.has(item)) {
+      return '[Circular]';
+    }
+
+    ancestors.add(item);
+
+    try {
+      if (Array.isArray(item)) {
+        return item.map((entry) => serialize(entry));
+      }
+
+      if (item instanceof Error) {
+        const serialized: Record<string, unknown> = {
+          name: item.name,
+          message: item.message,
+          stack: item.stack,
+        };
+
+        if (item.cause !== undefined) {
+          serialized.cause = serialize(item.cause);
+        }
+
+        for (const [key, entry] of Object.entries(item)) {
+          if (key === 'name' || key === 'message' || key === 'stack' || key === 'cause') {
+            continue;
+          }
+
+          serialized[key] = shouldRedactKey(key) ? '[REDACTED]' : serialize(entry);
+        }
+
+        return serialized;
+      }
+
+      return Object.fromEntries(
+        Object.entries(item).map(([key, entry]) => [
+          key,
+          shouldRedactKey(key) ? '[REDACTED]' : serialize(entry),
+        ]),
+      );
+    } catch {
+      try {
+        return String(item);
+      } catch {
+        return '[Unserializable]';
+      }
+    } finally {
+      ancestors.delete(item);
+    }
+  };
+
+  return serialize(value);
 };
 
 const emitLog = (entry: Record<string, unknown>) => {
@@ -78,27 +133,6 @@ const parseProviderToken = (value: string): LlmProvider | null => {
   return null;
 };
 
-const shouldRedactKey = (key: string): boolean => {
-  return /authorization|api[-_]?key|token|secret/i.test(key);
-};
-
-const redactSensitiveData = (value: unknown): unknown => {
-  if (Array.isArray(value)) {
-    return value.map((item) => redactSensitiveData(item));
-  }
-
-  if (!value || typeof value !== 'object') {
-    return value;
-  }
-
-  return Object.fromEntries(
-    Object.entries(value).map(([key, itemValue]) => [
-      key,
-      shouldRedactKey(key) ? '[REDACTED]' : redactSensitiveData(itemValue),
-    ]),
-  );
-};
-
 export const shouldLogProviderCommunication = (provider: LlmProvider): boolean => {
   const rawValue = getServerEnv().LLM_STREAM_LOGGING;
   if (!rawValue) {
@@ -143,14 +177,13 @@ export const logProviderCommunication = (
     return;
   }
 
-  const redacted = redactSensitiveData(data);
   const entry: Record<string, unknown> = {
     ts: Date.now(),
     cat: LLM_PROVIDER_CATEGORY[provider],
     msg: message,
   };
-  if (redacted !== undefined) {
-    entry.data = toJsonSafe(redacted);
+  if (data !== undefined) {
+    entry.data = toJsonSafe(data);
   }
 
   const serialized = JSON.stringify(entry);
