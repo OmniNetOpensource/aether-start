@@ -90,7 +90,6 @@ function getStatusText(tool: Tool, isActive: boolean, toolName: string): string 
     if (!isActive) return '等待中...';
     if (SEARCH_TOOL_NAMES.has(toolName)) return '搜索中...';
     if (toolName === 'fetch_url') return '获取中...';
-    if (toolName === 'render') return '渲染中...';
     return '执行中...';
   }
 
@@ -303,35 +302,6 @@ function FetchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolea
   );
 }
 
-function RenderStep(props: { tool: Tool; isActive: boolean; hideConnector: boolean }) {
-  const description = `render · ${getStatusText(props.tool, props.isActive, 'render')}`;
-
-  return (
-    <ChainOfThoughtStep
-      icon={
-        <svg
-          viewBox='0 0 24 24'
-          fill='none'
-          stroke='currentColor'
-          strokeWidth='2'
-          strokeLinecap='round'
-          strokeLinejoin='round'
-          className='h-full w-full'
-          aria-hidden='true'
-        >
-          <rect x='3' y='3' width='18' height='18' rx='2' />
-          <path d='M3 9h18' />
-          <path d='M7 13h10' />
-          <path d='M7 17h6' />
-        </svg>
-      }
-      description={description}
-      status={getStepStatus(props.tool, props.isActive)}
-      hideConnector={props.hideConnector}
-    />
-  );
-}
-
 // Render a generic tool step
 function GenericToolStep(props: { tool: Tool; isActive: boolean; hideConnector: boolean }) {
   const description = `${props.tool.call.tool} · ${getStatusText(props.tool, props.isActive, props.tool.call.tool)}`;
@@ -352,12 +322,20 @@ type ResearchBlockProps = {
 };
 
 export function ResearchBlock(props: ResearchBlockProps) {
+  const visibleItems = props.items.filter(
+    (item) => item.kind === 'thinking' || item.data.call.tool !== 'render',
+  );
+
+  if (visibleItems.length === 0) {
+    return null;
+  }
+
   return (
     <ChainOfThought>
       <ChainOfThoughtHeader>思考过程</ChainOfThoughtHeader>
       <ChainOfThoughtContent>
-        {props.items.map((item, index) => {
-          const isLastStep = index === props.items.length - 1;
+        {visibleItems.map((item, index) => {
+          const isLastStep = index === visibleItems.length - 1;
 
           if (item.kind === 'thinking') {
             return <ThinkingStep key={index} text={item.text} hideConnector={isLastStep} />;
@@ -381,17 +359,6 @@ export function ResearchBlock(props: ResearchBlockProps) {
           if (toolName === 'fetch_url') {
             return (
               <FetchStep
-                key={index}
-                tool={tool}
-                isActive={itemIsActive}
-                hideConnector={isLastStep}
-              />
-            );
-          }
-
-          if (toolName === 'render') {
-            return (
-              <RenderStep
                 key={index}
                 tool={tool}
                 isActive={itemIsActive}

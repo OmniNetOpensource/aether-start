@@ -80,4 +80,56 @@ describe('ResearchBlock', () => {
     expect(screen.getByText('Reading the web · 人工智能')).toBeTruthy();
     expect(screen.queryByText('搜索 Google · 人工智能')).toBeNull();
   });
+
+  it('renders nothing when every item is a render tool call', () => {
+    const view = renderTest(() => (
+      <ResearchBlock
+        items={[
+          {
+            kind: 'tool',
+            data: {
+              call: {
+                tool: 'render',
+                args: { code: '<!doctype html><html><body>Canvas</body></html>' },
+                callId: 'render-1',
+              },
+              result: { result: 'HTML rendered successfully.' },
+            },
+          },
+        ]}
+      />
+    ));
+
+    expect(view.container.firstChild).toBeNull();
+    expect(screen.queryByText('思考过程')).toBeNull();
+  });
+
+  it('hides render calls and derives active and connector state from visible items', () => {
+    const view = renderTest(() => (
+      <ResearchBlock
+        isActive
+        items={[
+          ...searchItems('google'),
+          {
+            kind: 'tool',
+            data: {
+              call: {
+                tool: 'render',
+                args: { code: '<!doctype html><html><body>Canvas</body></html>' },
+                callId: 'render-1',
+              },
+            },
+          },
+        ]}
+      />
+    ));
+
+    expect(screen.getByText('搜索 Google · 人工智能')).toBeTruthy();
+    expect(screen.queryByText(/render/i)).toBeNull();
+    expect(view.container.querySelectorAll("[data-slot='chain-of-thought-step']")).toHaveLength(1);
+    expect(view.container.querySelector("[data-slot='chain-of-thought-step'] .w-px")).toBeNull();
+    expect(
+      view.container.querySelector("[data-slot='chain-of-thought-step'] .text-muted-foreground"),
+    ).toBeNull();
+  });
 });

@@ -1,4 +1,4 @@
-import { act } from '@testing-library/react';
+import { act, fireEvent } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderTest } from '@/test/render';
 import {
@@ -24,6 +24,7 @@ vi.mock('@tanstack/react-router', () => ({
 const notify = () => '';
 
 afterEach(() => {
+  vi.unstubAllGlobals();
   clearConversationMeta();
   clearMessageTree();
   chatState.setStatus('idle');
@@ -128,8 +129,26 @@ describe('MessageItem', () => {
     expect(container.textContent).not.toContain('部分回复');
   });
 
-  it('renders persisted render HTML between its surrounding assistant content', () => {
+  it('renders persisted HTML in a fixed canvas and expands with its content height', () => {
     registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    let resizeCallback: ResizeObserverCallback | undefined;
+    const resizeObserver: ResizeObserver = {
+      observe: vi.fn(),
+      unobserve: vi.fn(),
+      disconnect: vi.fn(),
+    };
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(callback: ResizeObserverCallback) {
+          resizeCallback = callback;
+        }
+
+        observe = resizeObserver.observe;
+        unobserve = resizeObserver.unobserve;
+        disconnect = resizeObserver.disconnect;
+      },
+    );
     const message: Message = {
       id: 1,
       parentId: null,
@@ -163,7 +182,7 @@ describe('MessageItem', () => {
       completedAt: '2026-08-04T08:00:01.000Z',
     };
 
-    const { container, getByText } = renderTest(() => (
+    const { container, getByRole, getByText } = renderTest(() => (
       <ToastProvider>
         <MessageItem
           message={message}
@@ -189,12 +208,69 @@ describe('MessageItem', () => {
     if (!preview) {
       throw new Error('HTML preview was not rendered');
     }
+    const frameDocument = preview.contentDocument;
+    if (!frameDocument?.body) {
+      throw new Error('HTML preview document was not available');
+    }
+    Object.defineProperty(frameDocument.documentElement, 'clientHeight', {
+      configurable: true,
+      value: 384,
+    });
+    Object.defineProperty(frameDocument.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 840,
+    });
+    Object.defineProperty(preview, 'clientHeight', {
+      configurable: true,
+      value: 382,
+    });
+    Object.defineProperty(preview, 'offsetHeight', {
+      configurable: true,
+      value: 384,
+    });
+    const bodyRect = vi
+      .spyOn(frameDocument.body, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 0, 960));
+
     expect(container.textContent).not.toContain('会话内产物');
-    expect(container.querySelector('iframe')?.getAttribute('title')).toBe('HTML preview');
-    expect(container.querySelector('iframe')?.getAttribute('sandbox')).toBe('allow-scripts');
-    expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe(
-      '<!doctype html><main>Inline preview</main>',
-    );
+    expect(preview.getAttribute('title')).toBe('HTML preview');
+    expect(preview.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin');
+    expect(preview.getAttribute('srcdoc')).toBe('<!doctype html><main>Inline preview</main>');
+    expect(preview.style.height).toBe('384px');
+    fireEvent.click(getByRole('button', { name: '展开' }));
+    expect(preview.style.height).toBe('962px');
+    expect(getByRole('button', { name: '固定' })).toBeDefined();
+    expect(resizeObserver.observe).toHaveBeenCalledWith(frameDocument.documentElement);
+    expect(resizeObserver.observe).toHaveBeenCalledWith(frameDocument.body);
+
+    Object.defineProperty(frameDocument.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 1240,
+    });
+    Object.defineProperty(frameDocument.documentElement, 'clientHeight', {
+      configurable: true,
+      value: 960,
+    });
+    bodyRect.mockReturnValue(new DOMRect(0, 0, 0, 1240));
+    act(() => resizeCallback?.([], resizeObserver));
+    expect(preview.style.height).toBe('1242px');
+
+    Object.defineProperty(frameDocument.documentElement, 'clientHeight', {
+      configurable: true,
+      value: 1240,
+    });
+    Object.defineProperty(frameDocument.documentElement, 'scrollHeight', {
+      configurable: true,
+      value: 1240,
+    });
+    bodyRect.mockReturnValue(new DOMRect(0, 0, 0, 180));
+    act(() => resizeCallback?.([], resizeObserver));
+    expect(preview.style.height).toBe('384px');
+
+    fireEvent.click(getByRole('button', { name: '固定' }));
+    expect(preview.style.height).toBe('384px');
+    expect(getByRole('button', { name: '展开' })).toBeDefined();
+    expect(resizeObserver.disconnect).toHaveBeenCalled();
     expect(before.compareDocumentPosition(preview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(preview.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
@@ -279,12 +355,14 @@ describe('MessageItem', () => {
     ));
 
     expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe('<main>Branch A</main>');
+    expect(container.querySelector('iframe')?.style.height).toBe('384px');
 
     await act(() => {
       setMessageTreeState({ currentPath: [1, 3] });
     });
 
     expect(container.querySelector('iframe')?.getAttribute('srcdoc')).toBe('<main>Branch B</main>');
+    expect(container.querySelector('iframe')?.style.height).toBe('384px');
   });
 
   it('does not render HTML before a successful render result', () => {
@@ -340,6 +418,7 @@ describe('MessageItem', () => {
     ));
 
     expect(container.querySelector('iframe')).toBeNull();
+    expect(container.querySelector('button[title="展开完整画布"]')).toBeNull();
   });
 
   it('disables edit and retry while keeping branch enabled when chat is busy', () => {

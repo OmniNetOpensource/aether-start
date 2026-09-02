@@ -118,6 +118,85 @@ type MessageItemProps = {
   onBranch: (messageId: number) => Promise<void>;
 } & ({ message: Message; messageId?: undefined } | { message?: undefined; messageId: number });
 
+const RenderCanvas = (props: { code: string }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [height, setHeight] = useState(384);
+  const iframe = useRef<HTMLIFrameElement>(null);
+  const resizeObserver = useRef<ResizeObserver | null>(null);
+
+  useEffect(
+    () => () => {
+      resizeObserver.current?.disconnect();
+    },
+    [],
+  );
+
+  const observeContentHeight = () => {
+    const frame = iframe.current;
+    const frameDocument = frame?.contentDocument;
+    if (!frame || !frameDocument?.body) return;
+
+    const updateHeight = () => {
+      const root = frameDocument.documentElement;
+      const overflowHeight = root.scrollHeight > root.clientHeight ? root.scrollHeight : 0;
+      setHeight(
+        Math.max(
+          384,
+          Math.ceil(
+            Math.max(frameDocument.body.getBoundingClientRect().height, overflowHeight) +
+              frame.offsetHeight -
+              frame.clientHeight,
+          ),
+        ),
+      );
+    };
+
+    resizeObserver.current?.disconnect();
+    updateHeight();
+    resizeObserver.current = new ResizeObserver(updateHeight);
+    resizeObserver.current.observe(frameDocument.documentElement);
+    resizeObserver.current.observe(frameDocument.body);
+  };
+
+  const toggleExpanded = () => {
+    if (isExpanded) {
+      resizeObserver.current?.disconnect();
+      setIsExpanded(false);
+      return;
+    }
+
+    setIsExpanded(true);
+    observeContentHeight();
+  };
+
+  return (
+    <div className='relative w-full'>
+      <Button
+        type='button'
+        variant='secondary'
+        size='sm'
+        title={isExpanded ? '固定画布高度' : '展开完整画布'}
+        onClick={toggleExpanded}
+        className='absolute top-2 right-2 z-10 bg-background/90 shadow-sm backdrop-blur-sm'
+      >
+        {isExpanded ? '固定' : '展开'}
+      </Button>
+      <iframe
+        ref={iframe}
+        title='HTML preview'
+        srcDoc={props.code}
+        sandbox='allow-scripts allow-same-origin'
+        loading='lazy'
+        onLoad={() => {
+          if (isExpanded) observeContentHeight();
+        }}
+        style={{ height: isExpanded ? `${height}px` : '384px' }}
+        className='block w-full rounded-lg border border-border bg-background'
+      />
+    </div>
+  );
+};
+
 const formatMessageTime = (iso: string) =>
   new Date(iso).toLocaleString('en-US', {
     timeZone: 'Asia/Shanghai',
@@ -280,15 +359,11 @@ export function MessageItem(props: MessageItemProps) {
                             }
 
                             return (
-                              <iframe
+                              <RenderCanvas
                                 key={
                                   item.data.call.callId ?? `${messageId}-${blockIndex}-${itemIndex}`
                                 }
-                                title='HTML preview'
-                                srcDoc={item.data.call.args.code}
-                                sandbox='allow-scripts'
-                                loading='lazy'
-                                className='h-80 w-full rounded-lg border border-border bg-background sm:h-96'
+                                code={item.data.call.args.code}
                               />
                             );
                           })}
