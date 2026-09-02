@@ -9,13 +9,15 @@ type SseEvent = {
   [key: string]: unknown;
 };
 
+const TEST_MODEL = 'claude-opus-4-6';
+
 const MESSAGE_START: SseEvent = {
   type: 'message_start',
   message: {
     id: 'msg_test',
     type: 'message',
     role: 'assistant',
-    model: 'claude-opus-4-6',
+    model: TEST_MODEL,
     content: [],
     stop_reason: null,
     stop_sequence: null,
@@ -87,9 +89,9 @@ const createSseResponse = (events: SseEvent[], ending: 'close' | 'error' | 'hang
   });
 };
 
-const collectProviderRun = async () => {
+const collectProviderRun = async (model: string) => {
   const provider = new AnthropicChatProvider({
-    model: 'claude-opus-4-6',
+    model,
     backendConfig: {
       apiKey: 'test-key',
       baseURL: 'https://api.example.test',
@@ -116,7 +118,7 @@ const runProvider = async (events: SseEvent[], ending: 'close' | 'error' | 'hang
     'fetch',
     vi.fn(async () => createSseResponse(events, ending)),
   );
-  return collectProviderRun();
+  return collectProviderRun(TEST_MODEL);
 };
 
 beforeEach(() => {
@@ -126,6 +128,59 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
+});
+
+describe('AnthropicChatProvider model configuration', () => {
+  it.each([
+    { model: 'claude-fable-5-1', profile: 'adaptive' },
+    { model: 'claude-fable-5', profile: 'adaptive' },
+    { model: 'claude-opus-5', profile: 'adaptive' },
+    { model: 'claude-sonnet-5', profile: 'adaptive' },
+    { model: 'claude-opus-4-8', profile: 'adaptive' },
+    { model: 'claude-opus-4-7', profile: 'adaptive' },
+    { model: 'claude-opus-4-6', profile: 'adaptive' },
+    { model: 'claude-sonnet-4-6', profile: 'adaptive' },
+    { model: 'claude-opus-4-5-20251101', profile: 'manual' },
+    { model: 'claude-sonnet-4-5-20250929', profile: 'manual' },
+    { model: 'claude-haiku-4-5-20251001', profile: 'manual' },
+  ])('uses the $profile thinking profile for $model', async ({ model, profile }) => {
+    let requestBody: string | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        requestBody = typeof init?.body === 'string' ? init.body : undefined;
+        return createSseResponse(
+          [MESSAGE_START, TEXT_START, TEXT_DELTA, TEXT_STOP, END_TURN, MESSAGE_STOP],
+          'close',
+        );
+      }),
+    );
+
+    await collectProviderRun(model);
+
+    if (!requestBody) {
+      throw new Error('Anthropic request body was not captured');
+    }
+
+    const body: unknown = JSON.parse(requestBody);
+    expect(body).toMatchObject({ model });
+
+    if (profile === 'adaptive') {
+      expect(body).toMatchObject({
+        max_tokens: 128000,
+        thinking: { type: 'adaptive' },
+        output_config: { effort: 'high' },
+      });
+      expect(body).not.toHaveProperty('thinking.budget_tokens');
+      return;
+    }
+
+    expect(body).toMatchObject({
+      max_tokens: 64000,
+      thinking: { type: 'enabled', budget_tokens: 51200 },
+    });
+    expect(body).not.toHaveProperty('output_config');
+  });
 });
 
 describe('AnthropicChatProvider streaming', () => {
@@ -198,7 +253,7 @@ describe('AnthropicChatProvider streaming', () => {
       ),
     );
 
-    const run = await collectProviderRun();
+    const run = await collectProviderRun(TEST_MODEL);
 
     expect(run.events).toEqual([
       expect.objectContaining({

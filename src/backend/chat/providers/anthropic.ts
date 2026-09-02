@@ -98,7 +98,16 @@ class AnthropicStreamError extends Error {
 
 const THINKING_BUDGET_RATIO = 0.8;
 const THINKING_MIN_BUDGET_TOKENS = 1024;
-const ADAPTIVE_THINKING_MODELS = new Set(['claude-opus-4-6', 'claude-opus-4-7', 'claude-opus-4-8']);
+const ADAPTIVE_THINKING_MODELS = new Set([
+  'claude-fable-5-1',
+  'claude-fable-5',
+  'claude-opus-5',
+  'claude-sonnet-5',
+  'claude-opus-4-8',
+  'claude-opus-4-7',
+  'claude-opus-4-6',
+  'claude-sonnet-4-6',
+]);
 
 const getClient = (config: BackendConfig) => {
   return new Anthropic({
@@ -131,8 +140,7 @@ const getMaxOutputTokens = (model: string) => {
 
   if (
     model === 'claude-opus-4-5-20251101' ||
-    model === 'claude-sonnet-4-6' ||
-    model === 'claude-sonnet-5' ||
+    model === 'claude-sonnet-4-5-20250929' ||
     model === 'claude-haiku-4-5-20251001'
   ) {
     return 64000;
