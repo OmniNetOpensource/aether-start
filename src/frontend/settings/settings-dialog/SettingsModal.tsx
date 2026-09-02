@@ -20,6 +20,7 @@ import {
   adminListRedeemCodesFn,
 } from '@/rpc/redeem-codes';
 import { getQuotaFn, redeemCodeFn } from '@/rpc/quota';
+import { ModelSettings } from './ModelSettings';
 
 type SettingsModalProps = {
   open: boolean;
@@ -160,6 +161,8 @@ export function SettingsModal(props: SettingsModalProps) {
         </DialogHeader>
 
         <div className='flex flex-col gap-6'>
+          <ModelSettings />
+
           <div className='space-y-3'>
             <h3 className='text-sm font-medium text-muted-foreground'>Quota</h3>
             <div className='space-y-3 rounded-lg border bg-muted p-3'>

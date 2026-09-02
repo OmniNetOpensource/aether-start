@@ -6,7 +6,6 @@ import { chatState, useChatStatus } from '@/frontend/chat/agent-runtime/chat-sta
 import { useToast } from '@/frontend/app-shell/useToast';
 import { Button } from '@/frontend/design-system/button';
 import { cn } from '@/shared/core/utils';
-import { ModelSelector } from './composer-controls/ModelSelector';
 import { registerActiveInput, setLastFocusedInput } from './composer-editor/active-input';
 import {
   createComposerDocument,
@@ -260,7 +259,6 @@ export function Composer() {
             </div>
 
             <div className='flex items-center gap-1'>
-              <ModelSelector />
               <Button
                 type='button'
                 aria-label='发送'

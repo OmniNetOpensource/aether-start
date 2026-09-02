@@ -34,6 +34,11 @@ vi.mock('@/rpc/redeem-codes', () => ({
 }));
 
 vi.mock('@tanstack/react-router', () => ({
+  getRouteApi: () => ({
+    useLoaderData: () => ({
+      availableModels: [{ id: 'claudeOpus46Ikun', name: 'opus-4-6+ikun' }],
+    }),
+  }),
   useNavigate: () => vi.fn(),
 }));
 
