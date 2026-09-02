@@ -1,10 +1,14 @@
 import { act } from 'react';
 import { hydrateRoot } from 'react-dom/client';
 import { renderToString } from 'react-dom/server';
-import { QueryClient, QueryClientProvider, dehydrate } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, dehydrate, useQuery } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getRouter } from '@/router';
-import { selectAllConversations, useConversationsQuery } from '@/frontend/conversations/session';
+import {
+  availableModelsQueryOptions,
+  selectAllConversations,
+  useConversationsQuery,
+} from '@/frontend/conversations/session';
 import { Route } from './route';
 
 const rpc = vi.hoisted(() => ({
@@ -22,11 +26,22 @@ vi.mock('@/rpc/chat-options', () => ({
 }));
 
 const title = '服务端预取的会话';
+const modelName = '服务端预取的模型';
 
 function ConversationProbe() {
   const conversations = useConversationsQuery();
   if (conversations.isLoading) return <p>加载会话中…</p>;
   return <p>{selectAllConversations(conversations.data)[0]?.title}</p>;
+}
+
+function RouteDataProbe() {
+  const models = useQuery(availableModelsQueryOptions);
+  return (
+    <>
+      <ConversationProbe />
+      <p>{models.data?.[0]?.name}</p>
+    </>
+  );
 }
 
 beforeEach(() => {
@@ -45,7 +60,7 @@ beforeEach(() => {
     ],
     nextCursor: null,
   });
-  rpc.getAvailableModels.mockResolvedValue([]);
+  rpc.getAvailableModels.mockResolvedValue([{ id: 'model-1', name: modelName }]);
 });
 
 afterEach(() => {
@@ -53,20 +68,24 @@ afterEach(() => {
 });
 
 describe('app route query hydration', () => {
-  it('hydrates the prefetched conversation before the first client render', async () => {
+  it('hydrates the prefetched route queries before the first client render', async () => {
     const serverQueryClient = new QueryClient();
     const loader = Reflect.get(Route.options, 'loader');
     if (typeof loader !== 'function') throw new Error('App route has no loader');
 
     await Reflect.apply(loader, undefined, [{ context: { queryClient: serverQueryClient } }]);
     expect(serverQueryClient.getQueryState(['conversations'])?.status).toBe('success');
+    expect(serverQueryClient.getQueryData(['chat-options', 'models'])).toEqual([
+      { id: 'model-1', name: modelName },
+    ]);
 
     const serverHtml = renderToString(
       <QueryClientProvider client={serverQueryClient}>
-        <ConversationProbe />
+        <RouteDataProbe />
       </QueryClientProvider>,
     );
     expect(serverHtml).toContain(title);
+    expect(serverHtml).toContain(modelName);
 
     const clientRouter = getRouter();
     const clientQueryClient = clientRouter.options.context.queryClient;
@@ -84,6 +103,9 @@ describe('app route query hydration', () => {
         }),
       },
     ]);
+    expect(clientQueryClient.getQueryData(['chat-options', 'models'])).toEqual([
+      { id: 'model-1', name: modelName },
+    ]);
 
     const Wrap = clientRouter.options.Wrap;
     if (!Wrap) throw new Error('Router query provider is not installed');
@@ -96,7 +118,7 @@ describe('app route query hydration', () => {
       hydrationRoot = hydrateRoot(
         container,
         <Wrap>
-          <ConversationProbe />
+          <RouteDataProbe />
         </Wrap>,
         {
           onRecoverableError(error) {
@@ -106,8 +128,9 @@ describe('app route query hydration', () => {
       );
     });
 
-    expect(container.textContent).toBe(title);
+    expect(container.textContent).toBe(`${title}${modelName}`);
     expect(recoverableErrors).toEqual([]);
+    expect(rpc.getAvailableModels).toHaveBeenCalledTimes(1);
 
     await act(async () => hydrationRoot?.unmount());
     container.remove();

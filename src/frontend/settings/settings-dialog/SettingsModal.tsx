@@ -161,7 +161,7 @@ export function SettingsModal(props: SettingsModalProps) {
         </DialogHeader>
 
         <div className='flex flex-col gap-6'>
-          <ModelSettings />
+          <ModelSettings canRefreshModels={isAdmin} />
 
           <div className='space-y-3'>
             <h3 className='text-sm font-medium text-muted-foreground'>Quota</h3>

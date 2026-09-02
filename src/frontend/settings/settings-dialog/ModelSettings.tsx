@@ -1,6 +1,8 @@
 import { useId, useRef, useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
-import { Bot, Check, ChevronDown } from '@/frontend/design-system/icons';
+import { Bot, Check, ChevronDown, Loader2 } from '@/frontend/design-system/icons';
+import { useToast } from '@/frontend/app-shell/useToast';
 import { Button } from '@/frontend/design-system/button';
 import {
   Command,
@@ -14,12 +16,20 @@ import {
   setCurrentModelId,
   useCurrentModelId,
 } from '@/frontend/conversations/session/chat-selection';
+import { availableModelsQueryOptions } from '@/frontend/conversations/session/available-models-query';
+import { refreshAvailableModelsFn } from '@/rpc/chat-options';
 import { cn } from '@/shared/core/utils';
 
 const appRoute = getRouteApi('/app');
 
-export function ModelSettings() {
-  const { availableModels } = appRoute.useLoaderData();
+export function ModelSettings({ canRefreshModels }: { canRefreshModels: boolean }) {
+  const { availableModels: loaderModels } = appRoute.useLoaderData();
+  const { data: availableModels } = useQuery({
+    ...availableModelsQueryOptions,
+    initialData: loaderModels,
+  });
+  const queryClient = useQueryClient();
+  const toast = useToast();
   const currentModelId = useCurrentModelId();
   const deviceType = useResponsive();
   const modelListId = useId();
@@ -28,6 +38,7 @@ export function ModelSettings() {
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState('');
   const [highlightedModelId, setHighlightedModelId] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const currentModel = availableModels.find((model) => model.id === currentModelId);
   const filterModels = (query: string) => {
@@ -46,11 +57,40 @@ export function ModelSettings() {
     setSearch('');
     trigger.current?.focus();
   };
+  const refreshModels = async () => {
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      const refreshedModels = await refreshAvailableModelsFn();
+      queryClient.setQueryData(availableModelsQueryOptions.queryKey, refreshedModels);
+      toast.success('Model list refreshed');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to refresh models');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   return (
     <section className='space-y-3'>
       <div className='space-y-1'>
-        <h3 className='text-sm font-medium text-muted-foreground'>Model</h3>
+        <div className='flex items-center justify-between gap-2'>
+          <h3 className='text-sm font-medium text-muted-foreground'>Model</h3>
+          {canRefreshModels ? (
+            <Button
+              type='button'
+              variant='ghost'
+              size='sm'
+              onClick={refreshModels}
+              disabled={isRefreshing}
+              className='h-7 px-2'
+            >
+              {isRefreshing ? <Loader2 className='animate-spin' /> : null}
+              {isRefreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+          ) : null}
+        </div>
         <p className='text-xs text-muted-foreground'>
           Used for the next message and saved with this conversation after sending.
         </p>

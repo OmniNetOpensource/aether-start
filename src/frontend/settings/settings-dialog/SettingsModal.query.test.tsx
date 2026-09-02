@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import {
   QueryClient,
   QueryClientProvider,
@@ -161,6 +161,26 @@ describe('SettingsModal direct async queries', () => {
     expect(rpc.getQuota).toHaveBeenCalledOnce();
     expect(rpc.getSessionState).toHaveBeenCalledOnce();
     expect(rpc.listRedeemCodes).toHaveBeenCalledOnce();
+    view.unmount();
+    view.client.clear();
+  });
+
+  it.each([
+    { isAdmin: true, hasRefresh: true },
+    { isAdmin: false, hasRefresh: false },
+  ])('sets model refresh permission from the session', async ({ isAdmin, hasRefresh }) => {
+    rpc.getSessionState.mockResolvedValue({ isAdmin });
+    const view = renderSettings();
+
+    await waitFor(() =>
+      expect(view.client.getQueryData(['settings', 'session'])).toEqual({ isAdmin }),
+    );
+
+    if (hasRefresh) {
+      expect(screen.getByRole('button', { name: 'Refresh' })).toBeDefined();
+    } else {
+      expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
+    }
     view.unmount();
     view.client.clear();
   });

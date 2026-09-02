@@ -13,6 +13,8 @@ import {
 } from '@/shared/chat/model-catalog';
 
 const MODEL_LIST_CACHE_TTL_SECONDS = 24 * 60 * 60;
+const MODEL_LIST_CACHE_KEY = 'https://aether-model-list.invalid/v1';
+const MODEL_LIST_CACHE_NAME = 'aether:model-list:v1';
 
 const toModelInfo = (backend: ChatBackend, provider: string, model: string, name?: string) => {
   if (backend === 'ikun' && model === 'claude-opus-4-6') {
@@ -79,14 +81,7 @@ const fetchGeminiModelList = async (
   return models;
 };
 
-export const getAvailableModels = async () => {
-  const cacheKey = 'https://aether-model-list.invalid/v1';
-  const modelListCache = await caches.open('aether:model-list:v1');
-  const cachedResponse = await modelListCache.match(cacheKey);
-  if (cachedResponse) {
-    return availableModelsSchema.parse(await cachedResponse.json());
-  }
-
+export const refreshAvailableModels = async () => {
   const env = getServerEnv();
   const requests: Promise<{ id: string; name: string }[]>[] = [];
 
@@ -146,8 +141,10 @@ export const getAvailableModels = async () => {
   models.delete(DEFAULT_MODEL_ID);
   const availableModels = [DEFAULT_MODEL_INFO, ...models.values()];
 
-  await modelListCache.put(
-    cacheKey,
+  await (
+    await caches.open(MODEL_LIST_CACHE_NAME)
+  ).put(
+    MODEL_LIST_CACHE_KEY,
     new Response(JSON.stringify(availableModels), {
       headers: {
         'Cache-Control': `public, max-age=${MODEL_LIST_CACHE_TTL_SECONDS}`,
@@ -157,4 +154,15 @@ export const getAvailableModels = async () => {
   );
 
   return availableModels;
+};
+
+export const getAvailableModels = async () => {
+  const cachedResponse = await (
+    await caches.open(MODEL_LIST_CACHE_NAME)
+  ).match(MODEL_LIST_CACHE_KEY);
+  if (cachedResponse) {
+    return availableModelsSchema.parse(await cachedResponse.json());
+  }
+
+  return refreshAvailableModels();
 };
