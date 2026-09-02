@@ -1,13 +1,14 @@
 import { fireEvent, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderTest } from '@/test/render';
 import { currentModelId, setCurrentModelId } from '@/frontend/conversations/session/chat-selection';
-import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
 import { ModelSettings } from './ModelSettings';
+
+const INITIAL_MODEL_ID = 'ikun:claude-opus-4-8';
 
 const router = vi.hoisted(() => ({
   availableModels: [
-    { id: 'claudeOpus46Ikun', name: 'Opus 4.6' },
+    { id: 'ikun:claude-opus-4-8', name: 'Opus 4.8' },
     { id: 'ikun:gpt-5.4', name: 'GPT 5.4' },
     { id: 'gemini-aistudio:gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
   ],
@@ -19,8 +20,8 @@ vi.mock('@tanstack/react-router', () => ({
   }),
 }));
 
-afterEach(() => {
-  setCurrentModelId(DEFAULT_MODEL_ID);
+beforeEach(() => {
+  setCurrentModelId(INITIAL_MODEL_ID);
 });
 
 describe('ModelSettings', () => {
@@ -28,15 +29,15 @@ describe('ModelSettings', () => {
     renderTest(() => <ModelSettings />);
 
     const trigger = screen.getByRole('button', {
-      name: 'Choose model, current model is Opus 4.6',
+      name: 'Choose model, current model is Opus 4.8',
     });
-    expect(screen.getByText(DEFAULT_MODEL_ID)).toBeDefined();
+    expect(screen.getByText(INITIAL_MODEL_ID)).toBeDefined();
 
     fireEvent.click(trigger);
     const search = screen.getByRole('textbox', { name: 'Search models' });
     fireEvent.input(search, { target: { value: 'GPT 5.4' } });
 
-    expect(screen.queryByRole('button', { name: 'Opus 4.6' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Opus 4.8' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Gemini 2.5 Pro' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'GPT 5.4' }));
 
@@ -71,7 +72,7 @@ describe('ModelSettings', () => {
     renderTest(() => <ModelSettings />);
 
     const trigger = screen.getByRole('button', {
-      name: 'Choose model, current model is Opus 4.6',
+      name: 'Choose model, current model is Opus 4.8',
     });
     fireEvent.click(trigger);
     const search = screen.getByRole('textbox', { name: 'Search models' });
@@ -87,7 +88,7 @@ describe('ModelSettings', () => {
     renderTest(() => <ModelSettings />);
 
     const trigger = screen.getByRole('button', {
-      name: 'Choose model, current model is Opus 4.6',
+      name: 'Choose model, current model is Opus 4.8',
     });
     fireEvent.click(trigger);
     const search = screen.getByRole('textbox', { name: 'Search models' });
@@ -102,13 +103,13 @@ describe('ModelSettings', () => {
     renderTest(() => <ModelSettings />);
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Choose model, current model is Opus 4.6' }),
+      screen.getByRole('button', { name: 'Choose model, current model is Opus 4.8' }),
     );
     const search = screen.getByRole('textbox', { name: 'Search models' });
     fireEvent.input(search, { target: { value: 'gpt' } });
 
     expect(fireEvent.keyDown(search, { key: 'Home' })).toBe(true);
     expect(fireEvent.keyDown(search, { key: 'End' })).toBe(true);
-    expect(currentModelId()).toBe(DEFAULT_MODEL_ID);
+    expect(currentModelId()).toBe(INITIAL_MODEL_ID);
   });
 });
