@@ -341,7 +341,7 @@ export const applyChatEventToTree = (
     runtime.messageTree.appendToAssistant(assistantMessageId, {
       kind: 'tool',
       data: {
-        call: { tool: event.tool, args: event.args },
+        call: { tool: event.tool, args: event.args, callId: event.callId },
       },
     });
     return;
@@ -352,6 +352,7 @@ export const applyChatEventToTree = (
       kind: 'tool_result',
       tool: event.tool,
       result: event.result,
+      callId: event.callId,
     });
     return;
   }

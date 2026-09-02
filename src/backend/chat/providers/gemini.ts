@@ -212,7 +212,7 @@ export class GeminiChatProvider {
           } else if (part.functionCall) {
             const fc = part.functionCall;
             const toolCall = {
-              id: fc.id || `gemini_tool_${pendingToolCalls.length + 1}`,
+              id: fc.id || crypto.randomUUID(),
               name: fc.name || 'unknown_tool',
               args: (fc.args ?? {}) as Record<string, unknown>,
             };

@@ -14,9 +14,9 @@ export type ChatServerToClientEvent =
       type: 'tool_call';
       tool: string;
       args: Record<string, unknown>;
-      callId?: string;
+      callId: string;
     }
-  | { type: 'tool_result'; tool: string; result: string; callId?: string }
+  | { type: 'tool_result'; tool: string; result: string; callId: string }
   | { type: 'artifact_started'; artifactId: string; callId?: string }
   | { type: 'artifact_title'; artifactId: string; title: string }
   | {

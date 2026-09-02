@@ -28,10 +28,10 @@ export const getAvailableTools = (): ChatTool[] => {
   tools.push(fetchUrlTool.spec);
   tools.push(renderTool.spec);
 
-  if (env.SERP_API_KEY) {
+  if (env.SERP_API_KEY || env.JUSTONEAPI_TOKEN) {
     tools.push(searchTool.spec);
   } else {
-    log('TOOLS', 'Skipping tool: search (missing SERP_API_KEY)');
+    log('TOOLS', 'Skipping tool: search (missing SERP_API_KEY and JUSTONEAPI_TOKEN)');
   }
 
   return tools;
@@ -54,7 +54,7 @@ export const executeToolCall = async (
       ? fetchUrlTool.handler
       : toolcall.name === 'render'
         ? renderTool.handler
-        : toolcall.name === 'search' && env.SERP_API_KEY
+        : toolcall.name === 'search' && (env.SERP_API_KEY || env.JUSTONEAPI_TOKEN)
           ? searchTool.handler
           : null;
   let rawResult: string;

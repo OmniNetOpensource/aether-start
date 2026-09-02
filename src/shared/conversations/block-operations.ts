@@ -12,7 +12,12 @@ import type {
 } from '@/shared/chat/message';
 import { cloneBlocks, cloneResearchItem } from './message-tree';
 
-type ToolLifecycleUpdate = { kind: 'tool_result'; tool: string; result: string };
+type ToolLifecycleUpdate = {
+  kind: 'tool_result';
+  tool: string;
+  result: string;
+  callId: string;
+};
 type AskUserQuestionsRequested = {
   kind: 'ask_user_questions_requested';
   callId: string;
@@ -86,20 +91,21 @@ export const applyAssistantAddition = (
     return nextBlocks;
   };
 
-  const findToolIndex = (items: ResearchItem[], toolName: string) => {
-    let fallback = -1;
-    for (let i = items.length - 1; i >= 0; i--) {
-      const item = items[i];
-      if (item.kind === 'tool' && item.data.call.tool === toolName) {
-        if (!item.data.result) {
-          return i;
-        }
-        if (fallback === -1) {
-          fallback = i;
+  const findToolLocation = (targetBlocks: AssistantContentBlock[], callId: string) => {
+    for (let blockIndex = targetBlocks.length - 1; blockIndex >= 0; blockIndex -= 1) {
+      const block = targetBlocks[blockIndex];
+      if (block?.type !== 'research') {
+        continue;
+      }
+
+      for (let itemIndex = block.items.length - 1; itemIndex >= 0; itemIndex -= 1) {
+        const item = block.items[itemIndex];
+        if (item?.kind === 'tool' && item.data.call.callId === callId) {
+          return { blockIndex, itemIndex };
         }
       }
     }
-    return fallback;
+    return null;
   };
 
   const findAskUserQuestionsIndex = (targetBlocks: AssistantContentBlock[], callId: string) => {
@@ -131,32 +137,40 @@ export const applyAssistantAddition = (
     }
 
     if (addition.kind === 'tool_result') {
-      return updateResearchItems((items) => {
-        const targetIndex = findToolIndex(items, addition.tool);
-
-        if (targetIndex === -1) {
-          items.push({
+      const target = findToolLocation(nextBlocks, addition.callId);
+      if (!target) {
+        return updateResearchItems((items) => [
+          ...items,
+          {
             kind: 'tool',
             data: {
-              call: { tool: addition.tool, args: {} },
+              call: { tool: addition.tool, args: {}, callId: addition.callId },
               result: { result: addition.result },
             },
-          });
-          return items;
-        }
+          },
+        ]);
+      }
 
-        const targetItem = items[targetIndex];
-        if (targetItem.kind === 'tool') {
-          items[targetIndex] = {
-            ...targetItem,
-            data: {
-              ...targetItem.data,
-              result: { result: addition.result },
-            },
-          };
-        }
-        return items;
-      });
+      const targetBlock = nextBlocks[target.blockIndex];
+      if (targetBlock.type !== 'research') {
+        return nextBlocks;
+      }
+
+      const targetItem = targetBlock.items[target.itemIndex];
+      if (targetItem.kind !== 'tool') {
+        return nextBlocks;
+      }
+
+      const items = [...targetBlock.items];
+      items[target.itemIndex] = {
+        ...targetItem,
+        data: {
+          ...targetItem.data,
+          result: { result: addition.result },
+        },
+      };
+      nextBlocks[target.blockIndex] = { ...targetBlock, items };
+      return nextBlocks;
     }
 
     if (addition.kind === 'ask_user_questions_requested') {

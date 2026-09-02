@@ -26,7 +26,7 @@ export const cloneResearchItem = (item: ResearchItem): ResearchItem => {
     kind: 'tool',
     data: {
       call: {
-        tool: item.data.call.tool,
+        ...item.data.call,
         args: { ...item.data.call.args },
       },
       result: item.data.result ? { ...item.data.result } : undefined,

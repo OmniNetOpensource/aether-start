@@ -117,7 +117,7 @@ const upsertToolCall = (
   }
 
   const created: AccumulatedToolCall = {
-    callId: '',
+    callId: crypto.randomUUID(),
     name: '',
     argsJson: '',
   };

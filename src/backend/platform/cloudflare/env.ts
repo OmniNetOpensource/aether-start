@@ -19,6 +19,7 @@ type ServerEnv = {
   GEMINI_API_KEY_AISTUDIO?: string;
   OPENROUTER_API_KEY?: string;
   SERP_API_KEY?: string;
+  JUSTONEAPI_TOKEN?: string;
   SUPADATA_API_KEY?: string;
   JINA_API_KEY?: string;
   RESEND_API_KEY?: string;
@@ -94,6 +95,8 @@ export const getServerEnv = (): ServerEnv => {
       readString((bindings as Record<string, unknown>).OPENROUTER_API_KEY) ??
       readStringFromProcess('OPENROUTER_API_KEY'),
     SERP_API_KEY: readString(bindings.SERP_API_KEY) ?? readStringFromProcess('SERP_API_KEY'),
+    JUSTONEAPI_TOKEN:
+      readString(bindings.JUSTONEAPI_TOKEN) ?? readStringFromProcess('JUSTONEAPI_TOKEN'),
     SUPADATA_API_KEY:
       readString(bindings.SUPADATA_API_KEY) ?? readStringFromProcess('SUPADATA_API_KEY'),
     JINA_API_KEY:

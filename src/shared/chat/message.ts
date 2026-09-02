@@ -35,6 +35,7 @@ export type ChatErrorInfo = {
 type ToolCall = {
   tool: string;
   args: Record<string, unknown>;
+  callId?: string;
 };
 
 export type ToolResult = {

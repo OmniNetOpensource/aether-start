@@ -425,7 +425,7 @@ export class OpenAIChatProvider {
         for (const toolCall of deltaToolCalls) {
           const index = typeof toolCall.index === 'number' ? toolCall.index : 0;
           const existing = toolCallsByIndex.get(index) ?? {
-            id: '',
+            id: crypto.randomUUID(),
             name: '',
             argsJson: '',
           };
