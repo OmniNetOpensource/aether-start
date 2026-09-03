@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react';
 
-let modelId = 'ikun:claude-opus-4-8';
+let modelId = 'ikun:claude-opus-5';
 const listeners = new Set<() => void>();
 
 const subscribe = (listener: () => void) => {
