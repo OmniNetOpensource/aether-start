@@ -1,5 +1,4 @@
 import { isAbortError } from '@/backend/chat/abort';
-import { askUserQuestionsTool } from '@/backend/chat/tools/ask-user-questions';
 import { fetchUrlTool } from '@/backend/chat/tools/fetch-tool';
 import {
   buildFetchClientPayload,
@@ -24,7 +23,6 @@ export const getAvailableTools = (): ChatTool[] => {
   const env = getServerEnv();
   const tools: ChatTool[] = [];
 
-  tools.push(askUserQuestionsTool.spec);
   tools.push(fetchUrlTool.spec);
   tools.push(renderTool.spec);
 
