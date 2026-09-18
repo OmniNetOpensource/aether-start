@@ -47,8 +47,18 @@ const CopyButton = (props: CopyButtonProps) => {
 
   const handleCopy = async () => {
     let text = props.blocks
-      .filter((b) => b.type === 'content')
-      .map((b) => b.content)
+      .flatMap((block) => {
+        if (block.type === 'content') return [block.content];
+        if (block.type === 'quotes') {
+          return block.quotes.map((quote) =>
+            quote.text
+              .split(/\r?\n/)
+              .map((line) => `> ${line}`)
+              .join('\n'),
+          );
+        }
+        return [];
+      })
       .join('\n\n');
 
     if (!text) return;
@@ -272,15 +282,16 @@ export function MessageItem(props: MessageItemProps) {
                       return (
                         <AskUserQuestionsCard
                           key={block.callId}
-                          block={block}
-                          readonly={
-                            !(
-                              props.isLastInPath &&
-                              blockIndex === assistantBlocks.length - 1 &&
-                              status === 'idle'
-                            )
+                          questions={block.questions}
+                          answers={block.answers}
+                          status={
+                            props.isLastInPath &&
+                            blockIndex === assistantBlocks.length - 1 &&
+                            status === 'idle'
+                              ? block.status
+                              : 'preview'
                           }
-                          onSubmit={(answers) => submitToolAnswer(chatState, block.callId, answers)}
+                          onSend={(answers) => submitToolAnswer(chatState, block.callId, answers)}
                         />
                       );
                     }
