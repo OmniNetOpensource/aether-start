@@ -18,6 +18,8 @@ import { cn } from '@/shared/core/utils';
 import { collectClipboardFiles } from '@/frontend/browser/file';
 import { type ComposerDocument, type PendingAttachment } from './composer-document';
 import { ContentChip } from './ContentChip';
+import { isQuoteSource, type QuoteItem } from '@/shared/chat/message';
+import { requestQuoteNavigation } from '@/frontend/chat/message-thread/quote-navigation';
 
 const CHIP_NODE = 'composerChip';
 
@@ -27,6 +29,18 @@ const createComposerItemId = () =>
   ).join('');
 
 const readString = (value: unknown) => (typeof value === 'string' ? value : '');
+
+function readQuote(attrs: Record<string, unknown>): QuoteItem {
+  const source = attrs.source;
+  if (source !== undefined && source !== null && !isQuoteSource(source)) {
+    throw new Error('Invalid quote source');
+  }
+  return {
+    id: readString(attrs.id),
+    text: readString(attrs.text),
+    ...(source !== undefined ? { source } : {}),
+  };
+}
 
 const appendText = (document: ComposerDocument, text: string) => {
   if (!text) {
@@ -58,6 +72,7 @@ const editorJSONFromComposerDocument = (document: ComposerDocument): JSONContent
           kind: 'quote',
           id: item.quote.id,
           text: item.quote.text,
+          source: item.quote.source,
         },
       });
       continue;
@@ -121,10 +136,7 @@ const composerDocumentFromEditorJSON = (json: JSONContent): ComposerDocument => 
       if (node.attrs.kind === 'quote') {
         document.push({
           type: 'quote',
-          quote: {
-            id: readString(node.attrs.id),
-            text: readString(node.attrs.text),
-          },
+          quote: readQuote(node.attrs),
         });
         continue;
       }
@@ -162,7 +174,12 @@ function createComposerChipView(props: NodeViewRendererProps) {
   const renderChip = () =>
     root.render(
       currentNode.attrs.kind === 'quote' ? (
-        <ContentChip kind='quote' text={readString(currentNode.attrs.text)} onRemove={deleteNode} />
+        <ContentChip
+          kind='quote'
+          text={readString(currentNode.attrs.text)}
+          onClick={() => requestQuoteNavigation(readQuote(currentNode.attrs))}
+          onRemove={deleteNode}
+        />
       ) : (
         <ContentChip
           kind='attachment'
@@ -200,6 +217,15 @@ const ComposerChip = Node.create({
       kind: { default: 'quote' },
       id: { default: '' },
       text: { default: '' },
+      source: {
+        default: undefined,
+        parseHTML: (element) => {
+          const source = element.getAttribute('data-quote-source');
+          return source === null ? undefined : readQuote({ source: JSON.parse(source) }).source;
+        },
+        renderHTML: (attrs) =>
+          attrs.source === undefined ? {} : { 'data-quote-source': JSON.stringify(attrs.source) },
+      },
       name: { default: '' },
       size: { default: 0 },
       mimeType: { default: '' },
@@ -251,7 +277,7 @@ export type RichComposerEditorHandle = {
   focus: () => void;
   blur: () => void;
   clear: () => void;
-  insertQuote: (text: string) => void;
+  insertQuote: (quote: Omit<QuoteItem, 'id'>) => void;
   insertFiles: (files: File[]) => Promise<void>;
 };
 
@@ -275,7 +301,7 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
   const editorElement = useRef<HTMLDivElement>(null);
   const propsRef = useRef(props);
   const toastRef = useRef(toast);
-  const insertQuoteRef = useRef<(text: string) => void>(() => {});
+  const insertQuoteRef = useRef<RichComposerEditorHandle['insertQuote']>(() => {});
   const insertFilesRef = useRef<(files: File[]) => Promise<void>>(async () => {});
   propsRef.current = props;
   toastRef.current = toast;
@@ -337,8 +363,8 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
       .run();
   };
 
-  const insertQuote = (text: string) => {
-    const trimmed = text.trim();
+  const insertQuote = (quote: Omit<QuoteItem, 'id'>) => {
+    const trimmed = quote.text.trim();
     const currentEditor = editorRef.current;
     if (!currentEditor || !trimmed) {
       return;
@@ -353,6 +379,7 @@ export function RichComposerEditor(props: RichComposerEditorProps) {
           kind: 'quote',
           id: createComposerItemId(),
           text: trimmed,
+          source: quote.source,
         },
       })
       .run();

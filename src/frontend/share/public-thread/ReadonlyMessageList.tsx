@@ -4,6 +4,7 @@ import { AttachmentStack } from '@/frontend/attachments/attachment-preview';
 import { AskUserQuestionsCard } from '@/frontend/chat/ask-user-questions';
 import { ResearchBlock } from '@/frontend/chat/research';
 import type { Message } from '@/shared/chat/message';
+import { requestQuoteNavigation } from '@/frontend/chat/message-thread/quote-navigation';
 
 type ReadonlyMessageListProps = {
   messages: Message[];
@@ -53,7 +54,11 @@ export function ReadonlyMessageList(props: ReadonlyMessageListProps) {
                 {shouldRenderBody &&
                   (isUser ? (
                     <div className='rounded-lg bg-muted px-4 py-3'>
-                      <AttachmentStack items={attachments} quotes={quotes} />
+                      <AttachmentStack
+                        items={attachments}
+                        quotes={quotes}
+                        onQuoteClick={requestQuoteNavigation}
+                      />
                       <div className='text-base leading-relaxed text-foreground whitespace-pre-wrap wrap-anywhere'>
                         {contentBlocks.map((block) => block.content).join('\n\n')}
                       </div>
@@ -70,7 +75,14 @@ export function ReadonlyMessageList(props: ReadonlyMessageListProps) {
                         }
 
                         if (block.type === 'ask_user_questions') {
-                          return <AskUserQuestionsCard key={block.callId} block={block} readonly />;
+                          return (
+                            <AskUserQuestionsCard
+                              key={block.callId}
+                              questions={block.questions}
+                              answers={block.answers}
+                              status='preview'
+                            />
+                          );
                         }
 
                         if (block.type === 'error') {
@@ -86,7 +98,17 @@ export function ReadonlyMessageList(props: ReadonlyMessageListProps) {
                         }
 
                         if (block.type !== 'content') return null;
-                        return <Markdown key={index} content={block.content} />;
+                        return (
+                          <Markdown
+                            key={index}
+                            content={block.content}
+                            quoteContentIndex={
+                              assistantBlocks
+                                .slice(0, index)
+                                .filter((item) => item.type === 'content').length
+                            }
+                          />
+                        );
                       })}
                     </div>
                   ))}

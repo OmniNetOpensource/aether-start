@@ -9,8 +9,8 @@ import {
   resolveStorageKeyForSharedAttachment,
 } from '@/shared/share/share-assets';
 import { buildPathToLatestAssistant } from '@/shared/conversations';
-import { isMessage } from '@/shared/chat/message';
-import { toSharedResearchItem } from '@/shared/share/share';
+import { isMessage, isQuoteItem } from '@/shared/chat/message';
+import { quoteForSnapshot, toSharedResearchItem } from '@/shared/share/share';
 import type {
   PublicSharedConversationSnapshot,
   SharedAttachmentSnapshot,
@@ -81,12 +81,11 @@ const toSharedMessageBlock = (
   }
 
   if (role === 'user' && value.type === 'quotes' && Array.isArray(value.quotes)) {
-    const quotes = value.quotes
-      .filter(
-        (q): q is { id: string; text: string } =>
-          isRecord(q) && typeof q.id === 'string' && typeof q.text === 'string',
-      )
-      .map((q) => ({ id: q.id, text: q.text }));
+    const quotes = value.quotes.filter(isQuoteItem).map((q) => ({
+      id: q.id,
+      text: q.text,
+      ...(q.source !== undefined ? { source: q.source } : {}),
+    }));
     if (quotes.length > 0) {
       return { type: 'quotes', quotes };
     }
@@ -157,6 +156,7 @@ const toSharedMessageSnapshot = (
 const buildSnapshotFromConversation = (
   conversation: SnapshotSourceConversation,
   currentPath: number[],
+  conversationId: string,
 ): SharedConversationSnapshot => {
   const messagesById = new Map<number, unknown>();
   for (const message of conversation.messages) {
@@ -187,13 +187,29 @@ const buildSnapshotFromConversation = (
   const sourceMessages =
     currentPathMessages.length > 0 ? currentPathMessages : conversation.messages;
 
+  const messages = sourceMessages
+    .map((message) => toSharedMessageSnapshot(message))
+    .filter(
+      (message): message is SharedConversationSnapshot['messages'][number] => message !== null,
+    );
+  const messageIds = new Set(
+    messages.filter((message) => message.role === 'assistant').map((message) => message.id),
+  );
   return {
     version: 1,
-    messages: sourceMessages
-      .map((message) => toSharedMessageSnapshot(message))
-      .filter(
-        (message): message is SharedConversationSnapshot['messages'][number] => message !== null,
+    messages: messages.map((message) => ({
+      ...message,
+      blocks: message.blocks.map((block) =>
+        block.type === 'quotes'
+          ? {
+              type: 'quotes',
+              quotes: block.quotes.map((quote) =>
+                quoteForSnapshot(quote, conversationId, messageIds),
+              ),
+            }
+          : block,
       ),
+    })),
   };
 };
 
@@ -276,7 +292,11 @@ export const createConversationShareFn = createServerFn({ method: 'POST' })
       throw new Error('Conversation not found');
     }
 
-    const snapshot = buildSnapshotFromConversation(conversation, data.currentPath);
+    const snapshot = buildSnapshotFromConversation(
+      conversation,
+      data.currentPath,
+      data.conversationId,
+    );
     if (snapshot.messages.length === 0) {
       throw new Error('No messages to share');
     }

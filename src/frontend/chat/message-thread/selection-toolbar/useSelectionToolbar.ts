@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { getSelectionContainer, getSelectionRect } from './utils';
+import { conversationId } from '@/frontend/conversations/session/conversation-meta';
+import type { QuoteSource } from '@/shared/chat/message';
+import { captureQuoteSource } from '../quote-navigation';
 
 const hiddenStyles: CSSProperties = {
   position: 'fixed',
@@ -10,6 +13,7 @@ const hiddenStyles: CSSProperties = {
 
 export function useSelectionToolbar(container: () => HTMLElement | null) {
   const [text, setText] = useState('');
+  const [source, setSource] = useState<QuoteSource | null>(null);
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [positionedStyles, setPositionedStyles] = useState<CSSProperties>(hiddenStyles);
   const timeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -56,6 +60,10 @@ export function useSelectionToolbar(container: () => HTMLElement | null) {
           return hideToolbar();
         const selectionRect = getSelectionRect(range);
         if (!selectionRect) return hideToolbar();
+        const id = conversationId();
+        const source = id ? captureQuoteSource(range, id) : null;
+        if (!source) return hideToolbar();
+        setSource(source);
         setText(selectedText);
         setRect(selectionRect);
       }, 300);
@@ -104,6 +112,7 @@ export function useSelectionToolbar(container: () => HTMLElement | null) {
 
   return {
     text,
+    source,
     hasSelection: Boolean(text && rect),
     clearSelection,
     setFloating: (element: HTMLDivElement | null) => {

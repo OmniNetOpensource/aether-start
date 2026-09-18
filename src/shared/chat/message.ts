@@ -79,7 +79,15 @@ type AskUserQuestionsBlock = {
 
 // --- Role-specific block types ---
 
-export type QuoteItem = { id: string; text: string };
+export type QuoteSource = {
+  // null 表示来源只在当前公开快照内有效。
+  conversationId: string | null;
+  messageId: number;
+  ranges: { contentIndex: number; start: number; end: number; text: string }[];
+};
+
+// undefined 是未记录来源的旧引用；null 是来源未包含在分享中的引用。
+export type QuoteItem = { id: string; text: string; source?: QuoteSource | null };
 
 export type UserContentBlock =
   | { type: 'content'; content: string }
@@ -124,6 +132,36 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isMessageId = (value: unknown): value is number | null =>
   value === null || (typeof value === 'number' && Number.isInteger(value) && value > 0);
 
+export const isQuoteSource = (value: unknown): value is QuoteSource =>
+  isRecord(value) &&
+  (typeof value.conversationId === 'string' || value.conversationId === null) &&
+  typeof value.messageId === 'number' &&
+  Number.isSafeInteger(value.messageId) &&
+  value.messageId > 0 &&
+  Array.isArray(value.ranges) &&
+  value.ranges.length > 0 &&
+  value.ranges.every(
+    (range) =>
+      isRecord(range) &&
+      typeof range.contentIndex === 'number' &&
+      Number.isSafeInteger(range.contentIndex) &&
+      range.contentIndex >= 0 &&
+      typeof range.start === 'number' &&
+      Number.isSafeInteger(range.start) &&
+      range.start >= 0 &&
+      typeof range.end === 'number' &&
+      Number.isSafeInteger(range.end) &&
+      range.end > range.start &&
+      typeof range.text === 'string' &&
+      range.text.length === range.end - range.start,
+  );
+
+export const isQuoteItem = (value: unknown): value is QuoteItem =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.text === 'string' &&
+  (value.source === undefined || value.source === null || isQuoteSource(value.source));
+
 export const isUserContentBlock = (value: unknown): value is UserContentBlock => {
   if (!isRecord(value) || typeof value.type !== 'string') {
     return false;
@@ -134,13 +172,7 @@ export const isUserContentBlock = (value: unknown): value is UserContentBlock =>
   }
 
   if (value.type === 'quotes') {
-    return (
-      Array.isArray(value.quotes) &&
-      value.quotes.every(
-        (quote) =>
-          isRecord(quote) && typeof quote.id === 'string' && typeof quote.text === 'string',
-      )
-    );
+    return Array.isArray(value.quotes) && value.quotes.every(isQuoteItem);
   }
 
   if (value.type === 'attachments') {

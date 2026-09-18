@@ -6,20 +6,19 @@ import {
   ChevronRight,
   Loader2,
 } from '@/frontend/design-system/icons';
-import type { AskUserQuestionsAnswer } from '@/shared/chat/ask-user-questions';
-import type { AssistantMessage } from '@/shared/chat/message';
+import type {
+  AskUserQuestionsAnswer,
+  AskUserQuestionsBlockStatus,
+  AskUserQuestionsQuestion,
+} from '@/shared/chat/ask-user-questions';
 import { Button } from '@/frontend/design-system/button';
 import { Textarea } from '@/frontend/design-system/textarea';
 
-type AskUserQuestionsBlock = Extract<
-  AssistantMessage['blocks'][number],
-  { type: 'ask_user_questions' }
->;
-
 type AskUserQuestionsCardProps = {
-  block: AskUserQuestionsBlock;
-  readonly?: boolean;
-  onSubmit?: (answers: AskUserQuestionsAnswer[]) => Promise<void>;
+  questions: AskUserQuestionsQuestion[];
+  answers: AskUserQuestionsAnswer[];
+  status: AskUserQuestionsBlockStatus;
+  onSend?: (answers: AskUserQuestionsAnswer[]) => Promise<void>;
 };
 
 type DraftAnswer = {
@@ -58,21 +57,23 @@ const getOptionIndex = (value: string) =>
   value.startsWith('option-') ? Number(value.slice('option-'.length)) : null;
 const isOptionIndex = (
   optionIndex: number | null,
-  question: AskUserQuestionsBlock['questions'][number],
+  question: AskUserQuestionsQuestion,
 ): optionIndex is number => optionIndex !== null && Boolean(question.options[optionIndex]);
 
 export function AskUserQuestionsCard(props: AskUserQuestionsCardProps) {
-  const [draftAnswers, setDraftAnswers] = useState(toDraftAnswers(props.block.answers));
+  const [draftAnswers, setDraftAnswers] = useState(toDraftAnswers(props.answers));
   const [currentPage, setCurrentPage] = useState(0);
   const answerSource =
-    props.block.status === 'answered' ? toDraftAnswers(props.block.answers) : draftAnswers;
-  const isLocked = (props.readonly ?? false) || props.block.status !== 'pending';
+    props.status === 'answered' || props.status === 'preview'
+      ? toDraftAnswers(props.answers)
+      : draftAnswers;
+  const isLocked = props.status !== 'pending';
   const canSubmit =
     !isLocked &&
-    props.block.questions.every((_, questionIndex) =>
+    props.questions.every((_, questionIndex) =>
       isDraftReady(getDraft(answerSource, questionIndex)),
     );
-  const question = props.block.questions[currentPage];
+  const question = props.questions[currentPage];
   const draft = getDraft(answerSource, currentPage);
   const selectedValues = [
     ...draft.selectedOptionIndexes.map(optionValue),
@@ -127,12 +128,12 @@ export function AskUserQuestionsCard(props: AskUserQuestionsCardProps) {
   };
 
   const handleSubmit = async () => {
-    if (!props.onSubmit || !canSubmit) {
+    if (!props.onSend || !canSubmit) {
       return;
     }
 
-    await props.onSubmit(
-      props.block.questions.map((_, questionIndex) => {
+    await props.onSend(
+      props.questions.map((_, questionIndex) => {
         const item = getDraft(answerSource, questionIndex);
         const trimmed = item.customText.trim();
         return {
@@ -236,7 +237,7 @@ export function AskUserQuestionsCard(props: AskUserQuestionsCardProps) {
           </label>
         </div>
 
-        {props.block.status === 'answered' && (
+        {(props.status === 'answered' || props.status === 'preview') && (
           <div className='mx-4 mt-3 flex items-start gap-2 rounded-md border border-dashed border-border px-3 py-2 text-xs text-secondary'>
             <CheckCircle2 className='mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground' />
             <span>
@@ -265,13 +266,13 @@ export function AskUserQuestionsCard(props: AskUserQuestionsCardProps) {
             <ChevronLeft className='h-4 w-4 text-secondary' />
           </Button>
           <span className='min-w-[3.25rem] text-center text-[11px] tabular-nums text-muted-foreground'>
-            {currentPage + 1} / {props.block.questions.length}
+            {currentPage + 1} / {props.questions.length}
           </span>
           <Button
             type='button'
             variant='ghost'
             size='icon-sm'
-            disabled={currentPage === props.block.questions.length - 1}
+            disabled={currentPage === props.questions.length - 1}
             onClick={() => setCurrentPage((p) => p + 1)}
             aria-label='下一题'
           >
@@ -279,18 +280,20 @@ export function AskUserQuestionsCard(props: AskUserQuestionsCardProps) {
           </Button>
         </div>
 
-        <Button type='button' disabled={!canSubmit} onClick={() => void handleSubmit()} size='sm'>
-          {props.block.status === 'submitting' ? (
-            <>
-              <Loader2 className='h-4 w-4 animate-spin' />
-              提交中
-            </>
-          ) : props.block.status === 'answered' ? (
-            '已提交'
-          ) : (
-            '提交回答'
-          )}
-        </Button>
+        {props.status !== 'preview' && (
+          <Button type='button' disabled={!canSubmit} onClick={() => void handleSubmit()} size='sm'>
+            {props.status === 'submitting' ? (
+              <>
+                <Loader2 className='h-4 w-4 animate-spin' />
+                提交中
+              </>
+            ) : props.status === 'answered' ? (
+              '已提交'
+            ) : (
+              '提交回答'
+            )}
+          </Button>
+        )}
       </div>
     </section>
   );

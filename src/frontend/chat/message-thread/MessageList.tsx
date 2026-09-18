@@ -16,13 +16,16 @@ import { branchConversationFn } from '@/rpc/conversations';
 import { upsertConversationInCache } from '@/frontend/conversations/session';
 import type { EditingState } from './editing-state';
 import { MessageItem } from './MessageItem';
+import { MessageNavigator } from './MessageNavigator';
 import { SelectionToolbar } from './selection-toolbar';
+import { useQuoteNavigation } from './quote-navigation';
 
 export function MessageList() {
   const scrollElement = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const currentPath = useCurrentPath();
   const currentConversationId = useConversationId();
+  useQuoteNavigation(scrollElement, { type: 'conversation', id: currentConversationId });
   const [editing, setEditing] = useState<{
     conversationId: string | null;
     state: EditingState;
@@ -161,6 +164,11 @@ export function MessageList() {
             </div>
           </div>
 
+          <MessageNavigator
+            key={currentConversationId}
+            messageIds={currentPath}
+            scrollElement={scrollElement}
+          />
           <SelectionToolbar container={() => scrollElement.current} />
         </div>
       )}

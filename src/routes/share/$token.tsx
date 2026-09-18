@@ -5,6 +5,8 @@ import { ReadonlyMessageList } from '@/frontend/share/public-thread';
 import { truncateMiddle } from '@/shared/core/truncate-middle';
 import { getPublicConversationShareFn } from '@/rpc/share';
 import type { Message } from '@/shared/chat/message';
+import { useRef } from 'react';
+import { useQuoteNavigation } from '@/frontend/chat/message-thread/quote-navigation';
 
 type PublicShareData = Awaited<ReturnType<typeof getPublicConversationShareFn>>;
 type ActivePublicShare = Extract<PublicShareData, { status: 'active' }>;
@@ -67,6 +69,8 @@ export const Route = createFileRoute('/share/$token')({
 
 function SharedConversationPage() {
   const { token } = Route.useParams();
+  const scrollElement = useRef<HTMLElement>(null);
+  useQuoteNavigation(scrollElement, { type: 'share' });
   const shareQuery = useQuery({
     queryKey: ['public-conversation-share', token],
     queryFn: () => getPublicConversationShareFn({ data: { token } }),
@@ -128,7 +132,7 @@ function SharedConversationPage() {
   const readonlyMessages = share.snapshot.messages.map(toReadonlyMessage);
 
   return (
-    <main className='h-screen w-full bg-background overflow-y-auto'>
+    <main ref={scrollElement} className='h-screen w-full bg-background overflow-y-auto'>
       <div className='pt-12 flex flex-col items-center'>
         <div className='w-full max-w-[390px] px-4 mb-8'>
           <h1 className='text-2xl font-semibold text-foreground' title={headingText}>

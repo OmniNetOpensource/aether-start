@@ -2,6 +2,10 @@ import { act, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderTest } from '@/test/render';
 import { useSelectionToolbar } from './useSelectionToolbar';
+import {
+  clearConversationMeta,
+  setConversationId,
+} from '@/frontend/conversations/session/conversation-meta';
 
 vi.mock('./utils', () => ({
   getSelectionContainer: (range: Range) => {
@@ -18,11 +22,13 @@ function SelectionState(props: { container: () => HTMLElement | null }) {
 
 beforeEach(() => {
   vi.useFakeTimers();
+  setConversationId('conversation-1');
 });
 
 afterEach(() => {
   vi.useRealTimers();
   window.getSelection()?.removeAllRanges();
+  clearConversationMeta();
 });
 
 describe('useSelectionToolbar', () => {
@@ -31,7 +37,11 @@ describe('useSelectionToolbar', () => {
     const message = document.createElement('p');
     const text = document.createTextNode('selected text');
     message.dataset.role = 'assistant';
-    message.appendChild(text);
+    message.dataset.messageId = '2';
+    const content = document.createElement('span');
+    content.dataset.quoteContent = '0';
+    content.appendChild(text);
+    message.appendChild(content);
     container.appendChild(message);
     document.body.appendChild(container);
 

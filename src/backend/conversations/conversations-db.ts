@@ -651,16 +651,39 @@ export const branchConversation = async (
     currentId = message.parentId;
   }
 
-  const branchedMessages = chain.map((message, index) => ({
-    ...message,
-    id: index + 1,
-    parentId: index === 0 ? null : index,
-    prevSibling: null,
-    nextSibling: null,
-    latestChild: index === chain.length - 1 ? null : index + 2,
-  }));
-
   const conversationId = crypto.randomUUID();
+  const messageIds = new Map(chain.map((message, index) => [message.id, index + 1]));
+  const branchedMessages = chain.map((message, index): Message => {
+    const fields = {
+      id: index + 1,
+      parentId: index === 0 ? null : index,
+      prevSibling: null,
+      nextSibling: null,
+      latestChild: index === chain.length - 1 ? null : index + 2,
+    };
+    if (message.role === 'assistant') return { ...message, ...fields };
+    return {
+      ...message,
+      ...fields,
+      blocks: message.blocks.map((block) =>
+        block.type === 'quotes'
+          ? {
+              type: 'quotes',
+              quotes: block.quotes.map((quote) => {
+                const source = quote.source;
+                const messageId =
+                  source?.conversationId === input.id
+                    ? messageIds.get(source.messageId)
+                    : undefined;
+                return source && messageId !== undefined
+                  ? { ...quote, source: { ...source, conversationId, messageId } }
+                  : quote;
+              }),
+            }
+          : block,
+      ),
+    };
+  });
   const title = typeof row.title === 'string' ? row.title : null;
   const model = typeof row.model === 'string' ? row.model : null;
   const now = new Date().toISOString();

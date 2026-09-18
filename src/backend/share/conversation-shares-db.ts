@@ -7,6 +7,7 @@ import type {
   SharedResearchItem,
 } from '@/shared/share/share';
 import { toSharedResearchItem } from '@/shared/share/share';
+import { isQuoteItem } from '@/shared/chat/message';
 import {
   isSafeShareToken,
   isSafeStorageKey,
@@ -62,12 +63,11 @@ const toSharedMessageBlock = (value: unknown): SharedMessageBlock | null => {
   }
 
   if (value.type === 'quotes' && Array.isArray(value.quotes)) {
-    const quotes = value.quotes
-      .filter(
-        (q): q is { id: string; text: string } =>
-          isRecord(q) && typeof q.id === 'string' && typeof q.text === 'string',
-      )
-      .map((q) => ({ id: q.id, text: q.text }));
+    const quotes = value.quotes.filter(isQuoteItem).map((q) => ({
+      id: q.id,
+      text: q.text,
+      ...(q.source !== undefined ? { source: q.source } : {}),
+    }));
     if (quotes.length > 0) {
       return { type: 'quotes', quotes };
     }

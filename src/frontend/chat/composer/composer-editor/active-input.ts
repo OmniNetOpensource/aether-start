@@ -1,4 +1,5 @@
 import type { RichComposerEditorHandle } from './RichComposerEditor';
+import type { QuoteItem } from '@/shared/chat/message';
 
 export type ActiveInputTarget = { type: 'composer' } | { type: 'edit'; messageId: number };
 
@@ -26,13 +27,13 @@ export function registerActiveInput(
   }
 }
 
-export function addQuoteToActiveInput(text: string) {
-  const trimmed = text.trim();
+export function addQuoteToActiveInput(quote: Omit<QuoteItem, 'id'>) {
+  const trimmed = quote.text.trim();
   if (!trimmed) return;
 
   const editor =
     lastFocusedInput?.type === 'edit'
       ? messageEditors.get(lastFocusedInput.messageId)
       : composerEditor;
-  (editor ?? composerEditor)?.insertQuote(trimmed);
+  (editor ?? composerEditor)?.insertQuote({ ...quote, text: trimmed });
 }
