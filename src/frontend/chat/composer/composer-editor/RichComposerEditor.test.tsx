@@ -3,6 +3,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { renderTest } from '@/test/render';
 import { RichComposerEditor, type RichComposerEditorHandle } from './RichComposerEditor';
 import { ToastProvider } from '@/frontend/app-shell/toast-context';
+import type { QuoteSource } from '@/shared/chat/message';
+import type { ComposerDocument } from './composer-document';
+import { composerDocumentFromBlocks, composerDocumentToBlocks } from './composer-document';
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -94,11 +97,11 @@ describe('RichComposerEditor', () => {
     await waitFor(() => expect(editor).not.toBeNull());
     await act(() => {
       if (!editor) throw new Error('Editor ref is not ready');
-      editor.insertQuote('quoted text');
+      editor.insertQuote({ text: 'quoted text' });
     });
 
     const quote = await screen.findByText('quoted text');
-    expect(quote.parentElement?.parentElement?.classList.contains('max-w-64')).toBe(true);
+    expect(quote.closest('.max-w-64')).not.toBeNull();
     await waitFor(() =>
       expect(onChange).toHaveBeenCalledWith(
         expect.arrayContaining([
@@ -135,5 +138,62 @@ describe('RichComposerEditor', () => {
     expect(consoleError.mock.calls.flat().join(' ')).not.toContain(
       'Attempted to synchronously unmount a root while React was already rendering',
     );
+  });
+
+  it('preserves quote positions through insertion, sending, reload and editing without navigating on removal', async () => {
+    let editor: RichComposerEditorHandle | null = null;
+    let document: ComposerDocument = [];
+    const source: QuoteSource = {
+      conversationId: 'conversation',
+      messageId: 2,
+      ranges: [{ contentIndex: 0, start: 4, end: 6, text: '原文' }],
+    };
+    const navigate = vi.fn();
+    window.document.addEventListener('aether-quote-navigate', navigate);
+    const view = renderTest(() => (
+      <ToastProvider>
+        <RichComposerEditor
+          ref={(value) => {
+            editor = value;
+          }}
+          id='source-editor'
+          document={[]}
+          onChange={(value) => {
+            document = value;
+          }}
+          onSubmit={() => {}}
+          ariaLabel='引用编辑器'
+        />
+      </ToastProvider>
+    ));
+    await screen.findByRole('textbox');
+    await act(() => {
+      if (!editor) throw new Error('Editor not ready');
+      editor.insertQuote({ text: '原文', source });
+    });
+    await screen.findByText('原文');
+    expect(document).toEqual([
+      { type: 'quote', quote: { id: expect.any(String), text: '原文', source } },
+    ]);
+    const restored = composerDocumentFromBlocks(composerDocumentToBlocks(document));
+    view.unmount();
+    renderTest(() => (
+      <ToastProvider>
+        <RichComposerEditor
+          id='restored-editor'
+          document={restored}
+          onChange={() => {}}
+          onSubmit={() => {}}
+          ariaLabel='引用编辑器'
+        />
+      </ToastProvider>
+    ));
+    fireEvent.click(await screen.findByRole('button', { name: '原文' }));
+    expect(navigate).toHaveBeenCalledOnce();
+    expect(navigate.mock.calls[0][0].detail.source).toEqual(source);
+    fireEvent.click(screen.getByRole('button', { name: '删除引用' }));
+    await waitFor(() => expect(screen.queryByText('原文')).toBeNull());
+    expect(navigate).toHaveBeenCalledOnce();
+    window.document.removeEventListener('aether-quote-navigate', navigate);
   });
 });

@@ -21,6 +21,15 @@ body {
   color: var(--color-foreground);
 }
 
+::highlight(quote-source) {
+  background-color: color-mix(in oklch, #facc15 45%, transparent);
+  color: var(--color-foreground);
+}
+
+[data-quote-target] .aether-markdown > div {
+  content-visibility: visible !important;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring;

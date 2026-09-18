@@ -28,6 +28,7 @@ import { BranchNavigator } from './BranchNavigator';
 import { ContentChip } from '@/frontend/chat/composer/composer-editor/ContentChip';
 import { consumeNewMessageAnimation } from './message-entry-animation';
 import { enhanceServerErrorMessage } from './error-message';
+import { requestQuoteNavigation } from './quote-navigation';
 
 type CopyButtonProps = {
   blocks: Message['blocks'];
@@ -229,6 +230,7 @@ export function MessageItem(props: MessageItemProps) {
                                 key={quote.id}
                                 kind='quote'
                                 text={quote.text}
+                                onClick={() => requestQuoteNavigation(quote)}
                                 className='mx-1 max-w-[calc(100%-0.5rem)]'
                               />
                             ))}
@@ -302,6 +304,11 @@ export function MessageItem(props: MessageItemProps) {
                       <Markdown
                         key={blockIndex}
                         content={block.content}
+                        quoteContentIndex={
+                          assistantBlocks
+                            .slice(0, blockIndex)
+                            .filter((item) => item.type === 'content').length
+                        }
                         isAnimating={isStreaming && blockIndex === assistantBlocks.length - 1}
                       />
                     );

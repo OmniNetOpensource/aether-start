@@ -1,4 +1,4 @@
-import type { Message } from '@/shared/chat/message';
+import type { Message, QuoteItem } from '@/shared/chat/message';
 
 /** 快照经 JSON 存库和 RPC 传输，值必须是纯 JSON，不能是 unknown */
 export type JsonValue =
@@ -88,7 +88,33 @@ export type SharedAttachmentSnapshot = {
   storageKey?: string;
 };
 
-export type SharedQuoteItem = { id: string; text: string };
+export type SharedQuoteItem = QuoteItem;
+
+export function quoteForSnapshot(
+  quote: QuoteItem,
+  conversationId: string,
+  messageIds: Set<number>,
+): QuoteItem {
+  if (quote.source === undefined) return { id: quote.id, text: quote.text };
+  const source = quote.source;
+  return {
+    id: quote.id,
+    text: quote.text,
+    source:
+      source && source.conversationId === conversationId && messageIds.has(source.messageId)
+        ? {
+            conversationId: null,
+            messageId: source.messageId,
+            ranges: source.ranges.map(({ contentIndex, start, end, text }) => ({
+              contentIndex,
+              start,
+              end,
+              text,
+            })),
+          }
+        : null,
+  };
+}
 
 export type SharedUserBlock =
   | { type: 'content'; content: string }
@@ -117,7 +143,7 @@ export type SharedConversationSnapshot = {
 
 export type PublicSharedAttachment = Omit<SharedAttachmentSnapshot, 'storageKey'>;
 
-export type PublicSharedQuoteItem = { id: string; text: string };
+export type PublicSharedQuoteItem = SharedQuoteItem;
 
 export type PublicSharedMessageBlock =
   | { type: 'content'; content: string }

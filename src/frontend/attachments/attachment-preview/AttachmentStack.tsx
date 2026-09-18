@@ -1,13 +1,12 @@
 import { X } from '@/frontend/design-system/icons';
 import { ImagePreview } from '@/frontend/attachments/attachment-preview';
 import { Button } from '@/frontend/design-system/button';
-import type { Attachment } from '@/shared/chat/message';
-
-type PendingQuote = { id: string; text: string };
+import type { Attachment, QuoteItem } from '@/shared/chat/message';
 
 type AttachmentStackProps = {
   items: Attachment[];
-  quotes?: PendingQuote[];
+  quotes?: QuoteItem[];
+  onQuoteClick: (quote: QuoteItem) => void;
   onRemove?: (id: string) => void;
   onRemoveQuote?: (id: string) => void;
 };
@@ -16,6 +15,7 @@ type QuoteEntry = {
   kind: 'quote';
   id: string;
   text: string;
+  quote: QuoteItem;
   rotate: number;
   offsetY: number;
 };
@@ -54,11 +54,13 @@ export function AttachmentStack({
   quotes = [],
   onRemove,
   onRemoveQuote,
+  onQuoteClick,
 }: AttachmentStackProps) {
   const quoteEntries: QuoteEntry[] = quotes.map((quote) => ({
     kind: 'quote',
     id: quote.id,
     text: quote.text,
+    quote,
     rotate: getRotate(quote.id),
     offsetY: getOffsetY(quote.id),
   }));
@@ -91,9 +93,14 @@ export function AttachmentStack({
           >
             <div className={cardStyle} style={cardSize}>
               {entry.kind === 'quote' ? (
-                <p className='line-clamp-3 h-full w-full select-none overflow-hidden p-1.5 text-[10px] leading-tight text-muted-foreground'>
+                <button
+                  type='button'
+                  title='跳转到引用原文'
+                  onClick={() => onQuoteClick(entry.quote)}
+                  className='line-clamp-3 h-full w-full cursor-pointer text-left select-none overflow-hidden p-1.5 text-[10px] leading-tight text-muted-foreground'
+                >
                   {entry.text}
-                </p>
+                </button>
               ) : (
                 <ImagePreview
                   url={entry.attachment.url}

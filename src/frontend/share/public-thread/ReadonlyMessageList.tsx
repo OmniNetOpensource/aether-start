@@ -4,6 +4,7 @@ import { AttachmentStack } from '@/frontend/attachments/attachment-preview';
 import { AskUserQuestionsCard } from '@/frontend/chat/ask-user-questions';
 import { ResearchBlock } from '@/frontend/chat/research';
 import type { Message } from '@/shared/chat/message';
+import { requestQuoteNavigation } from '@/frontend/chat/message-thread/quote-navigation';
 
 type ReadonlyMessageListProps = {
   messages: Message[];
@@ -86,7 +87,17 @@ export function ReadonlyMessageList(props: ReadonlyMessageListProps) {
                         }
 
                         if (block.type !== 'content') return null;
-                        return <Markdown key={index} content={block.content} />;
+                        return (
+                          <Markdown
+                            key={index}
+                            content={block.content}
+                            quoteContentIndex={
+                              assistantBlocks
+                                .slice(0, index)
+                                .filter((item) => item.type === 'content').length
+                            }
+                          />
+                        );
                       })}
                     </div>
                   ))}

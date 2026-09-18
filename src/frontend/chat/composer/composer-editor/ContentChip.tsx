@@ -6,6 +6,7 @@ type ContentChipProps =
   | {
       kind: 'quote';
       text: string;
+      onClick: () => void;
       onRemove?: () => void;
       className?: string;
     }
@@ -52,24 +53,41 @@ export function ContentChip(props: ContentChipProps) {
     <span
       data-content-chip={props.kind}
       className={cn(
-        'group/chip inline-flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded-full bg-muted px-2.5 text-xs align-middle',
+        'group/chip inline-flex h-7 min-w-0 max-w-full items-center gap-1.5 rounded-full bg-muted text-xs align-middle',
+        props.kind === 'attachment' && 'px-2.5',
         props.className,
       )}
     >
       {props.kind === 'quote' ? (
-        <Quote className='h-3 w-3 shrink-0 text-muted-foreground' />
-      ) : props.mimeType.startsWith('image/') ? (
-        <Image className='h-3 w-3 shrink-0 text-muted-foreground' />
+        <button
+          type='button'
+          className='inline-flex h-full min-w-0 items-center gap-1.5 rounded-full px-2.5 cursor-pointer hover:underline'
+          title='跳转到引用原文'
+          onClick={props.onClick}
+          onKeyDown={(event) => event.stopPropagation()}
+        >
+          <Quote className='h-3 w-3 shrink-0 text-muted-foreground' />
+          <span className='truncate'>{props.text}</span>
+        </button>
       ) : (
-        <FileText className='h-3 w-3 shrink-0 text-muted-foreground' />
+        <>
+          {props.mimeType.startsWith('image/') ? (
+            <Image className='h-3 w-3 shrink-0 text-muted-foreground' />
+          ) : (
+            <FileText className='h-3 w-3 shrink-0 text-muted-foreground' />
+          )}
+          <span className='truncate'>{props.name}</span>
+        </>
       )}
-      <span className='truncate'>{props.kind === 'quote' ? props.text : props.name}</span>
       {props.onRemove ? (
         <button
           type='button'
           aria-label={props.kind === 'quote' ? '删除引用' : '删除附件'}
           onClick={props.onRemove}
-          className='-mr-1 grid h-4 w-4 shrink-0 place-items-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground'
+          className={cn(
+            'grid h-4 w-4 shrink-0 place-items-center rounded-full text-muted-foreground/60 transition-colors hover:text-foreground',
+            props.kind === 'quote' ? 'mr-2' : '-mr-1',
+          )}
         >
           <X className='h-3 w-3' />
         </button>

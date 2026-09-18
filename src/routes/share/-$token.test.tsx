@@ -7,6 +7,7 @@ import {
   onlineManager,
 } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ToastProvider } from '@/frontend/app-shell/toast-context';
 
 const rpc = vi.hoisted(() => ({
   getPublicConversationShare: vi.fn(),
@@ -38,7 +39,6 @@ vi.mock('@/rpc/share', () => ({
   getPublicConversationShareFn: rpc.getPublicConversationShare,
 }));
 
-vi.mock('@/frontend/design-system/icons', () => ({ Loader2: () => null }));
 vi.mock('@/frontend/share/public-thread', () => ({ ReadonlyMessageList: () => null }));
 
 import './$token';
@@ -69,9 +69,11 @@ const renderPublicShare = () => {
   const PublicSharePage = routeHost.getComponent();
   const view = render(
     <QueryClientProvider client={client}>
-      <TestErrorBoundary>
-        <PublicSharePage />
-      </TestErrorBoundary>
+      <ToastProvider>
+        <TestErrorBoundary>
+          <PublicSharePage />
+        </TestErrorBoundary>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 
