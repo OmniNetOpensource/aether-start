@@ -19,12 +19,10 @@ type ServerEnv = {
   GEMINI_API_KEY_AISTUDIO?: string;
   OPENROUTER_API_KEY?: string;
   SERP_API_KEY?: string;
+  JUSTONEAPI_TOKEN?: string;
   SUPADATA_API_KEY?: string;
   JINA_API_KEY?: string;
-  FIRECRAWL_API_KEY?: string;
-  EXA_API_KEY?: string;
   RESEND_API_KEY?: string;
-  NETIFY_TOKEN?: string;
   DB?: D1Database;
   CHAT_ASSETS?: R2Bucket;
   NODE_ENV?: string;
@@ -96,19 +94,14 @@ export const getServerEnv = (): ServerEnv => {
       readString((bindings as Record<string, unknown>).OPENROUTER_API_KEY) ??
       readStringFromProcess('OPENROUTER_API_KEY'),
     SERP_API_KEY: readString(bindings.SERP_API_KEY) ?? readStringFromProcess('SERP_API_KEY'),
+    JUSTONEAPI_TOKEN:
+      readString(bindings.JUSTONEAPI_TOKEN) ?? readStringFromProcess('JUSTONEAPI_TOKEN'),
     SUPADATA_API_KEY:
       readString(bindings.SUPADATA_API_KEY) ?? readStringFromProcess('SUPADATA_API_KEY'),
     JINA_API_KEY:
       readString((bindings as Record<string, unknown>).JINA_API_KEY) ??
       readStringFromProcess('JINA_API_KEY'),
-    FIRECRAWL_API_KEY:
-      readString((bindings as Record<string, unknown>).FIRECRAWL_API_KEY) ??
-      readStringFromProcess('FIRECRAWL_API_KEY'),
-    EXA_API_KEY:
-      readString((bindings as Record<string, unknown>).EXA_API_KEY) ??
-      readStringFromProcess('EXA_API_KEY'),
     RESEND_API_KEY: readString(bindings.RESEND_API_KEY) ?? readStringFromProcess('RESEND_API_KEY'),
-    NETIFY_TOKEN: readString(bindings.NETIFY_TOKEN) ?? readStringFromProcess('NETIFY_TOKEN'),
     NODE_ENV: readString(bindings.NODE_ENV) ?? readStringFromProcess('NODE_ENV') ?? 'production',
     DB: bindings.DB,
     CHAT_ASSETS: bindings.CHAT_ASSETS,

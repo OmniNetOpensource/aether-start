@@ -55,7 +55,7 @@ export const processEventToTree = (
     return appendToAssistant(state, assistantMessageId, {
       kind: 'tool',
       data: {
-        call: { tool: event.tool, args: event.args },
+        call: { tool: event.tool, args: event.args, callId: event.callId },
       },
     });
   }
@@ -65,6 +65,7 @@ export const processEventToTree = (
       kind: 'tool_result',
       tool: event.tool,
       result: event.result,
+      callId: event.callId,
     });
   }
 

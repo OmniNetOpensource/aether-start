@@ -1,9 +1,3 @@
-export type FetchProvider = 'jina' | 'firecrawl' | 'exa';
-
-export type ToolContext = {
-  fetchProvider?: FetchProvider;
-};
-
 export type ChatTool = {
   type: 'function';
   function: {
@@ -13,11 +7,7 @@ export type ChatTool = {
   };
 };
 
-export type ToolHandler = (
-  args: unknown,
-  signal?: AbortSignal,
-  context?: ToolContext,
-) => Promise<string>;
+export type ToolHandler = (args: unknown, signal?: AbortSignal) => Promise<string>;
 
 export type ToolDefinition = {
   spec: ChatTool;

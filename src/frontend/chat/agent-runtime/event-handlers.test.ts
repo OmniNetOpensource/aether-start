@@ -7,6 +7,7 @@ import {
   messages,
 } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import type { AssistantMessage } from '@/shared/chat/message';
+import type { ChatServerToClientEvent } from '@/shared/chat/chat-api';
 
 const notify = () => '';
 
@@ -145,6 +146,143 @@ describe('event handlers', () => {
           details: 'upstream unavailable',
         },
       },
+    ]);
+  });
+
+  it('matches same-name tool results by call ID', () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    initializeMessageTree([createAssistantMessage()], [1]);
+
+    const events: ChatServerToClientEvent[] = [
+      {
+        type: 'tool_call',
+        tool: 'fetch_url',
+        args: { url: 'https://example.com/first' },
+        callId: 'fetch-1',
+      },
+      {
+        type: 'tool_call',
+        tool: 'fetch_url',
+        args: { url: 'https://example.com/second' },
+        callId: 'fetch-2',
+      },
+      {
+        type: 'tool_result',
+        tool: 'fetch_url',
+        result: 'first page',
+        callId: 'fetch-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'fetch_url',
+        result: 'second page',
+        callId: 'fetch-2',
+      },
+    ];
+
+    for (const [index, event] of events.entries()) {
+      handleServerMessage(
+        chatState,
+        {
+          event: 'chat_event',
+          data: { eventId: index + 1, assistantMessageId: 1, event },
+        },
+        'conversation-1',
+      );
+    }
+
+    expect(messages()[0]?.blocks).toEqual([
+      {
+        type: 'research',
+        items: [
+          {
+            kind: 'tool',
+            data: {
+              call: {
+                tool: 'fetch_url',
+                args: { url: 'https://example.com/first' },
+                callId: 'fetch-1',
+              },
+              result: { result: 'first page' },
+            },
+          },
+          {
+            kind: 'tool',
+            data: {
+              call: {
+                tool: 'fetch_url',
+                args: { url: 'https://example.com/second' },
+                callId: 'fetch-2',
+              },
+              result: { result: 'second page' },
+            },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('keeps one render item when generic tool events are replayed', () => {
+    registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
+    initializeMessageTree([createAssistantMessage()], [1]);
+
+    const events: ChatServerToClientEvent[] = [
+      {
+        type: 'tool_call',
+        tool: 'render',
+        args: { code: '<main>Demo</main>' },
+        callId: 'render-1',
+      },
+      { type: 'content', content: 'Rendered above.' },
+      {
+        type: 'tool_call',
+        tool: 'render',
+        args: { code: '<main>Demo</main>' },
+        callId: 'render-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'render',
+        result: 'HTML rendered successfully.',
+        callId: 'render-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'render',
+        result: 'HTML rendered successfully.',
+        callId: 'render-1',
+      },
+    ];
+
+    for (const [index, event] of events.entries()) {
+      handleServerMessage(
+        chatState,
+        {
+          event: 'chat_event',
+          data: { eventId: index + 1, assistantMessageId: 1, event },
+        },
+        'conversation-1',
+      );
+    }
+
+    expect(messages()[0]?.blocks).toEqual([
+      {
+        type: 'research',
+        items: [
+          {
+            kind: 'tool',
+            data: {
+              call: {
+                tool: 'render',
+                args: { code: '<main>Demo</main>' },
+                callId: 'render-1',
+              },
+              result: { result: 'HTML rendered successfully.' },
+            },
+          },
+        ],
+      },
+      { type: 'content', content: 'Rendered above.' },
     ]);
   });
 });

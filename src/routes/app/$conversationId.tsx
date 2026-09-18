@@ -6,7 +6,6 @@ import {
 } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
-import { setArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { isMessage } from '@/shared/chat/message';
 import { MessageList } from '@/frontend/chat/message-thread/MessageList';
 import { buildPathToLatestAssistant } from '@/shared/conversations';
@@ -18,14 +17,12 @@ import {
   setPageTitle,
 } from '@/frontend/conversations/session';
 import { initializeMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
-import type { ConversationArtifact } from '@/shared/conversations/conversation';
 
 type ActivatableConversation = {
   id: string;
   title: string | null;
   model?: string | null;
   messages: unknown[];
-  artifacts: ConversationArtifact[];
 };
 
 function validateMessages(persistedMessages: unknown[]) {
@@ -68,7 +65,6 @@ function activateConversation(
   resetLastEventId();
   const messages = validateMessages(conversation.messages);
   initializeMessageTree(messages, buildPathToLatestAssistant(messages));
-  setArtifacts(conversation.artifacts);
   setPageTitle(conversation.title ?? 'Aether');
   setCurrentModelId(conversation.model ?? '');
   setConversationId(conversation.id);

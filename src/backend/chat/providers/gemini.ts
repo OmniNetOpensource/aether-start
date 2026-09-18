@@ -10,7 +10,6 @@ import { quotesToModelText } from '@/shared/conversations';
 import { buildProviderErrorEvent } from './provider-error';
 import { resolveAttachmentToBase64 } from '../attachment-utils';
 import { parseToolResultImage } from '../tool-result-images';
-import { buildRenderArtifactEvents } from '@/shared/chat/render-artifact-stream';
 import type {
   PendingToolInvocation,
   ChatServerToClientEvent,
@@ -212,7 +211,7 @@ export class GeminiChatProvider {
           } else if (part.functionCall) {
             const fc = part.functionCall;
             const toolCall = {
-              id: fc.id || `gemini_tool_${pendingToolCalls.length + 1}`,
+              id: fc.id || crypto.randomUUID(),
               name: fc.name || 'unknown_tool',
               args: (fc.args ?? {}) as Record<string, unknown>,
             };
@@ -223,11 +222,6 @@ export class GeminiChatProvider {
               args: toolCall.args,
               callId: toolCall.id,
             };
-            if (toolCall.name === 'render') {
-              for (const event of buildRenderArtifactEvents(toolCall.id, toolCall.args)) {
-                yield event;
-              }
-            }
           }
         }
       }

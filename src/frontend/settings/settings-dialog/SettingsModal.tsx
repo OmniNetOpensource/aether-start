@@ -6,7 +6,6 @@ import { authClient } from '@/frontend/auth/client';
 import { getSessionStateFn } from '@/rpc/auth';
 import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
-import { clearArtifacts } from '@/frontend/chat/artifact/artifact-state';
 import { clearMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { clearConversationMeta } from '@/frontend/conversations/session/conversation-meta';
 import { conversationListQueryKey } from '@/frontend/conversations/session';
@@ -20,6 +19,7 @@ import {
   adminListRedeemCodesFn,
 } from '@/rpc/redeem-codes';
 import { getQuotaFn, redeemCodeFn } from '@/rpc/quota';
+import { ModelSettings } from './ModelSettings';
 
 type SettingsModalProps = {
   open: boolean;
@@ -85,7 +85,6 @@ export function SettingsModal(props: SettingsModalProps) {
       chatState.setStatus('idle');
       clearConversationMeta();
       clearMessageTree();
-      clearArtifacts();
       queryClient.removeQueries({ queryKey: conversationListQueryKey });
       resetLastEventId();
       await navigate({
@@ -160,6 +159,8 @@ export function SettingsModal(props: SettingsModalProps) {
         </DialogHeader>
 
         <div className='flex flex-col gap-6'>
+          <ModelSettings canRefreshModels={isAdmin} />
+
           <div className='space-y-3'>
             <h3 className='text-sm font-medium text-muted-foreground'>Quota</h3>
             <div className='space-y-3 rounded-lg border bg-muted p-3'>

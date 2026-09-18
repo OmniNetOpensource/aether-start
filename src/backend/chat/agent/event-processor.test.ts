@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { applyOperation } from '@/backend/conversations/operation';
-import { processEventToTree } from './event-processor';
+import type { ChatServerToClientEvent } from '@/shared/chat/chat-api';
+import { cloneTreeSnapshot, processEventToTree } from './event-processor';
 
 const createdAt = '2026-08-07T00:00:00.000Z';
 
@@ -91,5 +92,141 @@ describe('processEventToTree', () => {
       },
     ]);
     expect(tree.messages[3].blocks).toEqual([{ type: 'content', content: 'Go 是' }]);
+  });
+
+  it('matches same-name tool results by call ID and preserves IDs when cloning', () => {
+    let tree = setupTwoRuns();
+    tree = processEventToTree(
+      tree,
+      { type: 'tool_call', tool: 'search', args: { query: 'first' }, callId: 'call-1' },
+      2,
+    );
+    tree = processEventToTree(
+      tree,
+      { type: 'tool_call', tool: 'search', args: { query: 'second' }, callId: 'call-2' },
+      2,
+    );
+    tree = processEventToTree(
+      tree,
+      { type: 'tool_result', tool: 'search', result: 'first result', callId: 'call-1' },
+      2,
+    );
+    tree = processEventToTree(
+      tree,
+      { type: 'tool_result', tool: 'search', result: 'second result', callId: 'call-2' },
+      2,
+    );
+
+    expect(cloneTreeSnapshot(tree).messages[1].blocks).toEqual([
+      {
+        type: 'research',
+        items: [
+          {
+            kind: 'tool',
+            data: {
+              call: { tool: 'search', args: { query: 'first' }, callId: 'call-1' },
+              result: { result: 'first result' },
+            },
+          },
+          {
+            kind: 'tool',
+            data: {
+              call: { tool: 'search', args: { query: 'second' }, callId: 'call-2' },
+              result: { result: 'second result' },
+            },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('preserves an unmatched tool result without attaching it to another call', () => {
+    let tree = setupTwoRuns();
+    tree = processEventToTree(
+      tree,
+      { type: 'tool_call', tool: 'search', args: { query: 'known' }, callId: 'known-call' },
+      2,
+    );
+    tree = processEventToTree(
+      tree,
+      { type: 'tool_result', tool: 'search', result: 'orphan', callId: 'unknown-call' },
+      2,
+    );
+
+    expect(tree.messages[1].blocks).toEqual([
+      {
+        type: 'research',
+        items: [
+          {
+            kind: 'tool',
+            data: {
+              call: { tool: 'search', args: { query: 'known' }, callId: 'known-call' },
+            },
+          },
+          {
+            kind: 'tool',
+            data: {
+              call: { tool: 'search', args: {}, callId: 'unknown-call' },
+              result: { result: 'orphan' },
+            },
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('keeps one render item when a tool call and result are replayed', () => {
+    let tree = setupTwoRuns();
+    const events: ChatServerToClientEvent[] = [
+      {
+        type: 'tool_call',
+        tool: 'render',
+        args: { code: '<main>Demo</main>' },
+        callId: 'render-1',
+      },
+      { type: 'content', content: 'Rendered above.' },
+      {
+        type: 'tool_call',
+        tool: 'render',
+        args: { code: '<main>Demo</main>' },
+        callId: 'render-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'render',
+        result: 'HTML rendered successfully.',
+        callId: 'render-1',
+      },
+      {
+        type: 'tool_result',
+        tool: 'render',
+        result: 'HTML rendered successfully.',
+        callId: 'render-1',
+      },
+    ];
+
+    for (const event of events) {
+      tree = processEventToTree(tree, event, 2);
+    }
+
+    expect(tree.messages[1].blocks).toEqual([
+      {
+        type: 'research',
+        items: [
+          {
+            kind: 'tool',
+            data: {
+              call: {
+                tool: 'render',
+                args: { code: '<main>Demo</main>' },
+                callId: 'render-1',
+              },
+              result: { result: 'HTML rendered successfully.' },
+            },
+          },
+        ],
+      },
+      { type: 'content', content: 'Rendered above.' },
+    ]);
   });
 });

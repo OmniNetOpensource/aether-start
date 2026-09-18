@@ -2,16 +2,14 @@ import { isAbortError } from '@/backend/chat/abort';
 import { DurableObject } from 'cloudflare:workers';
 import { executeToolCall, getAvailableTools } from '@/backend/chat/agent/tool-executor';
 import {
+  AETHER_SYSTEM_PROMPT,
   getDefaultModelConfig,
   getModelConfig,
-  getPromptById,
-  getDefaultPromptId,
 } from '@/shared/chat/model-catalog';
 import { log } from '@/backend/chat/logger';
 import { getBackendConfig } from '@/backend/chat/providers/backend-config';
 import { createChatProvider } from '@/backend/chat/providers/provider-factory';
 import type { ChatProvider, ProviderRunResult } from '@/backend/chat/providers/provider-types';
-import type { FetchProvider } from '@/shared/chat/tool-types';
 import { generateTitleFromConversation } from '@/backend/chat/chat-title';
 import { processEventToTree, cloneTreeSnapshot } from './event-processor';
 import { applyOperation } from '@/backend/conversations/operation';
@@ -25,14 +23,9 @@ import {
   parseAskUserQuestionsAnswerSubmission,
 } from '@/schema/ask-user-questions';
 import type { AskUserQuestionsQuestion } from '@/shared/chat/ask-user-questions';
-import {
-  createConversationArtifact,
-  getConversationById,
-  upsertConversation,
-} from '@/backend/conversations/conversations-db';
+import { getConversationById, upsertConversation } from '@/backend/conversations/conversations-db';
 import { consumePromptQuotaOnAccept } from '@/backend/quota/prompt-quota-db';
 import type {
-  ArtifactLanguage,
   ChatAgentStatus,
   ChatCommandResponse,
   ChatFinishedPayload,
@@ -72,6 +65,7 @@ type ConversationRunnerEnv = Cloudflare.Env & {
   GEMINI_API_KEY_AISTUDIO?: string;
   OPENROUTER_API_KEY?: string;
   SERP_API_KEY?: string;
+  JUSTONEAPI_TOKEN?: string;
   SUPADATA_API_KEY?: string;
 };
 
@@ -136,8 +130,6 @@ type ChatRequestBody = {
   idempotencyKey: string;
   conversationId: string | null;
   model: string;
-  promptId?: string;
-  fetchProvider?: FetchProvider;
   operation: Operation;
 };
 
@@ -150,113 +142,12 @@ type PreparedChatRequest = Omit<ChatRequestBody, 'conversationId'> & {
   runPath: number[];
 };
 
-// 流式 artifact 事件在内存里拼出的「进行中」状态；completed 或 failed 后从 Map 移除。
-type PendingArtifact = {
-  id: string;
-  title: string;
-  language: ArtifactLanguage | null;
-  code: string;
-};
-
 // 与闭包里的 throw 不同：显式传入 signal，方便在任意深度调用（工具循环、事件泵）里统一中断语义。
 const throwIfAborted = (signal: AbortSignal) => {
   if (signal.aborted) {
     throw new DOMException('Aborted', 'AbortError');
   }
 };
-
-/**
- * Artifact 相关 SSE 是一条增量流：started → title/language → code_delta → completed | failed。
- * 本类负责两件事：
- * 1. 跟随事件维护 pending，在 artifact_completed 时把成品写入 D1（与前端/树事件顺序一致）。
- * 2. 若整轮对话以非 completed 结束（中断、error、未跑完），由 drainPendingAsFailures 生成
- *    尚未完结的 artifact_failed，交给上层 emit（保证客户端能收口 UI，且与 finalize 里顺序可控）。
- */
-class ArtifactAccumulator {
-  private pending = new Map<string, PendingArtifact>();
-
-  constructor(
-    private env: ConversationRunnerEnv,
-    private userId: string,
-    private conversationId: string,
-  ) {}
-
-  /** 仅处理 artifact_* 类型；其它事件类型直接忽略。 */
-  async handleEvent(event: ChatServerToClientEvent): Promise<void> {
-    if (event.type === 'artifact_started') {
-      this.pending.set(event.artifactId, {
-        id: event.artifactId,
-        title: 'Untitled Artifact',
-        language: null,
-        code: '',
-      });
-      return;
-    }
-    if (event.type === 'artifact_title') {
-      const artifact = this.pending.get(event.artifactId);
-      if (artifact) {
-        artifact.title = event.title;
-      }
-      return;
-    }
-    if (event.type === 'artifact_language') {
-      const artifact = this.pending.get(event.artifactId);
-      if (artifact) {
-        artifact.language = event.language;
-      }
-      return;
-    }
-    if (event.type === 'artifact_code_delta') {
-      const artifact = this.pending.get(event.artifactId);
-      if (artifact) {
-        artifact.code += event.delta;
-      }
-      return;
-    }
-    if (event.type === 'artifact_completed') {
-      const artifact = this.pending.get(event.artifactId);
-      if (artifact && artifact.language && artifact.code.trim()) {
-        const now = new Date().toISOString();
-        await createConversationArtifact(this.env.DB, {
-          user_id: this.userId,
-          id: artifact.id,
-          conversation_id: this.conversationId,
-          title: artifact.title.trim() || 'Untitled Artifact',
-          language: artifact.language,
-          code: artifact.code,
-          created_at: now,
-          updated_at: now,
-        });
-      }
-      this.pending.delete(event.artifactId);
-      return;
-    }
-    if (event.type === 'artifact_failed') {
-      this.pending.delete(event.artifactId);
-    }
-  }
-
-  /**
-   * 取出当前仍挂在 pending 里的 artifact，生成对应的 artifact_failed 事件并清空 Map。
-   * 不直接广播：由调用方走统一的 emitEvent（会进消息树、SSE、缓存），与正常失败路径一致。
-   */
-  drainPendingAsFailures(reason: 'aborted' | 'error'): ChatServerToClientEvent[] {
-    const message =
-      reason === 'aborted'
-        ? 'Artifact generation stopped before completion.'
-        : 'Artifact generation failed before completion.';
-    const events: ChatServerToClientEvent[] = [];
-    for (const artifact of this.pending.values()) {
-      events.push({
-        type: 'artifact_failed',
-        artifactId: artifact.id,
-        message,
-      });
-    }
-    this.pending.clear();
-    return events;
-  }
-}
 
 type PendingAskUserQuestions = {
   callId: string;
@@ -282,12 +173,6 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
   const idempotencyKey = asString(body.idempotencyKey);
   const conversationId = asString(body.conversationId);
   const model = asString(body.model);
-  const promptId = asString(body.promptId) ?? undefined;
-  const rawFetchProvider = asString(body.fetchProvider);
-  const fetchProvider: FetchProvider | undefined =
-    rawFetchProvider === 'jina' || rawFetchProvider === 'firecrawl' || rawFetchProvider === 'exa'
-      ? rawFetchProvider
-      : undefined;
   const rawOperation = body.operation;
 
   let operation: Operation | null = null;
@@ -329,8 +214,6 @@ const parseChatRequestBody = (body: unknown): ChatRequestBody | null => {
     idempotencyKey,
     conversationId,
     model,
-    promptId,
-    fetchProvider,
     operation,
   };
 };
@@ -847,7 +730,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   // conversationHistory 由服务端从当前分支生成，这里只做业务级校验（非空、有有效用户消息）。
 
   /**
-   * 从 HTTP 已解析的 body 构造「可跑模型」所需的一切：校验、选模型与 prompt、创建统一 ChatProvider、
+   * 从 HTTP 已解析的 body 构造「可跑模型」所需的一切：校验、选模型、创建统一 ChatProvider、
    * 把 SerializedMessage[] 转成供应商内部消息格式（workingMessages）。
    * 任一步失败都会 emit error 事件并返回 null，调用方将 finalStatus 置为 error，不再进入主循环。
    */
@@ -858,7 +741,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     provider: ChatProvider;
     workingMessages: Awaited<ReturnType<ChatProvider['convertMessages']>>;
   } | null> {
-    const { conversationHistory, model, promptId } = message;
+    const { conversationHistory, model } = message;
 
     if (conversationHistory.length === 0) {
       await emitEvent(toEventError('Invalid conversation history: expected non-empty array.'));
@@ -885,16 +768,13 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       return null;
     }
 
-    const promptConfig = promptId ? getPromptById(promptId) : getPromptById(getDefaultPromptId());
-    const systemPrompt = promptConfig?.content ?? '';
-
     const backendConfig = getBackendConfig(modelConfig);
 
     const provider = await createChatProvider(modelConfig.format, {
       model: modelConfig.model,
       backendConfig,
       tools: getAvailableTools(),
-      systemPrompt,
+      systemPrompt: AETHER_SYSTEM_PROMPT,
     });
 
     const workingMessages = await provider.convertMessages(conversationHistory);
@@ -903,7 +783,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
 
   /**
    * 「一轮」= 带着当前 workingMessages 调用 provider.run，直到 generator 结束。
-   * 流式事件逐条经 emitEvent（更新消息树、累计 error、artifact、广播）；每 emit 后检查 abort。
+   * 流式事件逐条经 emitEvent（更新消息树、累计 error、广播）；每 emit 后检查 abort。
    * 返回的 assistantText 仅统计 content 事件，供后续 formatToolContinuation 拼用户可见正文；
    * runResult 含本轮结束时的 pendingToolCalls；hadErrors 通过 emit 前后 error 条数差判断（替代旧实现里
    * errorEventCountBeforeRun 快照），与「本轮是否出现 error 类型事件」语义一致。
@@ -1022,9 +902,7 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         continue;
       }
 
-      const executedToolCall = await executeToolCall(toolCall, signal, {
-        fetchProvider: message.fetchProvider,
-      });
+      const executedToolCall = await executeToolCall(toolCall, signal);
       for (const event of executedToolCall.events) {
         await emitEvent(event);
         throwIfAborted(signal);
@@ -1038,7 +916,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   /**
    * 单个 run 的收尾:无论 try 成功、return 还是 catch,finally 都会执行。
    * - 拒绝本 run 仍在等待的 askuserquestions,避免 /tool-answer 误匹配。
-   * - 非成功结束时为本 run 未完结 artifact 补发 failed(经 emitEvent,与正常事件同源)。
    * - 给本 run 的 assistant 打 completedAt,落共享树快照,广播 chat_finished。
    * - 只有最后一个收口的 run 负责:清事件缓存、释放共享树、置终态、重新生成标题。
    * runState 以对象传入,便于最终快照失败时把 finalStatus 纠正为 error。
@@ -1047,21 +924,12 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
     runState: { finalStatus: Exclude<ChatAgentStatus, 'idle' | 'running'> },
     message: PreparedChatRequest,
     userId: string,
-    artifactAccumulator: ArtifactAccumulator,
-    emitEvent: (event: ChatServerToClientEvent) => Promise<void>,
   ) {
     for (const [callId, pending] of this.pendingAskUserQuestions) {
       if (pending.assistantMessageId !== message.assistantMessageId) continue;
       pending.waitForAnswer?.reject(new DOMException('Aborted', 'AbortError'));
       pending.waitForAnswer?.clearAbortListener();
       this.pendingAskUserQuestions.delete(callId);
-    }
-
-    if (runState.finalStatus !== 'completed') {
-      const reason = runState.finalStatus === 'aborted' ? 'aborted' : 'error';
-      for (const event of artifactAccumulator.drainPendingAsFailures(reason)) {
-        await emitEvent(event);
-      }
     }
 
     let assistantCompletedAt: string | null = null;
@@ -1120,8 +988,8 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
 
   /**
    * /chat 返回回执后，真正跑模型与工具的逻辑；与 HTTP handler 解耦，便于 waitUntil 后台执行。
-   * emitEvent 是单一路由：先推进共享树(事件定点写本 run 的 assistant)、累计 error 条数、
-   * artifact 副作用、再入缓存并 SSE。
+   * emitEvent 是单一路由：先推进共享树(事件定点写本 run 的 assistant)、累计 error 条数，
+   * 再入缓存并 SSE。
    */
   private async runChatInBackground(
     message: PreparedChatRequest,
@@ -1130,7 +998,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
   ) {
     const runState = { finalStatus: 'completed' as Exclude<ChatAgentStatus, 'idle' | 'running'> };
     let errorEventCount = 0;
-    const artifactAccumulator = new ArtifactAccumulator(this.env, userId, message.conversationId);
 
     const emitEvent = async (event: ChatServerToClientEvent) => {
       if (this.activeTree) {
@@ -1139,7 +1006,6 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
       if (event.type === 'error') {
         errorEventCount += 1;
       }
-      await artifactAccumulator.handleEvent(event);
       this.persistAndBroadcastEvent(event, message.assistantMessageId);
     };
 
@@ -1223,8 +1089,8 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         await emitEvent(toEventError(`错误：${errorMessage}`));
       }
     } finally {
-      // 始终收口：清理交互状态、补 artifact、最终落库、广播结束;最后一个 run 额外负责全局收尾。
-      await this.finalize(runState, message, userId, artifactAccumulator, emitEvent);
+      // 始终收口：清理交互状态、最终落库、广播结束;最后一个 run 额外负责全局收尾。
+      await this.finalize(runState, message, userId);
     }
   }
 

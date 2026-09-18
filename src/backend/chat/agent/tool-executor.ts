@@ -1,5 +1,4 @@
 import { isAbortError } from '@/backend/chat/abort';
-import { askUserQuestionsTool } from '@/backend/chat/tools/ask-user-questions';
 import { fetchUrlTool } from '@/backend/chat/tools/fetch-tool';
 import {
   buildFetchClientPayload,
@@ -13,7 +12,7 @@ import { searchTool } from '@/backend/chat/tools/search-tool';
 import { renderTool } from '@/backend/chat/tools/render-tool';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
 import { log } from '@/backend/chat/logger';
-import type { ChatTool, ToolContext, ToolHandler } from '@/shared/chat/tool-types';
+import type { ChatTool, ToolHandler } from '@/shared/chat/tool-types';
 import type {
   PendingToolInvocation,
   ToolInvocationResult,
@@ -24,14 +23,13 @@ export const getAvailableTools = (): ChatTool[] => {
   const env = getServerEnv();
   const tools: ChatTool[] = [];
 
-  tools.push(askUserQuestionsTool.spec);
   tools.push(fetchUrlTool.spec);
   tools.push(renderTool.spec);
 
-  if (env.SERP_API_KEY) {
+  if (env.SERP_API_KEY || env.JUSTONEAPI_TOKEN) {
     tools.push(searchTool.spec);
   } else {
-    log('TOOLS', 'Skipping tool: search (missing SERP_API_KEY)');
+    log('TOOLS', 'Skipping tool: search (missing SERP_API_KEY and JUSTONEAPI_TOKEN)');
   }
 
   return tools;
@@ -45,7 +43,6 @@ export type ExecutedToolCallResult = {
 export const executeToolCall = async (
   toolcall: PendingToolInvocation,
   signal?: AbortSignal,
-  context?: ToolContext,
 ): Promise<ExecutedToolCallResult> => {
   const events: ChatServerToClientEvent[] = [];
 
@@ -55,7 +52,7 @@ export const executeToolCall = async (
       ? fetchUrlTool.handler
       : toolcall.name === 'render'
         ? renderTool.handler
-        : toolcall.name === 'search' && env.SERP_API_KEY
+        : toolcall.name === 'search' && (env.SERP_API_KEY || env.JUSTONEAPI_TOKEN)
           ? searchTool.handler
           : null;
   let rawResult: string;
@@ -68,7 +65,7 @@ export const executeToolCall = async (
       if (signal?.aborted) {
         throw new DOMException('Aborted', 'AbortError');
       }
-      rawResult = await handleTool(toolcall.args, signal, context);
+      rawResult = await handleTool(toolcall.args, signal);
     } catch (error) {
       if (isAbortError(error, signal)) {
         rawResult = 'Error: Aborted';
@@ -116,21 +113,6 @@ export const executeToolCall = async (
       clientResult = stringifyFetchClientPayload(buildFetchClientPayload(toolcall.args, rawResult));
     }
     toolResult = { client: clientResult, model: rawResult };
-  }
-
-  if (toolcall.name === 'render') {
-    events.push(
-      toolResult.model.startsWith('Error:')
-        ? {
-            type: 'artifact_failed',
-            artifactId: toolcall.id,
-            message: toolResult.model,
-          }
-        : {
-            type: 'artifact_completed',
-            artifactId: toolcall.id,
-          },
-    );
   }
 
   events.push({
