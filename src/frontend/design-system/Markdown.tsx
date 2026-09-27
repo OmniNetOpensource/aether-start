@@ -58,6 +58,7 @@ function splitMarkdownParagraphs(text: string): string[] {
 type Props = {
   content: string;
   isAnimating?: boolean;
+  quoteContentIndex?: number;
 };
 
 const sanitizeSchema = {
@@ -406,11 +407,14 @@ function MarkdownBlock({ isAnimating, markdown }: { isAnimating: boolean; markdo
   );
 }
 
-function Markdown({ content, isAnimating = false }: Props) {
+function Markdown({ content, isAnimating = false, quoteContentIndex }: Props) {
   const paragraphs = splitMarkdownParagraphs(content);
 
   return (
-    <div className='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'>
+    <div
+      data-quote-content={quoteContentIndex}
+      className='aether-markdown space-y-3 font-light [&_b]:font-black [&_strong]:font-black [&_b]:text-foreground [&_strong]:text-foreground'
+    >
       {paragraphs.map((markdown, index) => (
         <MarkdownBlock
           isAnimating={isAnimating && index === paragraphs.length - 1}

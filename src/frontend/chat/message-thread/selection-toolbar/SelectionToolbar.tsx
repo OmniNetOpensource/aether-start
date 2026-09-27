@@ -19,9 +19,10 @@ export function SelectionToolbar(props: { container: () => HTMLElement | null })
             type='button'
             variant='ghost'
             size='sm'
+            onMouseDown={(event) => event.preventDefault()}
             onClick={() => {
-              if (!toolbar.text) return;
-              addQuoteToActiveInput(toolbar.text);
+              if (!toolbar.text || !toolbar.source) return;
+              addQuoteToActiveInput({ text: toolbar.text, source: toolbar.source });
               toolbar.clearSelection();
             }}
             className='h-8 gap-1.5 rounded-md px-2.5 text-xs hover:bg-hover'

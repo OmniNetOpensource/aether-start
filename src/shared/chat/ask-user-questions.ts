@@ -16,7 +16,7 @@ export type AskUserQuestionsAnswer = {
   customText?: string;
 };
 
-export type AskUserQuestionsBlockStatus = 'pending' | 'submitting' | 'answered';
+export type AskUserQuestionsBlockStatus = 'pending' | 'submitting' | 'answered' | 'preview';
 
 export const cloneAskUserQuestions = (questions: AskUserQuestionsQuestion[]) =>
   questions.map((question) => ({

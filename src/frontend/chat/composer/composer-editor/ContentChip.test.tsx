@@ -21,10 +21,13 @@ describe('ContentChip', () => {
   });
 
   it('lets a quote chip shrink to its container', () => {
-    renderTest(() => <ContentChip kind='quote' text='A long quote' />);
+    renderTest(() => <ContentChip kind='quote' text='A long quote' onClick={() => {}} />);
 
-    expect(screen.getByText('A long quote').parentElement?.classList.contains('max-w-full')).toBe(
-      true,
-    );
+    expect(
+      screen
+        .getByText('A long quote')
+        .closest('[data-content-chip]')
+        ?.classList.contains('max-w-full'),
+    ).toBe(true);
   });
 });

@@ -143,7 +143,9 @@ describe('ModelSettings', () => {
   it('leaves Home and End available for editing the search text', () => {
     renderModelSettings();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Choose model, current model is Opus 5.5' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Choose model, current model is Opus 5.5' }),
+    );
     const search = screen.getByRole('textbox', { name: 'Search models' });
     fireEvent.input(search, { target: { value: 'gpt' } });
 
