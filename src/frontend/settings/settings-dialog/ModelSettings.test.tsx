@@ -5,10 +5,10 @@ import { renderTest } from '@/test/render';
 import { currentModelId, setCurrentModelId } from '@/frontend/conversations/session/chat-selection';
 import { ModelSettings } from './ModelSettings';
 
-const INITIAL_MODEL_ID = 'ikun:claude-opus-5-5';
+const INITIAL_MODEL_ID = 'claudeOpus46Ikun';
 const router = vi.hoisted(() => ({
   availableModels: [
-    { id: 'ikun:claude-opus-5-5', name: 'Opus 5.5' },
+    { id: 'claudeOpus46Ikun', name: 'Opus 4.6' },
     { id: 'ikun:gpt-5.4', name: 'GPT 5.4' },
     { id: 'gemini-aistudio:gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
   ],
@@ -59,7 +59,7 @@ beforeEach(() => {
 });
 
 describe('ModelSettings', () => {
-  it('starts with Opus 5.5 selected', async () => {
+  it('starts with Opus 4.6 selected', async () => {
     vi.resetModules();
     const selection = await import('@/frontend/conversations/session/chat-selection');
 
@@ -70,7 +70,7 @@ describe('ModelSettings', () => {
     renderModelSettings();
 
     const trigger = screen.getByRole('button', {
-      name: 'Choose model, current model is Opus 5.5',
+      name: 'Choose model, current model is Opus 4.6',
     });
     expect(screen.getByText(INITIAL_MODEL_ID)).toBeDefined();
 
@@ -78,7 +78,7 @@ describe('ModelSettings', () => {
     const search = screen.getByRole('textbox', { name: 'Search models' });
     fireEvent.input(search, { target: { value: 'GPT 5.4' } });
 
-    expect(screen.queryByRole('button', { name: 'Opus 5.5' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Opus 4.6' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Gemini 2.5 Pro' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'GPT 5.4' }));
 
@@ -113,7 +113,7 @@ describe('ModelSettings', () => {
     renderModelSettings();
 
     const trigger = screen.getByRole('button', {
-      name: 'Choose model, current model is Opus 5.5',
+      name: 'Choose model, current model is Opus 4.6',
     });
     fireEvent.click(trigger);
     const search = screen.getByRole('textbox', { name: 'Search models' });
@@ -129,7 +129,7 @@ describe('ModelSettings', () => {
     renderModelSettings();
 
     const trigger = screen.getByRole('button', {
-      name: 'Choose model, current model is Opus 5.5',
+      name: 'Choose model, current model is Opus 4.6',
     });
     fireEvent.click(trigger);
     const search = screen.getByRole('textbox', { name: 'Search models' });
@@ -144,7 +144,7 @@ describe('ModelSettings', () => {
     renderModelSettings();
 
     fireEvent.click(
-      screen.getByRole('button', { name: 'Choose model, current model is Opus 5.5' }),
+      screen.getByRole('button', { name: 'Choose model, current model is Opus 4.6' }),
     );
     const search = screen.getByRole('textbox', { name: 'Search models' });
     fireEvent.input(search, { target: { value: 'gpt' } });
@@ -213,7 +213,7 @@ describe('ModelSettings', () => {
     await waitFor(() => expect(toast.error).toHaveBeenCalledWith('provider failed'));
     expect(client.getQueryData(['chat-options', 'models'])).toEqual(router.availableModels);
     expect(
-      screen.getByRole('button', { name: 'Choose model, current model is Opus 5.5' }),
+      screen.getByRole('button', { name: 'Choose model, current model is Opus 4.6' }),
     ).toBeDefined();
   });
 
