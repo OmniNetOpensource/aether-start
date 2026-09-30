@@ -129,7 +129,7 @@ describe('MessageItem', () => {
     expect(container.textContent).not.toContain('部分回复');
   });
 
-  it('renders persisted HTML in a fixed canvas and expands with its content height', () => {
+  it('renders persisted HTML in an automatically expanded canvas without toggle buttons', () => {
     registerChatToast({ info: notify, success: notify, warning: notify, error: notify });
     let resizeCallback: ResizeObserverCallback | undefined;
     const resizeObserver: ResizeObserver = {
@@ -182,7 +182,7 @@ describe('MessageItem', () => {
       completedAt: '2026-08-04T08:00:01.000Z',
     };
 
-    const { container, getByRole, getByText } = renderTest(() => (
+    const { container, getByText, queryByRole } = renderTest(() => (
       <ToastProvider>
         <MessageItem
           message={message}
@@ -237,9 +237,10 @@ describe('MessageItem', () => {
     expect(preview.getAttribute('sandbox')).toBe('allow-scripts allow-same-origin');
     expect(preview.getAttribute('srcdoc')).toBe('<!doctype html><main>Inline preview</main>');
     expect(preview.style.height).toBe('384px');
-    fireEvent.click(getByRole('button', { name: '展开' }));
+    expect(queryByRole('button', { name: '展开' })).toBeNull();
+    expect(queryByRole('button', { name: '固定' })).toBeNull();
+    fireEvent.load(preview);
     expect(preview.style.height).toBe('962px');
-    expect(getByRole('button', { name: '固定' })).toBeDefined();
     expect(resizeObserver.observe).toHaveBeenCalledWith(frameDocument.documentElement);
     expect(resizeObserver.observe).toHaveBeenCalledWith(frameDocument.body);
 
@@ -267,10 +268,6 @@ describe('MessageItem', () => {
     act(() => resizeCallback?.([], resizeObserver));
     expect(preview.style.height).toBe('384px');
 
-    fireEvent.click(getByRole('button', { name: '固定' }));
-    expect(preview.style.height).toBe('384px');
-    expect(getByRole('button', { name: '展开' })).toBeDefined();
-    expect(resizeObserver.disconnect).toHaveBeenCalled();
     expect(before.compareDocumentPosition(preview) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(preview.compareDocumentPosition(after) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });

@@ -26,7 +26,9 @@ import {
   Link2 as link2,
   Loader2 as loader2,
   LogOut as logOut,
+  Maximize as maximize,
   MessageSquareText as messageSquareText,
+  Minimize as minimize,
   MoreHorizontal as moreHorizontal,
   Palette as palette,
   Paperclip as paperclip,
@@ -128,7 +130,9 @@ export const InfoIcon = createLucideIcon(info);
 export const Link2 = createLucideIcon(link2);
 export const Loader2 = createLucideIcon(loader2);
 export const LogOut = createLucideIcon(logOut);
+export const Maximize = createLucideIcon(maximize);
 export const MessageSquareText = createLucideIcon(messageSquareText);
+export const Minimize = createLucideIcon(minimize);
 export const MoreHorizontal = createLucideIcon(moreHorizontal);
 export const Palette = createLucideIcon(palette);
 export const Paperclip = createLucideIcon(paperclip);

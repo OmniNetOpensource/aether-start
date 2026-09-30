@@ -10,6 +10,8 @@ import {
   GitBranch,
   Pencil,
   RotateCcw,
+  Maximize,
+  Minimize,
 } from '@/frontend/design-system/icons';
 import { Button } from '@/frontend/design-system/button';
 import { useToast } from '@/frontend/app-shell/useToast';
@@ -129,9 +131,12 @@ type MessageItemProps = {
   onBranch: (messageId: number) => Promise<void>;
 } & ({ message: Message; messageId?: undefined } | { message?: undefined; messageId: number });
 
+// 按用户确认的交互：默认自动展开，hover 显示右上角全屏按钮，全屏后常驻缩小按钮。
+// 页面全屏使用浏览器顶层浮层覆盖侧边栏和输入框，外层保留原高度；同一个 iframe 不重建。
 const RenderCanvas = (props: { code: string }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [height, setHeight] = useState(384);
+  const canvas = useRef<HTMLDivElement>(null);
   const iframe = useRef<HTMLIFrameElement>(null);
   const resizeObserver = useRef<ResizeObserver | null>(null);
 
@@ -143,6 +148,7 @@ const RenderCanvas = (props: { code: string }) => {
   );
 
   const observeContentHeight = () => {
+    if (canvas.current?.matches(':popover-open')) return;
     const frame = iframe.current;
     const frameDocument = frame?.contentDocument;
     if (!frame || !frameDocument?.body) return;
@@ -169,41 +175,51 @@ const RenderCanvas = (props: { code: string }) => {
     resizeObserver.current.observe(frameDocument.body);
   };
 
-  const toggleExpanded = () => {
-    if (isExpanded) {
-      resizeObserver.current?.disconnect();
-      setIsExpanded(false);
-      return;
-    }
-
-    setIsExpanded(true);
-    observeContentHeight();
-  };
-
   return (
-    <div className='relative w-full'>
-      <Button
-        type='button'
-        variant='secondary'
-        size='sm'
-        title={isExpanded ? '固定画布高度' : '展开完整画布'}
-        onClick={toggleExpanded}
-        className='absolute top-2 right-2 z-10 bg-background/90 shadow-sm backdrop-blur-sm'
-      >
-        {isExpanded ? '固定' : '展开'}
-      </Button>
-      <iframe
-        ref={iframe}
-        title='HTML preview'
-        srcDoc={props.code}
-        sandbox='allow-scripts allow-same-origin'
-        loading='lazy'
-        onLoad={() => {
-          if (isExpanded) observeContentHeight();
+    <div className='w-full' style={{ height: `${height}px` }}>
+      <div
+        ref={(element) => {
+          canvas.current = element;
+          if (element && isFullscreen) element.showPopover();
         }}
-        style={{ height: isExpanded ? `${height}px` : '384px' }}
-        className='block w-full rounded-lg border border-border bg-background'
-      />
+        popover={isFullscreen ? 'auto' : undefined}
+        onToggle={(event) => {
+          if (event.newState === 'closed') {
+            setIsFullscreen(false);
+            requestAnimationFrame(observeContentHeight);
+          }
+        }}
+        className={`group/render bg-background ${isFullscreen ? 'fixed inset-0 m-0 h-dvh w-screen border-0 p-0' : 'relative w-full'}`}
+      >
+        <Button
+          type='button'
+          variant='secondary'
+          size='icon-sm'
+          title={isFullscreen ? '缩小' : '全屏'}
+          aria-label={isFullscreen ? '缩小' : '全屏'}
+          onClick={() => {
+            if (isFullscreen) {
+              canvas.current?.hidePopover();
+              return;
+            }
+            resizeObserver.current?.disconnect();
+            setIsFullscreen(true);
+          }}
+          className={`absolute top-2 right-2 z-10 bg-background/90 shadow-sm backdrop-blur-sm ${isFullscreen ? '' : 'opacity-0 group-hover/render:opacity-100 group-focus-within/render:opacity-100 [@media(hover:none)]:opacity-100'}`}
+        >
+          {isFullscreen ? <Minimize /> : <Maximize />}
+        </Button>
+        <iframe
+          ref={iframe}
+          title='HTML preview'
+          srcDoc={props.code}
+          sandbox='allow-scripts allow-same-origin'
+          loading='lazy'
+          onLoad={observeContentHeight}
+          style={{ height: isFullscreen ? '100%' : `${height}px` }}
+          className={`block w-full border border-border bg-background ${isFullscreen ? '' : 'rounded-lg'}`}
+        />
+      </div>
     </div>
   );
 };
