@@ -132,18 +132,13 @@ afterEach(() => {
 
 describe('AnthropicChatProvider model configuration', () => {
   it.each([
-    { model: 'claude-fable-5-1', profile: 'adaptive' },
-    { model: 'claude-fable-5', profile: 'adaptive' },
-    { model: 'claude-opus-5', profile: 'adaptive' },
-    { model: 'claude-sonnet-5', profile: 'adaptive' },
-    { model: 'claude-opus-4-8', profile: 'adaptive' },
-    { model: 'claude-opus-4-7', profile: 'adaptive' },
-    { model: 'claude-opus-4-6', profile: 'adaptive' },
-    { model: 'claude-sonnet-4-6', profile: 'adaptive' },
-    { model: 'claude-opus-4-5-20251101', profile: 'manual' },
-    { model: 'claude-sonnet-4-5-20250929', profile: 'manual' },
-    { model: 'claude-haiku-4-5-20251001', profile: 'manual' },
-  ])('uses the $profile thinking profile for $model', async ({ model, profile }) => {
+    'claude-opus-5-5',
+    'claude-opus-5',
+    'claude-opus-4-5-20251101',
+    'claude-sonnet-4-5-20250929',
+    'claude-haiku-4-5-20251001',
+    'claude-future-model',
+  ])('uses adaptive thinking without a model allowlist for %s', async (model) => {
     let requestBody: string | undefined;
     vi.stubGlobal(
       'fetch',
@@ -165,21 +160,12 @@ describe('AnthropicChatProvider model configuration', () => {
     const body: unknown = JSON.parse(requestBody);
     expect(body).toMatchObject({ model });
 
-    if (profile === 'adaptive') {
-      expect(body).toMatchObject({
-        max_tokens: 128000,
-        thinking: { type: 'adaptive' },
-        output_config: { effort: 'high' },
-      });
-      expect(body).not.toHaveProperty('thinking.budget_tokens');
-      return;
-    }
-
     expect(body).toMatchObject({
-      max_tokens: 64000,
-      thinking: { type: 'enabled', budget_tokens: 51200 },
+      max_tokens: 128000,
+      thinking: { type: 'adaptive' },
+      output_config: { effort: 'high' },
     });
-    expect(body).not.toHaveProperty('output_config');
+    expect(body).not.toHaveProperty('thinking.budget_tokens');
   });
 });
 
