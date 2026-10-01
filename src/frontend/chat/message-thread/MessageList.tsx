@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
 import { startChatRequest } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import {
   composerDocumentFromBlocks,
@@ -22,7 +21,6 @@ import { useQuoteNavigation } from './quote-navigation';
 
 export function MessageList() {
   const scrollElement = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
   const currentPath = useCurrentPath();
   const currentConversationId = useConversationId();
   useQuoteNavigation(scrollElement, { type: 'conversation', id: currentConversationId });
@@ -109,22 +107,30 @@ export function MessageList() {
   const branchFromMessage = async (messageId: number) => {
     if (!currentConversationId) return;
 
-    const branched = await branchConversationFn({
-      data: { id: currentConversationId, messageId },
-    });
-    upsertConversationInCache({
-      id: branched.conversationId,
-      title: branched.title,
-      model: branched.model,
-      is_pinned: false,
-      pinned_at: null,
-      created_at: branched.created_at,
-      updated_at: branched.created_at,
-    });
-    await navigate({
-      to: '/app/$conversationId',
-      params: { conversationId: branched.conversationId },
-    });
+    const branchTab = window.open('about:blank', '_blank');
+    if (!branchTab) throw new Error('请允许浏览器打开新标签页');
+    branchTab.opener = null;
+
+    try {
+      const branched = await branchConversationFn({
+        data: { id: currentConversationId, messageId },
+      });
+      upsertConversationInCache({
+        id: branched.conversationId,
+        title: branched.title,
+        model: branched.model,
+        is_pinned: false,
+        pinned_at: null,
+        created_at: branched.created_at,
+        updated_at: branched.created_at,
+      });
+      branchTab.location.replace(
+        new URL(`/app/${branched.conversationId}`, window.location.origin).href,
+      );
+    } catch (error) {
+      branchTab.close();
+      throw error;
+    }
   };
 
   return (
