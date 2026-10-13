@@ -67,6 +67,7 @@ type ConversationRunnerEnv = Cloudflare.Env & {
   SERP_API_KEY?: string;
   JUSTONEAPI_TOKEN?: string;
   SUPADATA_API_KEY?: string;
+  PARALLEL_API_KEY?: string;
 };
 
 // 请求体来自网络边界，先把 unknown 缩小成可用结构。

@@ -2,6 +2,7 @@ import { isAbortError } from '@/backend/chat/abort';
 import type { ChatTool, ToolDefinition, ToolHandler } from '@/shared/chat/tool-types';
 import { log } from '@/backend/chat/logger';
 import { Supadata } from '@supadata/js';
+import { z } from 'zod';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
 import { arrayBufferToBase64 } from '@/shared/core/base64';
 import { createRateLimitedQueue } from './shared/rate-limit';
@@ -332,46 +333,81 @@ const fetchDirectImage = async (url: string, signal?: AbortSignal): Promise<stri
   }
 };
 
-export const fetchMarkdownWithJina = async (url: string, signal?: AbortSignal): Promise<string> => {
-  const jinaUrl = `https://r.jina.ai/${url}`;
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 80_000);
-  const linkedAbort = () => controller.abort();
-  signal?.addEventListener('abort', linkedAbort);
+const fetchMarkdownWithParallel = async (url: string, signal?: AbortSignal): Promise<string> => {
+  signal?.throwIfAborted();
 
-  const { JINA_API_KEY } = getServerEnv();
-  const headers: Record<string, string> = {
-    'X-Token-Budget': '200000',
-    'X-Engine': 'browser',
-    'X-Timeout': '30',
-  };
-  if (JINA_API_KEY) {
-    headers['Authorization'] = `Bearer ${JINA_API_KEY}`;
+  const { PARALLEL_API_KEY } = getServerEnv();
+  if (!PARALLEL_API_KEY) {
+    return 'Error: PARALLEL_API_KEY is not set';
   }
 
+  const timeoutSignal = AbortSignal.timeout(80_000);
+
   try {
-    const jinaResponse = await fetch(jinaUrl, {
-      headers,
-      signal: controller.signal,
+    const response = await fetch('https://api.parallel.ai/v1/extract', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': PARALLEL_API_KEY,
+      },
+      body: JSON.stringify({
+        urls: [url],
+        advanced_settings: {
+          full_content: true,
+          fetch_policy: {
+            max_age_seconds: 600,
+            timeout_seconds: 60,
+            disable_cache_fallback: true,
+          },
+        },
+      }),
+      signal: signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal,
     });
 
-    if (!jinaResponse.ok) {
-      log('FETCH', `Jina AI Reader HTTP error: ${jinaResponse.status} ${jinaResponse.statusText}`);
-      return `Error: HTTP ${jinaResponse.status} ${jinaResponse.statusText}`;
+    if (!response.ok) {
+      const { error } = z
+        .object({ error: z.object({ message: z.string(), ref_id: z.string() }) })
+        .parse(await response.json());
+      log('FETCH', 'Parallel HTTP error', { status: response.status, ...error });
+      return `Error: Parallel HTTP ${response.status}: ${error.message} (ref_id ${error.ref_id})`;
     }
 
-    return await jinaResponse.text();
+    const result = z
+      .object({
+        extract_id: z.string(),
+        results: z.array(z.object({ full_content: z.string().nullable().optional() })),
+        errors: z.array(
+          z.object({
+            error_type: z.string(),
+            http_status_code: z.number().nullable(),
+            content: z.string().nullable(),
+          }),
+        ),
+      })
+      .parse(await response.json());
+
+    if (result.errors[0]) {
+      const error = result.errors[0];
+      log('FETCH', 'Parallel extraction failed', { extract_id: result.extract_id, ...error });
+      return `Error: Parallel ${error.error_type}${error.http_status_code === null ? '' : ` HTTP ${error.http_status_code}`}${error.content === null ? '' : `: ${error.content}`}`;
+    }
+
+    const content = result.results[0]?.full_content;
+    if (!content?.trim()) {
+      log('FETCH', 'Parallel returned no page content', { extract_id: result.extract_id });
+      return 'Error: Parallel returned no page content';
+    }
+
+    return content;
   } catch (error) {
-    const message = isAbortError(error)
-      ? 'Request timed out'
-      : typeof error === 'object' && error !== null
-        ? (error as Error).message
-        : String(error);
-    log('FETCH', `Error: ${message}`);
-    return `Error: ${message}`;
-  } finally {
-    signal?.removeEventListener('abort', linkedAbort);
-    clearTimeout(timeoutId);
+    if (signal?.aborted) {
+      throw error;
+    }
+    if (timeoutSignal.aborted) {
+      return 'Error: Parallel request timed out';
+    }
+    log('FETCH', 'Parallel request failed', error);
+    throw error;
   }
 };
 
@@ -547,7 +583,7 @@ const fetchUrl: ToolHandler = async (args, signal) => {
     return fetchRedditPost(resolution.postId, signal, remainingMs);
   }
 
-  return enqueueFetchUrlCall(() => fetchMarkdownWithJina(url, signal));
+  return enqueueFetchUrlCall(() => fetchMarkdownWithParallel(url, signal));
 };
 
 const fetchUrlSpec: ChatTool = {

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./shared/rate-limit', () => ({
   createRateLimitedQueue:
@@ -17,14 +17,26 @@ import { requestJustOneApi } from './shared/justone-api';
 
 const requestJustOneApiMock = vi.mocked(requestJustOneApi);
 
+beforeEach(() => {
+  vi.stubEnv('PARALLEL_API_KEY', 'test-parallel-key');
+});
+
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.unstubAllEnvs();
+  vi.restoreAllMocks();
   requestJustOneApiMock.mockReset();
 });
 
 describe('fetch_url markdown routing', () => {
-  it('keeps unmatched webpages on Jina Reader', async () => {
-    const fetchMock = vi.fn(async () => new Response('reader markdown'));
+  it('fetches full webpage markdown through Parallel', async () => {
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        extract_id: 'extract-test',
+        results: [{ full_content: '# Page body', excerpts: ['short excerpt'] }],
+        errors: [],
+      }),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await fetchUrlTool.handler({
@@ -32,16 +44,27 @@ describe('fetch_url markdown routing', () => {
       response_type: 'markdown',
     });
 
-    expect(result).toBe('reader markdown');
+    expect(result).toBe('# Page body');
     expect(requestJustOneApiMock).not.toHaveBeenCalled();
     expect(fetchMock).toHaveBeenCalledOnce();
     expect(fetchMock).toHaveBeenCalledWith(
-      'https://r.jina.ai/https://example.com/article',
+      'https://api.parallel.ai/v1/extract',
       expect.objectContaining({
-        headers: expect.objectContaining({
-          'X-Token-Budget': '200000',
-          'X-Engine': 'browser',
-          'X-Timeout': '30',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': 'test-parallel-key',
+        },
+        body: JSON.stringify({
+          urls: ['https://example.com/article'],
+          advanced_settings: {
+            full_content: true,
+            fetch_policy: {
+              max_age_seconds: 600,
+              timeout_seconds: 60,
+              disable_cache_fallback: true,
+            },
+          },
         }),
       }),
     );
@@ -53,12 +76,21 @@ describe('fetch_url markdown routing', () => {
     'https://www.xiaohongshu.com/user/profile/123',
     'https://www.reddit.com.evil.test/r/test/comments/abc/title',
   ])('does not route a lookalike or unsupported URL through Just One API: %s', async (url) => {
-    const fetchMock = vi.fn(async () => new Response('reader markdown'));
+    const fetchMock = vi.fn(async () =>
+      Response.json({
+        extract_id: 'extract-test',
+        results: [{ full_content: 'page' }],
+        errors: [],
+      }),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
-    expect(await fetchUrlTool.handler({ url, response_type: 'markdown' })).toBe('reader markdown');
+    expect(await fetchUrlTool.handler({ url, response_type: 'markdown' })).toBe('page');
     expect(requestJustOneApiMock).not.toHaveBeenCalled();
-    expect(fetchMock).toHaveBeenCalledWith(`https://r.jina.ai/${url}`, expect.any(Object));
+    expect(fetchMock).toHaveBeenCalledWith(
+      'https://api.parallel.ai/v1/extract',
+      expect.objectContaining({ body: expect.stringContaining(JSON.stringify(url)) }),
+    );
   });
 
   it('keeps image mode ahead of platform markdown routing', async () => {
@@ -75,6 +107,133 @@ describe('fetch_url markdown routing', () => {
     );
     expect(requestJustOneApiMock).not.toHaveBeenCalled();
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('fetch_url Parallel failures and cancellation', () => {
+  it('reports a missing key without making a request', async () => {
+    vi.stubEnv('PARALLEL_API_KEY', '');
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(
+      await fetchUrlTool.handler({ url: 'https://example.com', response_type: 'markdown' }),
+    ).toBe('Error: PARALLEL_API_KEY is not set');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each([401, 429, 503])('preserves HTTP %s error details', async (status) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json(
+          { type: 'error', error: { message: 'Upstream failure', ref_id: 'error-test' } },
+          { status },
+        ),
+      ),
+    );
+
+    expect(
+      await fetchUrlTool.handler({ url: 'https://example.com', response_type: 'markdown' }),
+    ).toBe(`Error: Parallel HTTP ${status}: Upstream failure (ref_id error-test)`);
+  });
+
+  it('treats a per-URL error in HTTP 200 as a failure', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        Response.json({
+          extract_id: 'extract-test',
+          results: [],
+          errors: [{ error_type: 'fetch_error', http_status_code: 403, content: 'Access denied' }],
+        }),
+      ),
+    );
+
+    expect(
+      await fetchUrlTool.handler({ url: 'https://example.com', response_type: 'markdown' }),
+    ).toBe('Error: Parallel fetch_error HTTP 403: Access denied');
+  });
+
+  it.each([undefined, null, '', '   '])(
+    'rejects missing or empty full content: %s',
+    async (content) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          Response.json({
+            extract_id: 'extract-test',
+            results: [{ full_content: content, excerpts: ['This is only an excerpt'] }],
+            errors: [],
+          }),
+        ),
+      );
+
+      expect(
+        await fetchUrlTool.handler({ url: 'https://example.com', response_type: 'markdown' }),
+      ).toBe('Error: Parallel returned no page content');
+    },
+  );
+
+  it('propagates malformed responses', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ results: 'invalid' })),
+    );
+
+    await expect(
+      fetchUrlTool.handler({ url: 'https://example.com', response_type: 'markdown' }),
+    ).rejects.toThrow();
+  });
+
+  it('preserves network errors for the tool execution boundary', async () => {
+    const networkError = new TypeError('fetch failed', { cause: new Error('connection refused') });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(networkError));
+
+    await expect(
+      fetchUrlTool.handler({ url: 'https://example.com', response_type: 'markdown' }),
+    ).rejects.toBe(networkError);
+  });
+
+  it('aborts an in-flight request when the user cancels', async () => {
+    const controller = new AbortController();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, options: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            options.signal?.addEventListener('abort', () => reject(options.signal?.reason));
+          }),
+      ),
+    );
+
+    const request = fetchUrlTool.handler(
+      { url: 'https://example.com', response_type: 'markdown' },
+      controller.signal,
+    );
+    controller.abort();
+
+    await expect(request).rejects.toMatchObject({ name: 'AbortError' });
+  });
+
+  it('reports the 80-second request timeout separately from user cancellation', async () => {
+    const controller = new AbortController();
+    const timeout = vi.spyOn(AbortSignal, 'timeout').mockReturnValue(controller.signal);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_url: string, options: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            options.signal?.addEventListener('abort', () => reject(options.signal?.reason));
+          }),
+      ),
+    );
+
+    const request = fetchUrlTool.handler({ url: 'https://example.com', response_type: 'markdown' });
+    controller.abort(new DOMException('Timed out', 'TimeoutError'));
+
+    await expect(request).resolves.toBe('Error: Parallel request timed out');
+    expect(timeout).toHaveBeenCalledWith(80_000);
   });
 });
 
@@ -103,7 +262,7 @@ describe('fetch_url WeChat articles', () => {
     expect(requestJustOneApiMock.mock.calls[0]?.[0].parameters.get('mode')).toBe('TEXT');
   });
 
-  it('returns a platform error without falling back to Jina Reader', async () => {
+  it('returns a platform error without requesting Parallel', async () => {
     const fetchMock = vi.fn();
     vi.stubGlobal('fetch', fetchMock);
     requestJustOneApiMock.mockResolvedValue({ ok: false, error: 'request failed' });
