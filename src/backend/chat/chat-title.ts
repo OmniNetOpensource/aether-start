@@ -165,6 +165,7 @@ export const generateTitleFromConversation = async (
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 64,
         temperature: 0.2,
+        ...(modelConfig.backend === 'openrouter' ? { reasoning: { enabled: false } } : {}),
       },
       { signal },
     );

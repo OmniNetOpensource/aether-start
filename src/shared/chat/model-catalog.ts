@@ -98,4 +98,7 @@ export const getDefaultModelConfig = (): ModelConfig => ({
 });
 
 /** Model ID used for conversation title generation. */
-export const TITLE_GENERATION_MODEL_ID = createModelId('gemini-aistudio', 'gemma-4-31b-it');
+export const TITLE_GENERATION_MODEL_ID = createModelId(
+  'openrouter',
+  'dots-studio/dots-3-note-preview:free',
+);
