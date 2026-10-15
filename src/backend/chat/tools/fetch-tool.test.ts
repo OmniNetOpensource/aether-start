@@ -79,7 +79,7 @@ describe('fetch_url markdown routing', () => {
     const fetchMock = vi.fn(async () =>
       Response.json({
         extract_id: 'extract-test',
-        results: [{ full_content: 'page' }],
+        results: [{ full_content: 'page', excerpts: [] }],
         errors: [],
       }),
     );
@@ -156,14 +156,36 @@ describe('fetch_url Parallel failures and cancellation', () => {
   });
 
   it.each([undefined, null, '', '   '])(
-    'rejects missing or empty full content: %s',
+    'uses excerpts when full content is missing or empty: %s',
     async (content) => {
       vi.stubGlobal(
         'fetch',
         vi.fn(async () =>
           Response.json({
             extract_id: 'extract-test',
-            results: [{ full_content: content, excerpts: ['This is only an excerpt'] }],
+            results: [
+              { full_content: content, excerpts: ['First excerpt', '', '   ', 'Second excerpt'] },
+            ],
+            errors: [],
+          }),
+        ),
+      );
+
+      expect(
+        await fetchUrlTool.handler({ url: 'https://example.com', response_type: 'markdown' }),
+      ).toBe('First excerpt\n\nSecond excerpt');
+    },
+  );
+
+  it.each([{ excerpts: [] }, { excerpts: [''] }, { excerpts: ['   '] }])(
+    'rejects empty full content and excerpts: $excerpts',
+    async ({ excerpts }) => {
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          Response.json({
+            extract_id: 'extract-test',
+            results: [{ full_content: '', excerpts }],
             errors: [],
           }),
         ),

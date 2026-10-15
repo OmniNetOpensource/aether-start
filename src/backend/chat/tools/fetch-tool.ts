@@ -375,7 +375,12 @@ const fetchMarkdownWithParallel = async (url: string, signal?: AbortSignal): Pro
     const result = z
       .object({
         extract_id: z.string(),
-        results: z.array(z.object({ full_content: z.string().nullable().optional() })),
+        results: z.array(
+          z.object({
+            full_content: z.string().nullable().optional(),
+            excerpts: z.array(z.string()),
+          }),
+        ),
         errors: z.array(
           z.object({
             error_type: z.string(),
@@ -392,7 +397,10 @@ const fetchMarkdownWithParallel = async (url: string, signal?: AbortSignal): Pro
       return `Error: Parallel ${error.error_type}${error.http_status_code === null ? '' : ` HTTP ${error.http_status_code}`}${error.content === null ? '' : `: ${error.content}`}`;
     }
 
-    const content = result.results[0]?.full_content;
+    const page = result.results[0];
+    const content = page?.full_content?.trim()
+      ? page.full_content
+      : page?.excerpts.filter((excerpt) => excerpt.trim()).join('\n\n');
     if (!content?.trim()) {
       log('FETCH', 'Parallel returned no page content', { extract_id: result.extract_id });
       return 'Error: Parallel returned no page content';
