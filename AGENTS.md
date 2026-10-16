@@ -136,7 +136,6 @@ Configured backends currently include:
 - `moonshot`
 - `ikun`
 - `openrouter`
-- `gemini-aistudio`
 
 ### Tools
 
@@ -255,7 +254,6 @@ Important env keys include:
 - `OPENAI_API_KEY_IKUNCODE`
 - `GEMINI_API_KEY_IKUNCODE`
 - `GEMINI_BASE_URL_IKUNCODE`
-- `GEMINI_API_KEY_AISTUDIO`
 - `OPENROUTER_API_KEY`
 
 Never commit real secrets.

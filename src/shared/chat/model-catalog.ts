@@ -1,5 +1,5 @@
 export type ChatFormat = 'anthropic' | 'openai' | 'gemini' | 'openai-responses';
-export type ChatBackend = 'moonshot' | 'ikun' | 'openrouter' | 'gemini-aistudio';
+export type ChatBackend = 'moonshot' | 'ikun' | 'openrouter';
 
 export const IKUN_BASE_URL = 'https://api.ikuncode.cc';
 
@@ -60,12 +60,7 @@ export const getModelConfig = (modelId: string): ModelConfig | null => {
     }
 
     const backend = id.slice(0, separatorIndex);
-    if (
-      backend !== 'ikun' &&
-      backend !== 'gemini-aistudio' &&
-      backend !== 'moonshot' &&
-      backend !== 'openrouter'
-    ) {
+    if (backend !== 'ikun' && backend !== 'moonshot' && backend !== 'openrouter') {
       return null;
     }
 
@@ -88,7 +83,7 @@ export const getModelConfig = (modelId: string): ModelConfig | null => {
 
   return {
     ...modelConfig,
-    format: modelConfig.backend === 'gemini-aistudio' ? 'gemini' : 'openai',
+    format: 'openai',
   };
 };
 

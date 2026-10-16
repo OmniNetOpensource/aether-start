@@ -13,8 +13,8 @@ import {
 } from '@/shared/chat/model-catalog';
 
 const MODEL_LIST_CACHE_TTL_SECONDS = 24 * 60 * 60;
-const MODEL_LIST_CACHE_KEY = 'https://aether-model-list.invalid/v1';
-const MODEL_LIST_CACHE_NAME = 'aether:model-list:v1';
+const MODEL_LIST_CACHE_KEY = 'https://aether-model-list.invalid/v2';
+const MODEL_LIST_CACHE_NAME = 'aether:model-list:v2';
 
 const toModelInfo = (backend: ChatBackend, provider: string, model: string, name?: string) => {
   if (backend === 'ikun' && model === 'claude-opus-4-6') {
@@ -105,18 +105,6 @@ export const refreshAvailableModels = async () => {
   const ikunGeminiBaseURL = env.GEMINI_BASE_URL_IKUNCODE;
   if (ikunGeminiApiKey && ikunGeminiBaseURL) {
     requests.push(fetchGeminiModelList('ikun', 'ikun', ikunGeminiBaseURL, ikunGeminiApiKey));
-  }
-
-  const aiStudioApiKey = env.GEMINI_API_KEY_AISTUDIO;
-  if (aiStudioApiKey) {
-    requests.push(
-      fetchGeminiModelList(
-        'aistudio',
-        'gemini-aistudio',
-        'https://generativelanguage.googleapis.com',
-        aiStudioApiKey,
-      ),
-    );
   }
 
   if (env.MOONSHOT_API_KEY) {

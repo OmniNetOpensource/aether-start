@@ -15,8 +15,6 @@ type ServerEnv = {
   OPENAI_API_KEY_IKUNCODE?: string;
   GEMINI_API_KEY_IKUNCODE?: string;
   GEMINI_BASE_URL_IKUNCODE?: string;
-  /** Google AI Studio / Gemini API (generativelanguage.googleapis.com) */
-  GEMINI_API_KEY_AISTUDIO?: string;
   OPENROUTER_API_KEY?: string;
   SERP_API_KEY?: string;
   JUSTONEAPI_TOKEN?: string;
@@ -88,9 +86,6 @@ export const getServerEnv = (): ServerEnv => {
     GEMINI_BASE_URL_IKUNCODE:
       readString((bindings as Record<string, unknown>).GEMINI_BASE_URL_IKUNCODE) ??
       readStringFromProcess('GEMINI_BASE_URL_IKUNCODE'),
-    GEMINI_API_KEY_AISTUDIO:
-      readString((bindings as Record<string, unknown>).GEMINI_API_KEY_AISTUDIO) ??
-      readStringFromProcess('GEMINI_API_KEY_AISTUDIO'),
     OPENROUTER_API_KEY:
       readString((bindings as Record<string, unknown>).OPENROUTER_API_KEY) ??
       readStringFromProcess('OPENROUTER_API_KEY'),

@@ -10,7 +10,7 @@ const router = vi.hoisted(() => ({
   availableModels: [
     { id: 'claudeOpus46Ikun', name: 'Opus 4.6' },
     { id: 'ikun:gpt-5.4', name: 'GPT 5.4' },
-    { id: 'gemini-aistudio:gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+    { id: 'ikun:gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
   ],
 }));
 const rpc = vi.hoisted(() => ({
@@ -117,10 +117,10 @@ describe('ModelSettings', () => {
     });
     fireEvent.click(trigger);
     const search = screen.getByRole('textbox', { name: 'Search models' });
-    fireEvent.input(search, { target: { value: 'gemini-aistudio' } });
+    fireEvent.input(search, { target: { value: 'ikun:gemini' } });
     fireEvent.keyDown(search, { key: 'Enter' });
 
-    expect(currentModelId()).toBe('gemini-aistudio:gemini-2.5-pro');
+    expect(currentModelId()).toBe('ikun:gemini-2.5-pro');
     expect(trigger).toBe(document.activeElement);
     expect(screen.queryByRole('textbox', { name: 'Search models' })).toBeNull();
   });

@@ -18,7 +18,7 @@ describe('getGeminiClient', () => {
     const { getGeminiClient } = await import('./gemini-client');
     const client = getGeminiClient({
       apiKey: 'test-key',
-      baseURL: 'https://generativelanguage.googleapis.com',
+      baseURL: 'https://api.ikuncode.cc',
       defaultHeaders: { 'User-Agent': 'aether-test' },
     });
 
@@ -28,6 +28,6 @@ describe('getGeminiClient', () => {
 
     expect(apiClient.isVertexAI()).toBe(false);
     expect(apiClient.getApiVersion()).toBe('v1beta');
-    expect(apiClient.getBaseUrl()).toBe('https://generativelanguage.googleapis.com');
+    expect(apiClient.getBaseUrl()).toBe('https://api.ikuncode.cc');
   });
 });
