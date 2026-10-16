@@ -273,6 +273,13 @@ Never commit real secrets.
 
 “把 X 换成 Y”“做一下 X”“继续”等祈使句不能推定为代码修改授权。即使需求明确、改动很小或容易回退，也不得跳过讨论和授权。
 
+## Commit 规范
+
+- 提交时尽可能细分 commit，不要一次性提交一堆改动。
+- 可以分多次、小规模 commit，逐个提交完整的逻辑单元。
+- 每次 commit 尽可能只包含一个自包含、完整的逻辑单元。
+- 每次 commit 的提交信息必须充分说明修改意图，清楚交代为什么修改、要解决什么问题，不能只罗列改了什么。
+
 ## Coding Style And Expectations
 
 - TypeScript + React
