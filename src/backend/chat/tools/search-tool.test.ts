@@ -34,10 +34,11 @@ const getOnlyRequest = (requests: CapturedRequest[]) => {
 
 beforeEach(() => {
   vi.stubEnv('SERP_API_KEY', '');
-  vi.stubEnv('JUSTONEAPI_TOKEN', '');
+  vi.stubEnv('EVERYINFRA_API_KEY', '');
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
 });
@@ -93,152 +94,170 @@ describe('search tool', () => {
     });
   });
 
-  it('searches Weixin articles through Just One API and flattens result groups', async () => {
-    vi.stubEnv('JUSTONEAPI_TOKEN', 'justone-test-token');
+  it.each([
+    {
+      platform: 'weixin',
+      providerPlatform: 'wechat_oa',
+      action: 'article_search',
+      summary: '文章摘要',
+    },
+    { platform: 'rednote', providerPlatform: 'xiaohongshu', action: 'search', text: '笔记摘要' },
+  ])('searches $platform through EveryInfra and preserves the result contract', async (example) => {
+    vi.stubEnv('EVERYINFRA_API_KEY', 'everyinfra-test-key');
+    const resultUrl =
+      example.platform === 'rednote'
+        ? 'https://www.xiaohongshu.com/explore/note123?xsec_token=token%2Bvalue&xsec_source=pc_search'
+        : 'http://mp.weixin.qq.com/s?__biz=example&mid=1#rd';
     const requests = stubJsonFetch({
-      code: 0,
-      message: null,
-      data: {
-        data: [
-          {
-            items: [
-              {
-                title: '<em class="highlight">微信</em>文章',
-                desc: '<em class="highlight">文章</em>摘要',
-                doc_url: 'http://mp.weixin.qq.com/s/example',
-              },
-              { title: '缺少链接' },
-            ],
-          },
-          { items: 'invalid' },
-        ],
-      },
-      recordTime: null,
+      id: 'req-success',
+      results: [
+        { title: '搜索结果', url: resultUrl, summary: example.summary, text: example.text },
+        { title: '缺少链接' },
+        { url: 'https://example.com/missing-title' },
+        null,
+      ],
     });
 
-    const result = await searchTool.handler({ query: '人工智能', platform: 'weixin' });
+    const result = await searchTool.handler({ query: '熊拖泥', platform: example.platform });
     const request = getOnlyRequest(requests);
-    const parameters = new URLSearchParams(String(request.init?.body));
-
-    expect(String(request.input)).toBe('https://api.justoneapi.com/api/weixin/search-article/v1');
+    expect(String(request.input)).toBe('https://api.everyinfra.com/api/v1/social');
     expect(request.init?.method).toBe('POST');
-    expect(parameters.get('token')).toBe('justone-test-token');
-    expect(parameters.get('keyword')).toBe('人工智能');
-    expect(parameters.get('publishTimeType')).toBe('ALL');
-    expect(parameters.get('sortType')).toBe('COMPREHENSIVE');
-    expect(parameters.get('currentPage')).toBe('1');
-    expect(parameters.get('offset')).toBe('0');
-    expect(parameters.get('cookies_buffer')).toBe('');
-    expect(JSON.parse(result)).toEqual({
-      client: {
-        results: [
-          {
-            title: '微信文章',
-            url: 'http://mp.weixin.qq.com/s/example',
-          },
-        ],
-      },
-      ai:
-        '[1]title: 微信文章\n' +
-        '[1]description: 文章摘要\n' +
-        '[1]url: http://mp.weixin.qq.com/s/example',
-    });
-  });
-
-  it('searches RedNote through Just One API and creates fetchable note URLs', async () => {
-    vi.stubEnv('JUSTONEAPI_TOKEN', 'justone-test-token');
-    const requests = stubJsonFetch({
-      code: 0,
-      message: null,
-      data: {
-        notes: [
-          {
-            id: '68b1234567890abcdef1234',
-            title: '小红书笔记',
-            desc: '笔记摘要',
-          },
-          { id: 'missing-title' },
-        ],
-      },
-      recordTime: null,
-    });
-
-    const result = await searchTool.handler({ query: '旅行', platform: 'rednote' });
-    const request = getOnlyRequest(requests);
-    const url = new URL(String(request.input));
-
-    expect(`${url.origin}${url.pathname}`).toBe(
-      'https://api.justoneapi.com/api/xiaohongshu/search-note/v4',
+    expect(request.init?.redirect).toBe('manual');
+    expect(new Headers(request.init?.headers).get('Authorization')).toBe(
+      'Bearer everyinfra-test-key',
     );
-    expect(request.init?.method).toBe('GET');
-    expect(url.searchParams.get('token')).toBe('justone-test-token');
-    expect(url.searchParams.get('keyword')).toBe('旅行');
-    expect(url.searchParams.get('page')).toBe('1');
-    expect(url.searchParams.get('sortType')).toBe('general');
-    expect(url.searchParams.get('noteType')).toBe('ALL');
-    expect(url.searchParams.get('timeFilter')).toBe('ALL');
+    expect(new Headers(request.init?.headers).get('Content-Type')).toBe('application/json');
+    expect(JSON.parse(String(request.init?.body))).toEqual({
+      platform: example.providerPlatform,
+      action: example.action,
+      params: { keyword: '熊拖泥' },
+    });
     expect(JSON.parse(result)).toEqual({
-      client: {
-        results: [
-          {
-            title: '小红书笔记',
-            url: 'https://www.xiaohongshu.com/explore/68b1234567890abcdef1234',
-          },
-        ],
+      client: { results: [{ title: '搜索结果', url: resultUrl }] },
+      ai: `[1]title: 搜索结果\n[1]description: ${example.summary ?? example.text}\n[1]url: ${resultUrl}`,
+    });
+  });
+
+  it('returns provider failures and request IDs without retrying or switching providers', async () => {
+    vi.stubEnv('EVERYINFRA_API_KEY', 'everyinfra-test-key');
+    vi.stubEnv('SERP_API_KEY', 'serper-test-key');
+    const requests = stubJsonFetch(
+      {
+        error: {
+          code: 'unavailable',
+          message: 'Temporarily unavailable',
+          request_id: 'req-failed',
+        },
       },
-      ai:
-        '[1]title: 小红书笔记\n' +
-        '[1]description: 笔记摘要\n' +
-        '[1]url: https://www.xiaohongshu.com/explore/68b1234567890abcdef1234',
-    });
+      503,
+    );
+    expect(await searchTool.handler({ query: '熊拖泥', platform: 'weixin' })).toBe(
+      'Error: EveryInfra HTTP 503 (unavailable, Temporarily unavailable, req-failed)',
+    );
+    expect(String(getOnlyRequest(requests).input)).toBe('https://api.everyinfra.com/api/v1/social');
   });
 
-  it('returns Just One API failures without falling back to Google', async () => {
-    vi.stubEnv('JUSTONEAPI_TOKEN', 'justone-test-token');
-    vi.stubEnv('SERP_API_KEY', 'serper-test-token');
-    const requests = stubJsonFetch({
-      code: 602,
-      message: 'TOKEN limit exceeded',
-      data: null,
-      recordTime: null,
-    });
-
-    const result = await searchTool.handler({ query: '旅行', platform: 'rednote' });
-    const request = getOnlyRequest(requests);
-
-    expect(result).toMatch(/^Error: /);
-    expect(String(request.input)).toContain('/api/xiaohongshu/search-note/v4');
+  it('does not mistake an HTTP 200 error envelope for empty search results', async () => {
+    vi.stubEnv('EVERYINFRA_API_KEY', 'everyinfra-test-key');
+    stubJsonFetch({ error: { code: 'failed', message: 'Search failed', request_id: 'req-error' } });
+    expect(await searchTool.handler({ query: '熊拖泥', platform: 'rednote' })).toBe(
+      'Error: EveryInfra HTTP 200 (failed, Search failed, req-error)',
+    );
   });
 
-  it('reports a missing Just One token without making a request', async () => {
+  it('reports a missing EveryInfra key without using the legacy token', async () => {
+    vi.stubEnv('JUSTONEAPI_TOKEN', 'legacy-token');
     const requests = stubJsonFetch({});
-
-    expect(await searchTool.handler({ query: '旅行', platform: 'rednote' })).toBe(
-      'Error: JUSTONEAPI_TOKEN is not set',
+    expect(await searchTool.handler({ query: '熊拖泥', platform: 'rednote' })).toBe(
+      'Error: EVERYINFRA_API_KEY is not set',
     );
     expect(requests).toHaveLength(0);
   });
 
   it('rejects an invalid platform without making a request', async () => {
     const requests = stubJsonFetch({});
-
     await expect(searchTool.handler({ query: 'example', platform: 'unknown' })).rejects.toThrow(
       'search platform must be google, weixin, or rednote',
     );
     expect(requests).toHaveLength(0);
   });
 
-  it('reports an invalid platform response as an error', async () => {
-    vi.stubEnv('JUSTONEAPI_TOKEN', 'justone-test-token');
-    stubJsonFetch({
-      code: 0,
-      message: null,
-      data: { items: [] },
-      recordTime: null,
+  it('distinguishes an invalid response from a valid empty result', async () => {
+    vi.stubEnv('EVERYINFRA_API_KEY', 'everyinfra-test-key');
+    stubJsonFetch({ results: null });
+    expect(await searchTool.handler({ query: '熊拖泥', platform: 'rednote' })).toBe(
+      'Error: Invalid rednote search response from EveryInfra',
+    );
+    stubJsonFetch({ results: [] });
+    expect(JSON.parse(await searchTool.handler({ query: '熊拖泥', platform: 'rednote' }))).toEqual({
+      client: { results: [] },
+      ai: 'No valid search results.',
     });
+  });
 
-    const result = await searchTool.handler({ query: '旅行', platform: 'rednote' });
+  it('reports a non-JSON HTTP failure with its status', async () => {
+    vi.stubEnv('EVERYINFRA_API_KEY', 'everyinfra-test-key');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('upstream failed', { status: 502 })),
+    );
+    expect(await searchTool.handler({ query: '熊拖泥', platform: 'weixin' })).toBe(
+      'Error: EveryInfra HTTP 502 returned invalid JSON',
+    );
+  });
 
-    expect(result).toBe('Error: Invalid rednote search response');
+  it('preserves unexpected network errors for the tool executor', async () => {
+    vi.stubEnv('EVERYINFRA_API_KEY', 'everyinfra-test-key');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('network failed');
+      }),
+    );
+    await expect(searchTool.handler({ query: '熊拖泥', platform: 'weixin' })).rejects.toThrow(
+      'network failed',
+    );
+  });
+
+  it('aborts an outstanding provider request after 120 seconds', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('EVERYINFRA_API_KEY', 'everyinfra-test-key');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_input: unknown, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError')),
+            );
+          }),
+      ),
+    );
+    const result = searchTool.handler({ query: '熊拖泥', platform: 'weixin' });
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(await result).toBe('Error: EveryInfra request timed out');
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('propagates caller cancellation and cleans up the timeout', async () => {
+    vi.useFakeTimers();
+    vi.stubEnv('EVERYINFRA_API_KEY', 'everyinfra-test-key');
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        (_input: unknown, init?: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init?.signal?.addEventListener('abort', () =>
+              reject(new DOMException('Aborted', 'AbortError')),
+            );
+          }),
+      ),
+    );
+    const controller = new AbortController();
+    const result = searchTool.handler({ query: '熊拖泥', platform: 'rednote' }, controller.signal);
+    const assertion = expect(result).rejects.toMatchObject({ name: 'AbortError' });
+    controller.abort();
+    await assertion;
+    expect(vi.getTimerCount()).toBe(0);
   });
 });

@@ -20,6 +20,7 @@ type ServerEnv = {
   OPENROUTER_API_KEY?: string;
   SERP_API_KEY?: string;
   JUSTONEAPI_TOKEN?: string;
+  EVERYINFRA_API_KEY?: string;
   SUPADATA_API_KEY?: string;
   PARALLEL_API_KEY?: string;
   RESEND_API_KEY?: string;
@@ -94,6 +95,8 @@ export const getServerEnv = (): ServerEnv => {
       readString((bindings as Record<string, unknown>).OPENROUTER_API_KEY) ??
       readStringFromProcess('OPENROUTER_API_KEY'),
     SERP_API_KEY: readString(bindings.SERP_API_KEY) ?? readStringFromProcess('SERP_API_KEY'),
+    EVERYINFRA_API_KEY:
+      readString(bindings.EVERYINFRA_API_KEY) ?? readStringFromProcess('EVERYINFRA_API_KEY'),
     JUSTONEAPI_TOKEN:
       readString(bindings.JUSTONEAPI_TOKEN) ?? readStringFromProcess('JUSTONEAPI_TOKEN'),
     SUPADATA_API_KEY:

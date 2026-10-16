@@ -3,7 +3,6 @@ import type { ChatTool, ToolDefinition, ToolHandler } from '@/shared/chat/tool-t
 import type { SearchClientResult } from '@/shared/chat/research/search-result-payload';
 import { log } from '@/backend/chat/logger';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
-import { requestJustOneApi } from './shared/justone-api';
 import { createRateLimitedQueue } from './shared/rate-limit';
 
 type SearchPlatform = 'google' | 'weixin' | 'rednote';
@@ -24,8 +23,6 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const readString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
 
-const readWeixinText = (value: unknown) => readString(value).replace(/<[^>]*>/g, '');
-
 const normalizeGoogleResult = (result: unknown): NormalizedSearchResult | null => {
   if (!isRecord(result)) {
     return null;
@@ -41,68 +38,6 @@ const normalizeGoogleResult = (result: unknown): NormalizedSearchResult | null =
     url,
     description: readString(result.snippet),
   };
-};
-
-const normalizeWeixinResults = (data: unknown): NormalizedSearchResult[] | null => {
-  if (!isRecord(data) || !Array.isArray(data.data)) {
-    return null;
-  }
-
-  const results: NormalizedSearchResult[] = [];
-
-  for (const group of data.data) {
-    if (!isRecord(group) || !Array.isArray(group.items)) {
-      continue;
-    }
-
-    for (const item of group.items) {
-      if (!isRecord(item)) {
-        continue;
-      }
-
-      const url = readString(item.doc_url);
-      if (!url) {
-        continue;
-      }
-
-      results.push({
-        title: readWeixinText(item.title) || url,
-        url,
-        description: readWeixinText(item.desc),
-      });
-    }
-  }
-
-  return results;
-};
-
-const normalizeRednoteResults = (data: unknown): NormalizedSearchResult[] | null => {
-  if (!isRecord(data) || !Array.isArray(data.notes)) {
-    return null;
-  }
-
-  const results: NormalizedSearchResult[] = [];
-
-  for (const note of data.notes) {
-    if (!isRecord(note)) {
-      continue;
-    }
-
-    const id = readString(note.id);
-    const title = readString(note.title);
-    if (!id || !title) {
-      continue;
-    }
-
-    const url = `https://www.xiaohongshu.com/explore/${encodeURIComponent(id)}`;
-    results.push({
-      title,
-      url,
-      description: readString(note.desc),
-    });
-  }
-
-  return results;
 };
 
 const buildAiMarkdown = (results: NormalizedSearchResult[]): string => {
@@ -229,53 +164,91 @@ const search: ToolHandler = async (args, signal) => {
     return enqueueSearchCall(() => performGoogleSearch(query, apiKey, signal));
   }
 
-  const response =
-    platform === 'weixin'
-      ? await requestJustOneApi(
-          {
-            endpoint: '/api/weixin/search-article/v1',
-            method: 'POST',
-            parameters: new URLSearchParams({
-              keyword: query,
-              publishTimeType: 'ALL',
-              sortType: 'COMPREHENSIVE',
-              currentPage: '1',
-              offset: '0',
-              cookies_buffer: '',
-            }),
-          },
-          signal,
-        )
-      : await requestJustOneApi(
-          {
-            endpoint: '/api/xiaohongshu/search-note/v4',
-            method: 'GET',
-            parameters: new URLSearchParams({
-              keyword: query,
-              page: '1',
-              sortType: 'general',
-              noteType: 'ALL',
-              timeFilter: 'ALL',
-            }),
-          },
-          signal,
-        );
-
-  if (!response.ok) {
-    return `Error: ${response.error}`;
+  const { EVERYINFRA_API_KEY: apiKey } = getServerEnv();
+  if (!apiKey) {
+    return 'Error: EVERYINFRA_API_KEY is not set';
   }
 
-  const normalizedResults =
-    platform === 'weixin'
-      ? normalizeWeixinResults(response.data)
-      : normalizeRednoteResults(response.data);
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 120_000);
+  const abortRequest = () => controller.abort();
+  signal?.addEventListener('abort', abortRequest);
 
-  if (!normalizedResults) {
-    log('SEARCH', `Invalid ${platform} search response`);
-    return `Error: Invalid ${platform} search response`;
+  try {
+    const response = await fetch('https://api.everyinfra.com/api/v1/social', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        platform: platform === 'weixin' ? 'wechat_oa' : 'xiaohongshu',
+        action: platform === 'weixin' ? 'article_search' : 'search',
+        params: { keyword: query },
+      }),
+      redirect: 'manual',
+      signal: controller.signal,
+    });
+
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error;
+      }
+      return `Error: EveryInfra HTTP ${response.status} returned invalid JSON`;
+    }
+
+    if (!response.ok || (isRecord(payload) && isRecord(payload.error))) {
+      const error = isRecord(payload) && isRecord(payload.error) ? payload.error : {};
+      const details = [
+        readString(error.code),
+        readString(error.message),
+        readString(error.request_id),
+      ]
+        .filter(Boolean)
+        .join(', ');
+      return `Error: EveryInfra HTTP ${response.status}${details ? ` (${details})` : ''}`;
+    }
+
+    if (!isRecord(payload) || !Array.isArray(payload.results)) {
+      return `Error: Invalid ${platform} search response from EveryInfra`;
+    }
+
+    const results: NormalizedSearchResult[] = [];
+    for (const result of payload.results) {
+      if (!isRecord(result)) {
+        continue;
+      }
+      const title = readString(result.title);
+      const url = readString(result.url);
+      if (!title || !url) {
+        continue;
+      }
+      results.push({
+        title,
+        url,
+        description: readString(platform === 'weixin' ? result.summary : result.text),
+      });
+    }
+    return formatNormalizedSearchResponse(results);
+  } catch (error) {
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    if (timedOut) {
+      return 'Error: EveryInfra request timed out';
+    }
+    throw error;
+  } finally {
+    signal?.removeEventListener('abort', abortRequest);
+    clearTimeout(timeoutId);
   }
-
-  return formatNormalizedSearchResponse(normalizedResults);
 };
 
 const searchSpec: ChatTool = {
