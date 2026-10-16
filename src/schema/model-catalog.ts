@@ -15,7 +15,6 @@ export const geminiModelListSchema = z.object({
     z.object({
       name: z.string(),
       displayName: z.string(),
-      supportedGenerationMethods: z.array(z.string()).nullable(),
     }),
   ),
   nextPageToken: z.string().nullish(),

@@ -69,11 +69,9 @@ const fetchGeminiModelList = async (
 
     const page = geminiModelListSchema.parse(await response.json());
     models.push(
-      ...page.models
-        .filter((model) => model.supportedGenerationMethods?.includes('generateContent'))
-        .map((model) =>
-          toModelInfo(backend, provider, model.name.replace(/^models\//, ''), model.displayName),
-        ),
+      ...page.models.map((model) =>
+        toModelInfo(backend, provider, model.name.replace(/^models\//, ''), model.displayName),
+      ),
     );
     pageToken = page.nextPageToken;
   } while (pageToken);

@@ -28,6 +28,48 @@ afterEach(() => {
 });
 
 describe('available model cache', () => {
+  it.each(['ikun', 'aistudio'])(
+    'lists every %s model regardless of generation methods',
+    async (provider) => {
+      serverEnv.getServerEnv.mockReturnValue(
+        provider === 'ikun'
+          ? {
+              GEMINI_API_KEY_IKUNCODE: 'gemini-key',
+              GEMINI_BASE_URL_IKUNCODE: 'https://api.ikuncode.cc',
+            }
+          : { GEMINI_API_KEY_AISTUDIO: 'gemini-key' },
+      );
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () =>
+          Response.json({
+            models: [
+              {
+                name: 'models/gemini-2.5-flash',
+                displayName: 'Gemini 2.5 Flash',
+                supportedGenerationMethods: null,
+              },
+              { name: 'models/gemini-2.5-pro', displayName: 'Gemini 2.5 Pro' },
+              {
+                name: 'models/gemini-embedding-001',
+                displayName: 'Gemini Embedding',
+                supportedGenerationMethods: ['embedContent'],
+              },
+            ],
+          }),
+        ),
+      );
+
+      const backend = provider === 'ikun' ? 'ikun' : 'gemini-aistudio';
+      await expect(refreshAvailableModels()).resolves.toEqual([
+        { id: 'claudeOpus46Ikun', name: 'opus-4-6+ikun' },
+        { id: `${backend}:gemini-2.5-flash`, name: `Gemini 2.5 Flash+${provider}` },
+        { id: `${backend}:gemini-2.5-pro`, name: `Gemini 2.5 Pro+${provider}` },
+        { id: `${backend}:gemini-embedding-001`, name: `Gemini Embedding+${provider}` },
+      ]);
+    },
+  );
+
   it('returns a valid cached model list without fetching providers', async () => {
     const cachedModels = [{ id: 'cached:model', name: 'Cached model' }];
     cacheMatch.mockResolvedValue(new Response(JSON.stringify(cachedModels)));
