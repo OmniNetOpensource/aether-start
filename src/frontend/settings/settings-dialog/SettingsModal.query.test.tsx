@@ -1,5 +1,5 @@
 import { Component, type ReactNode } from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import {
   QueryClient,
   QueryClientProvider,
@@ -8,6 +8,8 @@ import {
 } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { SettingsModal } from './SettingsModal';
+import { currentModelId, setCurrentModelId } from '@/frontend/conversations/session/chat-selection';
+import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
 
 const rpc = vi.hoisted(() => ({
   getQuota: vi.fn(),
@@ -16,6 +18,8 @@ const rpc = vi.hoisted(() => ({
   createRedeemCode: vi.fn(),
   deactivateRedeemCode: vi.fn(),
   listRedeemCodes: vi.fn(),
+  signOut: vi.fn(),
+  navigate: vi.fn(),
 }));
 
 vi.mock('@/rpc/quota', () => ({
@@ -39,11 +43,11 @@ vi.mock('@tanstack/react-router', () => ({
       availableModels: [{ id: 'claudeOpus46Ikun', name: 'opus-4-6+ikun' }],
     }),
   }),
-  useNavigate: () => vi.fn(),
+  useNavigate: () => rpc.navigate,
 }));
 
 vi.mock('@/frontend/auth/client', () => ({
-  authClient: { signOut: vi.fn() },
+  authClient: { signOut: rpc.signOut },
 }));
 
 vi.mock('@/frontend/app-shell/useToast', () => ({
@@ -94,6 +98,8 @@ beforeEach(() => {
   rpc.redeemCode.mockReset();
   rpc.createRedeemCode.mockReset();
   rpc.deactivateRedeemCode.mockReset();
+  rpc.signOut.mockReset().mockResolvedValue(undefined);
+  rpc.navigate.mockReset().mockResolvedValue(undefined);
   focusManager.setFocused(undefined);
   onlineManager.setOnline(true);
 });
@@ -105,6 +111,22 @@ afterEach(() => {
 });
 
 describe('SettingsModal direct async queries', () => {
+  it('clears the previous account model selection on sign out', async () => {
+    setCurrentModelId('ikun:previous-account-model');
+    const view = renderSettings();
+    const removeQueries = vi.spyOn(view.client, 'removeQueries');
+    await screen.findByText('12 credits');
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out' }));
+    await waitFor(() => expect(currentModelId()).toBe(DEFAULT_MODEL_ID));
+    expect(rpc.signOut).toHaveBeenCalledOnce();
+    await waitFor(() => expect(removeQueries).toHaveBeenCalled());
+    expect(rpc.navigate.mock.invocationCallOrder[0]).toBeLessThan(
+      removeQueries.mock.invocationCallOrder[0],
+    );
+    view.unmount();
+    view.client.clear();
+  });
+
   it.each([
     {
       name: 'quota',

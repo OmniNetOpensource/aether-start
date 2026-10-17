@@ -9,6 +9,8 @@ import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
 import { clearMessageTree } from '@/frontend/conversations/conversation-tree/message-tree-state';
 import { clearConversationMeta } from '@/frontend/conversations/session/conversation-meta';
 import { conversationListQueryKey } from '@/frontend/conversations/session';
+import { setCurrentModelId } from '@/frontend/conversations/session/chat-selection';
+import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
 import { Button } from '@/frontend/design-system/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/frontend/design-system/dialog';
 import { Input } from '@/frontend/design-system/input';
@@ -85,13 +87,14 @@ export function SettingsModal(props: SettingsModalProps) {
       chatState.setStatus('idle');
       clearConversationMeta();
       clearMessageTree();
-      queryClient.removeQueries({ queryKey: conversationListQueryKey });
+      setCurrentModelId(DEFAULT_MODEL_ID);
       resetLastEventId();
       await navigate({
         to: '/auth/login',
         search: { redirect: undefined, email: undefined, reset: undefined },
         replace: true,
       });
+      queryClient.removeQueries({ queryKey: conversationListQueryKey });
       setIsSigningOut(false);
     }
   };
