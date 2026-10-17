@@ -17,7 +17,6 @@ type ServerEnv = {
   GEMINI_BASE_URL_IKUNCODE?: string;
   OPENROUTER_API_KEY?: string;
   SERP_API_KEY?: string;
-  JUSTONEAPI_TOKEN?: string;
   EVERYINFRA_API_KEY?: string;
   SUPADATA_API_KEY?: string;
   PARALLEL_API_KEY?: string;
@@ -92,8 +91,6 @@ export const getServerEnv = (): ServerEnv => {
     SERP_API_KEY: readString(bindings.SERP_API_KEY) ?? readStringFromProcess('SERP_API_KEY'),
     EVERYINFRA_API_KEY:
       readString(bindings.EVERYINFRA_API_KEY) ?? readStringFromProcess('EVERYINFRA_API_KEY'),
-    JUSTONEAPI_TOKEN:
-      readString(bindings.JUSTONEAPI_TOKEN) ?? readStringFromProcess('JUSTONEAPI_TOKEN'),
     SUPADATA_API_KEY:
       readString(bindings.SUPADATA_API_KEY) ?? readStringFromProcess('SUPADATA_API_KEY'),
     PARALLEL_API_KEY:

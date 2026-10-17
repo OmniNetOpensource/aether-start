@@ -90,6 +90,8 @@ function getStatusText(tool: Tool, isActive: boolean, toolName: string): string 
     if (!isActive) return '等待中...';
     if (SEARCH_TOOL_NAMES.has(toolName)) return '搜索中...';
     if (toolName === 'fetch_url') return '获取中...';
+    if (toolName === 'read_image') return '读取图片中...';
+    if (toolName === 'read_youtube_transcript') return '读取字幕中...';
     return '执行中...';
   }
 
@@ -228,7 +230,13 @@ function FetchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolea
     return payload?.type === 'error' || Boolean(result && isLegacyError);
   })();
   const canOpen = stepStatus === 'complete' && payload?.type !== 'error' && payload !== null;
-  const descriptionText = `Take a closer look${stepStatus === 'complete' ? (isError ? '...failed.' : '...done!') : ''}`;
+  const actionLabel =
+    props.tool.call.tool === 'read_image'
+      ? '读取图片'
+      : props.tool.call.tool === 'read_youtube_transcript'
+        ? '读取 YouTube 字幕'
+        : 'Take a closer look';
+  const descriptionText = `${actionLabel}${stepStatus === 'complete' ? (isError ? '...failed.' : '...done!') : ''}`;
   const renderImage = () => {
     const value = payload;
     if (value?.type !== 'image') return null;
@@ -356,7 +364,7 @@ export function ResearchBlock(props: ResearchBlockProps) {
             );
           }
 
-          if (toolName === 'fetch_url') {
+          if (['fetch_url', 'read_image', 'read_youtube_transcript'].includes(toolName)) {
             return (
               <FetchStep
                 key={index}

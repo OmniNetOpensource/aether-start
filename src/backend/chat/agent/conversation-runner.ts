@@ -64,7 +64,6 @@ type ConversationRunnerEnv = Cloudflare.Env & {
   GEMINI_BASE_URL_IKUNCODE?: string;
   OPENROUTER_API_KEY?: string;
   SERP_API_KEY?: string;
-  JUSTONEAPI_TOKEN?: string;
   EVERYINFRA_API_KEY?: string;
   SUPADATA_API_KEY?: string;
   PARALLEL_API_KEY?: string;

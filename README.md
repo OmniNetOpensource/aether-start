@@ -86,16 +86,16 @@ GEMINI_BASE_URL_IKUNCODE=可选 Gemini+ikun 线路 baseURL
 OPENROUTER_API_KEY=可选 OpenRouter 线路 key
 MOONSHOT_API_KEY=可选 Moonshot 官方 Kimi API key（如 kimi-k2.6）
 SERP_API_KEY=Google 搜索使用 Serper API
-EVERYINFRA_API_KEY=小红书和微信公众号搜索使用 EveryInfra API
-JUSTONEAPI_TOKEN=小红书和微信公众号正文抓取使用 Just One API
-PARALLEL_API_KEY=普通网页抓取使用 Parallel Extract API
+EVERYINFRA_API_KEY=小红书和微信公众号搜索及正文抓取使用 EveryInfra API
+PARALLEL_API_KEY=普通网页和 Reddit 正文抓取使用 Parallel Extract API
+SUPADATA_API_KEY=read_youtube_transcript 使用 Supadata
 LLM_STREAM_LOGGING=可选，默认关闭；true/all 打开全部，或填 anthropic,openai,openai-responses,gemini 精确开启
 LLM_STREAM_LOGGING_MAX_CHARS=可选，单条日志最大字符数，超过则不记录；默认 10000；设为 0 表示不限制
 ```
 
-普通网页的 `fetch_url` 使用 Parallel Extract API 获取 Markdown 正文；微信、小红书、Reddit、YouTube 和图片保留各自的抓取方式。本地在 `.env` 中配置 `PARALLEL_API_KEY`，线上在实际部署的 Worker 中配置同名 Secret。GitHub Actions 使用默认环境部署，本地 `cf:deploy` 使用 `production` 环境，设置 Secret 时须与部署目标一致。密钥只由服务端读取，不使用 `VITE_` 前缀。
+`fetch_url({ url })` 只读取文字：普通网页和 Reddit 帖子使用 Parallel Extract API，微信和小红书使用各自的 EveryInfra 接口。图片独立使用 `read_image({ url })`，服务端下载 JPEG、PNG、GIF 或 WebP 并交给模型读取；YouTube 字幕独立使用 `read_youtube_transcript({ url })`，调用 Supadata 并轮询异步任务。历史会话保存的图片和字幕结果继续正常展示。本地在 `.env` 中配置 `PARALLEL_API_KEY`，线上在实际部署的 Worker 中配置同名 Secret。GitHub Actions 使用默认环境部署，本地 `cf:deploy` 使用 `production` 环境，设置 Secret 时须与部署目标一致。密钥只由服务端读取，不使用 `VITE_` 前缀。
 
-小红书和微信公众号的 `search` 使用 EveryInfra 的 `POST /api/v1/social`，分别调用 `xiaohongshu.search` 和 `wechat_oa.article_search`。本地在 `.env` 配置 `EVERYINFRA_API_KEY`，线上在实际部署的 Worker 中设置同名 Secret（默认环境和 `production` 环境分别配置）。现有 `cf:sync-secrets` 读取 `.env.local` 并写入默认环境，不能替代上述目标环境配置。两个搜索不自动重试或切换供应商；`fetch_url` 的正文抓取仍需要 `JUSTONEAPI_TOKEN`。
+小红书和微信公众号的 `search` 使用 EveryInfra 的 `POST /api/v1/social`，分别调用 `xiaohongshu.search` 和 `wechat_oa.article_search`。本地在 `.env` 配置 `EVERYINFRA_API_KEY`，线上在实际部署的 Worker 中设置同名 Secret（默认环境和 `production` 环境分别配置）。现有 `cf:sync-secrets` 读取 `.env.local` 并写入默认环境，不能替代上述目标环境配置。`fetch_url` 的公众号文章和小红书笔记正文分别调用 `wechat_oa.article_detail` 和 `xiaohongshu.note`，完整保留链接参数（包括小红书的 `xsec_token`）。小红书分享短链先在平台域名内解析跳转，再读取笔记。搜索和正文抓取都不自动重试或切换供应商；Reddit 标准链接、`redd.it` 和 gallery 链接先规范化为 `https://www.reddit.com/comments/<id>/`，分享短链仅在 Reddit 域名内解析跳转；不再使用 Just One API。
 
 说明：应用在 `/app` SSR 时并发读取已配置的 ikun、Moonshot、OpenRouter 模型资源，不再维护固定模型目录。`claudeOpus46Ikun` 始终排在第一位并保持为默认模型。`backend=ikun` 根据模型 ID 选择协议：`claude-*` 使用 Anthropic，`gemini-*` 使用 Gemini，`gpt-*` 使用 OpenAI Responses。
 

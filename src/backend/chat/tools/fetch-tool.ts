@@ -1,44 +1,8 @@
-import { isAbortError } from '@/backend/chat/abort';
 import type { ChatTool, ToolDefinition, ToolHandler } from '@/shared/chat/tool-types';
 import { log } from '@/backend/chat/logger';
-import { Supadata } from '@supadata/js';
 import { z } from 'zod';
 import { getServerEnv } from '@/backend/platform/cloudflare/env';
-import { arrayBufferToBase64 } from '@/shared/core/base64';
 import { createRateLimitedQueue } from './shared/rate-limit';
-import { JUST_ONE_API_TIMEOUT_MS, requestJustOneApi } from './shared/justone-api';
-
-type FetchUrlArgs = {
-  url: string;
-  response_type: 'markdown' | 'image' | 'youtube';
-};
-
-const parseFetchUrlArgs = (args: unknown): FetchUrlArgs => {
-  if (!args || typeof args !== 'object') {
-    throw new Error('fetch_url requires an object with a URL');
-  }
-
-  const url = 'url' in args ? args.url : undefined;
-  if (typeof url !== 'string' || url.trim().length === 0) {
-    throw new Error('fetch_url requires a non-empty URL string');
-  }
-
-  if (!URL.canParse(url)) {
-    throw new Error('Invalid URL format');
-  }
-
-  const response_type = 'response_type' in args ? args.response_type : undefined;
-  if (response_type !== 'markdown' && response_type !== 'image' && response_type !== 'youtube') {
-    throw new Error("fetch_url requires response_type to be 'markdown', 'image', or 'youtube'");
-  }
-
-  return { url, response_type };
-};
-
-const sleep = (ms: number) =>
-  new Promise<void>((resolve) => {
-    setTimeout(resolve, ms);
-  });
 
 const enqueueFetchUrlCall = createRateLimitedQueue(2_000);
 
@@ -62,30 +26,23 @@ const isSafePlatformUrl = (url: URL): boolean =>
   url.password.length === 0 &&
   url.port.length === 0;
 
-const getXiaohongshuNoteReference = (url: URL): string | null => {
+const getXiaohongshuNoteUrl = (url: URL): string | null => {
   if (!isSafePlatformUrl(url) || !XIAOHONGSHU_NOTE_HOSTS.has(url.hostname)) {
     return null;
   }
 
-  const match = url.pathname.match(/^\/(explore|discovery\/item)\/([a-z0-9]+)(?:\/|$)/i);
-  if (!match?.[2]) {
+  if (!/^\/(explore|discovery\/item)\/[a-z0-9]+(?:\/|$)/i.test(url.pathname)) {
     return null;
   }
 
-  if (
-    match[1] === 'explore' &&
-    (url.hostname === 'xiaohongshu.com' || url.hostname === 'www.xiaohongshu.com')
-  ) {
-    const noteUrl = new URL(url);
-    noteUrl.hash = '';
-    return noteUrl.href;
-  }
-
-  return match[2];
+  const noteUrl = new URL(url);
+  noteUrl.hostname = 'www.xiaohongshu.com';
+  noteUrl.hash = '';
+  return noteUrl.href;
 };
 
 const toRedditPostId = (id: string | undefined): string | null =>
-  id && /^[a-z0-9]+$/i.test(id) ? `t3_${id.toLowerCase()}` : null;
+  id && /^[a-z0-9]+$/i.test(id) ? id.toLowerCase() : null;
 
 const getRedditPostId = (url: URL): string | null => {
   if (!isSafePlatformUrl(url)) {
@@ -134,7 +91,7 @@ const resolveRedditSharePostId = async (
   shareUrl: URL,
   signal?: AbortSignal,
 ): Promise<RedditShareResolution> => {
-  const timeoutSignal = AbortSignal.timeout(JUST_ONE_API_TIMEOUT_MS);
+  const timeoutSignal = AbortSignal.timeout(20_000);
   const requestSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
   let currentUrl = shareUrl;
 
@@ -202,133 +159,125 @@ const resolveRedditSharePostId = async (
   }
 };
 
-const stringifyJustOneApiData = (data: unknown): string => {
-  if (typeof data === 'string') {
-    return data;
-  }
-
-  const serialized = JSON.stringify(data, null, 2);
-  return typeof serialized === 'string'
-    ? serialized
-    : 'Error: Just One API returned unsupported data';
-};
-
-const fetchXiaohongshuNote = async (
-  noteId: string,
-  signal: AbortSignal | undefined,
-  timeoutMs: number,
+const fetchEveryInfraPage = async (
+  url: string,
+  platform: 'wechat_oa' | 'xiaohongshu',
+  signal?: AbortSignal,
 ): Promise<string> => {
-  const result = await requestJustOneApi(
-    {
-      endpoint: '/api/xiaohongshu/get-note-detail/v1',
-      method: 'GET',
-      parameters: new URLSearchParams({ noteId }),
-    },
-    signal,
-    timeoutMs,
-  );
-
-  return result.ok ? stringifyJustOneApiData(result.data) : `Error: ${result.error}`;
-};
-
-const fetchRedditPost = async (
-  postId: string,
-  signal: AbortSignal | undefined,
-  timeoutMs: number,
-): Promise<string> => {
-  const result = await requestJustOneApi(
-    {
-      endpoint: '/api/reddit/get-post-detail/v1',
-      method: 'GET',
-      parameters: new URLSearchParams({ postId }),
-    },
-    signal,
-    timeoutMs,
-  );
-
-  return result.ok ? stringifyJustOneApiData(result.data) : `Error: ${result.error}`;
-};
-
-// Image URL detection
-const IMAGE_EXTENSIONS = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.svg', '.ico'];
-
-const isDirectImageUrl = (url: string): boolean => {
-  if (!URL.canParse(url)) {
-    return false;
+  const { EVERYINFRA_API_KEY: apiKey } = getServerEnv();
+  if (!apiKey) {
+    return 'Error: EVERYINFRA_API_KEY is not set';
   }
 
-  const parsedUrl = new URL(url);
-  const pathname = parsedUrl.pathname.toLowerCase();
-
-  if (IMAGE_EXTENSIONS.some((ext) => pathname.endsWith(ext))) {
-    return true;
-  }
-
-  const imageHostPatterns = [
-    /^i\.imgur\.com/,
-    /^images\.unsplash\.com/,
-    /^pbs\.twimg\.com/,
-    /\.cloudinary\.com.*\/image\//,
-    /\.githubusercontent\.com.*\.(png|jpg|jpeg|gif|webp)$/i,
-  ];
-
-  const host = parsedUrl.host.toLowerCase();
-  const fullPath = host + pathname;
-
-  return imageHostPatterns.some((pattern) => pattern.test(fullPath));
-};
-
-type ImageResult = {
-  type: 'image';
-  data_url: string;
-  mime_type: string;
-  size_bytes: number;
-};
-
-const fetchDirectImage = async (url: string, signal?: AbortSignal): Promise<string> => {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30_000);
-  const linkedAbort = () => controller.abort();
-  signal?.addEventListener('abort', linkedAbort);
+  let timedOut = false;
+  const timeoutId = setTimeout(() => {
+    timedOut = true;
+    controller.abort();
+  }, 120_000);
+  const abortRequest = () => controller.abort();
+  signal?.addEventListener('abort', abortRequest);
 
   try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; AetherBot/1.0)',
-      },
-    });
+    let articleUrl = new URL(url);
+    if (platform === 'xiaohongshu' && articleUrl.hostname === 'xhslink.com') {
+      for (let redirectCount = 0; redirectCount < 3; redirectCount += 1) {
+        const response = await fetch(articleUrl, {
+          redirect: 'manual',
+          signal: controller.signal,
+        });
+        const location = response.headers.get('location');
+        await response.body?.cancel();
+        if (response.status < 300 || response.status >= 400 || !location) {
+          return `Error: Xiaohongshu share URL returned HTTP ${response.status} without a redirect`;
+        }
 
-    if (!response.ok) {
-      return `Error: HTTP ${response.status} ${response.statusText}`;
+        articleUrl = new URL(location, articleUrl);
+        if (!isSafePlatformUrl(articleUrl)) {
+          return 'Error: Xiaohongshu share URL redirected to an unsupported URL';
+        }
+        const noteUrl = getXiaohongshuNoteUrl(articleUrl);
+        if (noteUrl) {
+          articleUrl = new URL(noteUrl);
+          break;
+        }
+        if (articleUrl.hostname !== 'xhslink.com') {
+          return 'Error: Xiaohongshu share URL did not resolve to a supported note URL';
+        }
+      }
+      if (!getXiaohongshuNoteUrl(articleUrl)) {
+        return 'Error: Xiaohongshu share URL exceeded 3 redirects';
+      }
     }
 
-    const contentType = response.headers.get('content-type') || 'image/png';
+    const response = await fetch('https://api.everyinfra.com/api/v1/social', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        platform,
+        action: platform === 'wechat_oa' ? 'article_detail' : 'note',
+        params: { url: articleUrl.href },
+      }),
+      redirect: 'manual',
+      signal: controller.signal,
+    });
 
-    const arrayBuffer = await response.arrayBuffer();
+    let payload: unknown;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      if (!(error instanceof SyntaxError)) {
+        throw error;
+      }
+      return `Error: EveryInfra HTTP ${response.status} returned invalid JSON`;
+    }
 
-    const base64 = arrayBufferToBase64(arrayBuffer);
-    const mimeType = contentType.split(';')[0].trim();
-    const dataUrl = `data:${mimeType};base64,${base64}`;
-
-    const result: ImageResult = {
-      type: 'image',
-      data_url: dataUrl,
-      mime_type: mimeType,
-      size_bytes: arrayBuffer.byteLength,
-    };
-
-    return JSON.stringify(result);
+    const contentResponse = z
+      .object({
+        results: z.record(z.string(), z.unknown()).nullish(),
+        error: z
+          .object({ code: z.string(), message: z.string(), request_id: z.string().optional() })
+          .optional(),
+      })
+      .safeParse(payload);
+    if (!response.ok || (contentResponse.success && contentResponse.data.error)) {
+      const error = contentResponse.success ? contentResponse.data.error : undefined;
+      return `Error: EveryInfra HTTP ${response.status}${error ? ` (${[error.code, error.message, error.request_id].filter(Boolean).join(', ')})` : ''}`;
+    }
+    if (
+      !contentResponse.success ||
+      !contentResponse.data.results ||
+      Object.keys(contentResponse.data.results).length === 0
+    ) {
+      return 'Error: EveryInfra returned no page content';
+    }
+    const page = contentResponse.data.results;
+    const bodyText = platform === 'wechat_oa' ? page.content_text : page.text;
+    if (
+      !(typeof bodyText === 'string' && bodyText.trim()) &&
+      !(
+        platform === 'xiaohongshu' &&
+        Array.isArray(page.images) &&
+        page.images.some((image) => typeof image === 'string' && image.trim())
+      )
+    ) {
+      return 'Error: EveryInfra returned no page content';
+    }
+    delete page.content_html;
+    return JSON.stringify(page, null, 2);
   } catch (error) {
-    const message = isAbortError(error)
-      ? 'Request timed out'
-      : typeof error === 'object' && error !== null
-        ? (error as Error).message
-        : String(error);
-    log('FETCH', `Direct image error: ${message}`);
-    return `Error: ${message}`;
+    if (signal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError');
+    }
+    if (timedOut) {
+      return 'Error: EveryInfra request timed out';
+    }
+    throw error;
   } finally {
-    signal?.removeEventListener('abort', linkedAbort);
+    signal?.removeEventListener('abort', abortRequest);
     clearTimeout(timeoutId);
   }
 };
@@ -419,86 +368,13 @@ const fetchMarkdownWithParallel = async (url: string, signal?: AbortSignal): Pro
   }
 };
 
-const YOUTUBE_POLL_INTERVAL_MS = 3_000;
-const YOUTUBE_MAX_POLLS = 60;
-
-const fetchYoutubeTranscript = async (url: string, signal?: AbortSignal): Promise<string> => {
-  const { SUPADATA_API_KEY: apiKey } = getServerEnv();
-  if (!apiKey) {
-    log('FETCH', 'Missing SUPADATA_API_KEY');
-    return 'Error: SUPADATA_API_KEY is not set';
-  }
-
-  const supadata = new Supadata({ apiKey });
-
-  try {
-    const result = await supadata.transcript({
-      url,
-      text: true,
-      mode: 'auto',
-    });
-
-    if ('jobId' in result && result.jobId) {
-      const jobId = result.jobId;
-
-      for (let i = 1; i <= YOUTUBE_MAX_POLLS; i++) {
-        if (signal?.aborted) {
-          throw new DOMException('Aborted', 'AbortError');
-        }
-
-        await sleep(YOUTUBE_POLL_INTERVAL_MS);
-
-        const job = await supadata.transcript.getJobStatus(jobId);
-
-        if (job.status === 'completed' && job.result) {
-          const transcript = job.result;
-          return typeof transcript.content === 'string'
-            ? transcript.content
-            : JSON.stringify(transcript.content);
-        }
-
-        if (job.status === 'failed') {
-          const errMsg = job.error?.message || 'Job failed';
-          log('FETCH', `Transcript job failed: ${errMsg}`);
-          return `Error: ${errMsg}`;
-        }
-      }
-
-      log('FETCH', 'Transcript job timed out');
-      return 'Error: Transcript job timed out after polling';
-    }
-
-    const transcript = result as { content: unknown };
-    return typeof transcript.content === 'string'
-      ? transcript.content
-      : JSON.stringify(transcript.content);
-  } catch (error) {
-    const message =
-      typeof error === 'object' && error !== null ? (error as Error).message : String(error);
-    log('FETCH', `Transcript error: ${message}`);
-    return `Error: ${message}`;
-  }
-};
-
 const fetchUrl: ToolHandler = async (args, signal) => {
-  const { url, response_type } = parseFetchUrlArgs(args);
-
-  if (signal?.aborted) {
-    throw new DOMException('Aborted', 'AbortError');
-  }
-
-  if (response_type === 'youtube') {
-    return fetchYoutubeTranscript(url, signal);
-  }
-
-  if (response_type === 'image') {
-    if (!isDirectImageUrl(url)) {
-      return "Error: response_type 'image' only accepts direct image URLs (e.g. .jpg, .png, .gif, .webp)";
-    }
-    return enqueueFetchUrlCall(() => fetchDirectImage(url, signal));
-  }
-
+  const { url } = z.object({ url: z.string().url() }).strict().parse(args);
   const parsedUrl = new URL(url);
+  if (parsedUrl.protocol !== 'http:' && parsedUrl.protocol !== 'https:') {
+    throw new Error('fetch_url requires an HTTP or HTTPS URL');
+  }
+  signal?.throwIfAborted();
 
   if (
     isSafePlatformUrl(parsedUrl) &&
@@ -506,25 +382,12 @@ const fetchUrl: ToolHandler = async (args, signal) => {
     (parsedUrl.pathname === '/s' || parsedUrl.pathname.startsWith('/s/'))
   ) {
     parsedUrl.hash = '';
-    const result = await requestJustOneApi(
-      {
-        endpoint: '/api/weixin/get-article-detail/v1',
-        method: 'GET',
-        parameters: new URLSearchParams({
-          articleUrl: parsedUrl.href,
-          mode: 'TEXT',
-        }),
-      },
-      signal,
-      JUST_ONE_API_TIMEOUT_MS,
-    );
-
-    return result.ok ? stringifyJustOneApiData(result.data) : `Error: ${result.error}`;
+    return fetchEveryInfraPage(parsedUrl.href, 'wechat_oa', signal);
   }
 
-  const xiaohongshuNoteReference = getXiaohongshuNoteReference(parsedUrl);
-  if (xiaohongshuNoteReference) {
-    return fetchXiaohongshuNote(xiaohongshuNoteReference, signal, JUST_ONE_API_TIMEOUT_MS);
+  const xiaohongshuNoteUrl = getXiaohongshuNoteUrl(parsedUrl);
+  if (xiaohongshuNoteUrl) {
+    return fetchEveryInfraPage(xiaohongshuNoteUrl, 'xiaohongshu', signal);
   }
 
   if (
@@ -533,62 +396,25 @@ const fetchUrl: ToolHandler = async (args, signal) => {
     parsedUrl.pathname !== '/'
   ) {
     parsedUrl.hash = '';
-    const deadline = Date.now() + JUST_ONE_API_TIMEOUT_MS;
-    const resolution = await requestJustOneApi(
-      {
-        endpoint: '/api/xiaohongshu/share-url-transfer/v1',
-        method: 'GET',
-        parameters: new URLSearchParams({ shareUrl: parsedUrl.href }),
-      },
-      signal,
-      JUST_ONE_API_TIMEOUT_MS,
-    );
-
-    if (!resolution.ok) {
-      return `Error: ${resolution.error}`;
-    }
-
-    if (
-      typeof resolution.data !== 'object' ||
-      resolution.data === null ||
-      !('redirect_url' in resolution.data) ||
-      typeof resolution.data.redirect_url !== 'string' ||
-      !URL.canParse(resolution.data.redirect_url)
-    ) {
-      return 'Error: Just One API returned an invalid Xiaohongshu redirect URL';
-    }
-
-    const noteReference = getXiaohongshuNoteReference(new URL(resolution.data.redirect_url));
-    if (!noteReference) {
-      return 'Error: Xiaohongshu share URL did not resolve to a supported note URL';
-    }
-
-    const remainingMs = deadline - Date.now();
-    if (remainingMs <= 0) {
-      return 'Error: Xiaohongshu share URL request timed out';
-    }
-
-    return fetchXiaohongshuNote(noteReference, signal, remainingMs);
+    return fetchEveryInfraPage(parsedUrl.href, 'xiaohongshu', signal);
   }
 
   const redditPostId = getRedditPostId(parsedUrl);
   if (redditPostId) {
-    return fetchRedditPost(redditPostId, signal, JUST_ONE_API_TIMEOUT_MS);
+    return enqueueFetchUrlCall(() =>
+      fetchMarkdownWithParallel(`https://www.reddit.com/comments/${redditPostId}/`, signal),
+    );
   }
 
   if (isRedditShareUrl(parsedUrl)) {
-    const deadline = Date.now() + JUST_ONE_API_TIMEOUT_MS;
     const resolution = await resolveRedditSharePostId(parsedUrl, signal);
     if (!resolution.ok) {
       return `Error: ${resolution.error}`;
     }
 
-    const remainingMs = deadline - Date.now();
-    if (remainingMs <= 0) {
-      return 'Error: Reddit share URL request timed out';
-    }
-
-    return fetchRedditPost(resolution.postId, signal, remainingMs);
+    return enqueueFetchUrlCall(() =>
+      fetchMarkdownWithParallel(`https://www.reddit.com/comments/${resolution.postId}/`, signal),
+    );
   }
 
   return enqueueFetchUrlCall(() => fetchMarkdownWithParallel(url, signal));
@@ -599,23 +425,12 @@ const fetchUrlSpec: ChatTool = {
   function: {
     name: 'fetch_url',
     description:
-      "Fetch content from a URL with three response modes: 'markdown' reads webpages and automatically fetches WeChat articles, Xiaohongshu/RedNote notes, and Reddit posts through their platform APIs; 'image' fetches direct image URLs only; 'youtube' extracts transcript/subtitles from a YouTube video URL.",
+      'Read text content from a webpage URL, including WeChat articles, Xiaohongshu/RedNote notes and Reddit posts. Use read_image for images and read_youtube_transcript for YouTube transcripts.',
     parameters: {
       type: 'object',
       additionalProperties: false,
-      properties: {
-        url: {
-          type: 'string',
-          description: 'The URL to fetch',
-        },
-        response_type: {
-          type: 'string',
-          enum: ['markdown', 'image', 'youtube'],
-          description:
-            "Response format: 'markdown' for text content (converts HTML to readable text), 'image' for direct image URLs only (jpg, png, gif, webp, etc.), 'youtube' for extracting transcript/subtitles from YouTube videos",
-        },
-      },
-      required: ['url', 'response_type'],
+      properties: { url: { type: 'string', description: 'The webpage or article URL to read' } },
+      required: ['url'],
     },
   },
 };

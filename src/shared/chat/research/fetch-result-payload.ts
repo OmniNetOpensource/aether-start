@@ -26,17 +26,11 @@ const getUrlFromArgs = (args: unknown): string => {
   return typeof args.url === 'string' ? args.url : '';
 };
 
-const getResponseTypeFromArgs = (args: unknown): 'markdown' | 'youtube' | null => {
-  if (!isRecord(args)) {
-    return null;
-  }
-  if (args.response_type === 'youtube') {
-    return 'youtube';
-  }
-  return 'markdown';
-};
-
-export const buildFetchClientPayload = (args: unknown, rawResult: string): FetchClientPayload => {
+export const buildReadClientPayload = (
+  toolName: string,
+  args: unknown,
+  rawResult: string,
+): FetchClientPayload => {
   const url = getUrlFromArgs(args);
   const trimmed = rawResult.trim();
 
@@ -62,7 +56,7 @@ export const buildFetchClientPayload = (args: unknown, rawResult: string): Fetch
     /* plain text markdown / youtube */
   }
 
-  const responseType = getResponseTypeFromArgs(args);
+  const responseType = toolName === 'read_youtube_transcript' ? 'youtube' : 'markdown';
   const { content, truncated } = truncateFetchContent(rawResult);
 
   if (responseType === 'youtube') {

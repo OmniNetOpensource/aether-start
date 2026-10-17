@@ -133,3 +133,58 @@ describe('ResearchBlock', () => {
     ).toBeNull();
   });
 });
+
+describe('read tool results', () => {
+  it.each(['read_image', 'fetch_url'])('restores an image preview from %s', (toolName) => {
+    const url = 'https://example.com/image.png';
+    renderTest(() => (
+      <ResearchBlock
+        items={[
+          {
+            kind: 'tool',
+            data: {
+              call: { tool: toolName, args: { url }, callId: 'image-call' },
+              result: {
+                result: JSON.stringify({
+                  type: 'image',
+                  url,
+                  data_url: 'data:image/png;base64,AQID',
+                  mime_type: 'image/png',
+                  size_bytes: 3,
+                }),
+              },
+            },
+          },
+        ]}
+      />
+    ));
+    expect(screen.getByRole('img').getAttribute('src')).toBe('data:image/png;base64,AQID');
+    expect(screen.getByRole('button', { name: /查看/ })).toBeTruthy();
+  });
+
+  it.each(['read_youtube_transcript', 'fetch_url'])(
+    'restores a transcript preview from %s',
+    (toolName) => {
+      const url = 'https://youtu.be/jNQXAC9IVRw';
+      renderTest(() => (
+        <ResearchBlock
+          items={[
+            {
+              kind: 'tool',
+              data: {
+                call: { tool: toolName, args: { url }, callId: 'youtube-call' },
+                result: {
+                  result: JSON.stringify({ type: 'youtube', url, content: 'Transcript text' }),
+                },
+              },
+            },
+          ]}
+        />
+      ));
+      expect(screen.getByRole('button', { name: /查看/ })).toBeTruthy();
+      expect(screen.getByRole('link', { name: url }).getAttribute('href')).toBe(url);
+      if (toolName === 'read_youtube_transcript')
+        expect(screen.getByText(/读取 YouTube 字幕/)).toBeTruthy();
+    },
+  );
+});

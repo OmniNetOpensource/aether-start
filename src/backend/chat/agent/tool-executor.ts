@@ -1,7 +1,9 @@
 import { isAbortError } from '@/backend/chat/abort';
 import { fetchUrlTool } from '@/backend/chat/tools/fetch-tool';
+import { readImageTool } from '@/backend/chat/tools/read-image-tool';
+import { readYoutubeTranscriptTool } from '@/backend/chat/tools/read-youtube-transcript-tool';
 import {
-  buildFetchClientPayload,
+  buildReadClientPayload,
   stringifyFetchClientPayload,
 } from '@/shared/chat/research/fetch-result-payload';
 import {
@@ -23,7 +25,7 @@ export const getAvailableTools = (): ChatTool[] => {
   const env = getServerEnv();
   const tools: ChatTool[] = [];
 
-  tools.push(fetchUrlTool.spec);
+  tools.push(fetchUrlTool.spec, readImageTool.spec, readYoutubeTranscriptTool.spec);
   tools.push(renderTool.spec);
 
   if (env.SERP_API_KEY || env.EVERYINFRA_API_KEY) {
@@ -50,11 +52,15 @@ export const executeToolCall = async (
   const handleTool: ToolHandler | null =
     toolcall.name === 'fetch_url'
       ? fetchUrlTool.handler
-      : toolcall.name === 'render'
-        ? renderTool.handler
-        : toolcall.name === 'search' && (env.SERP_API_KEY || env.EVERYINFRA_API_KEY)
-          ? searchTool.handler
-          : null;
+      : toolcall.name === 'read_image'
+        ? readImageTool.handler
+        : toolcall.name === 'read_youtube_transcript'
+          ? readYoutubeTranscriptTool.handler
+          : toolcall.name === 'render'
+            ? renderTool.handler
+            : toolcall.name === 'search' && (env.SERP_API_KEY || env.EVERYINFRA_API_KEY)
+              ? searchTool.handler
+              : null;
   let rawResult: string;
 
   if (!handleTool) {
@@ -109,8 +115,10 @@ export const executeToolCall = async (
     }
   } else {
     let clientResult = rawResult;
-    if (toolcall.name === 'fetch_url') {
-      clientResult = stringifyFetchClientPayload(buildFetchClientPayload(toolcall.args, rawResult));
+    if (['fetch_url', 'read_image', 'read_youtube_transcript'].includes(toolcall.name)) {
+      clientResult = stringifyFetchClientPayload(
+        buildReadClientPayload(toolcall.name, toolcall.args, rawResult),
+      );
     }
     toolResult = { client: clientResult, model: rawResult };
   }
