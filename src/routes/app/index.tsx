@@ -1,4 +1,8 @@
+import { useLayoutEffect } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
+import { getUserPreferencesFn } from '@/rpc/user-preferences';
+import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
+import { setCurrentModelId } from '@/frontend/conversations/session/chat-selection';
 import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { resetLastEventId } from '@/frontend/chat/agent-runtime/event-handlers';
 import { chatState } from '@/frontend/chat/agent-runtime/chat-state';
@@ -15,6 +19,9 @@ import {
 } from '@/frontend/conversations/conversation-tree/message-tree-state';
 
 export const Route = createFileRoute('/app/')({
+  loader: () => getUserPreferencesFn(),
+  gcTime: 0,
+  preloadStaleTime: 0,
   onEnter: () => {
     if (conversationId() === null && messages().length === 0) return;
 
@@ -27,7 +34,12 @@ export const Route = createFileRoute('/app/')({
 });
 
 function NewChatPage() {
+  const { preferredModelId } = Route.useLoaderData();
   const visibleMessages = useMessages();
+
+  useLayoutEffect(() => {
+    setCurrentModelId(preferredModelId ?? DEFAULT_MODEL_ID);
+  }, [preferredModelId]);
 
   /* 新会话发出第一条消息后，消息已进树但路由还没跳到 /app/:id，
      先渲染 MessageList 避免跳转前出现空白 */

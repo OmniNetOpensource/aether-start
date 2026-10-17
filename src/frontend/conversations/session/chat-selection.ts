@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react';
+import { DEFAULT_MODEL_ID } from '@/shared/chat/model-catalog';
 
-let modelId = 'claudeOpus46Ikun';
+let modelId = DEFAULT_MODEL_ID;
 const listeners = new Set<() => void>();
 
 const subscribe = (listener: () => void) => {

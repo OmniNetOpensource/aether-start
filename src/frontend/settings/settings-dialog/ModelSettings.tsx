@@ -1,4 +1,4 @@
-import { useId, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getRouteApi } from '@tanstack/react-router';
 import { Bot, Check, ChevronDown, Loader2 } from '@/frontend/design-system/icons';
@@ -17,7 +17,9 @@ import {
   useCurrentModelId,
 } from '@/frontend/conversations/session/chat-selection';
 import { availableModelsQueryOptions } from '@/frontend/conversations/session/available-models-query';
+import { conversationId } from '@/frontend/conversations/session/conversation-meta';
 import { refreshAvailableModelsFn } from '@/rpc/chat-options';
+import { savePreferredModelFn } from '@/rpc/user-preferences';
 import { cn } from '@/shared/core/utils';
 
 const appRoute = getRouteApi('/app');
@@ -39,6 +41,14 @@ export function ModelSettings({ canRefreshModels }: { canRefreshModels: boolean 
   const [search, setSearch] = useState('');
   const [highlightedModelId, setHighlightedModelId] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSavingModel, setIsSavingModel] = useState(false);
+  const isMounted = useRef(true);
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const currentModel = availableModels.find((model) => model.id === currentModelId);
   const filterModels = (query: string) => {
@@ -51,11 +61,22 @@ export function ModelSettings({ canRefreshModels }: { canRefreshModels: boolean 
     );
   };
   const filteredModels = filterModels(search);
-  const selectModel = (modelId: string) => {
-    setCurrentModelId(modelId);
-    setExpanded(false);
-    setSearch('');
-    trigger.current?.focus();
+  const selectModel = async (modelId: string) => {
+    if (isSavingModel) return;
+    const selectedConversationId = conversationId();
+    setIsSavingModel(true);
+    try {
+      await savePreferredModelFn({ data: { preferredModelId: modelId } });
+      if (!isMounted.current || conversationId() !== selectedConversationId) return;
+      setCurrentModelId(modelId);
+      setExpanded(false);
+      setSearch('');
+      trigger.current?.focus();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to save model preference');
+    } finally {
+      setIsSavingModel(false);
+    }
   };
   const refreshModels = async () => {
     if (isRefreshing) return;
@@ -92,7 +113,7 @@ export function ModelSettings({ canRefreshModels }: { canRefreshModels: boolean 
           ) : null}
         </div>
         <p className='text-xs text-muted-foreground'>
-          Used for the next message and saved with this conversation after sending.
+          Used for the next message and remembered for new conversations across your devices.
         </p>
       </div>
       <div className='overflow-hidden rounded-lg border bg-muted'>
@@ -147,6 +168,7 @@ export function ModelSettings({ canRefreshModels }: { canRefreshModels: boolean 
             onValueChange={setHighlightedModelId}
           >
             <CommandInput
+              disabled={isSavingModel}
               aria-label='Search models'
               placeholder='Search models...'
               autoFocus={deviceType === 'desktop'}
@@ -169,7 +191,7 @@ export function ModelSettings({ canRefreshModels }: { canRefreshModels: boolean 
                   nextIndex = currentIndex > 0 ? currentIndex - 1 : filteredModels.length - 1;
                 } else if (event.key === 'Enter' && currentIndex >= 0) {
                   event.preventDefault();
-                  selectModel(filteredModels[currentIndex].id);
+                  void selectModel(filteredModels[currentIndex].id);
                   return;
                 } else {
                   return;
@@ -202,7 +224,8 @@ export function ModelSettings({ canRefreshModels }: { canRefreshModels: boolean 
                   value={model.id}
                   data-value={model.id}
                   aria-current={currentModelId === model.id ? 'true' : undefined}
-                  onSelect={() => selectModel(model.id)}
+                  disabled={isSavingModel}
+                  onSelect={() => void selectModel(model.id)}
                 >
                   <span className='flex-1 truncate'>{model.name}</span>
                   {currentModelId === model.id ? <Check className='h-4 w-4 shrink-0' /> : null}
@@ -212,6 +235,7 @@ export function ModelSettings({ canRefreshModels }: { canRefreshModels: boolean 
           </Command>
         ) : null}
       </div>
+      {isSavingModel ? <p role='status'>Saving model preference...</p> : null}
     </section>
   );
 }

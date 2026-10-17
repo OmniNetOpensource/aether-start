@@ -97,7 +97,7 @@ LLM_STREAM_LOGGING_MAX_CHARS=可选，单条日志最大字符数，超过则不
 
 小红书和微信公众号的 `search` 使用 EveryInfra 的 `POST /api/v1/social`，分别调用 `xiaohongshu.search` 和 `wechat_oa.article_search`。本地在 `.env` 配置 `EVERYINFRA_API_KEY`，线上在实际部署的 Worker 中设置同名 Secret（默认环境和 `production` 环境分别配置）。现有 `cf:sync-secrets` 读取 `.env.local` 并写入默认环境，不能替代上述目标环境配置。`fetch_url` 的公众号文章和小红书笔记正文分别调用 `wechat_oa.article_detail` 和 `xiaohongshu.note`，完整保留链接参数（包括小红书的 `xsec_token`）。小红书分享短链先在平台域名内解析跳转，再读取笔记。搜索和正文抓取都不自动重试或切换供应商；Reddit 标准链接、`redd.it` 和 gallery 链接先规范化为 `https://www.reddit.com/comments/<id>/`，分享短链仅在 Reddit 域名内解析跳转；不再使用 Just One API。
 
-说明：应用在 `/app` SSR 时并发读取已配置的 ikun、Moonshot、OpenRouter 模型资源，不再维护固定模型目录。`claudeOpus46Ikun` 始终排在第一位并保持为默认模型。`backend=ikun` 根据模型 ID 选择协议：`claude-*` 使用 Anthropic，`gemini-*` 使用 Gemini，`gpt-*` 使用 OpenAI Responses。
+说明：应用在 `/app` SSR 时并发读取已配置的 ikun、Moonshot、OpenRouter 模型资源，不再维护固定模型目录。`claudeOpus46Ikun` 始终排在第一位；尚未保存模型偏好的账户使用它作为默认模型。用户手动选择模型后，偏好按账户保存到 D1 的 `user_preferences` 表，新会话会重新读取，刷新或换设备后仍然生效。历史会话继续使用自身保存的模型，打开历史和断线恢复不会修改账户偏好。模型不可用时保留其 ID 并明确提示，不自动切换。开发和生产均须应用 `0025_user_preferences.sql` 迁移。`backend=ikun` 根据模型 ID 选择协议：`claude-*` 使用 Anthropic，`gemini-*` 使用 Gemini，`gpt-*` 使用 OpenAI Responses。
 
 ---
 

@@ -3,6 +3,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderTest } from '@/test/render';
 import { currentModelId, setCurrentModelId } from '@/frontend/conversations/session/chat-selection';
+import {
+  clearConversationMeta,
+  setConversationId,
+} from '@/frontend/conversations/session/conversation-meta';
 import { ModelSettings } from './ModelSettings';
 
 const INITIAL_MODEL_ID = 'claudeOpus46Ikun';
@@ -15,7 +19,9 @@ const router = vi.hoisted(() => ({
 }));
 const rpc = vi.hoisted(() => ({
   refreshAvailableModels: vi.fn(),
+  savePreferredModel: vi.fn(),
 }));
+vi.mock('@/rpc/user-preferences', () => ({ savePreferredModelFn: rpc.savePreferredModel }));
 const toast = vi.hoisted(() => ({
   error: vi.fn(),
   success: vi.fn(),
@@ -52,13 +58,73 @@ const renderModelSettings = (canRefreshModels = false) => {
 };
 
 beforeEach(() => {
+  clearConversationMeta();
   setCurrentModelId(INITIAL_MODEL_ID);
   rpc.refreshAvailableModels.mockReset();
+  rpc.savePreferredModel.mockReset().mockResolvedValue(undefined);
   toast.error.mockReset();
   toast.success.mockReset();
 });
 
 describe('ModelSettings', () => {
+  it('does not overwrite a history model when a save finishes after closing settings', async () => {
+    let finishSaving: () => void = () => undefined;
+    const pendingSave = new Promise<void>((resolve) => {
+      finishSaving = resolve;
+    });
+    rpc.savePreferredModel.mockReturnValue(pendingSave);
+    const view = renderModelSettings();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Choose model, current model is Opus 4.6' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'GPT 5.4' }));
+    view.unmount();
+    setConversationId('history-conversation');
+    setCurrentModelId('history-model');
+    await act(async () => {
+      finishSaving();
+      await pendingSave;
+    });
+    expect(currentModelId()).toBe('history-model');
+    view.client.clear();
+    clearConversationMeta();
+  });
+
+  it('keeps the current model until saving succeeds and prevents duplicate saves', async () => {
+    let finishSaving: () => void = () => undefined;
+    const pendingSave = new Promise<void>((resolve) => {
+      finishSaving = resolve;
+    });
+    rpc.savePreferredModel.mockReturnValue(pendingSave);
+    renderModelSettings();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Choose model, current model is Opus 4.6' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'GPT 5.4' }));
+    expect(currentModelId()).toBe(INITIAL_MODEL_ID);
+    expect(screen.getByRole('status').textContent).toBe('Saving model preference...');
+    expect(screen.getByRole('button', { name: 'Gemini 2.5 Pro' })).toHaveProperty('disabled', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Gemini 2.5 Pro' }));
+    expect(rpc.savePreferredModel).toHaveBeenCalledOnce();
+    await act(async () => {
+      finishSaving();
+      await pendingSave;
+    });
+    expect(currentModelId()).toBe('ikun:gpt-5.4');
+  });
+
+  it('reports save failures without changing the current model', async () => {
+    rpc.savePreferredModel.mockRejectedValue(new Error('Preference write failed'));
+    renderModelSettings();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Choose model, current model is Opus 4.6' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'GPT 5.4' }));
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith('Preference write failed'));
+    expect(currentModelId()).toBe(INITIAL_MODEL_ID);
+    expect(screen.getByRole('button', { name: 'GPT 5.4' })).toHaveProperty('disabled', false);
+  });
+
   it('starts with Opus 4.6 selected', async () => {
     vi.resetModules();
     const selection = await import('@/frontend/conversations/session/chat-selection');
@@ -66,7 +132,7 @@ describe('ModelSettings', () => {
     expect(selection.currentModelId()).toBe(INITIAL_MODEL_ID);
   });
 
-  it('shows the current model and selects a filtered model', () => {
+  it('shows the current model and saves a filtered model selection', async () => {
     renderModelSettings();
 
     const trigger = screen.getByRole('button', {
@@ -82,7 +148,10 @@ describe('ModelSettings', () => {
     expect(screen.queryByRole('button', { name: 'Gemini 2.5 Pro' })).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'GPT 5.4' }));
 
-    expect(currentModelId()).toBe('ikun:gpt-5.4');
+    await waitFor(() => expect(currentModelId()).toBe('ikun:gpt-5.4'));
+    expect(rpc.savePreferredModel).toHaveBeenCalledWith({
+      data: { preferredModelId: 'ikun:gpt-5.4' },
+    });
     expect(trigger).toBe(document.activeElement);
     expect(screen.queryByRole('textbox', { name: 'Search models' })).toBeNull();
     expect(
@@ -109,7 +178,7 @@ describe('ModelSettings', () => {
     expect(currentModelId()).toBe('retired:model');
   });
 
-  it('selects the highlighted search result with Enter', () => {
+  it('selects the highlighted search result with Enter', async () => {
     renderModelSettings();
 
     const trigger = screen.getByRole('button', {
@@ -120,12 +189,12 @@ describe('ModelSettings', () => {
     fireEvent.input(search, { target: { value: 'ikun:gemini' } });
     fireEvent.keyDown(search, { key: 'Enter' });
 
-    expect(currentModelId()).toBe('ikun:gemini-2.5-pro');
+    await waitFor(() => expect(currentModelId()).toBe('ikun:gemini-2.5-pro'));
     expect(trigger).toBe(document.activeElement);
     expect(screen.queryByRole('textbox', { name: 'Search models' })).toBeNull();
   });
 
-  it('moves through the unfiltered model list with arrow keys', () => {
+  it('moves through the unfiltered model list with arrow keys', async () => {
     renderModelSettings();
 
     const trigger = screen.getByRole('button', {
@@ -136,7 +205,7 @@ describe('ModelSettings', () => {
     fireEvent.keyDown(search, { key: 'ArrowDown' });
     fireEvent.keyDown(search, { key: 'Enter' });
 
-    expect(currentModelId()).toBe('ikun:gpt-5.4');
+    await waitFor(() => expect(currentModelId()).toBe('ikun:gpt-5.4'));
     expect(trigger).toBe(document.activeElement);
   });
 
