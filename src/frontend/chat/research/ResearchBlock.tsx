@@ -15,7 +15,6 @@ import {
 import {
   parseSearchClientPayload,
   SEARCH_TOOL_NAMES,
-  type SearchClientResult,
 } from '@/shared/chat/research/search-result-payload';
 import type { ResearchItem, Tool } from '@/shared/chat/message';
 import type { StepStatus } from '@/frontend/design-system/chain-of-thought';
@@ -36,8 +35,6 @@ import {
   ChainOfThoughtSearchResult,
   ChainOfThoughtImage,
 } from '@/frontend/design-system/chain-of-thought';
-
-type SearchResultBadge = SearchClientResult;
 
 function getSearchResultCount(rawResult: string): number | null {
   try {
@@ -73,11 +70,6 @@ function getSearchResultCount(rawResult: string): number | null {
   } catch {
     return null;
   }
-}
-
-// Parse search results to badge data
-function parseSearchResults(rawResult: string): SearchResultBadge[] {
-  return parseSearchClientPayload(rawResult)?.results.slice(0, 10) ?? [];
 }
 
 // Get step status from tool lifecycle
@@ -155,10 +147,10 @@ function SearchStep(props: { tool: Tool; isActive: boolean; hideConnector: boole
         ? `Reading the web · ${query}`
         : 'Reading the web';
   const searchResults = props.tool.result
-    ? parseSearchResults(
+    ? parseSearchClientPayload(
         typeof props.tool.result.result === 'string' ? props.tool.result.result : '',
-      )
-    : [];
+      )?.results.slice(0, 10)
+    : undefined;
 
   return (
     <ChainOfThoughtStep
@@ -167,7 +159,8 @@ function SearchStep(props: { tool: Tool; isActive: boolean; hideConnector: boole
       status={getStepStatus(props.tool, props.isActive)}
       hideConnector={props.hideConnector}
     >
-      {searchResults.length > 0 && (
+      {searchResults?.length === 0 && <p className='text-xs text-secondary'>no result</p>}
+      {searchResults && searchResults.length > 0 && (
         <ChainOfThoughtSearchResults>
           {searchResults.map((result, index) => (
             <ChainOfThoughtSearchResult
