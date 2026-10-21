@@ -4,6 +4,7 @@ import {
   AlertTriangle as alertTriangle,
   ArrowUp as arrowUp,
   Ban as ban,
+  BookOpen,
   Bot as bot,
   Braces as braces,
   Check as check,
@@ -42,6 +43,7 @@ import {
   Settings as settings,
   Share2 as share2,
   Square as square,
+  TextSearch,
   Trash2 as trash2,
   Wrench as wrench,
   X as x,
@@ -108,6 +110,7 @@ export const AlertTriangleIcon = createLucideIcon(alertTriangle);
 export const ArrowUp = createLucideIcon(arrowUp);
 export const Ban = createLucideIcon(ban);
 export const Bot = createLucideIcon(bot);
+export const BookOpenIcon = createLucideIcon(BookOpen);
 export const Braces = createLucideIcon(braces);
 export const Check = createLucideIcon(check);
 export const CheckCircle2 = createLucideIcon(checkCircle2);
@@ -143,6 +146,7 @@ export const Plus = createLucideIcon(plus);
 export const Quote = createLucideIcon(quote);
 export const RotateCcw = createLucideIcon(rotateCcw);
 export const Search = createLucideIcon(search);
+export const TextSearchIcon = createLucideIcon(TextSearch);
 export const Settings = createLucideIcon(settings);
 export const Share2 = createLucideIcon(share2);
 export const Square = createLucideIcon(square);

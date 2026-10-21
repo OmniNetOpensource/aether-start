@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { Search, Globe, Wrench } from '@/frontend/design-system/icons';
+import {
+  Search,
+  Globe,
+  Wrench,
+  TextSearchIcon,
+  BookOpenIcon,
+} from '@/frontend/design-system/icons';
 import { cn } from '@/shared/core/utils';
 import Markdown from '@/frontend/design-system/Markdown';
 import {
@@ -310,6 +316,80 @@ function FetchStep(props: { tool: Tool; isActive: boolean; hideConnector: boolea
   );
 }
 
+function ChatHistoryResultDialog(props: { tool: Tool; description: string }) {
+  const result = props.tool.result?.result;
+
+  return (
+    <Dialog>
+      <DialogTrigger
+        asChild={(triggerProps) => (
+          <button
+            {...triggerProps}
+            type='button'
+            className='block text-left text-xs leading-relaxed text-secondary hover:text-foreground cursor-pointer'
+          >
+            {props.description} · 查看
+          </button>
+        )}
+      />
+      <DialogContent className='w-[min(94vw,48rem)] gap-3 p-4 sm:max-w-3xl' showCloseButton>
+        <DialogHeader>
+          <DialogTitle>{props.tool.call.tool}</DialogTitle>
+          <DialogDescription>调用参数与完整返回结果</DialogDescription>
+        </DialogHeader>
+        <div className='max-h-[70vh] space-y-3 overflow-y-auto text-sm'>
+          <h3 className='font-medium'>调用参数</h3>
+          <pre className='whitespace-pre-wrap break-words text-xs text-secondary'>
+            {JSON.stringify(props.tool.call.args, null, 2)}
+          </pre>
+          <h3 className='font-medium'>返回结果</h3>
+          <pre className='whitespace-pre-wrap break-words text-xs text-secondary'>
+            {result === undefined
+              ? '等待工具返回…'
+              : result.startsWith('{')
+                ? JSON.stringify(JSON.parse(result), null, 2)
+                : result}
+          </pre>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type ChatHistoryStepProps = { tool: Tool; isActive: boolean; hideConnector: boolean };
+
+function SearchChatHistoryStep(props: ChatHistoryStepProps) {
+  const resultCount = props.tool.result ? getSearchResultCount(props.tool.result.result) : null;
+
+  return (
+    <ChainOfThoughtStep
+      icon={<TextSearchIcon className='h-3.5 w-3.5' strokeWidth={1.5} />}
+      status={getStepStatus(props.tool, props.isActive)}
+      hideConnector={props.hideConnector}
+    >
+      <ChatHistoryResultDialog
+        tool={props.tool}
+        description={`搜索历史 · ${props.tool.call.args.query} · ${getStatusText(props.tool, props.isActive, props.tool.call.tool)}${resultCount === null ? '' : ` · ${resultCount} 个结果`}`}
+      />
+    </ChainOfThoughtStep>
+  );
+}
+
+function ReadChatHistoryStep(props: ChatHistoryStepProps) {
+  return (
+    <ChainOfThoughtStep
+      icon={<BookOpenIcon className='h-3.5 w-3.5' strokeWidth={1.5} />}
+      status={getStepStatus(props.tool, props.isActive)}
+      hideConnector={props.hideConnector}
+    >
+      <ChatHistoryResultDialog
+        tool={props.tool}
+        description={`读取历史 · 消息 ${props.tool.call.args.message_id} · ${getStatusText(props.tool, props.isActive, props.tool.call.tool)}`}
+      />
+    </ChainOfThoughtStep>
+  );
+}
+
 // Render a generic tool step
 function GenericToolStep(props: { tool: Tool; isActive: boolean; hideConnector: boolean }) {
   const description = `${props.tool.call.tool} · ${getStatusText(props.tool, props.isActive, props.tool.call.tool)}`;
@@ -352,6 +432,28 @@ export function ResearchBlock(props: ResearchBlockProps) {
           const tool = item.data;
           const toolName = tool.call.tool;
           const itemIsActive = (props.isActive ?? false) && isLastStep;
+
+          if (toolName === 'search_chat_history') {
+            return (
+              <SearchChatHistoryStep
+                key={index}
+                tool={tool}
+                isActive={itemIsActive}
+                hideConnector={isLastStep}
+              />
+            );
+          }
+
+          if (toolName === 'read_chat_history') {
+            return (
+              <ReadChatHistoryStep
+                key={index}
+                tool={tool}
+                isActive={itemIsActive}
+                hideConnector={isLastStep}
+              />
+            );
+          }
 
           if (SEARCH_TOOL_NAMES.has(toolName)) {
             return (
