@@ -4,9 +4,8 @@ import type {
   SharedConversationSnapshot,
   SharedMessageBlock,
   SharedMessageSnapshot,
-  SharedResearchItem,
 } from '@/shared/share/share';
-import { toSharedResearchItem } from '@/shared/share/share';
+import { toSharedResearchItems } from '@/shared/share/share';
 import { isQuoteItem } from '@/shared/chat/message';
 import {
   isSafeShareToken,
@@ -54,12 +53,7 @@ const toSharedMessageBlock = (value: unknown): SharedMessageBlock | null => {
   }
 
   if (value.type === 'research' && Array.isArray(value.items)) {
-    return {
-      type: 'research',
-      items: value.items
-        .map(toSharedResearchItem)
-        .filter((item): item is SharedResearchItem => item !== null),
-    };
+    return { type: 'research', items: toSharedResearchItems(value.items) };
   }
 
   if (value.type === 'quotes' && Array.isArray(value.quotes)) {

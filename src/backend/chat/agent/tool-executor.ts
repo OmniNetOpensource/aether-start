@@ -3,6 +3,14 @@ import { fetchUrlTool } from '@/backend/chat/tools/fetch-tool';
 import { readImageTool } from '@/backend/chat/tools/read-image-tool';
 import { readYoutubeTranscriptTool } from '@/backend/chat/tools/read-youtube-transcript-tool';
 import {
+  executeSearchChatHistory,
+  searchChatHistorySpec,
+} from '@/backend/chat/tools/search-chat-history-tool';
+import {
+  executeReadChatHistory,
+  readChatHistorySpec,
+} from '@/backend/chat/tools/read-chat-history-tool';
+import {
   buildReadClientPayload,
   stringifyFetchClientPayload,
 } from '@/shared/chat/research/fetch-result-payload';
@@ -26,7 +34,7 @@ export const getAvailableTools = (): ChatTool[] => {
   const tools: ChatTool[] = [];
 
   tools.push(fetchUrlTool.spec, readImageTool.spec, readYoutubeTranscriptTool.spec);
-  tools.push(renderTool.spec);
+  tools.push(renderTool.spec, searchChatHistorySpec, readChatHistorySpec);
 
   if (env.SERP_API_KEY || env.EVERYINFRA_API_KEY) {
     tools.push(searchTool.spec);
@@ -44,23 +52,28 @@ export type ExecutedToolCallResult = {
 
 export const executeToolCall = async (
   toolcall: PendingToolInvocation,
+  context: { db: D1Database; userId: string; conversationId: string },
   signal?: AbortSignal,
 ): Promise<ExecutedToolCallResult> => {
   const events: ChatServerToClientEvent[] = [];
 
   const env = getServerEnv();
   const handleTool: ToolHandler | null =
-    toolcall.name === 'fetch_url'
-      ? fetchUrlTool.handler
-      : toolcall.name === 'read_image'
-        ? readImageTool.handler
-        : toolcall.name === 'read_youtube_transcript'
-          ? readYoutubeTranscriptTool.handler
-          : toolcall.name === 'render'
-            ? renderTool.handler
-            : toolcall.name === 'search' && (env.SERP_API_KEY || env.EVERYINFRA_API_KEY)
-              ? searchTool.handler
-              : null;
+    toolcall.name === 'search_chat_history'
+      ? (args, abortSignal) => executeSearchChatHistory(args, context, abortSignal)
+      : toolcall.name === 'read_chat_history'
+        ? (args, abortSignal) => executeReadChatHistory(args, context, abortSignal)
+        : toolcall.name === 'fetch_url'
+          ? fetchUrlTool.handler
+          : toolcall.name === 'read_image'
+            ? readImageTool.handler
+            : toolcall.name === 'read_youtube_transcript'
+              ? readYoutubeTranscriptTool.handler
+              : toolcall.name === 'render'
+                ? renderTool.handler
+                : toolcall.name === 'search' && (env.SERP_API_KEY || env.EVERYINFRA_API_KEY)
+                  ? searchTool.handler
+                  : null;
   let rawResult: string;
 
   if (!handleTool) {

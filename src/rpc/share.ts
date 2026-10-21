@@ -10,13 +10,12 @@ import {
 } from '@/shared/share/share-assets';
 import { buildPathToLatestAssistant } from '@/shared/conversations';
 import { isMessage, isQuoteItem } from '@/shared/chat/message';
-import { quoteForSnapshot, toSharedResearchItem } from '@/shared/share/share';
+import { quoteForSnapshot, toSharedResearchItems } from '@/shared/share/share';
 import type {
   PublicSharedConversationSnapshot,
   SharedAttachmentSnapshot,
   SharedConversationSnapshot,
   SharedMessageBlock,
-  SharedResearchItem,
 } from '@/shared/share/share';
 
 type SnapshotSourceConversation = {
@@ -96,9 +95,7 @@ const toSharedMessageBlock = (
   }
 
   if (role === 'assistant' && value.type === 'research' && Array.isArray(value.items)) {
-    const items = value.items
-      .map(toSharedResearchItem)
-      .filter((item): item is SharedResearchItem => item !== null);
+    const items = toSharedResearchItems(value.items);
     if (items.length > 0) {
       return { type: 'research', items };
     }

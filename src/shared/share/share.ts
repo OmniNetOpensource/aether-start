@@ -1,4 +1,5 @@
 import type { Message, QuoteItem } from '@/shared/chat/message';
+import { isChatHistoryTool } from '@/shared/chat/chat-history';
 
 /** 快照经 JSON 存库和 RPC 传输，值必须是纯 JSON，不能是 unknown */
 export type JsonValue =
@@ -76,6 +77,15 @@ export const toSharedResearchItem = (value: unknown): SharedResearchItem | null 
   }
 
   return null;
+};
+
+export const toSharedResearchItems = (values: unknown[]) => {
+  const items = values
+    .map(toSharedResearchItem)
+    .filter((item): item is SharedResearchItem => item !== null);
+  return items.filter(
+    (item) => item.kind === 'thinking' || !isChatHistoryTool(item.data.call.tool),
+  );
 };
 
 export type SharedAttachmentSnapshot = {

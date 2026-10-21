@@ -9,22 +9,9 @@ const listCursorSchema = z
   })
   .nullable();
 
-const searchCursorSchema = z
-  .object({
-    updated_at: z.string(),
-    id: z.string(),
-  })
-  .nullable();
-
 export const listConversationsPageSchema = z.object({
   limit: z.number().int().positive().max(100),
   cursor: listCursorSchema,
-});
-
-export const searchConversationsSchema = z.object({
-  query: z.string().trim().min(1).max(200),
-  limit: z.number().int().positive().max(50),
-  cursor: searchCursorSchema,
 });
 
 export const conversationIdSchema = z.object({

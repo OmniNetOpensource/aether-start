@@ -6,7 +6,6 @@ import { buttonVariants } from '@/frontend/design-system/button';
 import { cn } from '@/shared/core/utils';
 import { useResponsive } from '@/frontend/app-shell/ResponsiveContext';
 import { ConversationList } from '@/frontend/conversations/conversation-list';
-import { ConversationSearchTrigger } from '@/frontend/conversations/conversation-search';
 import { ProfileMenu } from '@/frontend/settings/profile-menu';
 
 const RIGHT_LEAVE_TOLERANCE_PX = 1;
@@ -121,7 +120,6 @@ export default function Sidebar() {
             </span>
             <span className='whitespace-nowrap text-sm font-medium'>新对话</span>
           </Link>
-          <ConversationSearchTrigger variant='sidebar' />
         </div>
 
         <div className='relative min-h-0 flex-1'>

@@ -902,7 +902,11 @@ export class ConversationRunner extends DurableObject<ConversationRunnerEnv> {
         continue;
       }
 
-      const executedToolCall = await executeToolCall(toolCall, signal);
+      const executedToolCall = await executeToolCall(
+        toolCall,
+        { db: this.env.DB, userId, conversationId: message.conversationId },
+        signal,
+      );
       for (const event of executedToolCall.events) {
         await emitEvent(event);
         throwIfAborted(signal);

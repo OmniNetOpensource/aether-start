@@ -4,15 +4,11 @@ import {
   conversationIdSchema,
   conversationPayloadSchema,
   listConversationsPageSchema,
-  searchConversationsSchema,
   setConversationPinnedSchema,
   updateConversationTitleSchema,
 } from '@/schema/conversations';
 
-export type {
-  ConversationListCursor,
-  ConversationSearchCursor,
-} from '@/shared/conversations/conversation';
+export type { ConversationListCursor } from '@/shared/conversations/conversation';
 
 export const listConversationsPageFn = createServerFn({ method: 'POST' })
   .inputValidator(listConversationsPageSchema)
@@ -28,25 +24,6 @@ export const listConversationsPageFn = createServerFn({ method: 'POST' })
 
     return listConversationsPage(DB, {
       userId: session.user.id,
-      limit: data.limit,
-      cursor: data.cursor,
-    });
-  });
-
-export const searchConversationsFn = createServerFn({ method: 'POST' })
-  .inputValidator(searchConversationsSchema)
-  .handler(async ({ data }) => {
-    const [{ getServerBindings }, { requireSession }, { searchConversations }] = await Promise.all([
-      import('@/backend/platform/cloudflare/env'),
-      import('@/backend/auth/request'),
-      import('@/backend/conversations/conversations-db'),
-    ]);
-    const { DB } = getServerBindings();
-    const session = await requireSession();
-
-    return searchConversations(DB, {
-      userId: session.user.id,
-      query: data.query,
       limit: data.limit,
       cursor: data.cursor,
     });
