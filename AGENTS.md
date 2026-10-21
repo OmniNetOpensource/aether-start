@@ -47,6 +47,21 @@ Generated files:
 
 Do not edit generated files by hand unless the task is specifically about regenerating them.
 
+## Codex 源码参考
+
+- 官方源码仓库为 `https://github.com/openai/codex.git`，本地路径为 `reference/codex/`，跟随远端默认分支（当前为 `main`）。首次导入使用 `git clone --depth 1 https://github.com/openai/codex.git reference/codex`。
+- `reference/` 仅用于按需查阅源码，已从 Aether 的 Git 跟踪中排除；不接入应用依赖、构建或 dev/prod 配置，不在参考仓库内修改文件或提交。
+- 每次参考 Codex 源码前，必须先检查 `git -C reference/codex status --short --branch`，确认工作区干净且处于跟踪远端默认分支的本地分支，再依次执行：
+
+  ```bash
+  git -C reference/codex fetch origin
+  git -C reference/codex merge --ff-only '@{upstream}'
+  git -C reference/codex rev-parse HEAD '@{upstream}'
+  ```
+
+- 必须确认最后输出的两个完整 commit SHA 相同，才能将源码视为本次同步时的远端版本；基于该源码给出结论时，记录完整 commit SHA 和成功同步时间（含时区）。
+- 如果同步失败、存在本地改动、分支不符或两个 SHA 不一致，必须明确报告，解决后再参考；不得声称已对齐最新，也不得通过强制重置或清理覆盖本地工作。
+
 ## Build And Development Commands
 
 Use `pnpm` for repo commands.
@@ -210,7 +225,7 @@ Required bindings:
 
 ## Testing Guidance
 
-Vitest tests are colocated with their owning frontend, backend, or shared modules. Run them with `pnpm test`.
+禁止新增或恢复测试文件，除非用户明确要求写测试。这包括 `*.test.ts`、`*.test.tsx`，以及 `src/test/`、`vitest.config.ts` 这类只为测试存在的文件。
 
 ## 强制真实验收
 

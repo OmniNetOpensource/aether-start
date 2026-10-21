@@ -19,4 +19,8 @@ resume.html
 resume-project.html
 coverage/
 test-results/
+/reference/
 /简历.md
+/简历.html
+/output/pdf/
+/tmp/pdfs/
