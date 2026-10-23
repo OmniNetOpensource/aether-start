@@ -1,4 +1,5 @@
 import { Outlet, createFileRoute } from '@tanstack/react-router';
+import '@/frontend/auth/auth.css';
 
 export const Route = createFileRoute('/auth')({
   component: AuthLayout,
@@ -6,10 +7,12 @@ export const Route = createFileRoute('/auth')({
 
 function AuthLayout() {
   return (
-    <main className='relative h-screen min-h-0 overflow-y-auto bg-background'>
-      <div className='relative flex min-h-screen w-full items-center justify-center p-6'>
-        <Outlet />
-      </div>
+    <main className='auth-page'>
+      <header className='auth-topline'>
+        <strong>AETHER / YOUR LEARNING SPACE</strong>
+        <span>DEEP RESEARCH & HTML VISUALIZATION</span>
+      </header>
+      <Outlet />
     </main>
   );
 }
