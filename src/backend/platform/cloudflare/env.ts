@@ -20,6 +20,7 @@ type ServerEnv = {
   EVERYINFRA_API_KEY?: string;
   SUPADATA_API_KEY?: string;
   PARALLEL_API_KEY?: string;
+  JINA_API_KEY?: string;
   RESEND_API_KEY?: string;
   DB?: D1Database;
   CHAT_ASSETS?: R2Bucket;
@@ -95,6 +96,7 @@ export const getServerEnv = (): ServerEnv => {
       readString(bindings.SUPADATA_API_KEY) ?? readStringFromProcess('SUPADATA_API_KEY'),
     PARALLEL_API_KEY:
       readString(bindings.PARALLEL_API_KEY) ?? readStringFromProcess('PARALLEL_API_KEY'),
+    JINA_API_KEY: readString(bindings.JINA_API_KEY) ?? readStringFromProcess('JINA_API_KEY'),
     RESEND_API_KEY: readString(bindings.RESEND_API_KEY) ?? readStringFromProcess('RESEND_API_KEY'),
     NODE_ENV: readString(bindings.NODE_ENV) ?? readStringFromProcess('NODE_ENV') ?? 'production',
     DB: bindings.DB,

@@ -262,6 +262,7 @@ Important env keys include:
 - `SERP_API_KEY`
 - `SUPADATA_API_KEY`
 - `PARALLEL_API_KEY`
+- `JINA_API_KEY`
 - `LLM_STREAM_LOGGING`
 - `LLM_STREAM_LOGGING_MAX_CHARS`
 - `MOONSHOT_API_KEY`
@@ -272,6 +273,8 @@ Important env keys include:
 - `OPENROUTER_API_KEY`
 
 Never commit real secrets.
+
+普通网页和 Reddit 抓取先调用 Parallel，服务请求失败、超时、响应无法解析或正文为空时，再调用 Jina Reader 一次。用户取消请求时立即停止，不切换服务。两家服务均失败时保留双方错误日志并返回失败结果。公众号和小红书仍使用 EveryInfra。
 
 ## 强制工作流程
 

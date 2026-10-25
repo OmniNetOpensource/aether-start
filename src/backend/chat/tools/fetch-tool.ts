@@ -282,12 +282,17 @@ const fetchEveryInfraPage = async (
   }
 };
 
-const fetchMarkdownWithParallel = async (url: string, signal?: AbortSignal): Promise<string> => {
+type PageFetchResult = { ok: true; content: string } | { ok: false; error: string };
+
+const fetchMarkdownWithParallel = async (
+  url: string,
+  signal?: AbortSignal,
+): Promise<PageFetchResult> => {
   signal?.throwIfAborted();
 
   const { PARALLEL_API_KEY } = getServerEnv();
   if (!PARALLEL_API_KEY) {
-    return 'Error: PARALLEL_API_KEY is not set';
+    return { ok: false, error: 'PARALLEL_API_KEY is not set' };
   }
 
   const timeoutSignal = AbortSignal.timeout(80_000);
@@ -314,11 +319,10 @@ const fetchMarkdownWithParallel = async (url: string, signal?: AbortSignal): Pro
     });
 
     if (!response.ok) {
-      const { error } = z
-        .object({ error: z.object({ message: z.string(), ref_id: z.string() }) })
-        .parse(await response.json());
-      log('FETCH', 'Parallel HTTP error', { status: response.status, ...error });
-      return `Error: Parallel HTTP ${response.status}: ${error.message} (ref_id ${error.ref_id})`;
+      return {
+        ok: false,
+        error: `Parallel HTTP ${response.status}: ${(await response.text()).slice(0, 1000)}`,
+      };
     }
 
     const result = z
@@ -342,8 +346,10 @@ const fetchMarkdownWithParallel = async (url: string, signal?: AbortSignal): Pro
 
     if (result.errors[0]) {
       const error = result.errors[0];
-      log('FETCH', 'Parallel extraction failed', { extract_id: result.extract_id, ...error });
-      return `Error: Parallel ${error.error_type}${error.http_status_code === null ? '' : ` HTTP ${error.http_status_code}`}${error.content === null ? '' : `: ${error.content}`}`;
+      return {
+        ok: false,
+        error: `Parallel ${error.error_type}${error.http_status_code === null ? '' : ` HTTP ${error.http_status_code}`}${error.content === null ? '' : `: ${error.content}`} (extract_id ${result.extract_id})`,
+      };
     }
 
     const page = result.results[0];
@@ -351,21 +357,98 @@ const fetchMarkdownWithParallel = async (url: string, signal?: AbortSignal): Pro
       ? page.full_content
       : page?.excerpts.filter((excerpt) => excerpt.trim()).join('\n\n');
     if (!content?.trim()) {
-      log('FETCH', 'Parallel returned no page content', { extract_id: result.extract_id });
-      return 'Error: Parallel returned no page content';
+      return { ok: false, error: `Parallel returned no page content (${result.extract_id})` };
     }
 
-    return content;
+    return { ok: true, content };
   } catch (error) {
     if (signal?.aborted) {
       throw error;
     }
     if (timeoutSignal.aborted) {
-      return 'Error: Parallel request timed out';
+      return { ok: false, error: 'Parallel request timed out' };
     }
-    log('FETCH', 'Parallel request failed', error);
+    if (error instanceof TypeError || error instanceof SyntaxError || error instanceof z.ZodError) {
+      return { ok: false, error: `Parallel request failed: ${error.message}` };
+    }
     throw error;
   }
+};
+
+const fetchMarkdownWithJina = async (
+  url: string,
+  signal?: AbortSignal,
+): Promise<PageFetchResult> => {
+  signal?.throwIfAborted();
+
+  const { JINA_API_KEY } = getServerEnv();
+  if (!JINA_API_KEY) {
+    return { ok: false, error: 'JINA_API_KEY is not set' };
+  }
+
+  const timeoutSignal = AbortSignal.timeout(80_000);
+
+  try {
+    const response = await fetch('https://r.jina.ai/', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${JINA_API_KEY}`,
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        'X-Respond-With': 'markdown',
+        'X-Timeout': '60',
+        'X-Cache-Tolerance': '600',
+      },
+      body: JSON.stringify({ url }),
+      signal: signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal,
+    });
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: `Jina HTTP ${response.status}: ${(await response.text()).slice(0, 1000)}`,
+      };
+    }
+
+    const { data } = z
+      .object({ data: z.object({ content: z.string() }) })
+      .parse(await response.json());
+    if (!data.content.trim()) {
+      return { ok: false, error: 'Jina returned no page content' };
+    }
+
+    return { ok: true, content: data.content };
+  } catch (error) {
+    if (signal?.aborted) {
+      throw error;
+    }
+    if (timeoutSignal.aborted) {
+      return { ok: false, error: 'Jina request timed out' };
+    }
+    if (error instanceof TypeError || error instanceof SyntaxError || error instanceof z.ZodError) {
+      return { ok: false, error: `Jina request failed: ${error.message}` };
+    }
+    throw error;
+  }
+};
+
+const fetchMarkdown = async (url: string, signal?: AbortSignal): Promise<string> => {
+  const parallel = await fetchMarkdownWithParallel(url, signal);
+  signal?.throwIfAborted();
+  if (parallel.ok) {
+    return parallel.content;
+  }
+
+  log('FETCH', 'Parallel failed; retrying with Jina', { url, error: parallel.error });
+  const jina = await fetchMarkdownWithJina(url, signal);
+  signal?.throwIfAborted();
+  if (jina.ok) {
+    log('FETCH', 'Jina retry completed', { url });
+    return jina.content;
+  }
+
+  log('FETCH', 'Parallel and Jina failed', { url, parallel: parallel.error, jina: jina.error });
+  return `Error: ${parallel.error}; ${jina.error}`;
 };
 
 const fetchUrl: ToolHandler = async (args, signal) => {
@@ -402,7 +485,7 @@ const fetchUrl: ToolHandler = async (args, signal) => {
   const redditPostId = getRedditPostId(parsedUrl);
   if (redditPostId) {
     return enqueueFetchUrlCall(() =>
-      fetchMarkdownWithParallel(`https://www.reddit.com/comments/${redditPostId}/`, signal),
+      fetchMarkdown(`https://www.reddit.com/comments/${redditPostId}/`, signal),
     );
   }
 
@@ -413,11 +496,11 @@ const fetchUrl: ToolHandler = async (args, signal) => {
     }
 
     return enqueueFetchUrlCall(() =>
-      fetchMarkdownWithParallel(`https://www.reddit.com/comments/${resolution.postId}/`, signal),
+      fetchMarkdown(`https://www.reddit.com/comments/${resolution.postId}/`, signal),
     );
   }
 
-  return enqueueFetchUrlCall(() => fetchMarkdownWithParallel(url, signal));
+  return enqueueFetchUrlCall(() => fetchMarkdown(url, signal));
 };
 
 const fetchUrlSpec: ChatTool = {
