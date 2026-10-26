@@ -1,15 +1,15 @@
 import { ThinkingLevel } from '@google/genai';
 
 export const buildGeminiThinkingConfig = (model: string) => {
-  if (model.startsWith('gemma-') || model.startsWith('gemini-3')) {
+  if (model.startsWith('gemini-2.5')) {
     return {
       includeThoughts: true,
-      thinkingLevel: ThinkingLevel.HIGH,
+      thinkingBudget: model.startsWith('gemini-2.5-pro') ? 32768 : 24576,
     };
   }
 
   return {
     includeThoughts: true,
-    thinkingBudget: -1,
+    thinkingLevel: ThinkingLevel.HIGH,
   };
 };
