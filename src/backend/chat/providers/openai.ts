@@ -357,6 +357,12 @@ export class OpenAIChatProvider {
         tools: this.openaiTools,
         stream: true,
       };
+      if (
+        this.backendConfig.baseURL === 'https://openrouter.ai/api/v1' &&
+        this.model.startsWith('google/gemini-')
+      ) {
+        streamParams.reasoning = { effort: 'high' };
+      }
       if (isMoonshotApiBaseUrl(this.backendConfig.baseURL)) {
         streamParams.thinking = { type: 'enabled' };
         streamParams.stream_options = { include_usage: true };
