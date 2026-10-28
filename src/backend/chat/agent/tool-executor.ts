@@ -1,15 +1,5 @@
 import { isAbortError } from '@/backend/chat/abort';
-import { fetchUrlTool } from '@/backend/chat/tools/fetch-tool';
-import { readImageTool } from '@/backend/chat/tools/read-image-tool';
-import { readYoutubeTranscriptTool } from '@/backend/chat/tools/read-youtube-transcript-tool';
-import {
-  executeSearchChatHistory,
-  searchChatHistorySpec,
-} from '@/backend/chat/tools/search-chat-history-tool';
-import {
-  executeReadChatHistory,
-  readChatHistorySpec,
-} from '@/backend/chat/tools/read-chat-history-tool';
+import { getToolRegistry } from '@/backend/chat/tools/tool-registry';
 import {
   buildReadClientPayload,
   stringifyFetchClientPayload,
@@ -18,32 +8,14 @@ import {
   parseSearchClientPayload,
   stringifySearchClientPayload,
 } from '@/shared/chat/research/search-result-payload';
-import { searchTool } from '@/backend/chat/tools/search-tool';
-import { renderTool } from '@/backend/chat/tools/render-tool';
-import { getServerEnv } from '@/backend/platform/cloudflare/env';
 import { log } from '@/backend/chat/logger';
-import type { ChatTool, ToolHandler } from '@/shared/chat/tool-types';
 import type {
   PendingToolInvocation,
   ToolInvocationResult,
   ChatServerToClientEvent,
 } from '@/shared/chat/chat-api';
 
-export const getAvailableTools = (): ChatTool[] => {
-  const env = getServerEnv();
-  const tools: ChatTool[] = [];
-
-  tools.push(fetchUrlTool.spec, readImageTool.spec, readYoutubeTranscriptTool.spec);
-  tools.push(renderTool.spec, searchChatHistorySpec, readChatHistorySpec);
-
-  if (env.SERP_API_KEY || env.EVERYINFRA_API_KEY) {
-    tools.push(searchTool.spec);
-  } else {
-    log('TOOLS', 'Skipping tool: search (missing SERP_API_KEY and EVERYINFRA_API_KEY)');
-  }
-
-  return tools;
-};
+export const getAvailableTools = () => getToolRegistry().map((tool) => tool.spec);
 
 export type ExecutedToolCallResult = {
   events: ChatServerToClientEvent[];
@@ -57,23 +29,9 @@ export const executeToolCall = async (
 ): Promise<ExecutedToolCallResult> => {
   const events: ChatServerToClientEvent[] = [];
 
-  const env = getServerEnv();
-  const handleTool: ToolHandler | null =
-    toolcall.name === 'search_chat_history'
-      ? (args, abortSignal) => executeSearchChatHistory(args, context, abortSignal)
-      : toolcall.name === 'read_chat_history'
-        ? (args, abortSignal) => executeReadChatHistory(args, context, abortSignal)
-        : toolcall.name === 'fetch_url'
-          ? fetchUrlTool.handler
-          : toolcall.name === 'read_image'
-            ? readImageTool.handler
-            : toolcall.name === 'read_youtube_transcript'
-              ? readYoutubeTranscriptTool.handler
-              : toolcall.name === 'render'
-                ? renderTool.handler
-                : toolcall.name === 'search' && (env.SERP_API_KEY || env.EVERYINFRA_API_KEY)
-                  ? searchTool.handler
-                  : null;
+  const handleTool = getToolRegistry().find(
+    (tool) => tool.spec.function.name === toolcall.name,
+  )?.handler;
   let rawResult: string;
 
   if (!handleTool) {
@@ -84,7 +42,7 @@ export const executeToolCall = async (
       if (signal?.aborted) {
         throw new DOMException('Aborted', 'AbortError');
       }
-      rawResult = await handleTool(toolcall.args, signal);
+      rawResult = await handleTool(toolcall.args, signal, context);
     } catch (error) {
       if (isAbortError(error, signal)) {
         rawResult = 'Error: Aborted';
