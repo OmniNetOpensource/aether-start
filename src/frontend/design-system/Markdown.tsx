@@ -391,7 +391,7 @@ function MarkdownBlock({ isAnimating, markdown }: { isAnimating: boolean; markdo
   }, [isAnimating, tree]);
 
   return (
-    <div style={{ contentVisibility: 'auto', containIntrinsicBlockSize: 'auto 0px' }}>
+    <div>
       {isAnimating ? (
         <div ref={streamHost} />
       ) : (

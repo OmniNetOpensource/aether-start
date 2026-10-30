@@ -26,10 +26,6 @@ body {
   color: var(--color-foreground);
 }
 
-[data-quote-target] .aether-markdown > div {
-  content-visibility: visible !important;
-}
-
 @layer base {
   * {
     @apply border-border outline-ring;
