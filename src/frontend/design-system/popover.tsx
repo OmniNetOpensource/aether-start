@@ -197,17 +197,19 @@ function getPosition(trigger: DOMRect, content: DOMRect, positioning: Positionin
 
 type PopoverContentProps = Omit<ComponentPropsWithRef<'div'>, 'style'> & {
   initialFocus?: boolean;
+  keepMounted?: boolean;
   style?: PopoverStyle;
 };
 
 function PopoverContent(props: PopoverContentProps) {
   const popover = usePopover();
-  if (!popover.open) return null;
+  if (!popover.open && !props.keepMounted) return null;
   return <OpenPopoverContent {...props} popoverState={popover} />;
 }
 
 function OpenPopoverContent({
   initialFocus,
+  keepMounted = false,
   className,
   style,
   ref,
@@ -219,11 +221,12 @@ function OpenPopoverContent({
   const placement = popoverState.positioning.placement;
   const gutter = popoverState.positioning.gutter;
   const trigger = popoverState.trigger;
+  const open = popoverState.open;
   const close = useEffectEvent(() => popoverState.setOpen(false));
   const dismiss = useEffectEvent(() => popoverState.dismiss());
 
   useEffect(() => {
-    if (!trigger || !content.current) return;
+    if (!open || !trigger || !content.current) return;
     const element = content.current;
     let active = true;
     const updatePosition = () => {
@@ -255,7 +258,9 @@ function OpenPopoverContent({
       if (!active) return;
       updatePosition();
       if (initialFocus) {
-        element.querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')?.focus();
+        element
+          .querySelector<HTMLElement>('[role="menuitem"]:not([disabled])')
+          ?.focus({ preventScroll: keepMounted });
       }
     });
 
@@ -267,7 +272,7 @@ function OpenPopoverContent({
       window.removeEventListener('scroll', updatePosition, true);
       resizeObserver.disconnect();
     };
-  }, [gutter, initialFocus, placement, trigger]);
+  }, [gutter, initialFocus, keepMounted, open, placement, trigger]);
 
   return createPortal(
     <div
@@ -279,6 +284,7 @@ function OpenPopoverContent({
       }}
       id={popoverState.contentId}
       role={props.role ?? 'dialog'}
+      inert={!open}
       className={cn(
         'bg-surface text-foreground fixed z-(--z-popover) w-72 p-4 outline-hidden',
         className,
@@ -287,6 +293,7 @@ function OpenPopoverContent({
         borderRadius: '8px 2px 12px 4px / 4px 12px 2px 8px',
         ...style,
         ...position,
+        ...(!open && { visibility: 'hidden' }),
       }}
     />,
     document.body,

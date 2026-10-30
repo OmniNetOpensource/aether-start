@@ -91,6 +91,7 @@ export function MessageNavigator({
         )}
       />
       <DropdownMenuContent
+        keepMounted
         aria-label='消息导航'
         className='max-h-[min(60vh,var(--available-height))] w-80 max-w-[calc(100vw-1rem)] overscroll-contain'
       >

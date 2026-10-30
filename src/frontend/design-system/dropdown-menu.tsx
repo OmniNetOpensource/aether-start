@@ -58,6 +58,7 @@ function DropdownMenuTrigger(props: PopoverTriggerProps) {
 }
 
 type DropdownMenuContentProps = ComponentProps<'div'> & {
+  keepMounted?: boolean;
   side?: 'top' | 'bottom' | 'left' | 'right';
   align?: 'start' | 'center' | 'end';
   style?: CSSProperties;
