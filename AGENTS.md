@@ -83,6 +83,11 @@ Use `pnpm` for repo commands.
 
 Auth generation scripts in `package.json` point to `src/backend/auth/identity/`.
 
+## 自动部署
+
+- GitHub 已配置 `.github/workflows/deploy-cloudflare.yml`：push 到 `master` 或 `main` 会自动触发发布。检查通过后，Action 会应用远端 D1 迁移并部署到 Cloudflare Workers，无需再手动部署。
+- push 后应检查 GitHub Actions 的执行结果和 Cloudflare 当前部署版本，再报告部署状态；不能因为没有手动执行部署命令就声称“尚未部署”。
+
 ## Current Architecture
 
 ### App Shell And Route Data
