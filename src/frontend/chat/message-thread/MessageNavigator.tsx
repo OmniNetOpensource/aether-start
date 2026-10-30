@@ -1,5 +1,16 @@
-import { useEffect, useRef, useState, type RefObject } from 'react';
+import { createContext, useContext, useEffect, useState, type RefObject } from 'react';
+import { createPortal } from 'react-dom';
 import { useMessage } from '@/frontend/conversations/conversation-tree/message-tree-state';
+import { Button } from '@/frontend/design-system/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/frontend/design-system/dropdown-menu';
+import { ChevronDown } from '@/frontend/design-system/icons';
+
+export const MessageNavigationTargetContext = createContext<HTMLElement | null>(null);
 
 function MessagePreview({ messageId }: { messageId: number }) {
   const message = useMessage(messageId);
@@ -35,9 +46,8 @@ export function MessageNavigator({
   messageIds: number[];
   scrollElement: RefObject<HTMLDivElement | null>;
 }) {
-  const navigation = useRef<HTMLElement>(null);
+  const navigationTarget = useContext(MessageNavigationTargetContext);
   const [activeId, setActiveId] = useState<number | null>(null);
-  const [preview, setPreview] = useState<{ messageId: number; top: number } | null>(null);
 
   useEffect(() => {
     const root = scrollElement.current;
@@ -68,50 +78,29 @@ export function MessageNavigator({
     };
   }, [messageIds, scrollElement]);
 
-  return (
-    <nav
-      ref={navigation}
-      aria-label='消息导航'
-      className='absolute right-3 top-[20%] bottom-[20%] z-20 hidden flex-col justify-center @[640px]:flex'
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') setPreview(null);
-      }}
-    >
-      <div
-        className='max-h-full overflow-y-auto overscroll-contain [scrollbar-width:none]'
-        onScroll={() => setPreview(null)}
+  if (!navigationTarget) return null;
+
+  return createPortal(
+    <DropdownMenu positioning={{ placement: 'bottom-start', gutter: 8 }}>
+      <DropdownMenuTrigger
+        asChild={(triggerProps) => (
+          <Button {...triggerProps} variant='ghost' className='h-10'>
+            对话导航
+            <ChevronDown />
+          </Button>
+        )}
+      />
+      <DropdownMenuContent
+        aria-label='消息导航'
+        className='max-h-[min(60vh,var(--available-height))] w-80 max-w-[calc(100vw-1rem)] overscroll-contain'
       >
         {messageIds.map((messageId, index) => (
-          <button
+          <DropdownMenuItem
             key={messageId}
-            type='button'
             aria-label={`跳转到第 ${index + 1} 条消息`}
             aria-current={activeId === messageId ? 'location' : undefined}
-            aria-describedby={
-              preview?.messageId === messageId ? 'message-navigation-preview' : undefined
-            }
-            className='group flex h-6 w-10 cursor-pointer items-center justify-end rounded px-1 outline-none focus-visible:ring-2 focus-visible:ring-ring'
-            onMouseEnter={(event) => {
-              const root = navigation.current;
-              if (!root) return;
-              const rect = event.currentTarget.getBoundingClientRect();
-              setPreview({
-                messageId,
-                top: rect.top + rect.height / 2 - root.getBoundingClientRect().top,
-              });
-            }}
-            onMouseLeave={() => setPreview(null)}
-            onFocus={(event) => {
-              const root = navigation.current;
-              if (!root) return;
-              const rect = event.currentTarget.getBoundingClientRect();
-              setPreview({
-                messageId,
-                top: rect.top + rect.height / 2 - root.getBoundingClientRect().top,
-              });
-            }}
-            onBlur={() => setPreview(null)}
-            onClick={() => {
+            className='flex-col items-start gap-0 px-3 py-2 aria-[current=location]:bg-hover'
+            onSelect={() => {
               const root = scrollElement.current;
               const target = root?.querySelector(`[data-message-id="${messageId}"]`);
               if (!root || !target) return;
@@ -127,35 +116,11 @@ export function MessageNavigator({
               });
             }}
           >
-            <MessageLine messageId={messageId} active={activeId === messageId} />
-          </button>
+            <MessagePreview messageId={messageId} />
+          </DropdownMenuItem>
         ))}
-      </div>
-      {preview && messageIds.includes(preview.messageId) && (
-        <div
-          id='message-navigation-preview'
-          role='tooltip'
-          className='pointer-events-none absolute right-full mr-3 w-64 -translate-y-1/2 rounded-lg border border-border bg-surface p-3 text-foreground shadow-md'
-          style={{ top: preview.top }}
-        >
-          <MessagePreview messageId={preview.messageId} />
-        </div>
-      )}
-    </nav>
-  );
-}
-
-function MessageLine({ messageId, active }: { messageId: number; active: boolean }) {
-  const message = useMessage(messageId);
-  return (
-    <span
-      className={`h-0.5 w-4 rounded-full transition-[width,background-color] duration-150 group-hover:w-7 group-focus-visible:w-7 motion-reduce:transition-none ${
-        active
-          ? 'bg-foreground'
-          : message?.role === 'user'
-            ? 'bg-foreground/45'
-            : 'bg-foreground/25'
-      }`}
-    />
+      </DropdownMenuContent>
+    </DropdownMenu>,
+    navigationTarget,
   );
 }

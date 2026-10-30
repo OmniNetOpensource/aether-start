@@ -1,8 +1,9 @@
-import { useEffect, useLayoutEffect } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { Link, Outlet, createFileRoute } from '@tanstack/react-router';
 import { cancelStreamSubscription } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { chatState, registerChatToast } from '@/frontend/chat/agent-runtime/chat-state';
 import { Composer } from '@/frontend/chat/composer/Composer';
+import { MessageNavigationTargetContext } from '@/frontend/chat/message-thread/MessageNavigator';
 import Sidebar from '@/frontend/conversations/conversation-list';
 import { Pencil } from '@/frontend/design-system/icons';
 import { buttonVariants } from '@/frontend/design-system/button';
@@ -37,6 +38,7 @@ export const Route = createFileRoute('/app')({
 function AppLayout() {
   const toast = useToast();
   const pageTitle = usePageTitle();
+  const [navigationTarget, setNavigationTarget] = useState<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
     registerChatToast(toast);
@@ -50,7 +52,8 @@ function AppLayout() {
     <div className='relative flex h-screen w-screen overflow-hidden text-foreground'>
       <Sidebar />
       <div className='relative flex-1 z-0 min-w-0 flex flex-col gap-2 min-h-0'>
-        <div className='flex shrink-0 h-16 items-center gap-3 px-4 bg-transparent'>
+        <header className='flex shrink-0 h-16 items-center gap-3 px-4 bg-transparent'>
+          <div ref={setNavigationTarget} />
           <div className='flex-1' />
           <ShareButton />
           <Link
@@ -66,10 +69,12 @@ function AppLayout() {
             </span>
             <span className='sr-only'>新对话</span>
           </Link>
-        </div>
+        </header>
         <main className='relative flex flex-1 min-h-0 min-w-0'>
           <div className='@container relative h-full flex-1 min-w-0'>
-            <Outlet />
+            <MessageNavigationTargetContext value={navigationTarget}>
+              <Outlet />
+            </MessageNavigationTargetContext>
             <Composer />
           </div>
         </main>

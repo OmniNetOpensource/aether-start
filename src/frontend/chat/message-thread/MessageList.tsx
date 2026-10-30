@@ -136,7 +136,7 @@ export function MessageList() {
   return (
     <>
       {currentPath.length > 0 && (
-        <div className='relative w-full h-full'>
+        <>
           <div
             ref={scrollElement}
             data-testid='message-scroll'
@@ -176,7 +176,7 @@ export function MessageList() {
             scrollElement={scrollElement}
           />
           <SelectionToolbar container={() => scrollElement.current} />
-        </div>
+        </>
       )}
     </>
   );
