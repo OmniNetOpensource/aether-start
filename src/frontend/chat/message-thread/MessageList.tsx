@@ -139,6 +139,7 @@ export function MessageList() {
         <>
           <div
             ref={scrollElement}
+            id='message-scroll'
             data-testid='message-scroll'
             style={{ overflowAnchor: 'none' }}
             className='w-full h-full overflow-y-auto'

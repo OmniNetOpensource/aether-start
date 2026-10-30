@@ -1,6 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { useHydrated, useNavigate } from '@tanstack/react-router';
-import { ArrowUp, Loader2, Paperclip, Square, X } from '@/frontend/design-system/icons';
+import {
+  ArrowUp,
+  ChevronDown,
+  Loader2,
+  Paperclip,
+  Square,
+  X,
+} from '@/frontend/design-system/icons';
 import { cancelAnswering, cancelSending } from '@/frontend/chat/agent-runtime/chat-orchestrator';
 import { chatState, useChatStatus } from '@/frontend/chat/agent-runtime/chat-state';
 import { useToast } from '@/frontend/app-shell/useToast';
@@ -25,6 +32,7 @@ import {
   useQueuedMessages,
 } from './composer-request/message-queue';
 import { markNewMessageAnimation } from '@/frontend/chat/message-thread/message-entry-animation';
+import { useCurrentPath } from '@/frontend/conversations/conversation-tree/message-tree-state';
 
 declare global {
   interface Window {
@@ -46,6 +54,10 @@ export function Composer() {
   const fileInputId = useId();
   const status = useChatStatus();
   const queuedMessagesState = useQueuedMessages();
+  const messageIds = useCurrentPath();
+  const lastMessageId = messageIds.at(-1);
+  const scrollToBottomButton = useRef<HTMLButtonElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
   const uploading = isComposerDocumentUploading(composerDocument);
   const action =
     status === 'idle'
@@ -55,6 +67,34 @@ export function Composer() {
       : status;
   const inputDisabled = action === 'sending';
   const sendDisabled = action === 'disabled' || action === 'stopping';
+
+  useEffect(() => {
+    const root = document.getElementById('message-scroll');
+    const content = root?.firstElementChild;
+    const lastMessage = root?.querySelector(`[data-message-id="${lastMessageId}"]`);
+    const button = scrollToBottomButton.current;
+    const composer = button?.parentElement;
+    if (!root || !content || !lastMessage || !button || !composer) return;
+
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        setIsAtBottom(
+          lastMessage.getBoundingClientRect().bottom <= button.getBoundingClientRect().top - 10,
+        );
+      });
+    };
+    const observer = new ResizeObserver(update);
+    for (const element of [root, content, composer]) observer.observe(element);
+    root.addEventListener('scroll', update, { passive: true });
+    update();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      root.removeEventListener('scroll', update);
+    };
+  }, [lastMessageId, messageIds]);
 
   useEffect(() => {
     if (hydrated) {
@@ -180,6 +220,37 @@ export function Composer() {
           if (files.length) void onFilesSelected(files);
         }}
       >
+        {lastMessageId !== undefined && (
+          <Button
+            ref={scrollToBottomButton}
+            type='button'
+            variant='outline'
+            size='icon'
+            aria-label='滚动至底部'
+            title='滚动至底部'
+            className={cn(
+              'absolute bottom-full left-1/2 mb-3 -translate-x-1/2 rounded-full bg-surface shadow-sm',
+              isAtBottom && 'invisible',
+            )}
+            onClick={(event) => {
+              const root = document.getElementById('message-scroll');
+              const lastMessage = root?.querySelector(`[data-message-id="${lastMessageId}"]`);
+              if (!root || !lastMessage) return;
+              root.scrollTo({
+                top:
+                  root.scrollTop +
+                  lastMessage.getBoundingClientRect().bottom -
+                  event.currentTarget.getBoundingClientRect().top +
+                  12,
+                behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                  ? 'instant'
+                  : 'smooth',
+              });
+            }}
+          >
+            <ChevronDown />
+          </Button>
+        )}
         {queuedMessagesState.map((queued, index) => (
           <div
             key={index}
